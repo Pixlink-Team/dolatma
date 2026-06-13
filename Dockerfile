@@ -13,7 +13,8 @@ FROM base AS builder
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN mkdir -p public
-RUN npm run build
+# DATABASE_URL is injected at runtime by Compose; db host is unavailable during image build
+RUN DATABASE_URL= npm run build
 
 FROM base AS runner
 ENV NODE_ENV=production
