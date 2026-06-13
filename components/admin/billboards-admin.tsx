@@ -1,11 +1,13 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { Plus } from "lucide-react";
+import { Download, Plus } from "lucide-react";
+import { BillboardImportDialog } from "@/components/admin/billboard-import-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -55,10 +57,16 @@ interface BillboardsAdminProps {
 }
 
 export function BillboardsAdmin({ campaignId, initialBillboards }: BillboardsAdminProps) {
+  const router = useRouter();
   const [billboards, setBillboards] = useState(initialBillboards);
   const [open, setOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [editing, setEditing] = useState<Billboard | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  useEffect(() => {
+    setBillboards(initialBillboards);
+  }, [initialBillboards]);
 
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -169,10 +177,16 @@ export function BillboardsAdmin({ campaignId, initialBillboards }: BillboardsAdm
           <h1 className="text-2xl font-bold">بیلبوردها</h1>
           <p className="text-sm text-muted-foreground">مدیریت بیلبوردهای کمپین</p>
         </div>
-        <Button onClick={openCreate}>
-          <Plus className="h-4 w-4" />
-          افزودن
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setImportOpen(true)}>
+            <Download className="h-4 w-4" />
+            دریافت از Map Bilboard
+          </Button>
+          <Button onClick={openCreate}>
+            <Plus className="h-4 w-4" />
+            افزودن
+          </Button>
+        </div>
       </div>
 
       <AdminDataTable
@@ -201,6 +215,16 @@ export function BillboardsAdmin({ campaignId, initialBillboards }: BillboardsAdm
         onDelete={handleDelete}
         onTogglePublish={handleTogglePublish}
         getPublished={(item) => item.published}
+      />
+
+      <BillboardImportDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        campaignId={campaignId}
+        existingBillboards={billboards}
+        onImported={() => {
+          router.refresh();
+        }}
       />
 
       <Dialog open={open} onOpenChange={setOpen}>
