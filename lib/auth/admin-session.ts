@@ -1,5 +1,6 @@
 const SESSION_COOKIE = "admin_session";
 const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
+const LEGACY_MOCK_COOKIE = "mock_admin";
 
 function getAuthSecret(): string {
   return (
@@ -13,13 +14,17 @@ export function getAdminSessionCookieName() {
   return SESSION_COOKIE;
 }
 
+export function getLegacyMockCookieName() {
+  return LEGACY_MOCK_COOKIE;
+}
+
 export function verifyAdminCredentials(email: string, password: string): boolean {
   const adminEmail = process.env.ADMIN_EMAIL ?? "admin@example.com";
   const adminPassword = process.env.ADMIN_PASSWORD ?? "admin123";
   return email === adminEmail && password === adminPassword;
 }
 
-async function signPayload(payload: string): Promise<string> {
+async function signPayloadAsync(payload: string): Promise<string> {
   const key = await crypto.subtle.importKey(
     "raw",
     new TextEncoder().encode(getAuthSecret()),
@@ -37,10 +42,13 @@ async function signPayload(payload: string): Promise<string> {
     .join("");
 }
 
+export function buildAdminSessionToken(expiresAt = Date.now() + SESSION_TTL_MS): string {
+  return `admin:${expiresAt}`;
+}
+
 export async function createAdminSessionToken(): Promise<string> {
-  const expiresAt = Date.now() + SESSION_TTL_MS;
-  const payload = `admin:${expiresAt}`;
-  const signature = await signPayload(payload);
+  const payload = buildAdminSessionToken();
+  const signature = await signPayloadAsync(payload);
   return `${payload}.${signature}`;
 }
 
@@ -50,7 +58,7 @@ export async function verifyAdminSessionToken(token: string | undefined | null):
   const [payload, signature] = token.split(".");
   if (!payload || !signature) return false;
 
-  const expected = await signPayload(payload);
+  const expected = await signPayloadAsync(payload);
   if (signature.length !== expected.length) return false;
 
   let mismatch = 0;
@@ -61,6 +69,16 @@ export async function verifyAdminSessionToken(token: string | undefined | null):
 
   const expiresAt = Number(payload.split(":")[1]);
   return Number.isFinite(expiresAt) && expiresAt > Date.now();
+}
+
+export function getAdminSessionCookieOptions(maxAge = 60 * 60 * 24) {
+  return {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax" as const,
+    path: "/",
+    maxAge,
+  };
 }
 
 export function isAdminAuthConfigured(): boolean {

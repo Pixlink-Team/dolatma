@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -12,8 +11,17 @@ import { loginAdminAction } from "@/lib/actions/auth-actions";
 import { getDatabaseMode } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
 
+function isNextRedirectError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "digest" in error &&
+    typeof error.digest === "string" &&
+    error.digest.startsWith("NEXT_REDIRECT")
+  );
+}
+
 export function AdminLoginForm() {
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -31,22 +39,14 @@ export function AdminLoginForm() {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
 
-        toast.success("ورود موفق");
-        router.push("/admin");
-        router.refresh();
+        window.location.assign("/admin");
         return;
       }
 
-      const result = await loginAdminAction(email, password);
-      if (!result.success) {
-        toast.error(result.error);
-        return;
-      }
-
-      toast.success(databaseMode === "postgres" ? "ورود موفق" : "ورود موفق (حالت mock)");
-      router.push("/admin");
-      router.refresh();
+      await loginAdminAction(email, password);
     } catch (err) {
+      if (isNextRedirectError(err)) return;
+
       toast.error(err instanceof Error ? err.message : "خطا در ورود");
     } finally {
       setLoading(false);

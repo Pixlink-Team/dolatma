@@ -1,37 +1,34 @@
 "use server";
 
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import {
-  createAdminSessionToken,
   getAdminSessionCookieName,
+  getAdminSessionCookieOptions,
+  getLegacyMockCookieName,
   verifyAdminCredentials,
 } from "@/lib/auth/admin-session";
+import { createAdminSessionTokenSync } from "@/lib/auth/admin-session-node";
 
 export async function loginAdminAction(email: string, password: string) {
   if (!verifyAdminCredentials(email, password)) {
     return { success: false as const, error: "ایمیل یا رمز عبور اشتباه است" };
   }
 
-  const token = await createAdminSessionToken();
   const cookieStore = await cookies();
-  cookieStore.set(getAdminSessionCookieName(), token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: 60 * 60 * 24,
-  });
+  const token = createAdminSessionTokenSync();
+  const cookieOptions = getAdminSessionCookieOptions();
 
-  return { success: true as const };
+  cookieStore.set(getAdminSessionCookieName(), token, cookieOptions);
+  cookieStore.set(getLegacyMockCookieName(), "", { ...cookieOptions, maxAge: 0 });
+
+  redirect("/admin");
 }
 
 export async function logoutAdminAction() {
   const cookieStore = await cookies();
-  cookieStore.set(getAdminSessionCookieName(), "", {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: 0,
-  });
+  const cookieOptions = getAdminSessionCookieOptions(0);
+
+  cookieStore.set(getAdminSessionCookieName(), "", cookieOptions);
+  cookieStore.set(getLegacyMockCookieName(), "", cookieOptions);
 }
