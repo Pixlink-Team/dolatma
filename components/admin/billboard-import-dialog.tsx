@@ -8,7 +8,6 @@ import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -161,9 +160,9 @@ export function BillboardImportDialog({
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>دریافت بیلبورد از Map Bilboard</DialogTitle>
-          <DialogDescription>
+          <p className="text-sm text-muted-foreground">
             کمپین را از سامانه بیلبورد انتخاب کنید و بیلبوردهای موردنظر را به داشبورد فعلی وارد کنید.
-          </DialogDescription>
+          </p>
         </DialogHeader>
 
         <div className="space-y-4">
