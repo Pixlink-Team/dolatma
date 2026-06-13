@@ -15,7 +15,13 @@ import { Badge } from "@/components/ui/badge";
 import { getAdminData } from "@/lib/data-access/admin";
 import { resolveAdminCampaignId } from "@/lib/admin-campaign";
 import { adminHref } from "@/lib/utils";
-import { formatPersianNumber, getDatabaseMode } from "@/lib/utils";
+import { formatPersianNumber, isPostgresConfigured, isSupabaseConfigured } from "@/lib/utils";
+
+function getDatabaseLabel() {
+  if (isPostgresConfigured()) return "PostgreSQL";
+  if (isSupabaseConfigured()) return "Supabase";
+  return "Local";
+}
 
 interface AdminDashboardProps {
   searchParams: Promise<{ campaign?: string }>;
@@ -56,12 +62,8 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
               مدیریت کمپین‌ها
             </Button>
           </Link>
-          <Badge variant={getDatabaseMode() === "mock" ? "warning" : "success"}>
-            {getDatabaseMode() === "postgres"
-              ? "PostgreSQL"
-              : getDatabaseMode() === "supabase"
-                ? "Supabase"
-                : "حالت Mock"}
+          <Badge variant="success">
+            {getDatabaseLabel()}
           </Badge>
           <Link href={adminHref("/admin/settings", campaignId)}>
             <Badge variant="outline" className="gap-1 cursor-pointer">

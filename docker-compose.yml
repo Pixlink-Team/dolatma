@@ -24,7 +24,7 @@ services:
       NODE_ENV: production
       DATABASE_URL: postgres://dashboard:dashboard@db:5432/dashboard
       ADMIN_EMAIL: admin@example.com
-      ADMIN_PASSWORD: admin123
+      ADMIN_PASSWORD: password
       AUTH_SECRET: change-this-secret-in-production
     depends_on:
       db:

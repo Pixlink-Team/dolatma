@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { createClient } from "@/lib/supabase/client";
 import { loginAdminAction } from "@/lib/actions/auth-actions";
-import { getDatabaseMode } from "@/lib/utils";
+import { isSupabaseConfigured } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
 
 function isNextRedirectError(error: unknown): boolean {
@@ -22,17 +22,16 @@ function isNextRedirectError(error: unknown): boolean {
 }
 
 export function AdminLoginForm() {
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState("admin@example.com");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const databaseMode = getDatabaseMode();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      if (databaseMode === "supabase") {
+      if (isSupabaseConfigured()) {
         const supabase = createClient();
         if (!supabase) throw new Error("Supabase not configured");
 
@@ -46,7 +45,6 @@ export function AdminLoginForm() {
       await loginAdminAction(email, password);
     } catch (err) {
       if (isNextRedirectError(err)) return;
-
       toast.error(err instanceof Error ? err.message : "خطا در ورود");
     } finally {
       setLoading(false);
@@ -82,16 +80,6 @@ export function AdminLoginForm() {
               minLength={4}
             />
           </div>
-          {databaseMode === "mock" && (
-            <p className="text-xs text-muted-foreground bg-muted p-3 rounded-lg">
-              حالت mock: از ایمیل و رمز پیش‌فرض admin@example.com / admin123 استفاده کنید.
-            </p>
-          )}
-          {databaseMode === "postgres" && (
-            <p className="text-xs text-muted-foreground bg-muted p-3 rounded-lg">
-              ورود با ADMIN_EMAIL و ADMIN_PASSWORD تنظیم‌شده در سرور.
-            </p>
-          )}
           <Button type="submit" className="w-full" disabled={loading}>
             {loading && <Loader2 className="h-4 w-4 animate-spin" />}
             ورود

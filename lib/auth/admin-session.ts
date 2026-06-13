@@ -20,7 +20,7 @@ export function getLegacyMockCookieName() {
 
 export function verifyAdminCredentials(email: string, password: string): boolean {
   const adminEmail = process.env.ADMIN_EMAIL ?? "admin@example.com";
-  const adminPassword = process.env.ADMIN_PASSWORD ?? "admin123";
+  const adminPassword = process.env.ADMIN_PASSWORD ?? "password";
   return email === adminEmail && password === adminPassword;
 }
 

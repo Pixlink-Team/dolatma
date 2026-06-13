@@ -29,13 +29,12 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000) for the public report.
 
-### Admin Login (Mock Mode)
+### Admin Login
 
-When Supabase is not configured:
-
-- URL: [http://localhost:3000/admin/login](http://localhost:3000/admin/login)
-- Email: `admin@example.com`
-- Password: `admin123`
+- URL: `/admin/login`
+- Default credentials (override via `ADMIN_EMAIL` / `ADMIN_PASSWORD` env):
+  - Email: `admin@example.com`
+  - Password: `password`
 
 ## Deploy on Coolify
 

@@ -24,7 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { cn, adminHref, getDatabaseMode } from "@/lib/utils";
+import { cn, adminHref, isSupabaseConfigured } from "@/lib/utils";
 import { logoutAdminAction } from "@/lib/actions/auth-actions";
 import { createClient } from "@/lib/supabase/client";
 import { useAdminCampaign } from "@/components/admin/admin-campaign-provider";
@@ -47,7 +47,7 @@ export function AdminSidebar() {
   const { campaignId, campaigns, currentCampaign, setCampaignId } = useAdminCampaign();
 
   const handleLogout = async () => {
-    if (getDatabaseMode() === "supabase") {
+    if (isSupabaseConfigured()) {
       const supabase = createClient();
       if (supabase) await supabase.auth.signOut();
     } else {
