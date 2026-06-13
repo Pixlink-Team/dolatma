@@ -111,6 +111,7 @@ export function CampaignDashboard({ initialData, slug }: CampaignDashboardProps)
           )}
         </section>
 
+        {sections.analytics && <AnalyticsSection analytics={data.analytics} />}
         {sections.billboards && <BillboardSection billboards={data.billboards} />}
         {sections.posters && (
           <PostersSection categories={data.posterCategories} posters={data.posters} />
@@ -118,7 +119,6 @@ export function CampaignDashboard({ initialData, slug }: CampaignDashboardProps)
         {sections.videos && (
           <VideosSection categories={data.videoCategories} videos={data.videos} />
         )}
-        {sections.analytics && <AnalyticsSection analytics={data.analytics} />}
         {sections.submissions && (
           <SubmissionsSection submissions={data.submissions} summary={data.submissionSummary} />
         )}

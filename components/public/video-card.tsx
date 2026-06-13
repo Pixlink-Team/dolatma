@@ -1,15 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
-import { ChevronDown, ChevronUp, History, Play } from "lucide-react";
+import { ChevronDown, ChevronUp, Download, History, Play } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { VideoModal } from "@/components/media/video-modal";
+import { VideoThumbnail } from "@/components/media/video-thumbnail";
 import type { VideoVersion } from "@/lib/types";
-import { formatPersianDate, getStatusLabel } from "@/lib/utils";
-import { cn } from "@/lib/utils";
+import { downloadMedia, getFilenameFromUrl, hasDistinctThumbnail } from "@/lib/media-utils";
+import { cn, formatPersianDate, getStatusLabel } from "@/lib/utils";
 
 interface VideoCardProps {
   title: string;
@@ -27,19 +27,37 @@ export function VideoCard({ title, description, versions }: VideoCardProps) {
 
   if (!finalVersion) return null;
 
+  const handleDownloadVideo = (version: VideoVersion, event: React.MouseEvent) => {
+    event.stopPropagation();
+    void downloadMedia(
+      version.videoUrl,
+      getFilenameFromUrl(version.videoUrl, `${title}-v${version.versionNumber}.mp4`)
+    );
+  };
+
+  const handleDownloadCover = (version: VideoVersion, event: React.MouseEvent) => {
+    event.stopPropagation();
+    if (!hasDistinctThumbnail(version.thumbnailUrl, version.videoUrl)) return;
+    void downloadMedia(
+      version.thumbnailUrl,
+      getFilenameFromUrl(version.thumbnailUrl, `${title}-v${version.versionNumber}-cover.jpg`)
+    );
+  };
+
   return (
     <>
-      <Card className="overflow-hidden">
+      <Card className="overflow-hidden w-full max-w-md">
         <div
           className="relative aspect-video bg-muted cursor-pointer group"
           onClick={() => setActiveVersion(finalVersion)}
         >
-          {finalVersion.thumbnailUrl ? (
-            <Image src={finalVersion.thumbnailUrl} alt={title} fill className="object-cover transition-transform group-hover:scale-105" sizes="(max-width: 768px) 100vw, 33vw" />
-          ) : (
-            <div className="flex h-full items-center justify-center text-muted-foreground text-sm">بدون تصویر</div>
-          )}
-          <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/30 transition-colors">
+          <VideoThumbnail
+            videoUrl={finalVersion.videoUrl}
+            thumbnailUrl={finalVersion.thumbnailUrl}
+            alt={title}
+            className="object-cover transition-transform group-hover:scale-105"
+          />
+          <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/30 transition-colors pointer-events-none">
             <Play className="h-12 w-12 text-white" />
           </div>
           {finalVersion.isFinal && (
@@ -47,6 +65,30 @@ export function VideoCard({ title, description, versions }: VideoCardProps) {
               <Badge status="final">نسخه نهایی</Badge>
             </div>
           )}
+          <div className="absolute bottom-3 left-3 flex gap-1">
+            <Button
+              type="button"
+              variant="secondary"
+              size="icon"
+              className="h-8 w-8 opacity-90"
+              onClick={(e) => handleDownloadVideo(finalVersion, e)}
+              aria-label="دانلود ویدیو"
+            >
+              <Download className="h-4 w-4" />
+            </Button>
+            {hasDistinctThumbnail(finalVersion.thumbnailUrl, finalVersion.videoUrl) && (
+              <Button
+                type="button"
+                variant="secondary"
+                size="icon"
+                className="h-8 w-8 opacity-90"
+                onClick={(e) => handleDownloadCover(finalVersion, e)}
+                aria-label="دانلود کاور"
+              >
+                <Download className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
         </div>
 
         <CardContent className="p-4 space-y-3">
@@ -68,18 +110,31 @@ export function VideoCard({ title, description, versions }: VideoCardProps) {
               </Button>
               <div className={cn("grid gap-2 overflow-hidden transition-all duration-300", expanded ? "mt-3 max-h-96 opacity-100" : "max-h-0 opacity-0")}>
                 {previousVersions.map((version) => (
-                  <button key={version.id} type="button" onClick={() => setActiveVersion(version)} className="flex items-center gap-3 p-2 rounded-lg border bg-muted/30 hover:bg-muted/60 transition-colors text-right w-full">
-                    <div className="relative w-16 h-10 shrink-0 rounded overflow-hidden bg-muted">
-                      {version.thumbnailUrl && <Image src={version.thumbnailUrl} alt="" fill className="object-cover" sizes="64px" />}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-xs font-medium">نسخه {version.versionNumber}</span>
-                        <Badge status={version.status} className="text-[10px] shrink-0">{getStatusLabel(version.status)}</Badge>
+                  <div key={version.id} className="flex items-center gap-2 p-2 rounded-lg border bg-muted/30">
+                    <button
+                      type="button"
+                      onClick={() => setActiveVersion(version)}
+                      className="flex items-center gap-3 flex-1 min-w-0 text-right"
+                    >
+                      <div className="relative w-16 h-10 shrink-0 rounded overflow-hidden bg-muted">
+                        <VideoThumbnail
+                          videoUrl={version.videoUrl}
+                          thumbnailUrl={version.thumbnailUrl}
+                          alt={`نسخه ${version.versionNumber}`}
+                        />
                       </div>
-                      <p className="text-[11px] text-muted-foreground mt-0.5">{formatPersianDate(version.date)}</p>
-                    </div>
-                  </button>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-medium">نسخه {version.versionNumber}</span>
+                          <Badge status={version.status} className="text-[10px] shrink-0">{getStatusLabel(version.status)}</Badge>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground mt-0.5">{formatPersianDate(version.date)}</p>
+                      </div>
+                    </button>
+                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={(e) => handleDownloadVideo(version, e)}>
+                      <Download className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
                 ))}
               </div>
             </div>
@@ -92,6 +147,7 @@ export function VideoCard({ title, description, versions }: VideoCardProps) {
           open={!!activeVersion}
           onOpenChange={(open) => !open && setActiveVersion(null)}
           videoUrl={activeVersion.videoUrl}
+          thumbnailUrl={activeVersion.thumbnailUrl}
           title={title}
           versionNumber={activeVersion.versionNumber}
           date={activeVersion.date}

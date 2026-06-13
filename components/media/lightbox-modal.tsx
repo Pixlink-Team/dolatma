@@ -1,8 +1,11 @@
 "use client";
 
 import Image from "next/image";
+import { Download } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { downloadMedia, getFilenameFromUrl } from "@/lib/media-utils";
 import { formatPersianDate, getStatusLabel } from "@/lib/utils";
 
 interface LightboxModalProps {
@@ -28,6 +31,11 @@ export function LightboxModal({
   status,
   isFinal,
 }: LightboxModalProps) {
+  const handleDownload = () => {
+    const suffix = versionNumber ? `-v${versionNumber}` : "";
+    void downloadMedia(imageUrl, getFilenameFromUrl(imageUrl, `${title}${suffix}.jpg`));
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl p-0 overflow-hidden">
@@ -52,14 +60,16 @@ export function LightboxModal({
             sizes="(max-width: 768px) 100vw, 768px"
           />
         </div>
-        {(date || notes) && (
-          <div className="p-4 space-y-2 border-t">
-            {date && (
-              <p className="text-sm text-muted-foreground">{formatPersianDate(date)}</p>
-            )}
-            {notes && <p className="text-sm">{notes}</p>}
-          </div>
-        )}
+        <div className="p-4 space-y-3 border-t">
+          <Button variant="outline" size="sm" onClick={handleDownload} className="gap-2">
+            <Download className="h-4 w-4" />
+            دانلود تصویر
+          </Button>
+          {date && (
+            <p className="text-sm text-muted-foreground">{formatPersianDate(date)}</p>
+          )}
+          {notes && <p className="text-sm">{notes}</p>}
+        </div>
       </DialogContent>
     </Dialog>
   );

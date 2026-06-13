@@ -1,13 +1,17 @@
 "use client";
 
+import { Download } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { downloadMedia, getFilenameFromUrl, hasDistinctThumbnail } from "@/lib/media-utils";
 import { formatPersianDate, getStatusLabel, isValidUrl } from "@/lib/utils";
 
 interface VideoModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   videoUrl: string;
+  thumbnailUrl?: string | null;
   title: string;
   versionNumber?: number;
   date?: string;
@@ -25,6 +29,7 @@ export function VideoModal({
   open,
   onOpenChange,
   videoUrl,
+  thumbnailUrl,
   title,
   versionNumber,
   date,
@@ -34,6 +39,17 @@ export function VideoModal({
   duration,
 }: VideoModalProps) {
   const validUrl = isValidUrl(videoUrl);
+  const suffix = versionNumber ? `-v${versionNumber}` : "";
+  const showCoverDownload = hasDistinctThumbnail(thumbnailUrl, videoUrl);
+
+  const handleDownloadVideo = () => {
+    void downloadMedia(videoUrl, getFilenameFromUrl(videoUrl, `${title}${suffix}.mp4`));
+  };
+
+  const handleDownloadCover = () => {
+    if (!thumbnailUrl) return;
+    void downloadMedia(thumbnailUrl, getFilenameFromUrl(thumbnailUrl, `${title}${suffix}-cover.jpg`));
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -56,12 +72,7 @@ export function VideoModal({
         <div className="relative aspect-video w-full bg-black">
           {validUrl ? (
             isDirectVideo(videoUrl) ? (
-              <video
-                src={videoUrl}
-                controls
-                className="h-full w-full"
-                playsInline
-              />
+              <video src={videoUrl} controls className="h-full w-full" playsInline />
             ) : (
               <iframe
                 src={videoUrl}
@@ -77,14 +88,24 @@ export function VideoModal({
             </div>
           )}
         </div>
-        {(date || notes) && (
-          <div className="p-4 space-y-2 border-t">
-            {date && (
-              <p className="text-sm text-muted-foreground">{formatPersianDate(date)}</p>
+        <div className="p-4 space-y-3 border-t">
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" size="sm" onClick={handleDownloadVideo} className="gap-2" disabled={!validUrl}>
+              <Download className="h-4 w-4" />
+              دانلود ویدیو
+            </Button>
+            {showCoverDownload && (
+              <Button variant="outline" size="sm" onClick={handleDownloadCover} className="gap-2">
+                <Download className="h-4 w-4" />
+                دانلود کاور
+              </Button>
             )}
-            {notes && <p className="text-sm">{notes}</p>}
           </div>
-        )}
+          {date && (
+            <p className="text-sm text-muted-foreground">{formatPersianDate(date)}</p>
+          )}
+          {notes && <p className="text-sm">{notes}</p>}
+        </div>
       </DialogContent>
     </Dialog>
   );

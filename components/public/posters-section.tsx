@@ -26,8 +26,8 @@ export function PostersSection({ categories, posters }: PostersSectionProps) {
         description="پوسترهای کمپین — روی هر پوستر کلیک کنید و نسخه‌های قبلی را در کارت ببینید"
       />
 
-      <Tabs defaultValue={defaultCategory}>
-        <TabsList className="mb-6 flex-wrap h-auto gap-1">
+      <Tabs defaultValue={defaultCategory} dir="rtl">
+        <TabsList className="mb-6 flex-wrap h-auto gap-1 w-full justify-start">
           {activeCategories.map((cat) => (
             <TabsTrigger key={cat.id} value={cat.id}>{cat.title}</TabsTrigger>
           ))}
@@ -37,7 +37,7 @@ export function PostersSection({ categories, posters }: PostersSectionProps) {
           const categoryPosters = posters.filter((p) => p.categoryId === cat.id);
           return (
             <TabsContent key={cat.id} value={cat.id}>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 justify-items-start">
                 {categoryPosters.map((poster) => (
                   <PosterCard
                     key={poster.id}

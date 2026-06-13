@@ -22,8 +22,8 @@ export function VideosSection({ categories, videos }: VideosSectionProps) {
           ویدیویی ثبت نشده است.
         </div>
       ) : (
-        <Tabs defaultValue={defaultCategory}>
-          <TabsList className="mb-4">
+        <Tabs defaultValue={defaultCategory} dir="rtl">
+          <TabsList className="mb-4 w-full justify-start">
             {categories.map((cat) => (
               <TabsTrigger key={cat.id} value={cat.id}>{cat.title}</TabsTrigger>
             ))}
@@ -36,7 +36,7 @@ export function VideosSection({ categories, videos }: VideosSectionProps) {
                 {categoryVideos.length === 0 ? (
                   <p className="text-muted-foreground text-sm">ویدیویی در این دسته وجود ندارد.</p>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 justify-items-start">
                     {categoryVideos.map((video) => (
                       <VideoCard key={video.id} title={video.title} description={video.description} versions={video.versions} />
                     ))}

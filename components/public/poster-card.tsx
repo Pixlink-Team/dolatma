@@ -2,14 +2,14 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { ChevronDown, ChevronUp, History } from "lucide-react";
+import { ChevronDown, ChevronUp, Download, History } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { LightboxModal } from "@/components/media/lightbox-modal";
 import type { PosterVersion } from "@/lib/types";
-import { formatPersianDate, getStatusLabel } from "@/lib/utils";
-import { cn } from "@/lib/utils";
+import { downloadMedia, getFilenameFromUrl } from "@/lib/media-utils";
+import { cn, formatPersianDate, getStatusLabel } from "@/lib/utils";
 
 interface PosterCardProps {
   title: string;
@@ -27,15 +27,23 @@ export function PosterCard({ title, description, versions }: PosterCardProps) {
 
   if (!finalVersion) return null;
 
+  const handleDownload = (version: PosterVersion, event: React.MouseEvent) => {
+    event.stopPropagation();
+    void downloadMedia(
+      version.imageUrl,
+      getFilenameFromUrl(version.imageUrl, `${title}-v${version.versionNumber}.jpg`)
+    );
+  };
+
   return (
     <>
-      <Card className="overflow-hidden">
+      <Card className="overflow-hidden w-full max-w-sm">
         <div
           className="relative aspect-[3/4] max-h-80 bg-muted cursor-pointer group"
           onClick={() => setLightboxVersion(finalVersion)}
         >
           <Image
-            src={finalVersion.thumbnailUrl}
+            src={finalVersion.thumbnailUrl || finalVersion.imageUrl}
             alt={title}
             fill
             className="object-cover transition-transform group-hover:scale-105"
@@ -46,11 +54,21 @@ export function PosterCard({ title, description, versions }: PosterCardProps) {
               <Badge status="final">نسخه نهایی</Badge>
             </div>
           )}
-          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center gap-2">
             <span className="opacity-0 group-hover:opacity-100 text-white text-sm font-medium bg-black/50 px-3 py-1.5 rounded-lg transition-opacity">
               مشاهده
             </span>
           </div>
+          <Button
+            type="button"
+            variant="secondary"
+            size="icon"
+            className="absolute bottom-3 left-3 h-8 w-8 opacity-90"
+            onClick={(e) => handleDownload(finalVersion, e)}
+            aria-label="دانلود تصویر"
+          >
+            <Download className="h-4 w-4" />
+          </Button>
         </div>
 
         <CardContent className="p-4 space-y-3">
@@ -91,36 +109,47 @@ export function PosterCard({ title, description, versions }: PosterCardProps) {
                 )}
               >
                 {previousVersions.map((version) => (
-                  <button
+                  <div
                     key={version.id}
-                    type="button"
-                    onClick={() => setLightboxVersion(version)}
-                    className="flex items-center gap-3 p-2 rounded-lg border bg-muted/30 hover:bg-muted/60 transition-colors text-right w-full"
+                    className="flex items-center gap-3 p-2 rounded-lg border bg-muted/30 hover:bg-muted/60 transition-colors"
                   >
-                    <div className="relative w-12 h-14 shrink-0 rounded overflow-hidden bg-muted">
-                      <Image
-                        src={version.thumbnailUrl}
-                        alt={`نسخه ${version.versionNumber}`}
-                        fill
-                        className="object-cover"
-                        sizes="48px"
-                      />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-xs font-medium">نسخه {version.versionNumber}</span>
-                        <Badge status={version.status} className="text-[10px] shrink-0">
-                          {getStatusLabel(version.status)}
-                        </Badge>
+                    <button
+                      type="button"
+                      onClick={() => setLightboxVersion(version)}
+                      className="flex items-center gap-3 flex-1 min-w-0 text-right"
+                    >
+                      <div className="relative w-12 h-14 shrink-0 rounded overflow-hidden bg-muted">
+                        <Image
+                          src={version.thumbnailUrl || version.imageUrl}
+                          alt={`نسخه ${version.versionNumber}`}
+                          fill
+                          className="object-cover"
+                          sizes="48px"
+                        />
                       </div>
-                      <p className="text-[11px] text-muted-foreground mt-0.5">
-                        {formatPersianDate(version.date)}
-                      </p>
-                      {version.notes && (
-                        <p className="text-[11px] text-muted-foreground line-clamp-1 mt-0.5">{version.notes}</p>
-                      )}
-                    </div>
-                  </button>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-medium">نسخه {version.versionNumber}</span>
+                          <Badge status={version.status} className="text-[10px] shrink-0">
+                            {getStatusLabel(version.status)}
+                          </Badge>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground mt-0.5">
+                          {formatPersianDate(version.date)}
+                        </p>
+                      </div>
+                    </button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="shrink-0 h-8 w-8"
+                      onClick={(e) => handleDownload(version, e)}
+                      aria-label={`دانلود نسخه ${version.versionNumber}`}
+                    >
+                      <Download className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
                 ))}
               </div>
             </div>

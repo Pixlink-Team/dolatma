@@ -411,7 +411,7 @@ export async function pgSaveVideoVersion(data: Partial<VideoVersion> & { id?: st
       ${data.videoId},
       ${versionNumber},
       ${data.videoUrl ?? ""},
-      ${data.thumbnailUrl ?? ""},
+      ${data.thumbnailUrl || data.videoUrl || ""},
       ${data.duration ?? null},
       ${data.notes ?? null},
       ${status},

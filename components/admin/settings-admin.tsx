@@ -43,7 +43,7 @@ const schema = z.object({
   coverImageUrl: z.string().optional(),
   published: z.boolean(),
   features: featuresSchema,
-  analyticsSource: z.enum(["manual", "metabase"]),
+  analyticsSource: z.enum(["manual", "metabase", "hybrid"]),
   metabase: metabaseSchema,
 });
 
@@ -88,17 +88,17 @@ export function SettingsAdmin({ initialSettings }: SettingsAdminProps) {
 
   const onSubmit = form.handleSubmit((data) => {
     const analyticsConfig: AnalyticsConfig =
-      data.analyticsSource === "metabase"
-        ? {
-            source: "metabase",
+      data.analyticsSource === "manual"
+        ? { source: "manual" }
+        : {
+            source: data.analyticsSource,
             metabase: {
               url: data.metabase.url ?? "",
               username: data.metabase.username ?? "",
               password: data.metabase.password ?? "",
               questionId: Number(data.metabase.questionId ?? 0),
             },
-          }
-        : { source: "manual" };
+          };
 
     startTransition(async () => {
       await updateSettingsAction({
@@ -168,16 +168,17 @@ export function SettingsAdmin({ initialSettings }: SettingsAdminProps) {
               <Label className="text-sm font-semibold">آمار سایت (Metabase)</Label>
               <div>
                 <Label>منبع داده</Label>
-                <Select value={analyticsSource} onValueChange={(v) => form.setValue("analyticsSource", v as "manual" | "metabase")}>
+                <Select value={analyticsSource} onValueChange={(v) => form.setValue("analyticsSource", v as "manual" | "metabase" | "hybrid")}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="manual">دستی (از پنل آمار)</SelectItem>
-                    <SelectItem value="metabase">Metabase</SelectItem>
+                    <SelectItem value="manual">فقط دستی (پنل آمار)</SelectItem>
+                    <SelectItem value="hybrid">دستی + Metabase (زنده)</SelectItem>
+                    <SelectItem value="metabase">فقط Metabase</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
-              {analyticsSource === "metabase" && (
+              {(analyticsSource === "metabase" || analyticsSource === "hybrid") && (
                 <div className="space-y-3">
                   <div><Label>آدرس Metabase</Label><Input {...form.register("metabase.url")} dir="ltr" placeholder="https://metabase.example.com" /></div>
                   <div><Label>نام کاربری</Label><Input {...form.register("metabase.username")} dir="ltr" autoComplete="off" /></div>

@@ -15,7 +15,7 @@ export interface CampaignFeatures {
   submissions: boolean;
 }
 
-export type AnalyticsSource = "manual" | "metabase";
+export type AnalyticsSource = "manual" | "metabase" | "hybrid";
 
 export interface MetabaseConfig {
   url: string;

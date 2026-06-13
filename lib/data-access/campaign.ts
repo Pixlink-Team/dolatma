@@ -29,13 +29,22 @@ async function resolveAnalyticsMetrics(
   settings: CampaignSettings,
   dbMetrics: AnalyticsMetric[]
 ): Promise<AnalyticsMetric[]> {
-  const metabase = settings.analyticsConfig?.metabase;
-  if (settings.analyticsConfig?.source !== "metabase" || !metabase?.url || !metabase.questionId) {
+  const config = settings.analyticsConfig;
+  const metabase = config?.metabase;
+  const useMetabase =
+    (config?.source === "metabase" || config?.source === "hybrid") &&
+    Boolean(metabase?.url && metabase?.questionId);
+
+  if (!useMetabase || !metabase) {
     return dbMetrics;
   }
 
   try {
-    return await fetchMetabaseMetrics(settings.id, metabase);
+    const liveMetrics = await fetchMetabaseMetrics(settings.id, metabase);
+    if (config.source === "hybrid") {
+      return [...dbMetrics, ...liveMetrics];
+    }
+    return liveMetrics;
   } catch (error) {
     console.error("Metabase analytics fetch failed:", error);
     return dbMetrics;

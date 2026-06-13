@@ -84,7 +84,7 @@ export function BillboardSection({ billboards }: BillboardSectionProps) {
           بیلبوردی یافت نشد.
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 justify-items-start">
           {filtered.map((billboard) => (
             <BillboardCard key={billboard.id} billboard={billboard} />
           ))}
