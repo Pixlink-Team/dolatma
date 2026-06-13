@@ -18,7 +18,7 @@ RUN DATABASE_URL= npm run build
 
 FROM base AS runner
 ENV NODE_ENV=production
-ENV PORT=3000
+ENV PORT=3030
 ENV HOSTNAME=0.0.0.0
 ENV UPLOAD_DIR=/app/data/uploads
 
@@ -33,6 +33,6 @@ COPY --from=builder /app/scripts ./scripts
 RUN mkdir -p /app/data/uploads && chown -R nextjs:nodejs /app/data/uploads /app/public
 RUN chmod +x ./scripts/docker-entrypoint.sh
 
-EXPOSE 3000
+EXPOSE 3030
 
 CMD ["./scripts/docker-entrypoint.sh"]
