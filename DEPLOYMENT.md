@@ -104,3 +104,40 @@ Usually the app never started because DB auth failed (infinite wait loop). Fix t
 | DB connection refused | `POSTGRES_HOST` is `dashboard-postgres` inside compose |
 | Port conflict on server | Use `expose: 3030` in Coolify compose, not `5432:5432` for Postgres |
 | Uploads lost on redeploy | Volume `dashboard_uploads` mounted at `/app/data/uploads` |
+
+### Images missing — text only on site
+
+Uploaded media is stored on disk at `/app/data/uploads`, not in PostgreSQL. DB only stores paths like `/api/files/uuid.jpg`.
+
+**Diagnose:**
+
+```bash
+# App container name
+docker ps | grep dashboard-app
+
+# Files on current volume
+docker exec <APP_CONTAINER> ls -la /app/data/uploads | head
+
+# Sample URLs stored in DB
+docker exec <PG_CONTAINER> psql -U dashboard dashboard -c \
+  "SELECT thumbnail_url FROM billboards WHERE thumbnail_url LIKE '/api/files/%' LIMIT 5;"
+```
+
+**Restore from old uploads volume** (same project prefix, often `*_uploads-data`):
+
+```bash
+docker volume ls | grep -E "upload|c7addyxuet73uzli65odvhxr"
+
+docker run --rm \
+  -v c7addyxuet73uzli65odvhxr_uploads-data:/from:ro \
+  -v c7addyxuet73uzli65odvhxr_dashboard-uploads:/to \
+  alpine sh -c "cp -an /from/. /to/ && ls -la /to | head"
+```
+
+Then restart the app container. Test one file:
+
+```bash
+curl -I https://campain.pixlink.ir/api/files/<filename-from-db>
+```
+
+Expect `HTTP/1.1 200`. If `404`, the file is not on the volume.

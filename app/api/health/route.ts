@@ -26,6 +26,7 @@ export async function GET() {
         database: dbOk ? "connected" : "disconnected",
         mode,
         publishedCampaigns: campaignCount,
+        uploadsDir: process.env.UPLOAD_DIR ?? null,
       },
       { status: dbOk ? 200 : 503 }
     );
