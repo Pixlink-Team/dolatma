@@ -1,7 +1,6 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { parseISODateLocal } from "@/lib/jalali";
-import { resolveDatabaseUrl } from "@/lib/db/resolve-database-url";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -157,7 +156,7 @@ export function isValidUrl(url: string): boolean {
 
 export function isPostgresConfigured(): boolean {
   if (process.env.NEXT_PUBLIC_USE_MOCK_DATA === "true") return false;
-  return Boolean(resolveDatabaseUrl());
+  return Boolean(process.env.DATABASE_URL);
 }
 
 export function isSupabaseConfigured(): boolean {

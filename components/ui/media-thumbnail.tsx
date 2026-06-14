@@ -1,6 +1,6 @@
 "use client";
 
-import { OptimizedMediaImage } from "@/components/ui/optimized-media-image";
+import Image from "next/image";
 import { MediaPlaceholder } from "@/components/ui/media-placeholder";
 import { cn } from "@/lib/utils";
 
@@ -28,7 +28,7 @@ export function MediaThumbnail({
   }
 
   return (
-    <OptimizedMediaImage
+    <Image
       src={src}
       alt={alt}
       fill={fill}

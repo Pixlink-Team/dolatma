@@ -5,9 +5,6 @@ const nextConfig: NextConfig = {
   output: "standalone",
   outputFileTracingRoot: path.join(__dirname),
   images: {
-    localPatterns: [
-      { pathname: "/api/files/**" },
-    ],
     remotePatterns: [
       { protocol: "https", hostname: "**" },
       { protocol: "http", hostname: "localhost" },

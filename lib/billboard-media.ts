@@ -1,12 +1,11 @@
 import type { Billboard } from "@/lib/types";
-import { normalizeUploadMediaUrl } from "@/lib/uploads";
 
 export const BILLBOARD_PLACEHOLDER_IMAGE = "/images/billboard-placeholder.svg";
 
 const INVALID_BILLBOARD_IMAGE_HINTS = ["via.placeholder.com", "placeholder.com"];
 
 function normalizeBillboardImageUrl(url?: string | null): string {
-  return normalizeUploadMediaUrl(url);
+  return url?.trim() ?? "";
 }
 
 function isInvalidBillboardImageUrl(url: string): boolean {

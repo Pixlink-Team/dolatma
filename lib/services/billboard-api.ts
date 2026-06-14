@@ -5,18 +5,11 @@ import {
   type ExternalCampaign,
   type ExternalCampaignsResponse,
 } from "@/lib/models/billboard-api";
-import { fetchWithTimeout } from "@/lib/fetch-with-timeout";
 import { billboardApiRoutes } from "@/lib/routes/billboard-api";
 import type { Billboard } from "@/lib/types";
 
-const BILLBOARD_FETCH_TIMEOUT_MS = 8_000;
-const MAX_BILLBOARD_PAGES = 10;
-
 async function fetchJson<T>(url: string): Promise<T> {
-  const response = await fetchWithTimeout(url, {
-    cache: "no-store",
-    timeoutMs: BILLBOARD_FETCH_TIMEOUT_MS,
-  });
+  const response = await fetch(url, { cache: "no-store" });
   if (!response.ok) {
     throw new Error(`Billboard API request failed: ${response.status}`);
   }
@@ -41,7 +34,7 @@ export async function fetchExternalBillboards(
 export async function fetchAllExternalBillboards(campaignId: string): Promise<ExternalBillboard[]> {
   const firstPage = await fetchExternalBillboards(campaignId, 1, 50);
   const items = [...(firstPage.data ?? [])];
-  const lastPage = Math.min(firstPage.meta?.last_page ?? 1, MAX_BILLBOARD_PAGES);
+  const lastPage = firstPage.meta?.last_page ?? 1;
 
   for (let page = 2; page <= lastPage; page += 1) {
     const nextPage = await fetchExternalBillboards(campaignId, page, 50);

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { OptimizedMediaImage } from "@/components/ui/optimized-media-image";
+import Image from "next/image";
 import { Download } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
@@ -68,7 +68,7 @@ export function LightboxModal({
 
         <div className="relative mx-4 aspect-[3/4] max-h-[55vh] w-auto bg-muted">
           {activeVersion.imageUrl ? (
-            <OptimizedMediaImage
+            <Image
               key={activeVersion.id}
               src={activeVersion.imageUrl}
               alt={`${title} — نسخه ${activeVersion.versionNumber}`}
@@ -98,7 +98,7 @@ export function LightboxModal({
             onSelect={setActiveVersionId}
             renderThumb={(version) =>
               version.thumbnailUrl || version.imageUrl ? (
-                <OptimizedMediaImage
+                <Image
                   src={version.thumbnailUrl || version.imageUrl}
                   alt=""
                   fill

@@ -10,7 +10,6 @@ import type {
   VideoVersion,
 } from "@/lib/types";
 import { normalizeAnalyticsConfig } from "@/lib/analytics-config";
-import { normalizeUploadMediaUrl } from "@/lib/uploads";
 
 function toDateString(value: unknown): string {
   if (value instanceof Date) {
@@ -34,7 +33,7 @@ export function mapSettingsFromDb(row: any): CampaignSettings {
     status: row.status,
     startDate: toDateString(row.start_date),
     endDate: toDateString(row.end_date),
-    coverImageUrl: normalizeUploadMediaUrl(row.cover_image_url),
+    coverImageUrl: row.cover_image_url,
     published: row.published ?? false,
     features:
       typeof row.features === "string"
@@ -79,8 +78,8 @@ export function mapBillboardFromDb(row: any): Billboard {
     city: row.city,
     location: row.location,
     date: toDateString(row.date),
-    thumbnailUrl: normalizeUploadMediaUrl(row.thumbnail_url),
-    imageUrl: normalizeUploadMediaUrl(row.image_url ?? row.thumbnail_url),
+    thumbnailUrl: row.thumbnail_url,
+    imageUrl: row.image_url ?? row.thumbnail_url,
     externalUrl: row.external_url,
     latitude: row.latitude != null ? Number(row.latitude) : null,
     longitude: row.longitude != null ? Number(row.longitude) : null,
@@ -131,8 +130,8 @@ export function mapPosterVersionFromDb(row: any): PosterVersion {
     id: row.id,
     posterId: row.poster_id,
     versionNumber: row.version_number,
-    imageUrl: normalizeUploadMediaUrl(row.image_url),
-    thumbnailUrl: normalizeUploadMediaUrl(row.thumbnail_url),
+    imageUrl: row.image_url,
+    thumbnailUrl: row.thumbnail_url,
     notes: row.notes,
     status: row.status,
     isFinal: row.is_final,
@@ -163,7 +162,7 @@ export function mapVideoVersionFromDb(row: any): VideoVersion {
     videoId: row.video_id,
     versionNumber: row.version_number,
     videoUrl: row.video_url,
-    thumbnailUrl: normalizeUploadMediaUrl(row.thumbnail_url),
+    thumbnailUrl: row.thumbnail_url,
     duration: row.duration,
     notes: row.notes,
     status: row.status,
@@ -203,7 +202,7 @@ export function mapSubmissionFromDb(row: any): CampaignSubmission {
     participantEmail: row.participant_email,
     title: row.title,
     text: row.text,
-    mediaUrl: normalizeUploadMediaUrl(row.media_url),
+    mediaUrl: row.media_url,
     status: row.status,
     published: row.published,
     createdAt: toIsoString(row.created_at),

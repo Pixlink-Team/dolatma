@@ -1,8 +1,5 @@
 import type { AnalyticsChannel, AnalyticsMetric, ChannelAnalyticsConfig, MetabaseConfig, TrafficSource, DeviceType } from "@/lib/types";
 import { createHmac } from "crypto";
-import { fetchWithTimeout } from "@/lib/fetch-with-timeout";
-
-const METABASE_FETCH_TIMEOUT_MS = 8_000;
 
 interface MetabaseRow {
   [key: string]: unknown;
@@ -71,7 +68,7 @@ export async function fetchMetabaseMetrics(
   channel: AnalyticsChannel = "site"
 ): Promise<AnalyticsMetric[]> {
   const baseUrl = config.url.replace(/\/$/, "");
-  const sessionResponse = await fetchWithTimeout(`${baseUrl}/api/session`, {
+  const sessionResponse = await fetch(`${baseUrl}/api/session`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -79,7 +76,6 @@ export async function fetchMetabaseMetrics(
       password: config.password,
     }),
     cache: "no-store",
-    timeoutMs: METABASE_FETCH_TIMEOUT_MS,
   });
 
   if (!sessionResponse.ok) {
@@ -94,7 +90,7 @@ export async function fetchMetabaseMetrics(
     throw new Error("Metabase session cookie missing");
   }
 
-  const queryResponse = await fetchWithTimeout(`${baseUrl}/api/card/${config.questionId}/query/json`, {
+  const queryResponse = await fetch(`${baseUrl}/api/card/${config.questionId}/query/json`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -102,7 +98,6 @@ export async function fetchMetabaseMetrics(
     },
     body: JSON.stringify({}),
     cache: "no-store",
-    timeoutMs: METABASE_FETCH_TIMEOUT_MS,
   });
 
   if (!queryResponse.ok) {

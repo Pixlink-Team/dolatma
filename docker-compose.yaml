@@ -1,71 +1,40 @@
-# Coolify / production compose — no host port conflicts with other apps on the same server.
-# Coolify routes traffic via reverse proxy; the app only exposes 3030 inside the stack.
-#
-# Database credentials: set POSTGRES_PASSWORD only (single source of truth).
-# Do NOT set a separate DATABASE_URL in Coolify unless you know what you are doing.
-
 services:
-  dashboard-postgres:
+  db:
     image: postgres:16-alpine
-    container_name: dashboard-postgres
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-dashboard}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dashboard}
       POSTGRES_DB: ${POSTGRES_DB:-dashboard}
     volumes:
-      - dashboard_postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\" && PGPASSWORD=\"$$POSTGRES_PASSWORD\" psql -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\" -c 'SELECT 1' >/dev/null 2>&1",
-        ]
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\" || exit 1"]
       interval: 5s
       timeout: 5s
       retries: 12
       start_period: 30s
-    networks:
-      - dashboard-net
 
-  dashboard-app:
+  app:
     build: .
-    container_name: dashboard-app
     restart: unless-stopped
     expose:
       - "3030"
     environment:
       NODE_ENV: production
       PORT: ${PORT:-3030}
-      HOSTNAME: 0.0.0.0
-      APP_URL: ${APP_URL:-https://campain.pixlink.ir}
-      SERVICE_FQDN_APP: ${SERVICE_FQDN_APP:-campain.pixlink.ir}
-      POSTGRES_HOST: dashboard-postgres
-      POSTGRES_PORT: "5432"
-      POSTGRES_USER: ${POSTGRES_USER:-dashboard}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dashboard}
-      POSTGRES_DB: ${POSTGRES_DB:-dashboard}
-      DATABASE_URL: postgres://${POSTGRES_USER:-dashboard}:${POSTGRES_PASSWORD:-dashboard}@dashboard-postgres:5432/${POSTGRES_DB:-dashboard}
+      DATABASE_URL: ${DATABASE_URL:-postgres://dashboard:dashboard@db:5432/dashboard}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@example.com}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-password}
       AUTH_SECRET: ${AUTH_SECRET:-change-this-secret-in-production}
       NEXT_PUBLIC_USE_MOCK_DATA: ${NEXT_PUBLIC_USE_MOCK_DATA:-false}
       UPLOAD_DIR: ${UPLOAD_DIR:-/app/data/uploads}
-      BILLBOARD_API_BASE_URL: ${BILLBOARD_API_BASE_URL:-https://billboard.pixlink.ir}
     volumes:
-      - dashboard_uploads:/app/data/uploads
+      - uploads_data:/app/data/uploads
     depends_on:
-      dashboard-postgres:
+      db:
         condition: service_healthy
-    networks:
-      - dashboard-net
-
-networks:
-  dashboard-net:
-    name: dashboard-info-net
 
 volumes:
-  dashboard_postgres_data:
-    name: dashboard_postgres_data
-  dashboard_uploads:
-    name: dashboard_uploads
+  postgres_data:
+  uploads_data:

@@ -1,12 +1,11 @@
 import postgres from "postgres";
-import { resolveDatabaseUrl } from "@/lib/db/resolve-database-url";
 
 declare global {
   var __postgresClient: ReturnType<typeof postgres> | undefined;
 }
 
 export function getSql() {
-  const databaseUrl = resolveDatabaseUrl();
+  const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) {
     throw new Error("DATABASE_URL is not configured");
   }

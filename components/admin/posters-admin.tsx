@@ -29,11 +29,10 @@ export function PostersAdmin({
   const router = useRouter();
   const [editorOpen, setEditorOpen] = useState(false);
   const [activePosterId, setActivePosterId] = useState<string | null>(null);
-  const [draftPoster, setDraftPoster] = useState<Poster | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const activePoster = activePosterId
-    ? initialPosters.find((poster) => poster.id === activePosterId) ?? draftPoster
+    ? initialPosters.find((poster) => poster.id === activePosterId) ?? null
     : null;
 
   const refresh = () => router.refresh();
@@ -42,16 +41,14 @@ export function PostersAdmin({
     if (editorOpen) window.scrollTo({ top: 0, behavior: "smooth" });
   }, [editorOpen]);
 
-  const openEditor = (posterId: string, draft?: Poster) => {
+  const openEditor = (posterId: string) => {
     setActivePosterId(posterId);
-    setDraftPoster(draft ?? null);
     setEditorOpen(true);
   };
 
   const closeEditor = () => {
     setEditorOpen(false);
     setActivePosterId(null);
-    setDraftPoster(null);
   };
 
   const handleCreatePoster = () => {
@@ -61,29 +58,18 @@ export function PostersAdmin({
     }
 
     const posterId = crypto.randomUUID();
-    const draft: Poster = {
-      id: posterId,
-      campaignId,
-      categoryId: initialCategories[0].id,
-      title: `پوستر ${initialPosters.length + 1}`,
-      description: "",
-      published: false,
-      sortOrder: initialPosters.length + 1,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
 
     startTransition(async () => {
       await savePosterAction({
         id: posterId,
         campaignId,
         categoryId: initialCategories[0].id,
-        title: draft.title,
+        title: `پوستر ${initialPosters.length + 1}`,
         description: "",
         published: false,
-        sortOrder: draft.sortOrder,
+        sortOrder: initialPosters.length + 1,
       });
-      openEditor(posterId, draft);
+      openEditor(posterId);
       toast.success("پوستر جدید — تصویر را آپلود کنید");
       refresh();
     });
@@ -133,15 +119,13 @@ export function PostersAdmin({
             <DialogTitle>{activePoster?.title ?? "ویرایش پوستر"}</DialogTitle>
           </DialogHeader>
           <div className="min-h-0 flex-1 overflow-hidden px-6 pb-4 pt-4">
-            {activePoster ? (
+            {activePoster && (
               <AdminPosterEditor
                 poster={activePoster}
                 versions={activeVersions}
                 categories={initialCategories}
                 onClose={closeEditor}
               />
-            ) : (
-              <p className="py-8 text-center text-sm text-muted-foreground">در حال بارگذاری...</p>
             )}
           </div>
         </DialogContent>

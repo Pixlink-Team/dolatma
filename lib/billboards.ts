@@ -22,16 +22,6 @@ function isManualBillboard(billboard: Billboard): boolean {
   return !isApiBillboard(billboard);
 }
 
-function isLiveBillboardSyncEnabled(): boolean {
-  return process.env.BILLBOARD_LIVE_SYNC !== "false";
-}
-
-export function getManualPublishedBillboards(dbBillboards: Billboard[]): Billboard[] {
-  return dbBillboards
-    .filter((billboard) => billboard.published && isManualBillboard(billboard))
-    .sort((a, b) => a.sortOrder - b.sortOrder);
-}
-
 export async function resolveAdminBillboards(
   settings: CampaignSettings,
   dbBillboards: Billboard[]
@@ -41,7 +31,7 @@ export async function resolveAdminBillboards(
     .sort((a, b) => a.sortOrder - b.sortOrder);
 
   const externalCampaignId = settings.billboardConfig?.externalCampaignId;
-  if (!externalCampaignId || !isLiveBillboardSyncEnabled()) {
+  if (!externalCampaignId) {
     return manualBillboards;
   }
 
@@ -65,10 +55,12 @@ export async function resolvePublicBillboards(
   settings: CampaignSettings,
   dbBillboards: Billboard[]
 ): Promise<Billboard[]> {
-  const manualBillboards = getManualPublishedBillboards(dbBillboards);
+  const manualBillboards = dbBillboards
+    .filter((billboard) => billboard.published && isManualBillboard(billboard))
+    .sort((a, b) => a.sortOrder - b.sortOrder);
 
   const externalCampaignId = settings.billboardConfig?.externalCampaignId;
-  if (!externalCampaignId || !isLiveBillboardSyncEnabled()) {
+  if (!externalCampaignId) {
     return manualBillboards;
   }
 
