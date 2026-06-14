@@ -1,0 +1,18 @@
+---
+description: After every task, run build and push to GitHub if successful — no need to ask.
+alwaysApply: true
+---
+
+# Build and Push Workflow
+
+After completing any user-requested code change in this project:
+
+1. Run `npm run build` before finishing.
+2. If the build fails, fix the issues and rebuild until it passes.
+3. If the build passes and there are uncommitted changes:
+   - Stage and commit with a concise message describing the why.
+   - Push to `origin main` immediately.
+4. Do not ask the user for permission to push after successful builds.
+5. Only skip push when there is nothing to commit and the branch is already up to date.
+
+Use PowerShell-compatible command chaining (`;` not `&&`) on Windows.
