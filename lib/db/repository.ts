@@ -2,6 +2,7 @@ import { getSql } from "@/lib/db/client";
 import {
   mapAnalyticsFromDb,
   mapBillboardFromDb,
+  mapCampaignFileFromDb,
   mapCategoryFromDb,
   mapPosterFromDb,
   mapPosterVersionFromDb,
@@ -13,6 +14,7 @@ import {
 import type {
   AnalyticsMetric,
   Billboard,
+  CampaignFile,
   CampaignSettings,
   CampaignSubmission,
   MediaCategory,
@@ -31,6 +33,7 @@ const defaultFeatures = {
   analytics: true,
   socialAnalytics: true,
   submissions: true,
+  files: true,
 };
 
 export async function pgGetAllCampaigns(): Promise<CampaignSettings[]> {
@@ -61,6 +64,7 @@ export async function pgGetAdminData(campaignId: string) {
     videoVersions,
     analytics,
     submissions,
+    files,
   ] = await Promise.all([
     sql`SELECT * FROM campaign_settings ORDER BY updated_at DESC`,
     sql`SELECT * FROM campaign_settings WHERE id = ${campaignId} LIMIT 1`,
@@ -81,6 +85,7 @@ export async function pgGetAdminData(campaignId: string) {
     `,
     sql`SELECT * FROM analytics_metrics WHERE campaign_id = ${campaignId} ORDER BY date DESC`,
     sql`SELECT * FROM campaign_submissions WHERE campaign_id = ${campaignId} ORDER BY created_at DESC`,
+    sql`SELECT * FROM campaign_files WHERE campaign_id = ${campaignId} ORDER BY sort_order`,
   ]);
 
   return {
@@ -95,6 +100,7 @@ export async function pgGetAdminData(campaignId: string) {
     videoVersions: videoVersions.map(mapVideoVersionFromDb),
     analytics: analytics.map(mapAnalyticsFromDb),
     submissions: submissions.map(mapSubmissionFromDb),
+    files: files.map(mapCampaignFileFromDb),
   };
 }
 
@@ -564,6 +570,7 @@ export async function pgGetPublicCampaignData(campaignId: string) {
     videoVersions,
     analytics,
     submissions,
+    files,
   ] = await Promise.all([
     sql`SELECT * FROM billboards WHERE campaign_id = ${campaignId} AND published = true ORDER BY sort_order`,
     sql`SELECT * FROM media_categories WHERE campaign_id = ${campaignId} AND type = 'poster' AND published = true ORDER BY sort_order`,
@@ -588,6 +595,11 @@ export async function pgGetPublicCampaignData(campaignId: string) {
       WHERE campaign_id = ${campaignId} AND published = true AND status = 'approved'
       ORDER BY created_at DESC
     `,
+    sql`
+      SELECT * FROM campaign_files
+      WHERE campaign_id = ${campaignId} AND published = true
+      ORDER BY sort_order
+    `,
   ]);
 
   return {
@@ -600,7 +612,52 @@ export async function pgGetPublicCampaignData(campaignId: string) {
     videoVersions: videoVersions.map(mapVideoVersionFromDb),
     analytics: analytics.map(mapAnalyticsFromDb),
     submissions: submissions.map(mapSubmissionFromDb),
+    files: files.map(mapCampaignFileFromDb),
   };
+}
+
+export async function pgSaveCampaignFile(data: Partial<CampaignFile> & { id?: string }) {
+  const sql = getSql();
+  const now = new Date().toISOString();
+  const id = data.id ?? generateId();
+
+  await sql`
+    INSERT INTO campaign_files (
+      id, campaign_id, title, description, file_url, file_name, mime_type, file_size,
+      published, sort_order, created_at, updated_at
+    ) VALUES (
+      ${id},
+      ${data.campaignId ?? ""},
+      ${data.title ?? ""},
+      ${data.description ?? null},
+      ${data.fileUrl ?? ""},
+      ${data.fileName ?? ""},
+      ${data.mimeType ?? "application/octet-stream"},
+      ${data.fileSize ?? 0},
+      ${data.published ?? false},
+      ${data.sortOrder ?? 0},
+      ${now},
+      ${now}
+    )
+    ON CONFLICT (id) DO UPDATE SET
+      title = EXCLUDED.title,
+      description = EXCLUDED.description,
+      file_url = EXCLUDED.file_url,
+      file_name = EXCLUDED.file_name,
+      mime_type = EXCLUDED.mime_type,
+      file_size = EXCLUDED.file_size,
+      published = EXCLUDED.published,
+      sort_order = EXCLUDED.sort_order,
+      updated_at = EXCLUDED.updated_at
+  `;
+
+  return { success: true, id };
+}
+
+export async function pgDeleteCampaignFile(id: string) {
+  const sql = getSql();
+  await sql`DELETE FROM campaign_files WHERE id = ${id}`;
+  return { success: true };
 }
 
 export async function pgGetPublishedCampaignBySlug(slug: string) {

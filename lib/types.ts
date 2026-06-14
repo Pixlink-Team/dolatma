@@ -14,6 +14,7 @@ export interface CampaignFeatures {
   analytics: boolean;
   socialAnalytics: boolean;
   submissions: boolean;
+  files: boolean;
 }
 
 export type AnalyticsSource = "manual" | "metabase" | "hybrid";
@@ -188,6 +189,21 @@ export interface CampaignSubmission {
   updatedAt: string;
 }
 
+export interface CampaignFile {
+  id: string;
+  campaignId: string;
+  title: string;
+  description?: string | null;
+  fileUrl: string;
+  fileName: string;
+  mimeType: string;
+  fileSize: number;
+  published: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface AdminUser {
   id: string;
   email: string;
@@ -245,6 +261,7 @@ export interface SectionVisibility {
   analytics: boolean;
   socialAnalytics: boolean;
   submissions: boolean;
+  files: boolean;
 }
 
 export interface PublicCampaignData {
@@ -260,5 +277,6 @@ export interface PublicCampaignData {
   socialAnalytics: AnalyticsSummary;
   submissions: CampaignSubmission[];
   submissionSummary: SubmissionSummary;
+  files: CampaignFile[];
   lastUpdated: string;
 }

@@ -21,6 +21,7 @@ const fullFeatures = {
   analytics: true,
   socialAnalytics: true,
   submissions: true,
+  files: true,
 };
 
 const defaultAnalyticsConfig = {
@@ -62,6 +63,7 @@ export const mockCampaigns: CampaignSettings[] = [
       analytics: false,
       socialAnalytics: false,
       submissions: false,
+      files: false,
     },
     analyticsConfig: defaultAnalyticsConfig,
     billboardConfig: {},
@@ -84,6 +86,7 @@ export const mockCampaigns: CampaignSettings[] = [
       analytics: false,
       socialAnalytics: true,
       submissions: false,
+      files: false,
     },
     analyticsConfig: defaultAnalyticsConfig,
     billboardConfig: {},
@@ -266,6 +269,7 @@ let mockStore = {
   videoVersions: [...mockVideoVersions],
   analytics: [...mockAnalyticsMetrics],
   submissions: [...mockSubmissions],
+  files: [] as import("./types").CampaignFile[],
 };
 
 export function getMockStore() {
@@ -290,6 +294,7 @@ export function getMockStoreForCampaign(campaignId: string) {
     ),
     analytics: store.analytics.filter((a) => a.campaignId === campaignId),
     submissions: store.submissions.filter((s) => s.campaignId === campaignId),
+    files: store.files.filter((file) => file.campaignId === campaignId),
   };
 }
 
@@ -305,6 +310,7 @@ export function resetMockStore() {
     videoVersions: [...mockVideoVersions],
     analytics: [...mockAnalyticsMetrics],
     submissions: [...mockSubmissions],
+    files: [],
   };
 }
 

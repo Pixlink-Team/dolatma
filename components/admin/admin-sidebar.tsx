@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   BarChart3,
+  FileStack,
   FileText,
   ImageIcon,
   LayoutDashboard,
@@ -34,6 +35,7 @@ const navItems = [
   { href: "/admin/billboards", label: "بیلبوردها", icon: LayoutGrid },
   { href: "/admin/posters", label: "پوسترها", icon: ImageIcon },
   { href: "/admin/videos", label: "ویدیوها", icon: Video },
+  { href: "/admin/files", label: "فایل‌ها", icon: FileStack },
   { href: "/admin/analytics", label: "آمار", icon: BarChart3 },
   { href: "/admin/submissions", label: "مشارکت‌ها", icon: FileText },
 ];

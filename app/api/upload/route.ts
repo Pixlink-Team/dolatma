@@ -10,6 +10,7 @@ import { getUploadPublicUrl, getUploadsDir } from "@/lib/uploads";
 
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 const MAX_VIDEO_BYTES = 100 * 1024 * 1024;
+const MAX_DOCUMENT_BYTES = 25 * 1024 * 1024;
 
 const IMAGE_TYPES = new Set([
   "image/jpeg",
@@ -22,6 +23,15 @@ const VIDEO_TYPES = new Set([
   "video/mp4",
   "video/webm",
   "video/quicktime",
+]);
+
+const DOCUMENT_TYPES = new Set([
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "text/plain",
 ]);
 
 function extensionForMime(mime: string): string {
@@ -40,6 +50,18 @@ function extensionForMime(mime: string): string {
       return ".webm";
     case "video/quicktime":
       return ".mov";
+    case "application/pdf":
+      return ".pdf";
+    case "application/msword":
+      return ".doc";
+    case "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+      return ".docx";
+    case "application/vnd.ms-excel":
+      return ".xls";
+    case "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
+      return ".xlsx";
+    case "text/plain":
+      return ".txt";
     default:
       return "";
   }
@@ -62,8 +84,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "فایلی ارسال نشده است" }, { status: 400 });
   }
 
-  const allowedTypes = kind === "video" ? VIDEO_TYPES : IMAGE_TYPES;
-  const maxBytes = kind === "video" ? MAX_VIDEO_BYTES : MAX_IMAGE_BYTES;
+  const allowedTypes =
+    kind === "video" ? VIDEO_TYPES : kind === "document" ? DOCUMENT_TYPES : IMAGE_TYPES;
+  const maxBytes =
+    kind === "video"
+      ? MAX_VIDEO_BYTES
+      : kind === "document"
+        ? MAX_DOCUMENT_BYTES
+        : MAX_IMAGE_BYTES;
 
   if (!allowedTypes.has(file.type)) {
     return NextResponse.json({ error: "نوع فایل مجاز نیست" }, { status: 400 });
@@ -82,5 +110,10 @@ export async function POST(request: Request) {
   const buffer = Buffer.from(await file.arrayBuffer());
   await writeFile(`${uploadsDir}/${filename}`, buffer);
 
-  return NextResponse.json({ url: getUploadPublicUrl(filename) });
+  return NextResponse.json({
+    url: getUploadPublicUrl(filename),
+    fileName: file.name,
+    fileSize: file.size,
+    mimeType: file.type,
+  });
 }

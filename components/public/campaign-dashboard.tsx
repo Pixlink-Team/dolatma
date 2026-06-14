@@ -22,6 +22,7 @@ import { VideosSection } from "@/components/public/videos-section";
 import { AnalyticsSection } from "@/components/public/analytics-section";
 import { SocialAnalyticsSection } from "@/components/public/social-analytics-section";
 import { SubmissionsSection } from "@/components/public/submissions-section";
+import { CampaignFilesSection } from "@/components/public/campaign-files-section";
 import type { PublicCampaignData } from "@/lib/types";
 import { formatPersianDate, formatPersianDateTime } from "@/lib/utils";
 
@@ -52,17 +53,23 @@ export function CampaignDashboard({ initialData, slug }: CampaignDashboardProps)
   }, [slug]);
 
   useEffect(() => {
-    const interval = setInterval(refreshData, 30000);
+    const interval = setInterval(refreshData, 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, [refreshData]);
 
   const { settings, kpis, sections } = data;
+  const usesMetabaseSiteEmbed = Boolean(data.analytics.metabaseEmbedUrl);
 
   const kpiItems = [
     { show: sections.billboards, title: "کل بیلبوردها", value: kpis.totalBillboards, icon: LayoutGrid },
     { show: sections.posters, title: "کل پوسترها", value: kpis.totalPosters, icon: ImageIcon },
     { show: sections.videos, title: "کل ویدیوها", value: kpis.totalVideos, icon: Video },
-    { show: sections.analytics, title: "بازدید سایت", value: kpis.totalSiteVisitors, icon: MonitorPlay },
+    {
+      show: sections.analytics && !usesMetabaseSiteEmbed,
+      title: "بازدید سایت",
+      value: kpis.totalSiteVisitors,
+      icon: MonitorPlay,
+    },
     { show: sections.socialAnalytics, title: "دسترسی اجتماعی", value: kpis.totalSocialReach, icon: Share2 },
     { show: sections.submissions, title: "شرکت‌کنندگان", value: kpis.totalParticipants, icon: Users },
   ].filter((k) => k.show);
@@ -126,6 +133,7 @@ export function CampaignDashboard({ initialData, slug }: CampaignDashboardProps)
         {sections.submissions && (
           <SubmissionsSection submissions={data.submissions} summary={data.submissionSummary} />
         )}
+        {sections.files && <CampaignFilesSection files={data.files} />}
       </main>
 
       <footer className="border-t py-6 text-center text-sm text-muted-foreground">

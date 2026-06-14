@@ -28,6 +28,7 @@ const featuresSchema = z.object({
   analytics: z.boolean(),
   socialAnalytics: z.boolean(),
   submissions: z.boolean(),
+  files: z.boolean(),
 });
 
 const metabaseSchema = z.object({
@@ -70,6 +71,7 @@ const featureLabels: { key: keyof CampaignFeatures; label: string }[] = [
   { key: "analytics", label: "آمار سایت" },
   { key: "socialAnalytics", label: "آمار شبکه‌های اجتماعی" },
   { key: "submissions", label: "مشارکت کاربران" },
+  { key: "files", label: "فایل‌های کمپین" },
 ];
 
 function buildChannelAnalyticsConfig(

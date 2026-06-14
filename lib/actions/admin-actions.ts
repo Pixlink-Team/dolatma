@@ -5,6 +5,7 @@ import {
   deleteAnalyticsMetric,
   deleteBillboard,
   deleteCampaign,
+  deleteCampaignFile,
   deleteMediaCategory,
   deletePoster,
   deletePosterVersion,
@@ -14,6 +15,7 @@ import {
   saveAnalyticsMetric,
   saveBillboard,
   saveCampaign,
+  saveCampaignFile,
   saveMediaCategory,
   savePoster,
   savePosterVersion,
@@ -25,6 +27,7 @@ import {
 import type {
   AnalyticsMetric,
   Billboard,
+  CampaignFile,
   CampaignSettings,
   MediaCategory,
   Poster,
@@ -42,6 +45,7 @@ async function revalidateAll(slug?: string) {
   revalidatePath("/admin/videos");
   revalidatePath("/admin/analytics");
   revalidatePath("/admin/submissions");
+  revalidatePath("/admin/files");
   revalidatePath("/admin/settings");
   if (slug) revalidatePath(`/campaign/${slug}`);
 }
@@ -168,6 +172,18 @@ export async function updateSubmissionAction(
 
 export async function deleteSubmissionAction(id: string) {
   const result = await deleteSubmission(id);
+  await revalidateAll();
+  return result;
+}
+
+export async function saveCampaignFileAction(data: Partial<CampaignFile> & { id?: string }) {
+  const result = await saveCampaignFile(data);
+  await revalidateAll();
+  return result;
+}
+
+export async function deleteCampaignFileAction(id: string) {
+  const result = await deleteCampaignFile(id);
   await revalidateAll();
   return result;
 }

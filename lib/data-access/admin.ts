@@ -3,6 +3,7 @@ import * as pg from "@/lib/db/repository";
 import type {
   AnalyticsMetric,
   Billboard,
+  CampaignFile,
   CampaignSettings,
   CampaignSubmission,
   MediaCategory,
@@ -49,6 +50,7 @@ export async function getAdminData(campaignId: string) {
       videoVersions: [...store.videoVersions],
       analytics: [...store.analytics],
       submissions: [...store.submissions].sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+      files: [...(store.files ?? [])].sort((a, b) => a.sortOrder - b.sortOrder),
     };
   }
 
@@ -83,6 +85,7 @@ export async function getAdminData(campaignId: string) {
       videoVersions: videoVersions.data ?? [],
       analytics: analytics.data ?? [],
       submissions: submissions.data ?? [],
+      files: [],
     };
   } catch {
     return getAdminDataMock(campaignId);
@@ -103,6 +106,7 @@ function getAdminDataMock(campaignId: string) {
     videoVersions: [...store.videoVersions],
     analytics: [...store.analytics],
     submissions: [...store.submissions].sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+    files: [...(store.files ?? [])].sort((a, b) => a.sortOrder - b.sortOrder),
   };
 }
 
@@ -137,6 +141,7 @@ export async function saveCampaign(data: Partial<CampaignSettings> & { id?: stri
           analytics: false,
           socialAnalytics: false,
           submissions: false,
+          files: false,
         },
         analyticsConfig: data.analyticsConfig ?? {
           site: { source: "manual", metabase: null },
@@ -171,6 +176,7 @@ export async function deleteCampaign(id: string): Promise<{ success: boolean; er
       videos: store.videos.filter((v) => v.campaignId !== id),
       analytics: store.analytics.filter((a) => a.campaignId !== id),
       submissions: store.submissions.filter((s) => s.campaignId !== id),
+      files: (store.files ?? []).filter((file) => file.campaignId !== id),
     }));
     return { success: true };
   }
@@ -562,6 +568,54 @@ export async function deleteSubmission(id: string) {
     updateMockStore((store) => ({
       ...store,
       submissions: store.submissions.filter((s) => s.id !== id),
+    }));
+    return { success: true };
+  }
+  return { success: true };
+}
+
+export async function saveCampaignFile(data: Partial<CampaignFile> & { id?: string }) {
+  if (isPostgresConfigured()) return pg.pgSaveCampaignFile(data);
+  const now = new Date().toISOString();
+  if (!isSupabaseConfigured()) {
+    const newId = data.id ?? generateId();
+    updateMockStore((store) => {
+      const campaignFiles = (store.files ?? []).filter((file) => file.campaignId === data.campaignId);
+      if (data.id) {
+        return {
+          ...store,
+          files: (store.files ?? []).map((file) =>
+            file.id === data.id ? { ...file, ...data, updatedAt: now } as CampaignFile : file
+          ),
+        };
+      }
+      const newItem: CampaignFile = {
+        id: newId,
+        campaignId: data.campaignId ?? "",
+        title: data.title ?? "",
+        description: data.description,
+        fileUrl: data.fileUrl ?? "",
+        fileName: data.fileName ?? "",
+        mimeType: data.mimeType ?? "application/octet-stream",
+        fileSize: data.fileSize ?? 0,
+        published: data.published ?? false,
+        sortOrder: data.sortOrder ?? campaignFiles.length + 1,
+        createdAt: now,
+        updatedAt: now,
+      };
+      return { ...store, files: [...(store.files ?? []), newItem] };
+    });
+    return { success: true, id: newId };
+  }
+  return { success: true };
+}
+
+export async function deleteCampaignFile(id: string) {
+  if (isPostgresConfigured()) return pg.pgDeleteCampaignFile(id);
+  if (!isSupabaseConfigured()) {
+    updateMockStore((store) => ({
+      ...store,
+      files: (store.files ?? []).filter((file) => file.id !== id),
     }));
     return { success: true };
   }

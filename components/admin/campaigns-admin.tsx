@@ -31,6 +31,7 @@ const featuresSchema = z.object({
   analytics: z.boolean(),
   socialAnalytics: z.boolean(),
   submissions: z.boolean(),
+  files: z.boolean(),
 });
 
 const schema = z.object({
@@ -54,6 +55,7 @@ const defaultFeatures: CampaignFeatures = {
   analytics: false,
   socialAnalytics: false,
   submissions: false,
+  files: false,
 };
 
 interface CampaignsAdminProps {
@@ -145,6 +147,7 @@ export function CampaignsAdmin({ initialCampaigns }: CampaignsAdminProps) {
     { key: "analytics", label: "آمار سایت" },
     { key: "socialAnalytics", label: "آمار شبکه‌های اجتماعی" },
     { key: "submissions", label: "مشارکت کاربران" },
+    { key: "files", label: "فایل‌های کمپین" },
   ];
 
   return (

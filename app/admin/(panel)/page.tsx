@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
   BarChart3,
+  FileStack,
   FileText,
   FolderKanban,
   ImageIcon,
@@ -14,6 +15,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { getAdminData } from "@/lib/data-access/admin";
 import { resolveAdminCampaignId } from "@/lib/admin-campaign";
+import { resolveAdminBillboards } from "@/lib/billboards";
+import type { Billboard, CampaignSettings } from "@/lib/types";
 import { adminHref } from "@/lib/utils";
 import { formatPersianNumber, isPostgresConfigured, isSupabaseConfigured } from "@/lib/utils";
 
@@ -37,11 +40,18 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
   if (!data.settings) redirect("/admin/campaigns");
 
   const features = data.settings.features;
+  const billboards = data.settings
+    ? await resolveAdminBillboards(
+        data.settings as CampaignSettings,
+        (data.billboards ?? []) as Billboard[]
+      )
+    : [];
 
   const stats = [
-    { label: "بیلبوردها", value: data.billboards.length, href: adminHref("/admin/billboards", campaignId), icon: LayoutGrid, show: features.billboards },
+    { label: "بیلبوردها", value: billboards.length, href: adminHref("/admin/billboards", campaignId), icon: LayoutGrid, show: features.billboards },
     { label: "پوسترها", value: data.posters.length, href: adminHref("/admin/posters", campaignId), icon: ImageIcon, show: features.posters },
     { label: "ویدیوها", value: data.videos.length, href: adminHref("/admin/videos", campaignId), icon: Video, show: features.videos },
+    { label: "فایل‌ها", value: (data.files ?? []).length, href: adminHref("/admin/files", campaignId), icon: FileStack, show: features.files },
     { label: "ارسال‌ها", value: data.submissions.length, href: adminHref("/admin/submissions", campaignId), icon: FileText, show: features.submissions },
     { label: "رکورد آمار", value: data.analytics.length, href: adminHref("/admin/analytics", campaignId), icon: BarChart3, show: features.analytics },
   ].filter((s) => s.show);

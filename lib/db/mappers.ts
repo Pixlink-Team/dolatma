@@ -1,6 +1,7 @@
 import type {
   AnalyticsMetric,
   Billboard,
+  CampaignFile,
   CampaignSettings,
   CampaignSubmission,
   MediaCategory,
@@ -44,6 +45,7 @@ export function mapSettingsFromDb(row: any): CampaignSettings {
             analytics: true,
             socialAnalytics: true,
             submissions: true,
+            files: true,
             ...JSON.parse(row.features),
           }
         : {
@@ -53,6 +55,7 @@ export function mapSettingsFromDb(row: any): CampaignSettings {
             analytics: true,
             socialAnalytics: true,
             submissions: true,
+            files: true,
             ...(row.features ?? {}),
           },
     analyticsConfig: normalizeAnalyticsConfig(
@@ -205,6 +208,24 @@ export function mapSubmissionFromDb(row: any): CampaignSubmission {
     mediaUrl: row.media_url,
     status: row.status,
     published: row.published,
+    createdAt: toIsoString(row.created_at),
+    updatedAt: toIsoString(row.updated_at),
+  };
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function mapCampaignFileFromDb(row: any): CampaignFile {
+  return {
+    id: row.id,
+    campaignId: row.campaign_id,
+    title: row.title,
+    description: row.description,
+    fileUrl: row.file_url,
+    fileName: row.file_name,
+    mimeType: row.mime_type,
+    fileSize: Number(row.file_size ?? 0),
+    published: row.published ?? false,
+    sortOrder: row.sort_order ?? 0,
     createdAt: toIsoString(row.created_at),
     updatedAt: toIsoString(row.updated_at),
   };

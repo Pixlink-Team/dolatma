@@ -179,6 +179,7 @@ function buildSectionVisibility(
     analytics: AnalyticsSummary;
     socialAnalytics: AnalyticsSummary;
     submissions: unknown[];
+    files: unknown[];
   }
 ): SectionVisibility {
   return {
@@ -192,6 +193,7 @@ function buildSectionVisibility(
       features.socialAnalytics &&
       (data.socialAnalytics.hasData || Boolean(data.socialAnalytics.metabaseEmbedUrl)),
     submissions: features.submissions && data.submissions.length > 0,
+    files: features.files && data.files.length > 0,
   };
 }
 
@@ -269,6 +271,10 @@ function assemblePublicData(
     .filter((s) => s.published && s.status === "approved")
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 
+  const files = (store.files ?? [])
+    .filter((file) => file.published)
+    .sort((a, b) => a.sortOrder - b.sortOrder);
+
   const submissionSummary = buildSubmissionSummary(store.submissions);
 
   const sections = buildSectionVisibility(settings.features, {
@@ -278,6 +284,7 @@ function assemblePublicData(
     analytics,
     socialAnalytics,
     submissions,
+    files,
   });
 
   const kpis = buildKPIs(sections, {
@@ -302,6 +309,7 @@ function assemblePublicData(
     socialAnalytics,
     submissions,
     submissionSummary,
+    files,
     lastUpdated: new Date().toISOString(),
   };
 }
@@ -464,6 +472,7 @@ export async function getPublicCampaignData(slug: string): Promise<PublicCampaig
         .map(mapVideoVersionFromDb),
       analytics: (analyticsRes.data ?? []).map(mapAnalyticsFromDb),
       submissions: (submissionsRes.data ?? []).map(mapSubmissionFromDb),
+      files: [],
     };
 
     return assemblePublicData(settings, campaignStore, campaignStore.billboards
