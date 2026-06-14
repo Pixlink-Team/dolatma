@@ -16,6 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -138,6 +139,9 @@ export function AdminMediaCategories({
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{editingCategory ? "ویرایش دسته" : `افزودن دسته ${label}`}</DialogTitle>
+            <DialogDescription className="sr-only">
+              {editingCategory ? "ویرایش اطلاعات دسته‌بندی" : `افزودن دسته‌بندی جدید برای ${label}`}
+            </DialogDescription>
           </DialogHeader>
           <form onSubmit={onSubmit} className="space-y-4">
             <div>

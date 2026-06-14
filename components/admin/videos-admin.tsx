@@ -1,13 +1,19 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { AdminVideoAddCard, AdminVideoCompactCard } from "@/components/admin/admin-video-compact-card";
 import { AdminMediaCategories } from "@/components/admin/admin-media-categories";
 import { AdminVideoEditor } from "@/components/admin/admin-video-editor";
 import { saveVideoAction } from "@/lib/actions/admin-actions";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import type { MediaCategory, Video, VideoVersion } from "@/lib/types";
 
 interface VideosAdminProps {
@@ -18,7 +24,7 @@ interface VideosAdminProps {
 }
 
 const editorDialogClass =
-  "relative flex max-h-[92vh] max-w-2xl flex-col overflow-hidden p-0 !top-4 !translate-x-[-50%] !translate-y-0 sm:!top-6";
+  "flex max-h-[92vh] max-w-2xl flex-col overflow-hidden p-0 !top-4 !translate-x-[-50%] !translate-y-0 sm:!top-6";
 
 export function VideosAdmin({
   campaignId,
@@ -27,13 +33,32 @@ export function VideosAdmin({
   initialVersions,
 }: VideosAdminProps) {
   const router = useRouter();
+  const [videos, setVideos] = useState(initialVideos);
+  const [versions, setVersions] = useState(initialVersions);
   const [editorOpen, setEditorOpen] = useState(false);
   const [activeVideoId, setActiveVideoId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
+  useEffect(() => {
+    setVideos(initialVideos);
+    setVersions(initialVersions);
+  }, [initialVideos, initialVersions]);
+
+  const versionsByVideoId = useMemo(() => {
+    const map = new Map<string, VideoVersion[]>();
+    for (const version of versions) {
+      const list = map.get(version.videoId) ?? [];
+      list.push(version);
+      map.set(version.videoId, list);
+    }
+    return map;
+  }, [versions]);
+
   const activeVideo = activeVideoId
-    ? initialVideos.find((video) => video.id === activeVideoId) ?? null
+    ? videos.find((video) => video.id === activeVideoId) ?? null
     : null;
+
+  const activeVersions = activeVideoId ? versionsByVideoId.get(activeVideoId) ?? [] : [];
 
   const refresh = () => router.refresh();
 
@@ -58,26 +83,33 @@ export function VideosAdmin({
     }
 
     const videoId = crypto.randomUUID();
+    const categoryId = initialCategories[0].id;
+    const now = new Date().toISOString();
+    const newVideo: Video = {
+      id: videoId,
+      campaignId,
+      categoryId,
+      title: `ویدیو ${videos.length + 1}`,
+      description: "",
+      published: false,
+      sortOrder: videos.length + 1,
+      createdAt: now,
+      updatedAt: now,
+    };
 
     startTransition(async () => {
-      await saveVideoAction({
-        id: videoId,
-        campaignId,
-        categoryId: initialCategories[0].id,
-        title: `ویدیو ${initialVideos.length + 1}`,
-        description: "",
-        published: false,
-        sortOrder: initialVideos.length + 1,
-      });
+      const result = await saveVideoAction(newVideo);
+      if (!result.success) {
+        toast.error("ایجاد ویدیو ناموفق بود");
+        return;
+      }
+
+      setVideos((prev) => [...prev, newVideo]);
       openEditor(videoId);
       toast.success("ویدیو جدید — فایل را آپلود کنید");
       refresh();
     });
   };
-
-  const activeVersions = activeVideoId
-    ? initialVersions.filter((version) => version.videoId === activeVideoId)
-    : [];
 
   return (
     <div className="space-y-6">
@@ -101,11 +133,11 @@ export function VideosAdmin({
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-          {initialVideos.map((video) => (
+          {videos.map((video) => (
             <AdminVideoCompactCard
               key={video.id}
               video={video}
-              versions={initialVersions.filter((version) => version.videoId === video.id)}
+              versions={versionsByVideoId.get(video.id) ?? []}
               onClick={() => openEditor(video.id)}
             />
           ))}
@@ -113,19 +145,26 @@ export function VideosAdmin({
         </div>
       )}
 
-      <Dialog open={editorOpen} onOpenChange={(open) => !open && closeEditor()}>
+      <Dialog open={editorOpen} onOpenChange={(open) => (open ? setEditorOpen(true) : closeEditor())}>
         <DialogContent className={editorDialogClass}>
           <DialogHeader className="shrink-0 border-b px-6 py-4 pr-12">
             <DialogTitle>{activeVideo?.title ?? "ویرایش ویدیو"}</DialogTitle>
+            <DialogDescription className="sr-only">
+              ویرایش عنوان، دسته، نسخه‌ها و وضعیت انتشار ویدیو
+            </DialogDescription>
           </DialogHeader>
           <div className="min-h-0 flex-1 overflow-hidden px-6 pb-4 pt-4">
-            {activeVideo && (
+            {activeVideo ? (
               <AdminVideoEditor
                 video={activeVideo}
                 versions={activeVersions}
                 categories={initialCategories}
                 onClose={closeEditor}
               />
+            ) : (
+              <div className="flex min-h-48 items-center justify-center text-sm text-muted-foreground">
+                در حال بارگذاری...
+              </div>
             )}
           </div>
         </DialogContent>
