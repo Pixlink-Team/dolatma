@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronDown, ChevronUp, History, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -78,6 +78,8 @@ export function AdminPosterEditor({
   onClose,
 }: AdminPosterEditorProps) {
   const router = useRouter();
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const shouldScrollToBottomRef = useRef(false);
   const [versionsExpanded, setVersionsExpanded] = useState(true);
   const [isPending, startTransition] = useTransition();
   const [versionDrafts, setVersionDrafts] = useState<PosterVersionDraft[]>(() =>
@@ -93,6 +95,14 @@ export function AdminPosterEditor({
     setEditCategoryId(poster.categoryId);
     setVersionDrafts(buildPosterVersionDrafts(versions));
   }, [poster.id, poster.title, poster.description, poster.categoryId, versions.length]);
+
+  useLayoutEffect(() => {
+    if (!shouldScrollToBottomRef.current) return;
+    shouldScrollToBottomRef.current = false;
+    const scrollArea = scrollAreaRef.current;
+    if (!scrollArea) return;
+    scrollArea.scrollTo({ top: scrollArea.scrollHeight, behavior: "smooth" });
+  }, [versionDrafts.length]);
 
   const sortedVersions = useMemo(
     () => [...versions].sort((a, b) => b.versionNumber - a.versionNumber),
@@ -178,9 +188,14 @@ export function AdminPosterEditor({
     });
   };
 
+  const handleAddVersion = () => {
+    shouldScrollToBottomRef.current = true;
+    setVersionDrafts((prev) => [...prev, createPosterVersionDraft()]);
+  };
+
   return (
-    <div className="flex h-full min-h-0 flex-col">
-      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto pr-1">
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div ref={scrollAreaRef} className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-y-contain pr-1">
       <div className="relative mx-auto aspect-[3/4] max-h-80 w-full max-w-xs overflow-hidden rounded-xl bg-muted">
         {latestVersion ? (
           <MediaThumbnail src={latestVersion.imageUrl} alt={editTitle} kind="poster" sizes="320px" objectFit="contain" />
@@ -251,8 +266,8 @@ export function AdminPosterEditor({
 
         <div
           className={cn(
-            "space-y-3 overflow-hidden transition-all",
-            versionsExpanded ? "mt-3 opacity-100" : "max-h-0 opacity-0"
+            "space-y-3 transition-all",
+            versionsExpanded ? "mt-3 opacity-100" : "max-h-0 overflow-hidden opacity-0"
           )}
         >
           <p className="text-sm font-medium">ویرایش / افزودن نسخه</p>
@@ -310,7 +325,7 @@ export function AdminPosterEditor({
           type="button"
           variant="outline"
           disabled={isPending}
-          onClick={() => setVersionDrafts((prev) => [...prev, createPosterVersionDraft()])}
+          onClick={handleAddVersion}
         >
           <Plus className="h-4 w-4" />
           نسخه

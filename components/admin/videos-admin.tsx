@@ -24,7 +24,7 @@ interface VideosAdminProps {
 }
 
 const editorDialogClass =
-  "flex max-h-[92vh] max-w-2xl flex-col overflow-hidden p-0 !top-4 !translate-x-[-50%] !translate-y-0 sm:!top-6";
+  "!flex min-h-0 max-h-[92vh] max-w-2xl flex-col gap-0 overflow-hidden p-0 !top-4 !translate-x-[-50%] !translate-y-0 sm:!top-6";
 
 export function VideosAdmin({
   campaignId,
@@ -153,7 +153,7 @@ export function VideosAdmin({
               ویرایش عنوان، دسته، نسخه‌ها و وضعیت انتشار ویدیو
             </DialogDescription>
           </DialogHeader>
-          <div className="min-h-0 flex-1 overflow-hidden px-6 pb-4 pt-4">
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-6 pb-4 pt-4">
             {activeVideo ? (
               <AdminVideoEditor
                 video={activeVideo}

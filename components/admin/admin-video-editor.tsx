@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronDown, ChevronUp, History, Play, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -100,6 +100,8 @@ export function AdminVideoEditor({
   onClose,
 }: AdminVideoEditorProps) {
   const router = useRouter();
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const shouldScrollToBottomRef = useRef(false);
   const [versionsExpanded, setVersionsExpanded] = useState(true);
   const [isPending, startTransition] = useTransition();
   const [versionDrafts, setVersionDrafts] = useState<VideoVersionDraft[]>(() =>
@@ -115,6 +117,14 @@ export function AdminVideoEditor({
     setEditCategoryId(video.categoryId);
     setVersionDrafts(buildVideoVersionDrafts(versions));
   }, [video.id, video.title, video.description, video.categoryId, versions.length]);
+
+  useLayoutEffect(() => {
+    if (!shouldScrollToBottomRef.current) return;
+    shouldScrollToBottomRef.current = false;
+    const scrollArea = scrollAreaRef.current;
+    if (!scrollArea) return;
+    scrollArea.scrollTo({ top: scrollArea.scrollHeight, behavior: "smooth" });
+  }, [versionDrafts.length]);
 
   const sortedVersions = useMemo(
     () => [...versions].sort((a, b) => b.versionNumber - a.versionNumber),
@@ -205,9 +215,14 @@ export function AdminVideoEditor({
     });
   };
 
+  const handleAddVersion = () => {
+    shouldScrollToBottomRef.current = true;
+    setVersionDrafts((prev) => [...prev, createVideoVersionDraft()]);
+  };
+
   return (
-    <div className="flex h-full min-h-0 flex-col">
-      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto pr-1">
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div ref={scrollAreaRef} className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-y-contain pr-1">
       <div className="relative mx-auto aspect-video max-h-56 w-full overflow-hidden rounded-xl bg-muted">
         {previewCover ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -286,8 +301,8 @@ export function AdminVideoEditor({
 
         <div
           className={cn(
-            "space-y-3 overflow-hidden transition-all",
-            versionsExpanded ? "mt-3 opacity-100" : "max-h-0 opacity-0"
+            "space-y-3 transition-all",
+            versionsExpanded ? "mt-3 opacity-100" : "max-h-0 overflow-hidden opacity-0"
           )}
         >
           <p className="text-sm font-medium">ویرایش / افزودن نسخه</p>
@@ -380,7 +395,7 @@ export function AdminVideoEditor({
           type="button"
           variant="outline"
           disabled={isPending}
-          onClick={() => setVersionDrafts((prev) => [...prev, createVideoVersionDraft()])}
+          onClick={handleAddVersion}
         >
           <Plus className="h-4 w-4" />
           نسخه
