@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import { OptimizedMediaImage } from "@/components/ui/optimized-media-image";
 import { KPICard } from "@/components/public/kpi-card";
 import { CollapsibleSection } from "@/components/public/collapsible-section";
 import { ParticipationChart } from "@/components/charts/participation-chart";
@@ -45,7 +45,7 @@ export function SubmissionsSection({ submissions, summary }: SubmissionsSectionP
             <Card key={sub.id} className="overflow-hidden">
               {sub.mediaUrl && (
                 <div className="relative aspect-video bg-muted">
-                  <Image
+                  <OptimizedMediaImage
                     src={sub.mediaUrl}
                     alt={sub.title}
                     fill

@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import { OptimizedMediaImage } from "@/components/ui/optimized-media-image";
 import { CheckCircle2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -49,7 +49,7 @@ export function MediaVersionTimeline({
           >
             <Card className="overflow-hidden transition-all hover:ring-2 hover:ring-primary/50 cursor-pointer">
               <div className="relative aspect-[3/4] bg-muted">
-                <Image
+                <OptimizedMediaImage
                   src={version.thumbnailUrl}
                   alt={`نسخه ${version.versionNumber}`}
                   fill

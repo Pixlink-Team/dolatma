@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
+import { OptimizedMediaImage } from "@/components/ui/optimized-media-image";
 import { ChevronDown, ChevronUp, Download, History } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -50,7 +50,7 @@ export function PosterCard({ title, description, versions }: PosterCardProps) {
           onClick={() => openLightbox(finalVersion.id)}
         >
           {finalVersion.imageUrl ? (
-            <Image
+            <OptimizedMediaImage
               src={finalVersion.imageUrl}
               alt={title}
               fill
@@ -131,7 +131,7 @@ export function PosterCard({ title, description, versions }: PosterCardProps) {
                     >
                       <div className="relative w-12 h-14 shrink-0 rounded overflow-hidden bg-muted">
                         {version.thumbnailUrl || version.imageUrl ? (
-                          <Image
+                          <OptimizedMediaImage
                             src={version.thumbnailUrl || version.imageUrl}
                             alt=""
                             fill
