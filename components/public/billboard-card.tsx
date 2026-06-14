@@ -1,15 +1,12 @@
 "use client";
 
-import { useState } from "react";
-import Image from "next/image";
 import { Eye, MapPin } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { BillboardThumbnail } from "@/components/public/billboard-thumbnail";
 import {
-  BILLBOARD_PLACEHOLDER_IMAGE,
   filterPublicBillboardTags,
-  getBillboardDisplayImage,
   shouldShowBillboardNotes,
   shouldShowBillboardStatus,
 } from "@/lib/billboards";
@@ -22,24 +19,21 @@ interface BillboardCardProps {
 }
 
 export function BillboardCard({ billboard, onView }: BillboardCardProps) {
-  const [imageSrc, setImageSrc] = useState(() => getBillboardDisplayImage(billboard));
   const displayTags = filterPublicBillboardTags(billboard.tags);
   const showStatus = shouldShowBillboardStatus(billboard);
   const showNotes = shouldShowBillboardNotes(billboard);
-  const isPlaceholder = imageSrc === BILLBOARD_PLACEHOLDER_IMAGE;
 
   return (
     <Card className="group flex h-full w-full max-w-sm flex-col overflow-hidden">
       <div className="relative aspect-[4/3] shrink-0 overflow-hidden bg-muted">
-        <Image
-          src={imageSrc}
+        <BillboardThumbnail
+          billboard={billboard}
           alt={billboard.title}
-          fill
-          className={isPlaceholder ? "object-contain p-6" : "object-cover transition-transform group-hover:scale-105"}
           sizes="(max-width: 768px) 100vw, 320px"
-          onError={() => setImageSrc(BILLBOARD_PLACEHOLDER_IMAGE)}
+          imageClassName="transition-transform group-hover:scale-105"
         />
       </div>
+
       <CardContent className="flex flex-1 flex-col space-y-3 p-4">
         <div className="flex items-start justify-between gap-2">
           <h3 className="line-clamp-2 min-h-[2.5rem] font-semibold leading-tight">{billboard.title}</h3>

@@ -18,7 +18,7 @@ import { MediaUpload } from "@/components/ui/media-upload";
 import { PersianDateField } from "@/components/ui/persian-date-input";
 import { updateSettingsAction } from "@/lib/actions/admin-actions";
 import { fetchExternalCampaignsAction } from "@/lib/actions/billboard-import-actions";
-import type { AnalyticsConfig, CampaignFeatures, CampaignSettings } from "@/lib/types";
+import type { AnalyticsConfig, CampaignFeatures, CampaignSettings, ChannelAnalyticsConfig } from "@/lib/types";
 import type { ExternalCampaign } from "@/lib/models/billboard-api";
 
 const featuresSchema = z.object({
@@ -72,25 +72,61 @@ const featureLabels: { key: keyof CampaignFeatures; label: string }[] = [
   { key: "submissions", label: "مشارکت کاربران" },
 ];
 
-function buildAnalyticsConfig(data: z.infer<typeof schema>): AnalyticsConfig {
-  const buildChannel = (channel: z.infer<typeof channelSchema>) =>
-    channel.source === "manual"
-      ? { source: "manual" as const, metabase: null }
-      : {
-          source: channel.source,
-          metabase: {
-            url: channel.metabase.url ?? "",
-            username: channel.metabase.username ?? "",
-            password: channel.metabase.password ?? "",
-            questionId: Number(channel.metabase.questionId ?? 0) || undefined,
-            dashboardId: Number(channel.metabase.dashboardId ?? 0) || undefined,
-            embedSecret: channel.metabase.embedSecret ?? "",
-          },
-        };
+function buildChannelAnalyticsConfig(
+  channel: {
+    source: "manual" | "metabase" | "hybrid";
+    metabase?: {
+      url?: string;
+      username?: string;
+      password?: string;
+      questionId?: number;
+      dashboardId?: number;
+      embedSecret?: string;
+    };
+  },
+  previous: ChannelAnalyticsConfig
+): ChannelAnalyticsConfig {
+  const url = channel.metabase?.url?.trim() ?? "";
+  const dashboardId = Number(channel.metabase?.dashboardId ?? 0) || undefined;
+  const questionId = Number(channel.metabase?.questionId ?? 0) || undefined;
+  const username = channel.metabase?.username?.trim() ?? "";
+  const password = channel.metabase?.password?.trim()
+    ? channel.metabase.password
+    : previous.metabase?.password ?? "";
+  const embedSecret = channel.metabase?.embedSecret?.trim()
+    ? channel.metabase.embedSecret
+    : previous.metabase?.embedSecret ?? "";
+
+  const hasDashboardEmbed = Boolean(url && dashboardId && embedSecret);
+  const hasMetabaseQuery = Boolean(url && questionId && username && password);
+
+  if (channel.source === "manual" && !hasDashboardEmbed && !hasMetabaseQuery) {
+    return { source: "manual", metabase: null };
+  }
+
+  const resolvedSource =
+    channel.source === "manual" && hasDashboardEmbed ? "metabase" : channel.source;
 
   return {
-    site: buildChannel(data.siteAnalytics),
-    social: buildChannel(data.socialAnalyticsConfig),
+    source: resolvedSource,
+    metabase: {
+      url,
+      username,
+      password,
+      questionId,
+      dashboardId,
+      embedSecret,
+    },
+  };
+}
+
+function buildAnalyticsConfig(
+  data: z.infer<typeof schema>,
+  previous: AnalyticsConfig
+): AnalyticsConfig {
+  return {
+    site: buildChannelAnalyticsConfig(data.siteAnalytics, previous.site),
+    social: buildChannelAnalyticsConfig(data.socialAnalyticsConfig, previous.social),
   };
 }
 
@@ -127,7 +163,7 @@ function ChannelAnalyticsSettings({
           <SelectContent>
             <SelectItem value="manual">فقط دستی (پنل آمار)</SelectItem>
             <SelectItem value="hybrid">دستی + Metabase (زنده)</SelectItem>
-            <SelectItem value="metabase">فقط Metabase</SelectItem>
+            <SelectItem value="metabase">فقط Metabase (داشبورد embed)</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -145,7 +181,7 @@ function ChannelAnalyticsSettings({
             <Label>Embed Secret</Label>
             <Input {...form.register(`${metabasePrefix}.metabase.embedSecret`)} type="password" dir="ltr" autoComplete="new-password" placeholder="کلید embedding از Metabase Admin" />
             <p className="mt-1 text-xs text-muted-foreground">
-              برای نمایش داشبورد عمومی در سایت، embedding را در Metabase فعال کنید و Secret Key را اینجا وارد کنید.
+              برای نمایش داشبورد در سایت، منبع را «فقط Metabase» انتخاب کنید، Dashboard ID و Embed Secret را وارد کنید و embedding داشبورد ۲ را در Metabase فعال کنید.
             </p>
           </div>
         </div>
@@ -223,7 +259,7 @@ export function SettingsAdmin({ initialSettings }: SettingsAdminProps) {
         coverImageUrl: data.coverImageUrl,
         published: data.published,
         features: data.features,
-        analyticsConfig: buildAnalyticsConfig(data),
+        analyticsConfig: buildAnalyticsConfig(data, initialSettings.analyticsConfig),
         billboardConfig: {
           externalCampaignId: data.externalCampaignId || null,
         },

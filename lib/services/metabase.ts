@@ -124,8 +124,13 @@ function signMetabaseJwt(payload: Record<string, unknown>, secret: string): stri
   return `${data}.${signature}`;
 }
 
-export function buildMetabaseDashboardEmbedUrl(config: MetabaseConfig): string | null {
-  const { url, dashboardId, embedSecret } = config;
+export function buildMetabaseDashboardEmbedUrl(config: MetabaseConfig | null | undefined): string | null {
+  if (!config) return null;
+
+  const url = config.url?.trim();
+  const dashboardId = Number(config.dashboardId ?? 0) || undefined;
+  const embedSecret = config.embedSecret?.trim();
+
   if (!url || !dashboardId || !embedSecret) return null;
 
   const baseUrl = url.replace(/\/$/, "");
@@ -144,10 +149,5 @@ export function buildMetabaseDashboardEmbedUrl(config: MetabaseConfig): string |
 export function resolveChannelMetabaseEmbedUrl(
   channelConfig: ChannelAnalyticsConfig
 ): string | null {
-  if (channelConfig.source !== "metabase" && channelConfig.source !== "hybrid") {
-    return null;
-  }
-
-  if (!channelConfig.metabase) return null;
   return buildMetabaseDashboardEmbedUrl(channelConfig.metabase);
 }

@@ -16,7 +16,10 @@ interface AnalyticsSectionProps {
 
 export function AnalyticsSection({ analytics }: AnalyticsSectionProps) {
   const hasMetabaseDashboard = Boolean(analytics.metabaseEmbedUrl);
-  const hasManualCharts = analytics.hasData && !hasMetabaseDashboard;
+  const hasManualCharts =
+    analytics.totalVisitors > 0 ||
+    analytics.visitsOverTime.length > 0 ||
+    analytics.trafficSources.length > 0;
 
   return (
     <CollapsibleSection
@@ -35,7 +38,7 @@ export function AnalyticsSection({ analytics }: AnalyticsSectionProps) {
         />
       )}
 
-      {hasManualCharts && (
+      {!hasMetabaseDashboard && hasManualCharts && (
         <>
           <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <KPICard title="کل بازدیدکنندگان" value={analytics.totalVisitors} icon={Users} />

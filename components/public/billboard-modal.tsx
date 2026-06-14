@@ -1,13 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Image from "next/image";
 import { Download, ExternalLink, MapPin } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { BillboardThumbnail } from "@/components/public/billboard-thumbnail";
 import {
-  BILLBOARD_PLACEHOLDER_IMAGE,
   filterPublicBillboardTags,
   getBillboardDisplayImage,
   hasBillboardDisplayImage,
@@ -25,24 +23,17 @@ interface BillboardModalProps {
 }
 
 export function BillboardModal({ open, onOpenChange, billboard }: BillboardModalProps) {
-  const [imageSrc, setImageSrc] = useState(BILLBOARD_PLACEHOLDER_IMAGE);
-
-  useEffect(() => {
-    if (billboard) {
-      setImageSrc(getBillboardDisplayImage(billboard));
-    }
-  }, [billboard]);
-
   if (!billboard) return null;
+
   const displayTags = filterPublicBillboardTags(billboard.tags);
   const showStatus = shouldShowBillboardStatus(billboard);
   const showNotes = shouldShowBillboardNotes(billboard);
   const canDownload = hasBillboardDisplayImage(billboard);
-  const isPlaceholder = imageSrc === BILLBOARD_PLACEHOLDER_IMAGE;
 
   const handleDownload = () => {
     if (!canDownload) return;
-    void downloadMedia(imageSrc, getFilenameFromUrl(imageSrc, `${billboard.title}.jpg`));
+    const imageUrl = getBillboardDisplayImage(billboard);
+    void downloadMedia(imageUrl, getFilenameFromUrl(imageUrl, `${billboard.title}.jpg`));
   };
 
   const handleOpenMap = () => {
@@ -62,13 +53,10 @@ export function BillboardModal({ open, onOpenChange, billboard }: BillboardModal
         </DialogHeader>
 
         <div className="relative aspect-[4/3] w-full bg-muted">
-          <Image
-            src={imageSrc}
+          <BillboardThumbnail
+            billboard={billboard}
             alt={billboard.title}
-            fill
-            className={isPlaceholder ? "object-contain p-8" : "object-cover"}
             sizes="(max-width: 768px) 100vw, 768px"
-            onError={() => setImageSrc(BILLBOARD_PLACEHOLDER_IMAGE)}
           />
         </div>
 

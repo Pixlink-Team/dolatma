@@ -185,8 +185,12 @@ function buildSectionVisibility(
     billboards: features.billboards && data.billboards.length > 0,
     posters: features.posters && data.posters.length > 0,
     videos: features.videos && data.videos.length > 0,
-    analytics: features.analytics && data.analytics.hasData,
-    socialAnalytics: features.socialAnalytics && data.socialAnalytics.hasData,
+    analytics:
+      features.analytics &&
+      (data.analytics.hasData || Boolean(data.analytics.metabaseEmbedUrl)),
+    socialAnalytics:
+      features.socialAnalytics &&
+      (data.socialAnalytics.hasData || Boolean(data.socialAnalytics.metabaseEmbedUrl)),
     submissions: features.submissions && data.submissions.length > 0,
   };
 }

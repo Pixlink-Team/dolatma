@@ -10,6 +10,7 @@ function normalizeBillboardImageUrl(url?: string | null): string {
 
 function isInvalidBillboardImageUrl(url: string): boolean {
   if (!url) return true;
+  if (url === BILLBOARD_PLACEHOLDER_IMAGE) return true;
   const lower = url.toLowerCase();
   return INVALID_BILLBOARD_IMAGE_HINTS.some((hint) => lower.includes(hint));
 }

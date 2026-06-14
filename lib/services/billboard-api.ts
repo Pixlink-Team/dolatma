@@ -6,7 +6,6 @@ import {
   type ExternalCampaignsResponse,
 } from "@/lib/models/billboard-api";
 import { billboardApiRoutes } from "@/lib/routes/billboard-api";
-import { BILLBOARD_PLACEHOLDER_IMAGE } from "@/lib/billboard-media";
 import type { Billboard } from "@/lib/types";
 
 async function fetchJson<T>(url: string): Promise<T> {
@@ -77,8 +76,8 @@ export function mapExternalBillboardToBillboard(
   const resolvedImage = billboardApiRoutes.resolveAssetUrl(
     external.image_url ?? external.thumbnail_url
   );
-  const thumbnail = resolvedThumbnail || BILLBOARD_PLACEHOLDER_IMAGE;
-  const imageUrl = resolvedImage || thumbnail;
+  const thumbnail = resolvedThumbnail ?? "";
+  const imageUrl = resolvedImage ?? "";
 
   const tags = [external.code, external.axis, getExternalBillboardTag(external.id)].filter(Boolean);
   const now = new Date().toISOString();

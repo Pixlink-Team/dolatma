@@ -1,8 +1,8 @@
-import { Film, ImageIcon } from "lucide-react";
+import { Film, ImageIcon, LayoutGrid } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface MediaPlaceholderProps {
-  kind?: "image" | "video" | "poster";
+  kind?: "image" | "video" | "poster" | "billboard";
   className?: string;
   label?: string;
 }
@@ -12,9 +12,16 @@ export function MediaPlaceholder({
   className,
   label,
 }: MediaPlaceholderProps) {
-  const Icon = kind === "video" ? Film : ImageIcon;
+  const Icon =
+    kind === "video" ? Film : kind === "billboard" ? LayoutGrid : ImageIcon;
   const defaultLabel =
-    kind === "video" ? "بدون کاور ویدیو" : kind === "poster" ? "بدون تصویر پوستر" : "بدون تصویر";
+    kind === "video"
+      ? "بدون کاور ویدیو"
+      : kind === "poster"
+        ? "بدون تصویر پوستر"
+        : kind === "billboard"
+          ? "تصویر بیلبورد ثبت نشده"
+          : "بدون تصویر";
 
   return (
     <div
