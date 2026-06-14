@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -10,12 +11,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { SectionHeader } from "@/components/public/section-header";
+import { CollapsibleSection } from "@/components/public/collapsible-section";
 import { BillboardCard } from "@/components/public/billboard-card";
 import { BillboardMap } from "@/components/public/billboard-map";
 import { BillboardModal } from "@/components/public/billboard-modal";
+import {
+  PUBLIC_MEDIA_GRID_CLASS,
+  PUBLIC_MEDIA_PAGE_SIZE,
+  sortByPublicMediaOrder,
+  type PublicMediaSort,
+} from "@/lib/public-media-section";
 import type { Billboard } from "@/lib/types";
-import { getStatusLabel } from "@/lib/utils";
+import { formatPersianNumber, getStatusLabel } from "@/lib/utils";
 
 interface BillboardSectionProps {
   billboards: Billboard[];
@@ -24,91 +31,132 @@ interface BillboardSectionProps {
 export function BillboardSection({ billboards }: BillboardSectionProps) {
   const [cityFilter, setCityFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [sort, setSort] = useState<PublicMediaSort>("default");
   const [search, setSearch] = useState("");
+  const [visibleCount, setVisibleCount] = useState(PUBLIC_MEDIA_PAGE_SIZE);
   const [selectedBillboard, setSelectedBillboard] = useState<Billboard | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
 
   const cities = useMemo(
-    () => [...new Set(billboards.map((b) => b.city))],
+    () => [...new Set(billboards.map((billboard) => billboard.city))],
     [billboards]
   );
 
   const filtered = useMemo(() => {
-    return billboards.filter((b) => {
-      if (cityFilter !== "all" && b.city !== cityFilter) return false;
-      if (statusFilter !== "all" && b.status !== statusFilter) return false;
-      if (search && !b.title.includes(search) && !b.city.includes(search)) return false;
+    const items = billboards.filter((billboard) => {
+      if (cityFilter !== "all" && billboard.city !== cityFilter) return false;
+      if (statusFilter !== "all" && billboard.status !== statusFilter) return false;
+      if (search && !billboard.title.includes(search) && !billboard.city.includes(search)) return false;
       return true;
     });
-  }, [billboards, cityFilter, statusFilter, search]);
+    return sortByPublicMediaOrder(items, sort, (item) => item.date);
+  }, [billboards, cityFilter, statusFilter, search, sort]);
+
+  const visibleBillboards = filtered.slice(0, visibleCount);
+  const hasMore = visibleCount < filtered.length;
+
+  useEffect(() => {
+    setVisibleCount(PUBLIC_MEDIA_PAGE_SIZE);
+  }, [cityFilter, statusFilter, search, sort]);
 
   const openBillboard = (billboard: Billboard) => {
     setSelectedBillboard(billboard);
     setModalOpen(true);
   };
 
-  return (
-    <section id="billboards">
-      <SectionHeader
-        title="بیلبوردها"
-        description="نمایش بیلبوردهای کمپین روی نقشه و کارت‌ها — داده‌های Map Bilboard به‌صورت زنده"
-      >
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="relative">
-            <Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="جستجو..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-40 pr-9"
-            />
-          </div>
-          <Select value={cityFilter} onValueChange={setCityFilter}>
-            <SelectTrigger className="w-32">
-              <SelectValue placeholder="شهر" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">همه شهرها</SelectItem>
-              {cities.map((city) => (
-                <SelectItem key={city} value={city}>{city}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-32">
-              <SelectValue placeholder="وضعیت" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">همه</SelectItem>
-              {["completed", "published", "draft"].map((s) => (
-                <SelectItem key={s} value={s}>{getStatusLabel(s)}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </SectionHeader>
-
-      <div className="mb-8">
-        <BillboardMap billboards={filtered} onSelect={openBillboard} />
+  const controls = (
+    <>
+      <Select value={sort} onValueChange={(value) => setSort(value as PublicMediaSort)}>
+        <SelectTrigger className="w-36">
+          <SelectValue placeholder="مرتب‌سازی" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="default">ترتیب پیش‌فرض</SelectItem>
+          <SelectItem value="title">عنوان</SelectItem>
+          <SelectItem value="newest">جدیدترین</SelectItem>
+        </SelectContent>
+      </Select>
+      <div className="relative">
+        <Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          placeholder="جستجو..."
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          className="w-40 pr-9"
+        />
       </div>
-
-      {filtered.length === 0 ? (
-        <div className="rounded-xl border bg-card py-12 text-center text-muted-foreground">
-          بیلبوردی یافت نشد.
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {filtered.map((billboard) => (
-            <BillboardCard key={billboard.id} billboard={billboard} onView={openBillboard} />
+      <Select value={cityFilter} onValueChange={setCityFilter}>
+        <SelectTrigger className="w-32">
+          <SelectValue placeholder="شهر" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">همه شهرها</SelectItem>
+          {cities.map((city) => (
+            <SelectItem key={city} value={city}>
+              {city}
+            </SelectItem>
           ))}
+        </SelectContent>
+      </Select>
+      <Select value={statusFilter} onValueChange={setStatusFilter}>
+        <SelectTrigger className="w-32">
+          <SelectValue placeholder="وضعیت" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">همه</SelectItem>
+          {["completed", "published", "draft"].map((status) => (
+            <SelectItem key={status} value={status}>
+              {getStatusLabel(status)}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </>
+  );
+
+  return (
+    <>
+      <CollapsibleSection
+        id="billboards"
+        title="بیلبوردها"
+        description="نمایش بیلبوردهای کمپین روی نقشه و کارت‌ها"
+        controls={controls}
+      >
+        <div className="mb-6">
+          <BillboardMap billboards={filtered} onSelect={openBillboard} />
         </div>
-      )}
+
+        {filtered.length === 0 ? (
+          <div className="rounded-xl border bg-card py-12 text-center text-muted-foreground">
+            بیلبوردی یافت نشد.
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className={PUBLIC_MEDIA_GRID_CLASS}>
+              {visibleBillboards.map((billboard) => (
+                <BillboardCard key={billboard.id} billboard={billboard} onView={openBillboard} />
+              ))}
+            </div>
+
+            {hasMore && (
+              <div className="flex justify-center">
+                <Button
+                  variant="outline"
+                  onClick={() => setVisibleCount((count) => count + PUBLIC_MEDIA_PAGE_SIZE)}
+                >
+                  مشاهده بیشتر ({formatPersianNumber(filtered.length - visibleCount)} باقی‌مانده)
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
+      </CollapsibleSection>
 
       <BillboardModal
         open={modalOpen}
         onOpenChange={setModalOpen}
         billboard={selectedBillboard}
       />
-    </section>
+    </>
   );
 }

@@ -1,6 +1,8 @@
+"use client";
+
 import { Heart, Share2, Users } from "lucide-react";
 import { KPICard } from "@/components/public/kpi-card";
-import { SectionHeader } from "@/components/public/section-header";
+import { CollapsibleSection } from "@/components/public/collapsible-section";
 import { VisitsLineChart } from "@/components/charts/visits-line-chart";
 import { TrafficSourcesChart } from "@/components/charts/traffic-sources-chart";
 import { BarChartCard } from "@/components/charts/bar-chart-card";
@@ -13,12 +15,11 @@ interface SocialAnalyticsSectionProps {
 
 export function SocialAnalyticsSection({ analytics }: SocialAnalyticsSectionProps) {
   return (
-    <section id="social-analytics">
-      <SectionHeader
-        title="آمار شبکه‌های اجتماعی"
-        description="آمار بازدید، تعامل و دسترسی در پلتفرم‌های اجتماعی کمپین"
-      />
-
+    <CollapsibleSection
+      id="social-analytics"
+      title="آمار شبکه‌های اجتماعی"
+      description="آمار بازدید، تعامل و دسترسی در پلتفرم‌های اجتماعی کمپین"
+    >
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <KPICard title="کل بازدید/دسترسی" value={analytics.totalVisitors} icon={Users} />
         <KPICard title="کاربران یکتا" value={analytics.uniqueVisitors} icon={Share2} />
@@ -54,6 +55,6 @@ export function SocialAnalyticsSection({ analytics }: SocialAnalyticsSectionProp
           />
         )}
       </div>
-    </section>
+    </CollapsibleSection>
   );
 }

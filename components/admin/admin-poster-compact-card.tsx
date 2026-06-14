@@ -27,9 +27,10 @@ export function AdminPosterCompactCard({ poster, versions, onClick }: AdminPoste
         <MediaThumbnail
           src={latestVersion?.imageUrl}
           alt={poster.title}
-          kind="poster"
-          sizes="160px"
-        />
+            kind="poster"
+            sizes="160px"
+            objectFit="contain"
+          />
         <div className="absolute inset-0 bg-black/0 transition-colors group-hover:bg-black/10" />
         {latestVersion && (
           <div className="absolute top-1.5 right-1.5">

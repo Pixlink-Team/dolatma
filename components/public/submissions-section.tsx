@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { KPICard } from "@/components/public/kpi-card";
-import { SectionHeader } from "@/components/public/section-header";
+import { CollapsibleSection } from "@/components/public/collapsible-section";
 import { ParticipationChart } from "@/components/charts/participation-chart";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -17,11 +17,11 @@ interface SubmissionsSectionProps {
 
 export function SubmissionsSection({ submissions, summary }: SubmissionsSectionProps) {
   return (
-    <section id="submissions">
-      <SectionHeader
-        title="مشارکت کاربران"
-        description="مشارکت‌کنندگان و ارسال‌های تأییدشده در کمپین"
-      />
+    <CollapsibleSection
+      id="submissions"
+      title="مشارکت کاربران"
+      description="مشارکت‌کنندگان و ارسال‌های تأییدشده در کمپین"
+    >
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
         <KPICard title="شرکت‌کنندگان" value={summary.totalParticipants} icon={Users} />
@@ -70,6 +70,6 @@ export function SubmissionsSection({ submissions, summary }: SubmissionsSectionP
           ))}
         </div>
       )}
-    </section>
+    </CollapsibleSection>
   );
 }

@@ -1,6 +1,8 @@
+"use client";
+
 import { Clock, Eye, MousePointerClick, Users } from "lucide-react";
 import { KPICard } from "@/components/public/kpi-card";
-import { SectionHeader } from "@/components/public/section-header";
+import { CollapsibleSection } from "@/components/public/collapsible-section";
 import { VisitsLineChart } from "@/components/charts/visits-line-chart";
 import { TrafficSourcesChart } from "@/components/charts/traffic-sources-chart";
 import { BarChartCard } from "@/components/charts/bar-chart-card";
@@ -13,13 +15,12 @@ interface AnalyticsSectionProps {
 
 export function AnalyticsSection({ analytics }: AnalyticsSectionProps) {
   return (
-    <section id="analytics">
-      <SectionHeader
-        title="آمار بازدید سایت"
-        description="آمار ترافیک و بازدیدکنندگان سایت کمپین"
-      />
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <CollapsibleSection
+      id="analytics"
+      title="آمار بازدید سایت"
+      description="آمار ترافیک و بازدیدکنندگان سایت کمپین"
+    >
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <KPICard title="کل بازدیدکنندگان" value={analytics.totalVisitors} icon={Users} />
         <KPICard title="بازدیدکنندگان یکتا" value={analytics.uniqueVisitors} icon={Eye} />
         <KPICard title="بازدید صفحات" value={analytics.pageViews} icon={MousePointerClick} />
@@ -30,12 +31,12 @@ export function AnalyticsSection({ analytics }: AnalyticsSectionProps) {
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+      <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
         <VisitsLineChart data={analytics.visitsOverTime} />
         <TrafficSourcesChart data={analytics.trafficSources} />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <BarChartCard
           title="دستگاه‌ها"
           data={analytics.deviceSplit.map((d) => ({ label: d.device, value: d.count }))}
@@ -54,6 +55,6 @@ export function AnalyticsSection({ analytics }: AnalyticsSectionProps) {
           />
         )}
       </div>
-    </section>
+    </CollapsibleSection>
   );
 }

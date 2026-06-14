@@ -179,10 +179,11 @@ export function AdminPosterEditor({
   };
 
   return (
-    <div className="space-y-4 pt-2">
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto pr-1">
       <div className="relative mx-auto aspect-[3/4] max-h-80 w-full max-w-xs overflow-hidden rounded-xl bg-muted">
         {latestVersion ? (
-          <MediaThumbnail src={latestVersion.imageUrl} alt={editTitle} kind="poster" sizes="320px" />
+          <MediaThumbnail src={latestVersion.imageUrl} alt={editTitle} kind="poster" sizes="320px" objectFit="contain" />
         ) : (
           <MediaThumbnail src={null} alt={editTitle} kind="poster" />
         )}
@@ -251,22 +252,10 @@ export function AdminPosterEditor({
         <div
           className={cn(
             "space-y-3 overflow-hidden transition-all",
-            versionsExpanded ? "mt-3 max-h-[999px] opacity-100" : "max-h-0 opacity-0"
+            versionsExpanded ? "mt-3 opacity-100" : "max-h-0 opacity-0"
           )}
         >
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-sm font-medium">ویرایش / افزودن نسخه</p>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setVersionDrafts((prev) => [...prev, createPosterVersionDraft()])}
-              className="gap-1"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              نسخه جدید
-            </Button>
-          </div>
+          <p className="text-sm font-medium">ویرایش / افزودن نسخه</p>
 
           {versionDrafts.map((draft, index) => (
             <div key={draft.localId} className="space-y-3 rounded-lg border p-3">
@@ -314,10 +303,22 @@ export function AdminPosterEditor({
           ))}
         </div>
       </div>
+      </div>
 
-      <Button onClick={handleSaveAll} disabled={isPending} className="w-full">
-        {isPending ? "در حال ذخیره..." : "ذخیره"}
-      </Button>
+      <div className="mt-3 flex shrink-0 gap-2 border-t bg-card pt-3">
+        <Button
+          type="button"
+          variant="outline"
+          disabled={isPending}
+          onClick={() => setVersionDrafts((prev) => [...prev, createPosterVersionDraft()])}
+        >
+          <Plus className="h-4 w-4" />
+          نسخه
+        </Button>
+        <Button onClick={handleSaveAll} disabled={isPending} className="flex-1">
+          {isPending ? "در حال ذخیره..." : "ذخیره"}
+        </Button>
+      </div>
     </div>
   );
 }

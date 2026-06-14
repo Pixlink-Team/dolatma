@@ -93,7 +93,7 @@ export function CampaignDashboard({ initialData, slug }: CampaignDashboardProps)
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8 space-y-16">
+      <main className="container mx-auto space-y-8 px-4 py-8">
         <section id="overview">
           <SectionHeader title="خلاصه کمپین" description={settings.description}>
             <Badge status={settings.status}>

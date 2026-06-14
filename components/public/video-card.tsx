@@ -53,16 +53,16 @@ export function VideoCard({ title, description, categoryTitle, versions }: Video
 
   return (
     <>
-      <Card className="overflow-hidden w-full max-w-md">
+      <Card className="w-full overflow-hidden py-0 gap-0">
         <div
-          className="relative aspect-video bg-muted cursor-pointer group"
+          className="relative aspect-video cursor-pointer overflow-hidden bg-muted group"
           onClick={() => openModal(finalVersion.id)}
         >
           <VideoThumbnail
             videoUrl={finalVersion.videoUrl}
             thumbnailUrl={finalVersion.thumbnailUrl}
             alt={title}
-            className="object-cover transition-transform group-hover:scale-105"
+            className="object-contain transition-transform group-hover:scale-105"
           />
           <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/30 transition-colors pointer-events-none">
             <Play className="h-12 w-12 text-white" />

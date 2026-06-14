@@ -2,7 +2,7 @@
 
 import { Play } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { MediaThumbnail } from "@/components/ui/media-thumbnail";
+import { VideoThumbnail } from "@/components/media/video-thumbnail";
 import type { Video, VideoVersion } from "@/lib/types";
 import { cn, formatPersianNumber } from "@/lib/utils";
 
@@ -25,12 +25,16 @@ export function AdminVideoCompactCard({ video, versions, onClick }: AdminVideoCo
       )}
     >
       <div className="relative aspect-video w-full overflow-hidden bg-muted">
-        <MediaThumbnail
-          src={latestVersion?.thumbnailUrl}
-          alt={video.title}
-          kind="video"
-          sizes="160px"
-        />
+        {latestVersion ? (
+          <VideoThumbnail
+            videoUrl={latestVersion.videoUrl}
+            thumbnailUrl={latestVersion.thumbnailUrl}
+            alt={video.title}
+            className="object-contain"
+          />
+        ) : (
+          <div className="flex h-full items-center justify-center text-[10px] text-muted-foreground">بدون ویدیو</div>
+        )}
         <div className="absolute inset-0 flex items-center justify-center bg-black/20 transition-colors group-hover:bg-black/30">
           <Play className="h-8 w-8 text-white" />
         </div>

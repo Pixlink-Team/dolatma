@@ -206,11 +206,12 @@ export function AdminVideoEditor({
   };
 
   return (
-    <div className="space-y-4 pt-2">
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto pr-1">
       <div className="relative mx-auto aspect-video max-h-56 w-full overflow-hidden rounded-xl bg-muted">
         {previewCover ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={previewCover} alt={editTitle} className="h-full w-full object-cover" />
+          <img src={previewCover} alt={editTitle} className="h-full w-full object-contain" />
         ) : latestVersion ? (
           <VideoThumbnail
             videoUrl={latestVersion.videoUrl}
@@ -286,22 +287,10 @@ export function AdminVideoEditor({
         <div
           className={cn(
             "space-y-3 overflow-hidden transition-all",
-            versionsExpanded ? "mt-3 max-h-[999px] opacity-100" : "max-h-0 opacity-0"
+            versionsExpanded ? "mt-3 opacity-100" : "max-h-0 opacity-0"
           )}
         >
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-sm font-medium">ویرایش / افزودن نسخه</p>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setVersionDrafts((prev) => [...prev, createVideoVersionDraft()])}
-              className="gap-1"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              نسخه جدید
-            </Button>
-          </div>
+          <p className="text-sm font-medium">ویرایش / افزودن نسخه</p>
 
           {versionDrafts.map((draft, index) => {
             const isAparat = isAparatVideoInput(draft.videoUrl);
@@ -342,7 +331,7 @@ export function AdminVideoEditor({
                 {draftPreview && (
                   <div className="relative aspect-video max-h-32 overflow-hidden rounded-lg border bg-muted">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={draftPreview} alt="" className="h-full w-full object-cover" />
+                    <img src={draftPreview} alt="" className="h-full w-full object-contain" />
                   </div>
                 )}
 
@@ -384,10 +373,22 @@ export function AdminVideoEditor({
           })}
         </div>
       </div>
+      </div>
 
-      <Button onClick={handleSaveAll} disabled={isPending} className="w-full">
-        {isPending ? "در حال ذخیره..." : "ذخیره"}
-      </Button>
+      <div className="mt-3 flex shrink-0 gap-2 border-t bg-card pt-3">
+        <Button
+          type="button"
+          variant="outline"
+          disabled={isPending}
+          onClick={() => setVersionDrafts((prev) => [...prev, createVideoVersionDraft()])}
+        >
+          <Plus className="h-4 w-4" />
+          نسخه
+        </Button>
+        <Button onClick={handleSaveAll} disabled={isPending} className="flex-1">
+          {isPending ? "در حال ذخیره..." : "ذخیره"}
+        </Button>
+      </div>
     </div>
   );
 }

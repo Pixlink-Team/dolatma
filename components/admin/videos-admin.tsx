@@ -2,33 +2,13 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { toast } from "sonner";
-import { Plus } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AdminVideoAddCard, AdminVideoCompactCard } from "@/components/admin/admin-video-compact-card";
+import { AdminMediaCategories } from "@/components/admin/admin-media-categories";
 import { AdminVideoEditor } from "@/components/admin/admin-video-editor";
-import { saveCategoryAction, saveVideoAction } from "@/lib/actions/admin-actions";
+import { saveVideoAction } from "@/lib/actions/admin-actions";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { MediaCategory, Video, VideoVersion } from "@/lib/types";
-
-const categorySchema = z.object({
-  title: z.string().min(1),
-  description: z.string().optional(),
-  sortOrder: z.coerce.number(),
-  published: z.boolean(),
-});
-
-const editorDialogClass =
-  "max-h-[92vh] max-w-2xl overflow-y-auto !top-4 !translate-x-[-50%] !translate-y-0 sm:!top-6";
-
-function scrollToTop() {
-  window.scrollTo({ top: 0, behavior: "smooth" });
-}
 
 interface VideosAdminProps {
   campaignId: string;
@@ -37,6 +17,9 @@ interface VideosAdminProps {
   initialVersions: VideoVersion[];
 }
 
+const editorDialogClass =
+  "relative flex max-h-[92vh] max-w-2xl flex-col overflow-hidden p-0 !top-4 !translate-x-[-50%] !translate-y-0 sm:!top-6";
+
 export function VideosAdmin({
   campaignId,
   initialCategories,
@@ -44,15 +27,9 @@ export function VideosAdmin({
   initialVersions,
 }: VideosAdminProps) {
   const router = useRouter();
-  const [categoryOpen, setCategoryOpen] = useState(false);
   const [editorOpen, setEditorOpen] = useState(false);
   const [activeVideoId, setActiveVideoId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-
-  const categoryForm = useForm({
-    resolver: zodResolver(categorySchema),
-    defaultValues: { title: "", sortOrder: 1, published: true },
-  });
 
   const activeVideo = activeVideoId
     ? initialVideos.find((video) => video.id === activeVideoId) ?? null
@@ -61,7 +38,7 @@ export function VideosAdmin({
   const refresh = () => router.refresh();
 
   useEffect(() => {
-    if (editorOpen) scrollToTop();
+    if (editorOpen) window.scrollTo({ top: 0, behavior: "smooth" });
   }, [editorOpen]);
 
   const openEditor = (videoId: string) => {
@@ -104,17 +81,19 @@ export function VideosAdmin({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">ویدیوها</h1>
-          <p className="text-sm text-muted-foreground">
-            نمای فشرده — روی کارت کلیک کنید یا با + ویدیو جدید بسازید
-          </p>
-        </div>
-        <Button variant="outline" onClick={() => setCategoryOpen(true)}>
-          <Plus className="h-4 w-4" /> دسته جدید
-        </Button>
+      <div>
+        <h1 className="text-2xl font-bold">ویدیوها</h1>
+        <p className="text-sm text-muted-foreground">
+          نمای فشرده — روی کارت کلیک کنید یا با + ویدیو جدید بسازید
+        </p>
       </div>
+
+      <AdminMediaCategories
+        campaignId={campaignId}
+        type="video"
+        categories={initialCategories}
+        label="ویدیو"
+      />
 
       {initialCategories.length === 0 ? (
         <div className="rounded-xl border py-12 text-center text-muted-foreground">
@@ -136,39 +115,19 @@ export function VideosAdmin({
 
       <Dialog open={editorOpen} onOpenChange={(open) => !open && closeEditor()}>
         <DialogContent className={editorDialogClass}>
-          <DialogHeader>
+          <DialogHeader className="shrink-0 border-b px-6 py-4 pr-12">
             <DialogTitle>{activeVideo?.title ?? "ویرایش ویدیو"}</DialogTitle>
           </DialogHeader>
-          {activeVideo && (
-            <AdminVideoEditor
-              video={activeVideo}
-              versions={activeVersions}
-              categories={initialCategories}
-              onClose={closeEditor}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={categoryOpen} onOpenChange={setCategoryOpen}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>افزودن دسته ویدیو</DialogTitle></DialogHeader>
-          <form
-            onSubmit={categoryForm.handleSubmit((data) => {
-              startTransition(async () => {
-                await saveCategoryAction({ ...data, campaignId, type: "video" });
-                toast.success("ذخیره شد");
-                setCategoryOpen(false);
-                categoryForm.reset();
-                refresh();
-              });
-            })}
-            className="space-y-4"
-          >
-            <div><Label>عنوان</Label><Input {...categoryForm.register("title")} /></div>
-            <div><Label>ترتیب</Label><Input type="number" {...categoryForm.register("sortOrder")} /></div>
-            <Button type="submit" disabled={isPending}>ذخیره</Button>
-          </form>
+          <div className="min-h-0 flex-1 overflow-hidden px-6 pb-4 pt-4">
+            {activeVideo && (
+              <AdminVideoEditor
+                video={activeVideo}
+                versions={activeVersions}
+                categories={initialCategories}
+                onClose={closeEditor}
+              />
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>

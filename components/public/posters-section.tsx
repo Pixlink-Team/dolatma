@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Select,
   SelectContent,
@@ -8,17 +8,31 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { SectionHeader } from "@/components/public/section-header";
+import { Button } from "@/components/ui/button";
+import { CollapsibleSection } from "@/components/public/collapsible-section";
 import { PosterCard } from "@/components/public/poster-card";
+import {
+  PUBLIC_MEDIA_GRID_CLASS,
+  PUBLIC_MEDIA_PAGE_SIZE,
+  sortByPublicMediaOrder,
+  type PublicMediaSort,
+} from "@/lib/public-media-section";
 import type { MediaCategory, PosterWithVersions } from "@/lib/types";
+import { formatPersianNumber } from "@/lib/utils";
 
 interface PostersSectionProps {
   categories: MediaCategory[];
   posters: PosterWithVersions[];
 }
 
+function getPosterLatestDate(poster: PosterWithVersions): string | undefined {
+  return [...poster.versions].sort((a, b) => b.versionNumber - a.versionNumber)[0]?.date;
+}
+
 export function PostersSection({ categories, posters }: PostersSectionProps) {
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [sort, setSort] = useState<PublicMediaSort>("default");
+  const [visibleCount, setVisibleCount] = useState(PUBLIC_MEDIA_PAGE_SIZE);
 
   const activeCategories = useMemo(
     () => categories.filter((cat) => posters.some((poster) => poster.categoryId === cat.id)),
@@ -26,49 +40,88 @@ export function PostersSection({ categories, posters }: PostersSectionProps) {
   );
 
   const filteredPosters = useMemo(() => {
-    if (categoryFilter === "all") return posters;
-    return posters.filter((poster) => poster.categoryId === categoryFilter);
-  }, [posters, categoryFilter]);
+    const filtered =
+      categoryFilter === "all"
+        ? posters
+        : posters.filter((poster) => poster.categoryId === categoryFilter);
+    return sortByPublicMediaOrder(filtered, sort, getPosterLatestDate);
+  }, [posters, categoryFilter, sort]);
+
+  const visiblePosters = filteredPosters.slice(0, visibleCount);
+  const hasMore = visibleCount < filteredPosters.length;
+
+  useEffect(() => {
+    setVisibleCount(PUBLIC_MEDIA_PAGE_SIZE);
+  }, [categoryFilter, sort]);
 
   if (posters.length === 0) return null;
 
-  return (
-    <section id="posters">
-      <SectionHeader
-        title="پوسترها"
-        description="همه پوسترهای کمپین — در مودال مشاهده، بین نسخه‌ها جابه‌جا شوید"
-      >
-        {activeCategories.length > 1 && (
-          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-            <SelectTrigger className="w-40">
-              <SelectValue placeholder="دسته" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">همه دسته‌ها</SelectItem>
-              {activeCategories.map((cat) => (
-                <SelectItem key={cat.id} value={cat.id}>{cat.title}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
-      </SectionHeader>
+  const controls = (
+    <>
+      <Select value={sort} onValueChange={(value) => setSort(value as PublicMediaSort)}>
+        <SelectTrigger className="w-36">
+          <SelectValue placeholder="مرتب‌سازی" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="default">ترتیب پیش‌فرض</SelectItem>
+          <SelectItem value="title">عنوان</SelectItem>
+          <SelectItem value="newest">جدیدترین</SelectItem>
+        </SelectContent>
+      </Select>
+      {activeCategories.length > 0 && (
+        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+          <SelectTrigger className="w-40">
+            <SelectValue placeholder="دسته" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">همه دسته‌ها</SelectItem>
+            {activeCategories.map((cat) => (
+              <SelectItem key={cat.id} value={cat.id}>
+                {cat.title}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
+    </>
+  );
 
+  return (
+    <CollapsibleSection
+      id="posters"
+      title="پوسترها"
+      description="در مودال مشاهده، بین نسخه‌ها جابه‌جا شوید"
+      controls={controls}
+    >
       {filteredPosters.length === 0 ? (
         <div className="rounded-xl border bg-card py-12 text-center text-muted-foreground">
           پوستری در این دسته یافت نشد.
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {filteredPosters.map((poster) => (
-            <PosterCard
-              key={poster.id}
-              title={poster.title}
-              description={poster.description}
-              versions={poster.versions}
-            />
-          ))}
+        <div className="space-y-4">
+          <div className={PUBLIC_MEDIA_GRID_CLASS}>
+            {visiblePosters.map((poster) => (
+              <PosterCard
+                key={poster.id}
+                title={poster.title}
+                description={poster.description}
+                versions={poster.versions}
+              />
+            ))}
+          </div>
+
+          {hasMore && (
+            <div className="flex justify-center">
+              <Button
+                variant="outline"
+                onClick={() => setVisibleCount((count) => count + PUBLIC_MEDIA_PAGE_SIZE)}
+              >
+                مشاهده بیشتر ({formatPersianNumber(filteredPosters.length - visibleCount)} باقی‌مانده)
+              </Button>
+            </div>
+          )}
         </div>
       )}
-    </section>
+    </CollapsibleSection>
   );
 }
