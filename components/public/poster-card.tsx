@@ -20,13 +20,19 @@ interface PosterCardProps {
 
 export function PosterCard({ title, description, versions }: PosterCardProps) {
   const [expanded, setExpanded] = useState(false);
-  const [lightboxVersion, setLightboxVersion] = useState<PosterVersion | null>(null);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxVersionId, setLightboxVersionId] = useState<string | null>(null);
 
   const sortedVersions = [...versions].sort((a, b) => a.versionNumber - b.versionNumber);
   const finalVersion = sortedVersions.find((v) => v.isFinal) ?? sortedVersions[sortedVersions.length - 1];
   const previousVersions = sortedVersions.filter((v) => v.id !== finalVersion?.id);
 
   if (!finalVersion) return null;
+
+  const openLightbox = (versionId: string) => {
+    setLightboxVersionId(versionId);
+    setLightboxOpen(true);
+  };
 
   const handleDownload = (version: PosterVersion, event: React.MouseEvent) => {
     event.stopPropagation();
@@ -41,7 +47,7 @@ export function PosterCard({ title, description, versions }: PosterCardProps) {
       <Card className="overflow-hidden w-full py-0 gap-0">
         <div
           className="relative w-full aspect-[3/4] overflow-hidden bg-muted cursor-pointer group"
-          onClick={() => setLightboxVersion(finalVersion)}
+          onClick={() => openLightbox(finalVersion.id)}
         >
           {finalVersion.imageUrl ? (
             <Image
@@ -120,7 +126,7 @@ export function PosterCard({ title, description, versions }: PosterCardProps) {
                   >
                     <button
                       type="button"
-                      onClick={() => setLightboxVersion(version)}
+                      onClick={() => openLightbox(version.id)}
                       className="flex items-center gap-3 flex-1 min-w-0 text-right"
                     >
                       <div className="relative w-12 h-14 shrink-0 rounded overflow-hidden bg-muted">
@@ -166,17 +172,16 @@ export function PosterCard({ title, description, versions }: PosterCardProps) {
         </CardContent>
       </Card>
 
-      {lightboxVersion && (
+      {lightboxOpen && lightboxVersionId && (
         <LightboxModal
-          open={!!lightboxVersion}
-          onOpenChange={(open) => !open && setLightboxVersion(null)}
-          imageUrl={lightboxVersion.imageUrl}
+          open={lightboxOpen}
+          onOpenChange={(open) => {
+            setLightboxOpen(open);
+            if (!open) setLightboxVersionId(null);
+          }}
           title={title}
-          versionNumber={lightboxVersion.versionNumber}
-          date={lightboxVersion.date}
-          notes={lightboxVersion.notes}
-          status={lightboxVersion.status}
-          isFinal={lightboxVersion.isFinal}
+          versions={sortedVersions}
+          initialVersionId={lightboxVersionId}
         />
       )}
     </>

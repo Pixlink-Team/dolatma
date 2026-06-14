@@ -1,24 +1,28 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import { Download } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { downloadMedia, getFilenameFromUrl, hasDistinctThumbnail, isDirectVideoUrl, resolveVideoEmbedUrl } from "@/lib/media-utils";
+import { MediaVersionPicker } from "@/components/media/media-version-picker";
+import { VideoThumbnail } from "@/components/media/video-thumbnail";
+import {
+  downloadMedia,
+  getFilenameFromUrl,
+  hasDistinctThumbnail,
+  isDirectVideoUrl,
+  resolveVideoEmbedUrl,
+} from "@/lib/media-utils";
+import type { VideoVersion } from "@/lib/types";
 import { formatPersianDate, getStatusLabel, isValidUrl } from "@/lib/utils";
 
 interface VideoModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  videoUrl: string;
-  thumbnailUrl?: string | null;
   title: string;
-  versionNumber?: number;
-  date?: string;
-  notes?: string | null;
-  status?: string;
-  isFinal?: boolean;
-  duration?: string | null;
+  versions: VideoVersion[];
+  initialVersionId: string;
 }
 
 function isDirectVideo(url: string): boolean {
@@ -28,56 +32,81 @@ function isDirectVideo(url: string): boolean {
 export function VideoModal({
   open,
   onOpenChange,
-  videoUrl,
-  thumbnailUrl,
   title,
-  versionNumber,
-  date,
-  notes,
-  status,
-  isFinal,
-  duration,
+  versions,
+  initialVersionId,
 }: VideoModalProps) {
-  const validUrl = isValidUrl(videoUrl);
-  const embedUrl = validUrl ? resolveVideoEmbedUrl(videoUrl) : "";
-  const suffix = versionNumber ? `-v${versionNumber}` : "";
-  const showCoverDownload = hasDistinctThumbnail(thumbnailUrl, videoUrl);
+  const sortedVersions = useMemo(
+    () => [...versions].sort((a, b) => a.versionNumber - b.versionNumber),
+    [versions]
+  );
+
+  const [activeVersionId, setActiveVersionId] = useState(initialVersionId);
+
+  useEffect(() => {
+    if (open) setActiveVersionId(initialVersionId);
+  }, [open, initialVersionId]);
+
+  const activeVersion =
+    sortedVersions.find((version) => version.id === activeVersionId) ??
+    sortedVersions[sortedVersions.length - 1];
+
+  if (!activeVersion) return null;
+
+  const validUrl = isValidUrl(activeVersion.videoUrl);
+  const embedUrl = validUrl ? resolveVideoEmbedUrl(activeVersion.videoUrl) : "";
+  const suffix = `-v${activeVersion.versionNumber}`;
+  const showCoverDownload = hasDistinctThumbnail(activeVersion.thumbnailUrl, activeVersion.videoUrl);
 
   const handleDownloadVideo = () => {
-    void downloadMedia(videoUrl, getFilenameFromUrl(videoUrl, `${title}${suffix}.mp4`));
+    void downloadMedia(
+      activeVersion.videoUrl,
+      getFilenameFromUrl(activeVersion.videoUrl, `${title}${suffix}.mp4`)
+    );
   };
 
   const handleDownloadCover = () => {
-    if (!thumbnailUrl) return;
-    void downloadMedia(thumbnailUrl, getFilenameFromUrl(thumbnailUrl, `${title}${suffix}-cover.jpg`));
+    if (!activeVersion.thumbnailUrl) return;
+    void downloadMedia(
+      activeVersion.thumbnailUrl,
+      getFilenameFromUrl(activeVersion.thumbnailUrl, `${title}${suffix}-cover.jpg`)
+    );
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl p-0 overflow-hidden">
+      <DialogContent className="max-h-[92vh] max-w-3xl overflow-y-auto p-0">
         <DialogHeader className="p-4 pb-0">
-          <DialogTitle className="flex items-center gap-2 flex-wrap">
+          <DialogTitle className="flex flex-wrap items-center gap-2">
             {title}
-            {versionNumber && (
+            <span className="text-sm font-normal text-muted-foreground">
+              — نسخه {activeVersion.versionNumber}
+            </span>
+            {activeVersion.isFinal && <Badge status="final">نسخه نهایی</Badge>}
+            <Badge status={activeVersion.status}>{getStatusLabel(activeVersion.status)}</Badge>
+            {activeVersion.duration && (
               <span className="text-sm font-normal text-muted-foreground">
-                — نسخه {versionNumber}
+                ({activeVersion.duration})
               </span>
-            )}
-            {isFinal && <Badge status="final">نسخه نهایی</Badge>}
-            {status && <Badge status={status}>{getStatusLabel(status)}</Badge>}
-            {duration && (
-              <span className="text-sm font-normal text-muted-foreground">({duration})</span>
             )}
           </DialogTitle>
         </DialogHeader>
+
         <div className="relative aspect-video w-full bg-black">
           {validUrl ? (
             isDirectVideo(embedUrl) ? (
-              <video src={embedUrl} controls className="h-full w-full" playsInline />
+              <video
+                key={activeVersion.id}
+                src={embedUrl}
+                controls
+                className="h-full w-full"
+                playsInline
+              />
             ) : (
               <iframe
+                key={activeVersion.id}
                 src={embedUrl}
-                title={title}
+                title={`${title} — نسخه ${activeVersion.versionNumber}`}
                 className="h-full w-full"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowFullScreen
@@ -89,9 +118,16 @@ export function VideoModal({
             </div>
           )}
         </div>
-        <div className="p-4 space-y-3 border-t">
+
+        <div className="space-y-3 p-4">
           <div className="flex flex-wrap gap-2">
-            <Button variant="outline" size="sm" onClick={handleDownloadVideo} className="gap-2" disabled={!validUrl}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleDownloadVideo}
+              className="gap-2"
+              disabled={!validUrl}
+            >
               <Download className="h-4 w-4" />
               دانلود ویدیو
             </Button>
@@ -102,10 +138,24 @@ export function VideoModal({
               </Button>
             )}
           </div>
-          {date && (
-            <p className="text-sm text-muted-foreground">{formatPersianDate(date)}</p>
+
+          {activeVersion.date && (
+            <p className="text-sm text-muted-foreground">{formatPersianDate(activeVersion.date)}</p>
           )}
-          {notes && <p className="text-sm">{notes}</p>}
+          {activeVersion.notes && <p className="text-sm">{activeVersion.notes}</p>}
+
+          <MediaVersionPicker
+            versions={sortedVersions}
+            activeId={activeVersion.id}
+            onSelect={setActiveVersionId}
+            renderThumb={(version) => (
+              <VideoThumbnail
+                videoUrl={version.videoUrl}
+                thumbnailUrl={version.thumbnailUrl}
+                alt={`نسخه ${version.versionNumber}`}
+              />
+            )}
+          />
         </div>
       </DialogContent>
     </Dialog>

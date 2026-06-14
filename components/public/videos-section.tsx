@@ -30,21 +30,42 @@ export function VideosSection({ categories, videos }: VideosSectionProps) {
     return videos.filter((video) => video.categoryId === categoryFilter);
   }, [videos, categoryFilter]);
 
-  if (videos.length === 0) {
-    return (
-      <section id="videos">
-        <SectionHeader title="ویدیوها" description="ویدیوهای کمپین — نسخه‌ها داخل هر کارت" />
-        <div className="rounded-xl border bg-card py-12 text-center text-muted-foreground">
-          ویدیویی ثبت نشده است.
-        </div>
-      </section>
-    );
-  }
+  const groupedVideos = useMemo(() => {
+    if (categoryFilter !== "all") return null;
+    return activeCategories
+      .map((category) => ({
+        category,
+        videos: videos.filter((video) => video.categoryId === category.id),
+      }))
+      .filter((group) => group.videos.length > 0);
+  }, [activeCategories, categoryFilter, videos]);
+
+  const showCategoryFilter = activeCategories.length > 0;
+  const showGroupedLayout = categoryFilter === "all" && (groupedVideos?.length ?? 0) > 1;
+
+  if (videos.length === 0) return null;
+
+  const renderVideoGrid = (items: VideoWithVersions[]) => (
+    <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+      {items.map((video) => (
+        <VideoCard
+          key={video.id}
+          title={video.title}
+          description={video.description}
+          categoryTitle={video.category?.title}
+          versions={video.versions}
+        />
+      ))}
+    </div>
+  );
 
   return (
     <section id="videos">
-      <SectionHeader title="ویدیوها" description="همه ویدیوهای کمپین — نسخه‌ها داخل هر کارت">
-        {activeCategories.length > 1 && (
+      <SectionHeader
+        title="ویدیوها"
+        description="همه ویدیوهای کمپین — فیلتر دسته و نسخه‌ها در مودال پخش"
+      >
+        {showCategoryFilter && (
           <Select value={categoryFilter} onValueChange={setCategoryFilter}>
             <SelectTrigger className="w-40">
               <SelectValue placeholder="دسته" />
@@ -52,7 +73,9 @@ export function VideosSection({ categories, videos }: VideosSectionProps) {
             <SelectContent>
               <SelectItem value="all">همه دسته‌ها</SelectItem>
               {activeCategories.map((cat) => (
-                <SelectItem key={cat.id} value={cat.id}>{cat.title}</SelectItem>
+                <SelectItem key={cat.id} value={cat.id}>
+                  {cat.title}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -63,17 +86,20 @@ export function VideosSection({ categories, videos }: VideosSectionProps) {
         <div className="rounded-xl border bg-card py-12 text-center text-muted-foreground">
           ویدیویی در این دسته یافت نشد.
         </div>
-      ) : (
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {filteredVideos.map((video) => (
-            <VideoCard
-              key={video.id}
-              title={video.title}
-              description={video.description}
-              versions={video.versions}
-            />
+      ) : showGroupedLayout && groupedVideos ? (
+        <div className="space-y-10">
+          {groupedVideos.map((group) => (
+            <div key={group.category.id} className="space-y-4">
+              <h3 className="text-base font-semibold text-foreground">{group.category.title}</h3>
+              {group.category.description && (
+                <p className="text-sm text-muted-foreground">{group.category.description}</p>
+              )}
+              {renderVideoGrid(group.videos)}
+            </div>
           ))}
         </div>
+      ) : (
+        renderVideoGrid(filteredVideos)
       )}
     </section>
   );

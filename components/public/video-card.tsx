@@ -14,18 +14,25 @@ import { cn, formatPersianDate, getStatusLabel } from "@/lib/utils";
 interface VideoCardProps {
   title: string;
   description?: string | null;
+  categoryTitle?: string;
   versions: VideoVersion[];
 }
 
-export function VideoCard({ title, description, versions }: VideoCardProps) {
+export function VideoCard({ title, description, categoryTitle, versions }: VideoCardProps) {
   const [expanded, setExpanded] = useState(false);
-  const [activeVersion, setActiveVersion] = useState<VideoVersion | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [activeVersionId, setActiveVersionId] = useState<string | null>(null);
 
   const sortedVersions = [...versions].sort((a, b) => a.versionNumber - b.versionNumber);
   const finalVersion = sortedVersions.find((v) => v.isFinal) ?? sortedVersions[sortedVersions.length - 1];
   const previousVersions = sortedVersions.filter((v) => v.id !== finalVersion?.id);
 
   if (!finalVersion) return null;
+
+  const openModal = (versionId: string) => {
+    setActiveVersionId(versionId);
+    setModalOpen(true);
+  };
 
   const handleDownloadVideo = (version: VideoVersion, event: React.MouseEvent) => {
     event.stopPropagation();
@@ -49,7 +56,7 @@ export function VideoCard({ title, description, versions }: VideoCardProps) {
       <Card className="overflow-hidden w-full max-w-md">
         <div
           className="relative aspect-video bg-muted cursor-pointer group"
-          onClick={() => setActiveVersion(finalVersion)}
+          onClick={() => openModal(finalVersion.id)}
         >
           <VideoThumbnail
             videoUrl={finalVersion.videoUrl}
@@ -93,6 +100,11 @@ export function VideoCard({ title, description, versions }: VideoCardProps) {
 
         <CardContent className="p-4 space-y-3">
           <div>
+            {categoryTitle && (
+              <Badge variant="outline" className="mb-2 text-[10px]">
+                {categoryTitle}
+              </Badge>
+            )}
             <h3 className="font-semibold">{title}</h3>
             {description && <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{description}</p>}
           </div>
@@ -113,7 +125,7 @@ export function VideoCard({ title, description, versions }: VideoCardProps) {
                   <div key={version.id} className="flex items-center gap-2 p-2 rounded-lg border bg-muted/30">
                     <button
                       type="button"
-                      onClick={() => setActiveVersion(version)}
+                      onClick={() => openModal(version.id)}
                       className="flex items-center gap-3 flex-1 min-w-0 text-right"
                     >
                       <div className="relative w-16 h-10 shrink-0 rounded overflow-hidden bg-muted">
@@ -142,19 +154,16 @@ export function VideoCard({ title, description, versions }: VideoCardProps) {
         </CardContent>
       </Card>
 
-      {activeVersion && (
+      {modalOpen && activeVersionId && (
         <VideoModal
-          open={!!activeVersion}
-          onOpenChange={(open) => !open && setActiveVersion(null)}
-          videoUrl={activeVersion.videoUrl}
-          thumbnailUrl={activeVersion.thumbnailUrl}
+          open={modalOpen}
+          onOpenChange={(open) => {
+            setModalOpen(open);
+            if (!open) setActiveVersionId(null);
+          }}
           title={title}
-          versionNumber={activeVersion.versionNumber}
-          date={activeVersion.date}
-          notes={activeVersion.notes}
-          status={activeVersion.status}
-          isFinal={activeVersion.isFinal}
-          duration={activeVersion.duration}
+          versions={sortedVersions}
+          initialVersionId={activeVersionId}
         />
       )}
     </>

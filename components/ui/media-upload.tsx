@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MediaPlaceholder } from "@/components/ui/media-placeholder";
 import { cn } from "@/lib/utils";
+import { normalizeVideoInput } from "@/lib/media-utils";
 import { Loader2, Upload } from "lucide-react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
@@ -68,8 +69,14 @@ export function MediaUpload({
     if (file) void handleUpload(file);
   };
 
+  const handleValueChange = (raw: string) => {
+    onChange(kind === "video" ? normalizeVideoInput(raw) : raw);
+  };
+
   const placeholder =
-    kind === "video" ? "لینک آپارات/ویدیو یا فایل را بکشید و رها کنید" : "تصویر را بکشید و رها کنید یا لینک وارد کنید";
+    kind === "video"
+      ? "کد embed آپارات، لینک ویدیو، یا فایل را بکشید و رها کنید"
+      : "تصویر را بکشید و رها کنید یا لینک وارد کنید";
 
   return (
     <div className="space-y-2">
@@ -92,7 +99,14 @@ export function MediaUpload({
         <div className="flex flex-col gap-2 sm:flex-row">
           <Input
             value={value}
-            onChange={(event) => onChange(event.target.value)}
+            onChange={(event) => handleValueChange(event.target.value)}
+            onPaste={(event) => {
+              if (kind !== "video") return;
+              const pasted = event.clipboardData.getData("text");
+              if (!pasted.includes("aparat.com")) return;
+              event.preventDefault();
+              handleValueChange(pasted);
+            }}
             dir="ltr"
             placeholder={placeholder}
             className="flex-1"

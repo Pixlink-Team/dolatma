@@ -28,6 +28,7 @@ interface AdminDataTableProps<T> {
   onDelete?: (item: T) => void;
   onTogglePublish?: (item: T) => void;
   getPublished?: (item: T) => boolean;
+  isReadOnly?: (item: T) => boolean;
   emptyMessage?: string;
 }
 
@@ -39,6 +40,7 @@ export function AdminDataTable<T extends { id: string }>({
   onDelete,
   onTogglePublish,
   getPublished,
+  isReadOnly,
   emptyMessage = "موردی یافت نشد.",
 }: AdminDataTableProps<T>) {
   const [search, setSearch] = useState("");
@@ -93,10 +95,19 @@ export function AdminDataTable<T extends { id: string }>({
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((item) => (
-                  <tr key={item.id} className="border-t hover:bg-muted/30">
+                {filtered.map((item) => {
+                  const readOnly = isReadOnly?.(item) ?? false;
+
+                  return (
+                  <tr
+                    key={item.id}
+                    className={readOnly ? "border-t bg-muted/20 hover:bg-muted/30" : "border-t hover:bg-muted/30"}
+                  >
                     {hasActions && (
                       <td className="px-4 py-3 align-middle">
+                        {readOnly ? (
+                          <span className="text-xs text-muted-foreground">از API — فقط مشاهده</span>
+                        ) : (
                         <div className="flex flex-wrap items-center justify-start gap-1">
                           {onEdit && (
                             <Button variant="ghost" size="sm" onClick={() => onEdit(item)}>
@@ -136,6 +147,7 @@ export function AdminDataTable<T extends { id: string }>({
                             </AlertDialog>
                           )}
                         </div>
+                        )}
                       </td>
                     )}
                     {columns.map((col) => (
@@ -146,7 +158,8 @@ export function AdminDataTable<T extends { id: string }>({
                       </td>
                     ))}
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>

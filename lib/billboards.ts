@@ -4,8 +4,45 @@ import {
 } from "@/lib/services/billboard-api";
 import type { Billboard, CampaignSettings } from "@/lib/types";
 
+export function isApiBillboard(billboard: Billboard): boolean {
+  return (
+    billboard.source === "api" ||
+    billboard.id.startsWith("api-") ||
+    billboard.tags.some((tag) => tag.startsWith("map:"))
+  );
+}
+
 function isManualBillboard(billboard: Billboard): boolean {
-  return billboard.source !== "api" && !billboard.tags.some((tag) => tag.startsWith("map:"));
+  return !isApiBillboard(billboard);
+}
+
+export async function resolveAdminBillboards(
+  settings: CampaignSettings,
+  dbBillboards: Billboard[]
+): Promise<Billboard[]> {
+  const manualBillboards = dbBillboards
+    .filter(isManualBillboard)
+    .sort((a, b) => a.sortOrder - b.sortOrder);
+
+  const externalCampaignId = settings.billboardConfig?.externalCampaignId;
+  if (!externalCampaignId) {
+    return manualBillboards;
+  }
+
+  try {
+    const externalBillboards = await fetchAllExternalBillboards(externalCampaignId);
+    const liveBillboards = externalBillboards.map((item, index) =>
+      mapExternalBillboardToBillboard(item, settings.id, {
+        sortOrder: manualBillboards.length + index + 1,
+        published: item.status === "active",
+      })
+    );
+
+    return [...manualBillboards, ...liveBillboards];
+  } catch (error) {
+    console.error("Admin billboard API fetch failed:", error);
+    return manualBillboards;
+  }
 }
 
 export async function resolvePublicBillboards(

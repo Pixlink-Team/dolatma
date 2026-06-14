@@ -36,7 +36,7 @@ export function PostersSection({ categories, posters }: PostersSectionProps) {
     <section id="posters">
       <SectionHeader
         title="پوسترها"
-        description="همه پوسترهای کمپین — روی هر پوستر کلیک کنید و نسخه‌های قبلی را در کارت ببینید"
+        description="همه پوسترهای کمپین — در مودال مشاهده، بین نسخه‌ها جابه‌جا شوید"
       >
         {activeCategories.length > 1 && (
           <Select value={categoryFilter} onValueChange={setCategoryFilter}>

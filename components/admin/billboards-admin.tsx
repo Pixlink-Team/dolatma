@@ -30,6 +30,7 @@ import { MediaUpload } from "@/components/ui/media-upload";
 import { PersianDateField } from "@/components/ui/persian-date-input";
 import { Badge } from "@/components/ui/badge";
 import { saveBillboardAction, deleteBillboardAction } from "@/lib/actions/admin-actions";
+import { isApiBillboard } from "@/lib/billboards";
 import { todayISO } from "@/lib/jalali";
 import type { Billboard } from "@/lib/types";
 import { getStatusLabel } from "@/lib/utils";
@@ -55,9 +56,14 @@ type FormData = z.infer<typeof schema>;
 interface BillboardsAdminProps {
   campaignId: string;
   initialBillboards: Billboard[];
+  liveApiEnabled?: boolean;
 }
 
-export function BillboardsAdmin({ campaignId, initialBillboards }: BillboardsAdminProps) {
+export function BillboardsAdmin({
+  campaignId,
+  initialBillboards,
+  liveApiEnabled = false,
+}: BillboardsAdminProps) {
   const [billboards, setBillboards] = useState(initialBillboards);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Billboard | null>(null);
@@ -66,6 +72,9 @@ export function BillboardsAdmin({ campaignId, initialBillboards }: BillboardsAdm
   useEffect(() => {
     setBillboards(initialBillboards);
   }, [initialBillboards]);
+
+  const manualBillboards = billboards.filter((billboard) => !isApiBillboard(billboard));
+  const apiBillboardCount = billboards.length - manualBillboards.length;
 
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -82,7 +91,7 @@ export function BillboardsAdmin({ campaignId, initialBillboards }: BillboardsAdm
       tags: "",
       notes: "",
       published: false,
-      sortOrder: billboards.length + 1,
+      sortOrder: manualBillboards.length + 1,
     },
   });
 
@@ -101,12 +110,13 @@ export function BillboardsAdmin({ campaignId, initialBillboards }: BillboardsAdm
       tags: "",
       notes: "",
       published: false,
-      sortOrder: billboards.length + 1,
+      sortOrder: manualBillboards.length + 1,
     });
     setOpen(true);
   };
 
   const openEdit = (item: Billboard) => {
+    if (isApiBillboard(item)) return;
     setEditing(item);
     form.reset({
       title: item.title,
@@ -157,6 +167,7 @@ export function BillboardsAdmin({ campaignId, initialBillboards }: BillboardsAdm
   };
 
   const handleDelete = (item: Billboard) => {
+    if (isApiBillboard(item)) return;
     startTransition(async () => {
       await deleteBillboardAction(item.id);
       setBillboards((prev) => prev.filter((b) => b.id !== item.id));
@@ -165,6 +176,7 @@ export function BillboardsAdmin({ campaignId, initialBillboards }: BillboardsAdm
   };
 
   const handleTogglePublish = (item: Billboard) => {
+    if (isApiBillboard(item)) return;
     startTransition(async () => {
       const updated = { ...item, published: !item.published };
       await saveBillboardAction(updated);
@@ -181,11 +193,23 @@ export function BillboardsAdmin({ campaignId, initialBillboards }: BillboardsAdm
         <div>
           <h1 className="text-2xl font-bold">بیلبوردها</h1>
           <p className="text-sm text-muted-foreground">
-            بیلبوردهای دستی — برای دریافت زنده از Map Bilboard به{" "}
-            <Link href={`/admin/settings?campaign=${campaignId}`} className="text-primary hover:underline">
-              تنظیمات کمپین
-            </Link>{" "}
-            بروید.
+            بیلبوردهای دستی قابل ویرایش هستند.
+            {liveApiEnabled ? (
+              apiBillboardCount > 0 ? (
+                <> {apiBillboardCount} بیلبورد از Map Bilboard به‌صورت زنده نمایش داده می‌شود (فقط مشاهده).</>
+              ) : (
+                <> اتصال API فعال است — بیلبوردی از API دریافت نشد.</>
+              )
+            ) : (
+              <>
+                {" "}
+                برای دریافت زنده از Map Bilboard به{" "}
+                <Link href={`/admin/settings?campaign=${campaignId}`} className="text-primary hover:underline">
+                  تنظیمات کمپین
+                </Link>{" "}
+                بروید.
+              </>
+            )}
           </p>
         </div>
         <Button onClick={openCreate}>
@@ -198,6 +222,16 @@ export function BillboardsAdmin({ campaignId, initialBillboards }: BillboardsAdm
         data={billboards}
         searchKeys={["title", "city"]}
         columns={[
+          {
+            key: "source",
+            label: "منبع",
+            render: (item) =>
+              isApiBillboard(item) ? (
+                <Badge variant="secondary">API</Badge>
+              ) : (
+                <Badge variant="outline">دستی</Badge>
+              ),
+          },
           { key: "title", label: "عنوان" },
           { key: "city", label: "شهر" },
           {
@@ -220,6 +254,7 @@ export function BillboardsAdmin({ campaignId, initialBillboards }: BillboardsAdm
         onDelete={handleDelete}
         onTogglePublish={handleTogglePublish}
         getPublished={(item) => item.published}
+        isReadOnly={isApiBillboard}
       />
 
       <Dialog open={open} onOpenChange={setOpen}>

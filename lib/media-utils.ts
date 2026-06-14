@@ -1,20 +1,37 @@
-export function resolveVideoEmbedUrl(url: string): string {
-  const trimmed = url.trim();
+export function normalizeVideoInput(input: string): string {
+  const trimmed = input.trim();
   if (!trimmed) return trimmed;
 
+  const scriptSrcMatch = trimmed.match(/src=["'](https?:\/\/[^"']*aparat\.com[^"']*)["']/i);
+  if (scriptSrcMatch?.[1]) {
+    return normalizeVideoInput(scriptSrcMatch[1]);
+  }
+
+  const embedMatch = trimmed.match(/aparat\.com\/embed\/([^/?#"'\s&]+)/i);
+  if (embedMatch?.[1]) {
+    return `https://www.aparat.com/v/${embedMatch[1]}`;
+  }
+
   const aparatMatch = trimmed.match(
-    /aparat\.com\/(?:v|video\/video\/embed\/videohash)\/([^/?#]+)/i
+    /aparat\.com\/(?:v|video\/video\/embed\/videohash)\/([^/?#"'\s&]+)/i
   );
+  if (aparatMatch?.[1]) {
+    return `https://www.aparat.com/v/${aparatMatch[1]}`;
+  }
+
+  return trimmed;
+}
+
+export function resolveVideoEmbedUrl(url: string): string {
+  const normalized = normalizeVideoInput(url);
+  if (!normalized) return normalized;
+
+  const aparatMatch = normalized.match(/aparat\.com\/v\/([^/?#]+)/i);
   if (aparatMatch?.[1]) {
     return `https://www.aparat.com/video/video/embed/videohash/${aparatMatch[1]}/vt/frame`;
   }
 
-  const aparatShortMatch = trimmed.match(/aparat\.com\/v\/([^/?#]+)/i);
-  if (aparatShortMatch?.[1]) {
-    return `https://www.aparat.com/video/video/embed/videohash/${aparatShortMatch[1]}/vt/frame`;
-  }
-
-  return trimmed;
+  return normalized;
 }
 
 export function isDirectVideoUrl(url: string): boolean {
