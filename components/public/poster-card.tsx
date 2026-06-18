@@ -9,7 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { LightboxModal } from "@/components/media/lightbox-modal";
 import { MediaPlaceholder } from "@/components/ui/media-placeholder";
 import type { PosterVersion } from "@/lib/types";
-import { downloadMedia, getFilenameFromUrl } from "@/lib/media-utils";
+import { downloadMedia, getFilenameFromUrl, resolveDisplayVersion } from "@/lib/media-utils";
 import { cn, formatPersianDate, getStatusLabel } from "@/lib/utils";
 
 interface PosterCardProps {
@@ -24,7 +24,7 @@ export function PosterCard({ title, description, versions }: PosterCardProps) {
   const [lightboxVersionId, setLightboxVersionId] = useState<string | null>(null);
 
   const sortedVersions = [...versions].sort((a, b) => a.versionNumber - b.versionNumber);
-  const finalVersion = sortedVersions.find((v) => v.isFinal) ?? sortedVersions[sortedVersions.length - 1];
+  const finalVersion = resolveDisplayVersion(sortedVersions);
   const previousVersions = sortedVersions.filter((v) => v.id !== finalVersion?.id);
 
   if (!finalVersion) return null;
@@ -54,6 +54,7 @@ export function PosterCard({ title, description, versions }: PosterCardProps) {
               src={finalVersion.imageUrl}
               alt={title}
               fill
+              loading="lazy"
               className="object-contain object-center size-full transition-transform group-hover:scale-105"
               sizes="(max-width: 768px) 100vw, 33vw"
             />
@@ -135,6 +136,7 @@ export function PosterCard({ title, description, versions }: PosterCardProps) {
                             src={version.thumbnailUrl || version.imageUrl}
                             alt=""
                             fill
+                            loading="lazy"
                             className="object-cover"
                             sizes="48px"
                           />

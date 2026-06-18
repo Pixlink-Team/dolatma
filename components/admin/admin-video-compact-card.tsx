@@ -3,6 +3,7 @@
 import { Play } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { VideoThumbnail } from "@/components/media/video-thumbnail";
+import { resolveDisplayVersion } from "@/lib/media-utils";
 import type { Video, VideoVersion } from "@/lib/types";
 import { cn, formatPersianNumber } from "@/lib/utils";
 
@@ -13,7 +14,7 @@ interface AdminVideoCompactCardProps {
 }
 
 export function AdminVideoCompactCard({ video, versions, onClick }: AdminVideoCompactCardProps) {
-  const latestVersion = [...versions].sort((a, b) => b.versionNumber - a.versionNumber)[0];
+  const displayVersion = resolveDisplayVersion(versions);
 
   return (
     <button
@@ -25,10 +26,10 @@ export function AdminVideoCompactCard({ video, versions, onClick }: AdminVideoCo
       )}
     >
       <div className="relative aspect-video w-full overflow-hidden bg-muted">
-        {latestVersion ? (
+        {displayVersion ? (
           <VideoThumbnail
-            videoUrl={latestVersion.videoUrl}
-            thumbnailUrl={latestVersion.thumbnailUrl}
+            videoUrl={displayVersion.videoUrl}
+            thumbnailUrl={displayVersion.thumbnailUrl}
             alt={video.title}
             className="object-contain"
           />
@@ -38,11 +39,14 @@ export function AdminVideoCompactCard({ video, versions, onClick }: AdminVideoCo
         <div className="absolute inset-0 flex items-center justify-center bg-black/20 transition-colors group-hover:bg-black/30">
           <Play className="h-8 w-8 text-white" />
         </div>
-        {latestVersion && (
-          <div className="absolute top-1.5 right-1.5">
+        {displayVersion && (
+          <div className="absolute top-1.5 right-1.5 flex flex-wrap gap-1 justify-end">
             <Badge variant="outline" className="px-1.5 py-0 text-[10px]">
-              v{formatPersianNumber(latestVersion.versionNumber)}
+              v{formatPersianNumber(displayVersion.versionNumber)}
             </Badge>
+            {displayVersion.isFinal && (
+              <Badge status="final" className="px-1.5 py-0 text-[10px]">نهایی</Badge>
+            )}
           </div>
         )}
         {!video.published && (
@@ -53,7 +57,7 @@ export function AdminVideoCompactCard({ video, versions, onClick }: AdminVideoCo
       </div>
       <div className="space-y-1 p-2">
         <p className="truncate text-xs font-medium">{video.title}</p>
-        {!latestVersion && (
+        {!displayVersion && (
           <p className="text-[10px] text-muted-foreground">بدون ویدیو</p>
         )}
       </div>

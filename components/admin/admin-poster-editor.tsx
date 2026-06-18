@@ -26,6 +26,7 @@ import {
   savePosterVersionAction,
 } from "@/lib/actions/admin-actions";
 import { todayISO } from "@/lib/jalali";
+import { resolveDisplayVersion } from "@/lib/media-utils";
 import type { MediaCategory, Poster, PosterVersion } from "@/lib/types";
 import { cn, formatPersianDate, formatPersianNumber, getStatusLabel } from "@/lib/utils";
 
@@ -108,13 +109,19 @@ export function AdminPosterEditor({
     () => [...versions].sort((a, b) => b.versionNumber - a.versionNumber),
     [versions]
   );
-  const latestVersion = sortedVersions[0];
+  const displayVersion = resolveDisplayVersion(sortedVersions);
 
   const refresh = () => router.refresh();
 
   const updateDraft = (localId: string, patch: Partial<PosterVersionDraft>) => {
     setVersionDrafts((prev) =>
       prev.map((item) => (item.localId === localId ? { ...item, ...patch } : item))
+    );
+  };
+
+  const handleSetFinal = (localId: string) => {
+    setVersionDrafts((prev) =>
+      prev.map((item) => ({ ...item, isFinal: item.localId === localId }))
     );
   };
 
@@ -142,6 +149,20 @@ export function AdminPosterEditor({
       return;
     }
 
+    let finalLocalId = versionDrafts.find((item) => item.isFinal)?.localId;
+    if (!finalLocalId && draftsToSave.length === 1) {
+      finalLocalId = draftsToSave[0].localId;
+    }
+    if (!finalLocalId) {
+      toast.error("یک نسخه را به‌عنوان نسخه نهایی انتخاب کنید");
+      return;
+    }
+
+    const orderedDrafts = [
+      ...draftsToSave.filter((item) => item.localId !== finalLocalId),
+      ...draftsToSave.filter((item) => item.localId === finalLocalId),
+    ];
+
     startTransition(async () => {
       await savePosterAction({
         ...poster,
@@ -151,7 +172,8 @@ export function AdminPosterEditor({
       });
 
       let savedCount = 0;
-      for (const draft of draftsToSave) {
+      for (const draft of orderedDrafts) {
+        const isFinal = draft.localId === finalLocalId;
         await savePosterVersionAction({
           id: draft.id,
           posterId: poster.id,
@@ -160,8 +182,8 @@ export function AdminPosterEditor({
           thumbnailUrl: draft.imageUrl,
           notes: draft.notes || undefined,
           date: draft.date ?? todayISO(),
-          isFinal: draft.isFinal,
-          status: draft.status,
+          isFinal,
+          status: isFinal ? "final" : draft.status ?? "draft",
         });
         savedCount += 1;
       }
@@ -197,16 +219,16 @@ export function AdminPosterEditor({
     <div className="flex min-h-0 flex-1 flex-col">
       <div ref={scrollAreaRef} className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-y-contain pr-1">
       <div className="relative mx-auto aspect-[3/4] max-h-80 w-full max-w-xs overflow-hidden rounded-xl bg-muted">
-        {latestVersion ? (
-          <MediaThumbnail src={latestVersion.imageUrl} alt={editTitle} kind="poster" sizes="320px" objectFit="contain" />
+        {displayVersion ? (
+          <MediaThumbnail src={displayVersion.imageUrl} alt={editTitle} kind="poster" sizes="320px" objectFit="contain" />
         ) : (
           <MediaThumbnail src={null} alt={editTitle} kind="poster" />
         )}
         <div className="absolute top-2 right-2 flex flex-wrap gap-1">
-          {latestVersion ? (
+          {displayVersion ? (
             <>
-              <Badge variant="outline">نسخه {formatPersianNumber(latestVersion.versionNumber)}</Badge>
-              {latestVersion.isFinal && <Badge status="final">نسخه نهایی</Badge>}
+              <Badge variant="outline">نسخه {formatPersianNumber(displayVersion.versionNumber)}</Badge>
+              {displayVersion.isFinal && <Badge status="final">نسخه نهایی</Badge>}
             </>
           ) : (
             <Badge variant="secondary">بدون نسخه</Badge>
@@ -312,6 +334,19 @@ export function AdminPosterEditor({
                   value={draft.notes}
                   onChange={(e) => updateDraft(draft.localId, { notes: e.target.value })}
                   rows={2}
+                />
+              </div>
+              <div className="flex items-center justify-between gap-3 rounded-lg border bg-muted/30 px-3 py-2">
+                <div className="space-y-0.5">
+                  <Label className="text-xs">نسخه نهایی</Label>
+                  <p className="text-[10px] text-muted-foreground">فقط یک نسخه می‌تواند نهایی باشد</p>
+                </div>
+                <Switch
+                  checked={Boolean(draft.isFinal)}
+                  onCheckedChange={(checked) => {
+                    if (checked) handleSetFinal(draft.localId);
+                  }}
+                  disabled={isPending}
                 />
               </div>
             </div>

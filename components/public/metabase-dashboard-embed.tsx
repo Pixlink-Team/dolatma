@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Loader2 } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 
 const DEFAULT_RELOAD_MS = 5 * 60 * 1000;
 const FALLBACK_HEIGHT = 640;
@@ -59,6 +62,11 @@ export function MetabaseDashboardEmbed({
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [iframeKey, setIframeKey] = useState(0);
   const [height, setHeight] = useState(FALLBACK_HEIGHT);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    setIsLoading(true);
+  }, [embedUrl, iframeKey]);
 
   useEffect(() => {
     const origin = getMetabaseOrigin(embedUrl);
@@ -127,13 +135,23 @@ export function MetabaseDashboardEmbed({
   }, [embedUrl, iframeKey]);
 
   return (
-    <div className="w-full overflow-hidden rounded-xl border bg-background">
+    <div className="relative w-full overflow-hidden rounded-xl border bg-background">
+      {isLoading && (
+        <div
+          className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-muted/60 backdrop-blur-[1px]"
+          style={{ minHeight: `${MIN_HEIGHT}px` }}
+        >
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-sm text-muted-foreground">در حال بارگذاری داشبورد...</p>
+          <Skeleton className="h-2 w-40" />
+        </div>
+      )}
       <iframe
         ref={iframeRef}
         key={iframeKey}
         src={embedUrl}
         title={title}
-        className="block w-full border-0"
+        className={cn("block w-full border-0 transition-opacity", isLoading ? "opacity-0" : "opacity-100")}
         style={{
           width: "1px",
           minWidth: "100%",
@@ -143,6 +161,7 @@ export function MetabaseDashboardEmbed({
         }}
         scrolling="no"
         allowTransparency
+        onLoad={() => setIsLoading(false)}
       />
     </div>
   );

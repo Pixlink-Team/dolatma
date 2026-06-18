@@ -2,6 +2,7 @@
 
 import { Badge } from "@/components/ui/badge";
 import { MediaThumbnail } from "@/components/ui/media-thumbnail";
+import { resolveDisplayVersion } from "@/lib/media-utils";
 import type { Poster, PosterVersion } from "@/lib/types";
 import { cn, formatPersianNumber } from "@/lib/utils";
 
@@ -12,7 +13,7 @@ interface AdminPosterCompactCardProps {
 }
 
 export function AdminPosterCompactCard({ poster, versions, onClick }: AdminPosterCompactCardProps) {
-  const latestVersion = [...versions].sort((a, b) => b.versionNumber - a.versionNumber)[0];
+  const displayVersion = resolveDisplayVersion(versions);
 
   return (
     <button
@@ -25,18 +26,21 @@ export function AdminPosterCompactCard({ poster, versions, onClick }: AdminPoste
     >
       <div className="relative aspect-[3/4] w-full overflow-hidden bg-muted">
         <MediaThumbnail
-          src={latestVersion?.imageUrl}
+          src={displayVersion?.imageUrl}
           alt={poster.title}
             kind="poster"
             sizes="160px"
             objectFit="contain"
           />
         <div className="absolute inset-0 bg-black/0 transition-colors group-hover:bg-black/10" />
-        {latestVersion && (
-          <div className="absolute top-1.5 right-1.5">
+        {displayVersion && (
+          <div className="absolute top-1.5 right-1.5 flex flex-wrap gap-1 justify-end">
             <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-              v{formatPersianNumber(latestVersion.versionNumber)}
+              v{formatPersianNumber(displayVersion.versionNumber)}
             </Badge>
+            {displayVersion.isFinal && (
+              <Badge status="final" className="text-[10px] px-1.5 py-0">نهایی</Badge>
+            )}
           </div>
         )}
         {!poster.published && (
@@ -47,7 +51,7 @@ export function AdminPosterCompactCard({ poster, versions, onClick }: AdminPoste
       </div>
       <div className="space-y-1 p-2">
         <p className="truncate text-xs font-medium">{poster.title}</p>
-        {!latestVersion && (
+        {!displayVersion && (
           <p className="text-[10px] text-muted-foreground">بدون تصویر</p>
         )}
       </div>

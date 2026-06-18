@@ -31,6 +31,7 @@ import {
   extractAparatVideoHash,
   getAparatThumbnailUrl,
   isAparatVideoInput,
+  resolveDisplayVersion,
   resolveVideoThumbnail,
 } from "@/lib/media-utils";
 import type { MediaCategory, Video, VideoVersion } from "@/lib/types";
@@ -130,9 +131,9 @@ export function AdminVideoEditor({
     () => [...versions].sort((a, b) => b.versionNumber - a.versionNumber),
     [versions]
   );
-  const latestVersion = sortedVersions[0];
-  const previewCover = latestVersion
-    ? resolveVideoThumbnail(latestVersion.videoUrl, latestVersion.thumbnailUrl)
+  const displayVersion = resolveDisplayVersion(sortedVersions);
+  const previewCover = displayVersion
+    ? resolveVideoThumbnail(displayVersion.videoUrl, displayVersion.thumbnailUrl)
     : null;
 
   const refresh = () => router.refresh();
@@ -140,6 +141,12 @@ export function AdminVideoEditor({
   const updateDraft = (localId: string, patch: Partial<VideoVersionDraft>) => {
     setVersionDrafts((prev) =>
       prev.map((item) => (item.localId === localId ? { ...item, ...patch } : item))
+    );
+  };
+
+  const handleSetFinal = (localId: string) => {
+    setVersionDrafts((prev) =>
+      prev.map((item) => ({ ...item, isFinal: item.localId === localId }))
     );
   };
 
@@ -167,6 +174,20 @@ export function AdminVideoEditor({
       return;
     }
 
+    let finalLocalId = versionDrafts.find((item) => item.isFinal)?.localId;
+    if (!finalLocalId && draftsToSave.length === 1) {
+      finalLocalId = draftsToSave[0].localId;
+    }
+    if (!finalLocalId) {
+      toast.error("یک نسخه را به‌عنوان نسخه نهایی انتخاب کنید");
+      return;
+    }
+
+    const orderedDrafts = [
+      ...draftsToSave.filter((item) => item.localId !== finalLocalId),
+      ...draftsToSave.filter((item) => item.localId === finalLocalId),
+    ];
+
     startTransition(async () => {
       await saveVideoAction({
         ...video,
@@ -176,8 +197,9 @@ export function AdminVideoEditor({
       });
 
       let savedCount = 0;
-      for (const draft of draftsToSave) {
+      for (const draft of orderedDrafts) {
         const media = buildVideoVersionMedia(draft.videoUrl, draft.thumbnailUrl);
+        const isFinal = draft.localId === finalLocalId;
         await saveVideoVersionAction({
           id: draft.id,
           videoId: video.id,
@@ -187,8 +209,8 @@ export function AdminVideoEditor({
           duration: draft.duration || undefined,
           notes: draft.notes || undefined,
           date: draft.date ?? todayISO(),
-          isFinal: draft.isFinal,
-          status: draft.status,
+          isFinal,
+          status: isFinal ? "final" : draft.status ?? "draft",
         });
         savedCount += 1;
       }
@@ -227,10 +249,10 @@ export function AdminVideoEditor({
         {previewCover ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={previewCover} alt={editTitle} className="h-full w-full object-contain" />
-        ) : latestVersion ? (
+        ) : displayVersion ? (
           <VideoThumbnail
-            videoUrl={latestVersion.videoUrl}
-            thumbnailUrl={latestVersion.thumbnailUrl}
+            videoUrl={displayVersion.videoUrl}
+            thumbnailUrl={displayVersion.thumbnailUrl}
             alt={editTitle}
           />
         ) : null}
@@ -238,10 +260,10 @@ export function AdminVideoEditor({
           <Play className="h-12 w-12 text-white" />
         </div>
         <div className="absolute top-2 right-2 flex flex-wrap gap-1">
-          {latestVersion ? (
+          {displayVersion ? (
             <>
-              <Badge variant="outline">نسخه {formatPersianNumber(latestVersion.versionNumber)}</Badge>
-              {latestVersion.isFinal && <Badge status="final">نسخه نهایی</Badge>}
+              <Badge variant="outline">نسخه {formatPersianNumber(displayVersion.versionNumber)}</Badge>
+              {displayVersion.isFinal && <Badge status="final">نسخه نهایی</Badge>}
             </>
           ) : (
             <Badge variant="secondary">بدون نسخه</Badge>
@@ -381,6 +403,19 @@ export function AdminVideoEditor({
                     value={draft.notes}
                     onChange={(e) => updateDraft(draft.localId, { notes: e.target.value })}
                     rows={2}
+                  />
+                </div>
+                <div className="flex items-center justify-between gap-3 rounded-lg border bg-muted/30 px-3 py-2">
+                  <div className="space-y-0.5">
+                    <Label className="text-xs">نسخه نهایی</Label>
+                    <p className="text-[10px] text-muted-foreground">فقط یک نسخه می‌تواند نهایی باشد</p>
+                  </div>
+                  <Switch
+                    checked={Boolean(draft.isFinal)}
+                    onCheckedChange={(checked) => {
+                      if (checked) handleSetFinal(draft.localId);
+                    }}
+                    disabled={isPending}
                   />
                 </div>
               </div>

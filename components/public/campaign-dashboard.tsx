@@ -23,6 +23,7 @@ import { AnalyticsSection } from "@/components/public/analytics-section";
 import { SocialAnalyticsSection } from "@/components/public/social-analytics-section";
 import { SubmissionsSection } from "@/components/public/submissions-section";
 import { CampaignFilesSection } from "@/components/public/campaign-files-section";
+import { DeferredSection } from "@/components/public/deferred-section";
 import type { PublicCampaignData } from "@/lib/types";
 import { formatPersianDate, formatPersianDateTime } from "@/lib/utils";
 
@@ -121,19 +122,41 @@ export function CampaignDashboard({ initialData, slug }: CampaignDashboardProps)
           )}
         </section>
 
-        {sections.analytics && <AnalyticsSection analytics={data.analytics} />}
-        {sections.socialAnalytics && <SocialAnalyticsSection analytics={data.socialAnalytics} />}
-        {sections.billboards && <BillboardSection billboards={data.billboards} />}
+        {sections.analytics && (
+          <DeferredSection minHeight={320}>
+            <AnalyticsSection analytics={data.analytics} />
+          </DeferredSection>
+        )}
+        {sections.socialAnalytics && (
+          <DeferredSection minHeight={280}>
+            <SocialAnalyticsSection analytics={data.socialAnalytics} />
+          </DeferredSection>
+        )}
+        {sections.billboards && (
+          <DeferredSection minHeight={360}>
+            <BillboardSection billboards={data.billboards} />
+          </DeferredSection>
+        )}
         {sections.posters && (
-          <PostersSection categories={data.posterCategories} posters={data.posters} />
+          <DeferredSection minHeight={400}>
+            <PostersSection categories={data.posterCategories} posters={data.posters} />
+          </DeferredSection>
         )}
         {sections.videos && (
-          <VideosSection categories={data.videoCategories} videos={data.videos} />
+          <DeferredSection minHeight={400}>
+            <VideosSection categories={data.videoCategories} videos={data.videos} />
+          </DeferredSection>
         )}
         {sections.submissions && (
-          <SubmissionsSection submissions={data.submissions} summary={data.submissionSummary} />
+          <DeferredSection minHeight={280}>
+            <SubmissionsSection submissions={data.submissions} summary={data.submissionSummary} />
+          </DeferredSection>
         )}
-        {sections.files && <CampaignFilesSection files={data.files} />}
+        {sections.files && (
+          <DeferredSection minHeight={200}>
+            <CampaignFilesSection files={data.files} />
+          </DeferredSection>
+        )}
       </main>
 
       <footer className="border-t py-6 text-center text-sm text-muted-foreground">

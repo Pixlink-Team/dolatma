@@ -369,8 +369,8 @@ export async function savePosterVersion(data: Partial<PosterVersion> & { id?: st
         imageUrl: data.imageUrl ?? "",
         thumbnailUrl: data.thumbnailUrl ?? data.imageUrl ?? "",
         notes: data.notes,
-        status: data.isFinal === false ? (data.status ?? "draft") : "final",
-        isFinal: data.isFinal ?? true,
+        status: data.isFinal ? "final" : (data.status ?? "draft"),
+        isFinal: Boolean(data.isFinal),
         date: data.date ?? now.split("T")[0],
         createdAt: now,
       };
@@ -473,8 +473,8 @@ export async function saveVideoVersion(data: Partial<VideoVersion> & { id?: stri
         thumbnailUrl: data.thumbnailUrl ?? "",
         duration: data.duration,
         notes: data.notes,
-        status: data.isFinal === false ? (data.status ?? "draft") : "final",
-        isFinal: data.isFinal ?? true,
+        status: data.isFinal ? "final" : (data.status ?? "draft"),
+        isFinal: Boolean(data.isFinal),
         date: data.date ?? now.split("T")[0],
         createdAt: now,
       };

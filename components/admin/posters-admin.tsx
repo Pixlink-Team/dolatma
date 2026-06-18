@@ -24,7 +24,7 @@ interface PostersAdminProps {
 }
 
 const editorDialogClass =
-  "!flex min-h-0 max-h-[92vh] max-w-2xl flex-col gap-0 overflow-hidden p-0 !top-4 !translate-x-[-50%] !translate-y-0 sm:!top-6";
+  "!flex min-h-0 max-h-[92vh] max-w-2xl flex-col gap-0 overflow-hidden p-0";
 
 export function PostersAdmin({
   campaignId,
@@ -61,10 +61,6 @@ export function PostersAdmin({
   const activeVersions = activePosterId ? versionsByPosterId.get(activePosterId) ?? [] : [];
 
   const refresh = () => router.refresh();
-
-  useEffect(() => {
-    if (editorOpen) window.scrollTo({ top: 0, behavior: "smooth" });
-  }, [editorOpen]);
 
   const openEditor = (posterId: string) => {
     setActivePosterId(posterId);

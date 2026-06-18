@@ -124,3 +124,15 @@ export function hasDistinctThumbnail(thumbnailUrl?: string | null, mediaUrl?: st
   if (!mediaUrl) return true;
   return thumbnailUrl.trim() !== mediaUrl.trim();
 }
+
+interface VersionWithFinal {
+  id: string;
+  versionNumber: number;
+  isFinal?: boolean;
+}
+
+export function resolveDisplayVersion<T extends VersionWithFinal>(versions: T[]): T | undefined {
+  if (versions.length === 0) return undefined;
+  const sorted = [...versions].sort((a, b) => a.versionNumber - b.versionNumber);
+  return sorted.find((version) => version.isFinal) ?? sorted[sorted.length - 1];
+}

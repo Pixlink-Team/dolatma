@@ -62,10 +62,6 @@ export function VideosAdmin({
 
   const refresh = () => router.refresh();
 
-  useEffect(() => {
-    if (editorOpen) window.scrollTo({ top: 0, behavior: "smooth" });
-  }, [editorOpen]);
-
   const openEditor = (videoId: string) => {
     setActiveVideoId(videoId);
     setEditorOpen(true);

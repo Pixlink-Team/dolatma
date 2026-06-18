@@ -30,6 +30,7 @@ export function AnalyticsSection({ analytics }: AnalyticsSectionProps) {
           ? "داشبورد زنده آمار بازدید سایت از Metabase"
           : "آمار ترافیک و بازدیدکنندگان سایت کمپین"
       }
+      lazyMount
     >
       {hasMetabaseDashboard && analytics.metabaseEmbedUrl && (
         <MetabaseDashboardEmbed

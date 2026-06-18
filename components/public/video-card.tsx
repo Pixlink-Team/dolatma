@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { VideoModal } from "@/components/media/video-modal";
 import { VideoThumbnail } from "@/components/media/video-thumbnail";
 import type { VideoVersion } from "@/lib/types";
-import { downloadMedia, getFilenameFromUrl, hasDistinctThumbnail } from "@/lib/media-utils";
+import { downloadMedia, getFilenameFromUrl, hasDistinctThumbnail, resolveDisplayVersion } from "@/lib/media-utils";
 import { cn, formatPersianDate, getStatusLabel } from "@/lib/utils";
 
 interface VideoCardProps {
@@ -24,7 +24,7 @@ export function VideoCard({ title, description, categoryTitle, versions }: Video
   const [activeVersionId, setActiveVersionId] = useState<string | null>(null);
 
   const sortedVersions = [...versions].sort((a, b) => a.versionNumber - b.versionNumber);
-  const finalVersion = sortedVersions.find((v) => v.isFinal) ?? sortedVersions[sortedVersions.length - 1];
+  const finalVersion = resolveDisplayVersion(sortedVersions);
   const previousVersions = sortedVersions.filter((v) => v.id !== finalVersion?.id);
 
   if (!finalVersion) return null;

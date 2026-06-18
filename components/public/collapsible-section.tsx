@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -9,6 +9,7 @@ interface CollapsibleSectionProps {
   title: string;
   description?: string;
   defaultOpen?: boolean;
+  lazyMount?: boolean;
   children: React.ReactNode;
   controls?: React.ReactNode;
 }
@@ -18,10 +19,20 @@ export function CollapsibleSection({
   title,
   description,
   defaultOpen = true,
+  lazyMount = false,
   children,
   controls,
 }: CollapsibleSectionProps) {
   const [open, setOpen] = useState(defaultOpen);
+  const [hasMounted, setHasMounted] = useState(defaultOpen || !lazyMount);
+
+  useEffect(() => {
+    if (open && lazyMount) {
+      setHasMounted(true);
+    }
+  }, [open, lazyMount]);
+
+  const shouldRenderChildren = lazyMount ? hasMounted && open : open;
 
   return (
     <section id={id} className="rounded-xl border bg-card/40">
@@ -50,7 +61,9 @@ export function CollapsibleSection({
         {controls && <div className="flex flex-wrap items-center gap-2">{controls}</div>}
       </div>
 
-      <div className={cn("p-4 transition-all", open ? "block" : "hidden")}>{children}</div>
+      <div className={cn("p-4 transition-all", open ? "block" : "hidden")}>
+        {shouldRenderChildren ? children : null}
+      </div>
     </section>
   );
 }
