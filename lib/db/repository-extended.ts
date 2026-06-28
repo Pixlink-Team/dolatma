@@ -424,26 +424,31 @@ function groupMeetingTasks(rows: MeetingTask[]): Map<string, MeetingTask[]> {
 }
 
 export async function pgGetPublicMeetingPreviews(campaignId: string): Promise<MeetingPublicPreview[]> {
-  const sql = getSql();
-  const rows = await sql`
-    SELECT
-      m.id,
-      m.campaign_id,
-      m.meeting_date,
-      m.title,
-      m.image_url,
-      m.discussion_summary,
-      m.sort_order,
-      m.owner_user_id,
-      u.name AS owner_name,
-      (m.view_password_hash IS NOT NULL AND LENGTH(m.view_password_hash) > 0) AS has_password
-    FROM campaign_meetings m
-    LEFT JOIN users u ON u.id = m.owner_user_id
-    WHERE m.campaign_id = ${campaignId} AND m.published = true
-    ORDER BY m.sort_order, m.meeting_date DESC
-  `;
+  try {
+    const sql = getSql();
+    const rows = await sql`
+      SELECT
+        m.id,
+        m.campaign_id,
+        m.meeting_date,
+        m.title,
+        m.image_url,
+        m.discussion_summary,
+        m.sort_order,
+        m.owner_user_id,
+        u.name AS owner_name,
+        (m.view_password_hash IS NOT NULL AND LENGTH(m.view_password_hash) > 0) AS has_password
+      FROM campaign_meetings m
+      LEFT JOIN users u ON u.id = m.owner_user_id
+      WHERE m.campaign_id = ${campaignId} AND m.published = true
+      ORDER BY m.sort_order, m.meeting_date DESC
+    `;
 
-  return rows.map(mapMeetingPreviewFromDb);
+    return rows.map(mapMeetingPreviewFromDb);
+  } catch (error) {
+    console.error("pgGetPublicMeetingPreviews failed:", error);
+    return [];
+  }
 }
 
 export type MeetingUnlockResult =
@@ -486,42 +491,47 @@ export async function pgGetMeetingsWithTasks(
   campaignId: string,
   options?: { publishedOnly?: boolean; ownerUserId?: string | null }
 ): Promise<MeetingWithTasks[]> {
-  const sql = getSql();
-  const publishedOnly = options?.publishedOnly ?? false;
-  const ownerUserId = options?.ownerUserId;
+  try {
+    const sql = getSql();
+    const publishedOnly = options?.publishedOnly ?? false;
+    const ownerUserId = options?.ownerUserId;
 
-  const ownerFilter =
-    ownerUserId === undefined ? sql`` : sql`AND m.owner_user_id IS NOT DISTINCT FROM ${ownerUserId}`;
-  const publishedFilter = publishedOnly ? sql`AND m.published = true` : sql``;
+    const ownerFilter =
+      ownerUserId === undefined ? sql`` : sql`AND m.owner_user_id IS NOT DISTINCT FROM ${ownerUserId}`;
+    const publishedFilter = publishedOnly ? sql`AND m.published = true` : sql``;
 
-  const meetingRows = await sql`
-    SELECT m.*, u.name AS owner_name
-    FROM campaign_meetings m
-    LEFT JOIN users u ON u.id = m.owner_user_id
-    WHERE m.campaign_id = ${campaignId}
-    ${ownerFilter}
-    ${publishedFilter}
-    ORDER BY m.sort_order, m.meeting_date DESC
-  `;
+    const meetingRows = await sql`
+      SELECT m.*, u.name AS owner_name
+      FROM campaign_meetings m
+      LEFT JOIN users u ON u.id = m.owner_user_id
+      WHERE m.campaign_id = ${campaignId}
+      ${ownerFilter}
+      ${publishedFilter}
+      ORDER BY m.sort_order, m.meeting_date DESC
+    `;
 
-  if (meetingRows.length === 0) return [];
+    if (meetingRows.length === 0) return [];
 
-  const taskRows = await sql`
-    SELECT mt.*
-    FROM meeting_tasks mt
-    INNER JOIN campaign_meetings m ON m.id = mt.meeting_id
-    WHERE m.campaign_id = ${campaignId}
-    ${ownerFilter}
-    ${publishedFilter}
-    ORDER BY mt.sort_order
-  `;
+    const taskRows = await sql`
+      SELECT mt.*
+      FROM meeting_tasks mt
+      INNER JOIN campaign_meetings m ON m.id = mt.meeting_id
+      WHERE m.campaign_id = ${campaignId}
+      ${ownerFilter}
+      ${publishedFilter}
+      ORDER BY mt.sort_order
+    `;
 
-  const tasksByMeeting = groupMeetingTasks(taskRows.map(mapMeetingTaskFromDb));
+    const tasksByMeeting = groupMeetingTasks(taskRows.map(mapMeetingTaskFromDb));
 
-  return meetingRows.map((row) => ({
-    ...mapMeetingFromDb(row),
-    tasks: tasksByMeeting.get(row.id) ?? [],
-  }));
+    return meetingRows.map((row) => ({
+      ...mapMeetingFromDb(row),
+      tasks: tasksByMeeting.get(row.id) ?? [],
+    }));
+  } catch (error) {
+    console.error("pgGetMeetingsWithTasks failed:", error);
+    return [];
+  }
 }
 
 export async function pgSaveMeetingWithTasks(

@@ -394,7 +394,12 @@ function getMockPublicDataBySlug(slug: string): PublicCampaignData | null {
 
 export async function getCampaignList(): Promise<CampaignListItem[]> {
   if (isPostgresConfigured()) {
-    return pg.pgGetCampaignList();
+    try {
+      return await pg.pgGetCampaignList();
+    } catch (error) {
+      console.error("getCampaignList failed:", error);
+      return [];
+    }
   }
   if (!isSupabaseConfigured()) {
     return getMockStore()
@@ -449,28 +454,33 @@ export async function getCampaignList(): Promise<CampaignListItem[]> {
 
 export async function getPublicCampaignData(slug: string): Promise<PublicCampaignData | null> {
   if (isPostgresConfigured()) {
-    const settings = await pg.pgGetPublishedCampaignBySlug(slug);
-    if (!settings) return null;
-    const campaignStore = await pg.pgGetPublicCampaignData(settings.id);
-    const [siteMetrics, billboards] = await Promise.all([
-      resolveChannelAnalyticsMetrics(
+    try {
+      const settings = await pg.pgGetPublishedCampaignBySlug(slug);
+      if (!settings) return null;
+      const campaignStore = await pg.pgGetPublicCampaignData(settings.id);
+      const [siteMetrics, billboards] = await Promise.all([
+        resolveChannelAnalyticsMetrics(
+          settings,
+          campaignStore.analytics,
+          "site",
+          settings.analyticsConfig.site
+        ),
+        resolvePublicBillboards(settings, campaignStore.billboards),
+      ]);
+      return assemblePublicData(
         settings,
-        campaignStore.analytics,
-        "site",
-        settings.analyticsConfig.site
-      ),
-      resolvePublicBillboards(settings, campaignStore.billboards),
-    ]);
-    return assemblePublicData(
-      settings,
-      {
-        settings,
-        ...campaignStore,
-        analytics: siteMetrics,
-        socialPlatformStats: campaignStore.socialPlatformStats ?? [],
-      } as CampaignPublicStore,
-      billboards
-    );
+        {
+          settings,
+          ...campaignStore,
+          analytics: siteMetrics,
+          socialPlatformStats: campaignStore.socialPlatformStats ?? [],
+        } as CampaignPublicStore,
+        billboards
+      );
+    } catch (error) {
+      console.error("getPublicCampaignData failed:", error);
+      return null;
+    }
   }
   if (!isSupabaseConfigured()) {
     return getMockPublicDataBySlug(slug);

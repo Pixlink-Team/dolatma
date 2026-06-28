@@ -291,6 +291,11 @@ CREATE TABLE IF NOT EXISTS campaign_meetings (
 
 CREATE INDEX IF NOT EXISTS idx_campaign_meetings_campaign ON campaign_meetings(campaign_id, published, sort_order);
 
+ALTER TABLE campaign_meetings ADD COLUMN IF NOT EXISTS title TEXT NOT NULL DEFAULT '';
+ALTER TABLE campaign_meetings ADD COLUMN IF NOT EXISTS attendees JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE campaign_meetings ADD COLUMN IF NOT EXISTS audio_url TEXT;
+ALTER TABLE campaign_meetings ADD COLUMN IF NOT EXISTS view_password_hash TEXT;
+
 CREATE TABLE IF NOT EXISTS meeting_tasks (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   meeting_id UUID NOT NULL REFERENCES campaign_meetings(id) ON DELETE CASCADE,
