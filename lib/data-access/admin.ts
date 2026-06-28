@@ -1,5 +1,7 @@
 import { getMockStore, getMockStoreForCampaign, updateMockStore } from "@/lib/mock-data";
+import { getAuthSession, getOwnerFilter } from "@/lib/auth/get-session";
 import * as pg from "@/lib/db/repository";
+import * as pgExt from "@/lib/db/repository-extended";
 import type {
   AnalyticsMetric,
   Billboard,
@@ -14,6 +16,11 @@ import type {
 } from "@/lib/types";
 import { generateId, isPostgresConfigured, isSupabaseConfigured, slugify } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/server";
+
+export async function getAllUsers() {
+  if (!isPostgresConfigured()) return [];
+  return pgExt.pgGetAllUsers();
+}
 
 export async function getAllCampaigns(): Promise<CampaignSettings[]> {
   if (isPostgresConfigured()) {
@@ -33,24 +40,34 @@ export async function getAllCampaigns(): Promise<CampaignSettings[]> {
 }
 
 export async function getAdminData(campaignId: string) {
+  const session = await getAuthSession();
+  const ownerFilter = session ? getOwnerFilter(session) : undefined;
+
   if (isPostgresConfigured()) {
-    return pg.pgGetAdminData(campaignId);
+    return pg.pgGetAdminData(campaignId, ownerFilter);
   }
   if (!isSupabaseConfigured()) {
     const store = getMockStoreForCampaign(campaignId);
+    const filterByOwner = <T extends { ownerUserId?: string | null }>(items: T[]) =>
+      ownerFilter === undefined
+        ? items
+        : items.filter((item) => (item.ownerUserId ?? null) === ownerFilter);
+
     return {
       settings: store.settings ?? null,
       campaigns: getMockStore().campaigns,
-      billboards: [...store.billboards].sort((a, b) => a.sortOrder - b.sortOrder),
+      billboards: filterByOwner([...store.billboards]).sort((a, b) => a.sortOrder - b.sortOrder),
       posterCategories: [...store.posterCategories].sort((a, b) => a.sortOrder - b.sortOrder),
-      posters: [...store.posters].sort((a, b) => a.sortOrder - b.sortOrder),
+      posters: filterByOwner([...store.posters]).sort((a, b) => a.sortOrder - b.sortOrder),
       posterVersions: [...store.posterVersions],
       videoCategories: [...store.videoCategories].sort((a, b) => a.sortOrder - b.sortOrder),
-      videos: [...store.videos].sort((a, b) => a.sortOrder - b.sortOrder),
+      videos: filterByOwner([...store.videos]).sort((a, b) => a.sortOrder - b.sortOrder),
       videoVersions: [...store.videoVersions],
-      analytics: [...store.analytics],
-      submissions: [...store.submissions].sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
-      files: [...(store.files ?? [])].sort((a, b) => a.sortOrder - b.sortOrder),
+      analytics: filterByOwner([...store.analytics]),
+      submissions: filterByOwner([...store.submissions]).sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+      files: filterByOwner([...(store.files ?? [])]).sort((a, b) => a.sortOrder - b.sortOrder),
+      socialPosts: filterByOwner([...(store.socialPosts ?? [])]).sort((a, b) => a.sortOrder - b.sortOrder),
+      broadcastReports: filterByOwner([...(store.broadcastReports ?? [])]).sort((a, b) => a.sortOrder - b.sortOrder),
     };
   }
 
@@ -86,6 +103,8 @@ export async function getAdminData(campaignId: string) {
       analytics: analytics.data ?? [],
       submissions: submissions.data ?? [],
       files: [],
+      socialPosts: [],
+      broadcastReports: [],
     };
   } catch {
     return getAdminDataMock(campaignId);
@@ -107,6 +126,8 @@ function getAdminDataMock(campaignId: string) {
     analytics: [...store.analytics],
     submissions: [...store.submissions].sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
     files: [...(store.files ?? [])].sort((a, b) => a.sortOrder - b.sortOrder),
+    socialPosts: [...(store.socialPosts ?? [])].sort((a, b) => a.sortOrder - b.sortOrder),
+    broadcastReports: [...(store.broadcastReports ?? [])].sort((a, b) => a.sortOrder - b.sortOrder),
   };
 }
 
@@ -140,6 +161,8 @@ export async function saveCampaign(data: Partial<CampaignSettings> & { id?: stri
           videos: false,
           analytics: false,
           socialAnalytics: false,
+          socialPosts: false,
+          broadcastReports: false,
           submissions: false,
           files: false,
         },

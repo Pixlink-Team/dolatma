@@ -5,7 +5,10 @@ export type VersionStatus = "draft" | "revised" | "final";
 export type SubmissionStatus = "pending" | "approved" | "rejected";
 export type TrafficSource = "instagram" | "telegram" | "direct" | "google" | "referral" | "other";
 export type DeviceType = "mobile" | "desktop" | "tablet";
-export type AdminRole = "admin" | "editor";
+export type AdminRole = "admin" | "contributor";
+export type SocialPlatform = "instagram" | "x" | "telegram" | "linkedin" | "youtube" | "aparat" | "rubika" | "eitaa" | "other";
+export type SocialContentType = "image" | "text" | "video" | "carousel" | "story" | "reel";
+export type SessionRole = "admin" | "contributor";
 
 export interface CampaignFeatures {
   billboards: boolean;
@@ -13,6 +16,8 @@ export interface CampaignFeatures {
   videos: boolean;
   analytics: boolean;
   socialAnalytics: boolean;
+  socialPosts: boolean;
+  broadcastReports: boolean;
   submissions: boolean;
   files: boolean;
 }
@@ -72,7 +77,12 @@ export interface CampaignListItem {
   coverImageUrl?: string | null;
 }
 
-export interface Billboard {
+export interface Ownable {
+  ownerUserId?: string | null;
+  ownerName?: string | null;
+}
+
+export interface Billboard extends Ownable {
   id: string;
   campaignId: string;
   title: string;
@@ -112,7 +122,7 @@ export interface MediaCategory {
   createdAt: string;
 }
 
-export interface Poster {
+export interface Poster extends Ownable {
   id: string;
   campaignId: string;
   categoryId: string;
@@ -137,7 +147,7 @@ export interface PosterVersion {
   createdAt: string;
 }
 
-export interface Video {
+export interface Video extends Ownable {
   id: string;
   campaignId: string;
   categoryId: string;
@@ -163,7 +173,7 @@ export interface VideoVersion {
   createdAt: string;
 }
 
-export interface AnalyticsMetric {
+export interface AnalyticsMetric extends Ownable {
   id: string;
   campaignId: string;
   channel: AnalyticsChannel;
@@ -179,7 +189,7 @@ export interface AnalyticsMetric {
   createdAt: string;
 }
 
-export interface CampaignSubmission {
+export interface CampaignSubmission extends Ownable {
   id: string;
   campaignId: string;
   submissionType: string;
@@ -195,7 +205,7 @@ export interface CampaignSubmission {
   updatedAt: string;
 }
 
-export interface CampaignFile {
+export interface CampaignFile extends Ownable {
   id: string;
   campaignId: string;
   title: string;
@@ -213,8 +223,70 @@ export interface CampaignFile {
 export interface AdminUser {
   id: string;
   email: string;
+  name: string;
   role: AdminRole;
+  campaignIds: string[];
   createdAt: string;
+}
+
+export interface AuthSession {
+  type: "env_admin" | "db_user";
+  userId: string | null;
+  role: SessionRole;
+  email?: string;
+  name?: string;
+}
+
+export interface SocialMediaPost {
+  id: string;
+  campaignId: string;
+  ownerUserId?: string | null;
+  ownerName?: string | null;
+  platform: SocialPlatform;
+  title: string;
+  coverImageUrl?: string | null;
+  views: number;
+  likes: number;
+  comments: number;
+  shares: number;
+  link: string;
+  contentType: SocialContentType;
+  mediaUrl?: string | null;
+  description?: string | null;
+  publishedDate: string;
+  published: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BroadcastReportSummary {
+  totalBillboards?: number;
+  totalCities?: number;
+  notes?: string;
+}
+
+export interface BroadcastReport {
+  id: string;
+  campaignId: string;
+  ownerUserId?: string | null;
+  ownerName?: string | null;
+  title: string;
+  reportDate: string;
+  pdfUrl: string;
+  fileName: string;
+  summaryData: BroadcastReportSummary;
+  published: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DataOwnerGroup<T> {
+  ownerKey: string;
+  ownerLabel: string;
+  ownerUserId: string | null;
+  items: T[];
 }
 
 export interface PosterWithVersions extends Poster {
@@ -266,6 +338,8 @@ export interface SectionVisibility {
   videos: boolean;
   analytics: boolean;
   socialAnalytics: boolean;
+  socialPosts: boolean;
+  broadcastReports: boolean;
   submissions: boolean;
   files: boolean;
 }
@@ -275,14 +349,23 @@ export interface PublicCampaignData {
   kpis: CampaignKPIs;
   sections: SectionVisibility;
   billboards: Billboard[];
+  billboardGroups: DataOwnerGroup<Billboard>[];
   posterCategories: MediaCategory[];
   posters: PosterWithVersions[];
+  posterGroups: DataOwnerGroup<PosterWithVersions>[];
   videoCategories: MediaCategory[];
   videos: VideoWithVersions[];
+  videoGroups: DataOwnerGroup<VideoWithVersions>[];
   analytics: AnalyticsSummary;
   socialAnalytics: AnalyticsSummary;
+  socialPosts: SocialMediaPost[];
+  socialPostGroups: DataOwnerGroup<SocialMediaPost>[];
+  broadcastReports: BroadcastReport[];
+  broadcastReportGroups: DataOwnerGroup<BroadcastReport>[];
   submissions: CampaignSubmission[];
+  submissionGroups: DataOwnerGroup<CampaignSubmission>[];
   submissionSummary: SubmissionSummary;
   files: CampaignFile[];
+  fileGroups: DataOwnerGroup<CampaignFile>[];
   lastUpdated: string;
 }

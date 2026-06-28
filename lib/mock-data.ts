@@ -20,6 +20,8 @@ const fullFeatures = {
   videos: true,
   analytics: true,
   socialAnalytics: true,
+  socialPosts: true,
+  broadcastReports: true,
   submissions: true,
   files: true,
 };
@@ -62,6 +64,8 @@ export const mockCampaigns: CampaignSettings[] = [
       videos: false,
       analytics: false,
       socialAnalytics: false,
+      socialPosts: false,
+      broadcastReports: false,
       submissions: false,
       files: false,
     },
@@ -85,6 +89,8 @@ export const mockCampaigns: CampaignSettings[] = [
       videos: true,
       analytics: false,
       socialAnalytics: true,
+      socialPosts: true,
+      broadcastReports: false,
       submissions: false,
       files: false,
     },
@@ -270,6 +276,8 @@ let mockStore = {
   analytics: [...mockAnalyticsMetrics],
   submissions: [...mockSubmissions],
   files: [] as import("./types").CampaignFile[],
+  socialPosts: [] as import("./types").SocialMediaPost[],
+  broadcastReports: [] as import("./types").BroadcastReport[],
 };
 
 export function getMockStore() {
@@ -295,6 +303,8 @@ export function getMockStoreForCampaign(campaignId: string) {
     analytics: store.analytics.filter((a) => a.campaignId === campaignId),
     submissions: store.submissions.filter((s) => s.campaignId === campaignId),
     files: store.files.filter((file) => file.campaignId === campaignId),
+    socialPosts: store.socialPosts.filter((post) => post.campaignId === campaignId),
+    broadcastReports: store.broadcastReports.filter((report) => report.campaignId === campaignId),
   };
 }
 
@@ -311,6 +321,8 @@ export function resetMockStore() {
     analytics: [...mockAnalyticsMetrics],
     submissions: [...mockSubmissions],
     files: [],
+    socialPosts: [],
+    broadcastReports: [],
   };
 }
 

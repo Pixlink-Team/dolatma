@@ -30,6 +30,8 @@ const featuresSchema = z.object({
   videos: z.boolean(),
   analytics: z.boolean(),
   socialAnalytics: z.boolean(),
+  socialPosts: z.boolean(),
+  broadcastReports: z.boolean(),
   submissions: z.boolean(),
   files: z.boolean(),
 });
@@ -54,6 +56,8 @@ const defaultFeatures: CampaignFeatures = {
   videos: false,
   analytics: false,
   socialAnalytics: false,
+  socialPosts: false,
+  broadcastReports: false,
   submissions: false,
   files: false,
 };

@@ -11,11 +11,14 @@ import {
   LayoutGrid,
   LogOut,
   Menu,
+  Radio,
   Settings,
+  Share2,
+  Users,
   Video,
   X,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -26,25 +29,39 @@ import {
 } from "@/components/ui/select";
 import { cn, adminHref, isSupabaseConfigured } from "@/lib/utils";
 import { logoutAdminAction } from "@/lib/actions/auth-actions";
+import { getSessionContextAction } from "@/lib/actions/extended-actions";
 import { createClient } from "@/lib/supabase/client";
 import { useAdminCampaign } from "@/components/admin/admin-campaign-provider";
 
-const navItems = [
-  { href: "/admin", label: "داشبورد", icon: LayoutDashboard },
-  { href: "/admin/settings", label: "تنظیمات کمپین", icon: Settings },
-  { href: "/admin/billboards", label: "بیلبوردها", icon: LayoutGrid },
-  { href: "/admin/posters", label: "پوسترها", icon: ImageIcon },
-  { href: "/admin/videos", label: "ویدیوها", icon: Video },
-  { href: "/admin/files", label: "فایل‌ها", icon: FileStack },
-  { href: "/admin/analytics", label: "آمار", icon: BarChart3 },
-  { href: "/admin/submissions", label: "مشارکت‌ها", icon: FileText },
+const allNavItems = [
+  { href: "/admin", label: "داشبورد", icon: LayoutDashboard, adminOnly: false },
+  { href: "/admin/settings", label: "تنظیمات کمپین", icon: Settings, adminOnly: true },
+  { href: "/admin/billboards", label: "بیلبوردها", icon: LayoutGrid, adminOnly: false },
+  { href: "/admin/posters", label: "پوسترها", icon: ImageIcon, adminOnly: false },
+  { href: "/admin/videos", label: "ویدیوها", icon: Video, adminOnly: false },
+  { href: "/admin/files", label: "فایل‌ها", icon: FileStack, adminOnly: false },
+  { href: "/admin/analytics", label: "آمار سایت", icon: BarChart3, adminOnly: false },
+  { href: "/admin/social-posts", label: "شبکه‌های اجتماعی", icon: Share2, adminOnly: false },
+  { href: "/admin/broadcast", label: "پخش صدا و سیما", icon: Radio, adminOnly: false },
+  { href: "/admin/submissions", label: "مشارکت‌ها", icon: FileText, adminOnly: false },
+  { href: "/admin/users", label: "کاربران", icon: Users, adminOnly: true },
 ];
 
 export function AdminSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [isFullAdminUser, setIsFullAdminUser] = useState(true);
   const { campaignId, campaigns, currentCampaign, setCampaignId } = useAdminCampaign();
+
+  useEffect(() => {
+    getSessionContextAction().then((session) => {
+      if (!session) return;
+      setIsFullAdminUser(session.type === "env_admin" || session.role === "admin");
+    });
+  }, []);
+
+  const navItems = allNavItems.filter((item) => isFullAdminUser || !item.adminOnly);
 
   const handleLogout = async () => {
     if (isSupabaseConfigured()) {

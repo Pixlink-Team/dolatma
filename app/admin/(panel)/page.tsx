@@ -17,8 +17,9 @@ import { getAdminData } from "@/lib/data-access/admin";
 import { resolveAdminCampaignId } from "@/lib/admin-campaign";
 import { resolveAdminBillboards } from "@/lib/billboards";
 import type { Billboard, CampaignSettings } from "@/lib/types";
-import { adminHref } from "@/lib/utils";
-import { formatPersianNumber, isPostgresConfigured, isSupabaseConfigured } from "@/lib/utils";
+import { CampaignTools } from "@/components/admin/campaign-tools";
+import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
+import { formatPersianNumber, adminHref, isPostgresConfigured, isSupabaseConfigured } from "@/lib/utils";
 
 function getDatabaseLabel() {
   if (isPostgresConfigured()) return "PostgreSQL";
@@ -38,6 +39,8 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
 
   const data = await getAdminData(campaignId);
   if (!data.settings) redirect("/admin/campaigns");
+  const session = await getAuthSession();
+  const canManageAll = session ? isFullAdmin(session) : true;
 
   const features = data.settings.features;
   const billboards = data.settings
@@ -83,6 +86,8 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
           </Link>
         </div>
       </div>
+
+      <CampaignTools isFullAdmin={canManageAll} />
 
       <Card>
         <CardHeader>

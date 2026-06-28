@@ -176,3 +176,70 @@ CREATE TABLE IF NOT EXISTS campaign_files (
 );
 
 CREATE INDEX IF NOT EXISTS idx_campaign_files_campaign ON campaign_files(campaign_id, published, sort_order);
+
+-- Multi-user access
+CREATE TABLE IF NOT EXISTS users (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  email TEXT NOT NULL UNIQUE,
+  password_hash TEXT NOT NULL,
+  name TEXT NOT NULL,
+  role TEXT NOT NULL DEFAULT 'contributor' CHECK (role IN ('admin', 'contributor')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS user_campaign_access (
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  campaign_id UUID NOT NULL REFERENCES campaign_settings(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (user_id, campaign_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_campaign_access_campaign ON user_campaign_access(campaign_id);
+
+ALTER TABLE billboards ADD COLUMN IF NOT EXISTS owner_user_id UUID REFERENCES users(id) ON DELETE SET NULL;
+ALTER TABLE posters ADD COLUMN IF NOT EXISTS owner_user_id UUID REFERENCES users(id) ON DELETE SET NULL;
+ALTER TABLE videos ADD COLUMN IF NOT EXISTS owner_user_id UUID REFERENCES users(id) ON DELETE SET NULL;
+ALTER TABLE analytics_metrics ADD COLUMN IF NOT EXISTS owner_user_id UUID REFERENCES users(id) ON DELETE SET NULL;
+ALTER TABLE campaign_submissions ADD COLUMN IF NOT EXISTS owner_user_id UUID REFERENCES users(id) ON DELETE SET NULL;
+ALTER TABLE campaign_files ADD COLUMN IF NOT EXISTS owner_user_id UUID REFERENCES users(id) ON DELETE SET NULL;
+
+CREATE TABLE IF NOT EXISTS social_media_posts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  campaign_id UUID NOT NULL REFERENCES campaign_settings(id) ON DELETE CASCADE,
+  owner_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  platform TEXT NOT NULL DEFAULT 'instagram' CHECK (platform IN ('instagram', 'x', 'telegram', 'linkedin', 'youtube', 'aparat', 'rubika', 'eitaa', 'other')),
+  title TEXT NOT NULL,
+  cover_image_url TEXT,
+  views INT NOT NULL DEFAULT 0,
+  likes INT NOT NULL DEFAULT 0,
+  comments INT NOT NULL DEFAULT 0,
+  shares INT NOT NULL DEFAULT 0,
+  link TEXT NOT NULL DEFAULT '',
+  content_type TEXT NOT NULL DEFAULT 'image' CHECK (content_type IN ('image', 'text', 'video', 'carousel', 'story', 'reel')),
+  media_url TEXT,
+  description TEXT,
+  published_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  published BOOLEAN NOT NULL DEFAULT false,
+  sort_order INT NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_social_posts_campaign ON social_media_posts(campaign_id, published, sort_order);
+
+CREATE TABLE IF NOT EXISTS broadcast_reports (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  campaign_id UUID NOT NULL REFERENCES campaign_settings(id) ON DELETE CASCADE,
+  owner_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  title TEXT NOT NULL,
+  report_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  pdf_url TEXT NOT NULL,
+  file_name TEXT NOT NULL,
+  summary_data JSONB NOT NULL DEFAULT '{}'::jsonb,
+  published BOOLEAN NOT NULL DEFAULT false,
+  sort_order INT NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_broadcast_reports_campaign ON broadcast_reports(campaign_id, published, sort_order);

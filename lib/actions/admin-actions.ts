@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
 import {
   deleteAnalyticsMetric,
   deleteBillboard,
@@ -44,10 +45,19 @@ async function revalidateAll(slug?: string) {
   revalidatePath("/admin/posters");
   revalidatePath("/admin/videos");
   revalidatePath("/admin/analytics");
+  revalidatePath("/admin/social-posts");
+  revalidatePath("/admin/broadcast");
   revalidatePath("/admin/submissions");
   revalidatePath("/admin/files");
   revalidatePath("/admin/settings");
+  revalidatePath("/admin/users");
   if (slug) revalidatePath(`/campaign/${slug}`);
+}
+
+async function withOwnerScope<T extends { ownerUserId?: string | null }>(data: T): Promise<T> {
+  const session = await getAuthSession();
+  if (!session || isFullAdmin(session)) return data;
+  return { ...data, ownerUserId: session.userId };
 }
 
 export async function saveCampaignAction(data: Partial<CampaignSettings> & { id?: string }) {
@@ -74,7 +84,7 @@ export async function updateSettingsAction(data: Partial<CampaignSettings>) {
 }
 
 export async function saveBillboardAction(data: Partial<Billboard> & { id?: string }) {
-  const result = await saveBillboard(data);
+  const result = await saveBillboard(await withOwnerScope(data));
   await revalidateAll();
   return result;
 }
@@ -98,7 +108,7 @@ export async function deleteCategoryAction(id: string, type: "poster" | "video")
 }
 
 export async function savePosterAction(data: Partial<Poster> & { id?: string }) {
-  const result = await savePoster(data);
+  const result = await savePoster(await withOwnerScope(data));
   await revalidateAll();
   return result;
 }
@@ -124,7 +134,7 @@ export async function deletePosterVersionAction(id: string) {
 }
 
 export async function saveVideoAction(data: Partial<Video> & { id?: string }) {
-  const result = await saveVideo(data);
+  const result = await saveVideo(await withOwnerScope(data));
   await revalidateAll();
   return result;
 }
@@ -150,7 +160,7 @@ export async function deleteVideoVersionAction(id: string) {
 }
 
 export async function saveAnalyticsAction(data: Partial<AnalyticsMetric> & { id?: string }) {
-  const result = await saveAnalyticsMetric(data);
+  const result = await saveAnalyticsMetric(await withOwnerScope(data));
   await revalidateAll();
   return result;
 }
@@ -177,7 +187,7 @@ export async function deleteSubmissionAction(id: string) {
 }
 
 export async function saveCampaignFileAction(data: Partial<CampaignFile> & { id?: string }) {
-  const result = await saveCampaignFile(data);
+  const result = await saveCampaignFile(await withOwnerScope(data));
   await revalidateAll();
   return result;
 }

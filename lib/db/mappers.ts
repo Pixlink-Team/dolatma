@@ -1,12 +1,15 @@
 import type {
   AnalyticsMetric,
+  AdminUser,
   Billboard,
+  BroadcastReport,
   CampaignFile,
   CampaignSettings,
   CampaignSubmission,
   MediaCategory,
   Poster,
   PosterVersion,
+  SocialMediaPost,
   Video,
   VideoVersion,
 } from "@/lib/types";
@@ -44,6 +47,8 @@ export function mapSettingsFromDb(row: any): CampaignSettings {
             videos: true,
             analytics: true,
             socialAnalytics: true,
+            socialPosts: true,
+            broadcastReports: true,
             submissions: true,
             files: true,
             ...JSON.parse(row.features),
@@ -54,6 +59,8 @@ export function mapSettingsFromDb(row: any): CampaignSettings {
             videos: true,
             analytics: true,
             socialAnalytics: true,
+            socialPosts: true,
+            broadcastReports: true,
             submissions: true,
             files: true,
             ...(row.features ?? {}),
@@ -93,6 +100,8 @@ export function mapBillboardFromDb(row: any): Billboard {
     notes: row.notes,
     published: row.published,
     sortOrder: row.sort_order,
+    ownerUserId: row.owner_user_id ?? null,
+    ownerName: row.owner_name ?? null,
     createdAt: toIsoString(row.created_at),
     updatedAt: toIsoString(row.updated_at),
   };
@@ -122,6 +131,8 @@ export function mapPosterFromDb(row: any): Poster {
     description: row.description,
     published: row.published,
     sortOrder: row.sort_order,
+    ownerUserId: row.owner_user_id ?? null,
+    ownerName: row.owner_name ?? null,
     createdAt: toIsoString(row.created_at),
     updatedAt: toIsoString(row.updated_at),
   };
@@ -153,6 +164,8 @@ export function mapVideoFromDb(row: any): Video {
     description: row.description,
     published: row.published,
     sortOrder: row.sort_order,
+    ownerUserId: row.owner_user_id ?? null,
+    ownerName: row.owner_name ?? null,
     createdAt: toIsoString(row.created_at),
     updatedAt: toIsoString(row.updated_at),
   };
@@ -190,6 +203,8 @@ export function mapAnalyticsFromDb(row: any): AnalyticsMetric {
     device: row.device,
     page: row.page,
     city: row.city,
+    ownerUserId: row.owner_user_id ?? null,
+    ownerName: row.owner_name ?? null,
     createdAt: toIsoString(row.created_at),
   };
 }
@@ -208,8 +223,72 @@ export function mapSubmissionFromDb(row: any): CampaignSubmission {
     mediaUrl: row.media_url,
     status: row.status,
     published: row.published,
+    ownerUserId: row.owner_user_id ?? null,
+    ownerName: row.owner_name ?? null,
     createdAt: toIsoString(row.created_at),
     updatedAt: toIsoString(row.updated_at),
+  };
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function mapSocialPostFromDb(row: any): SocialMediaPost {
+  return {
+    id: row.id,
+    campaignId: row.campaign_id,
+    ownerUserId: row.owner_user_id ?? null,
+    ownerName: row.owner_name ?? null,
+    platform: row.platform,
+    title: row.title,
+    coverImageUrl: row.cover_image_url,
+    views: Number(row.views ?? 0),
+    likes: Number(row.likes ?? 0),
+    comments: Number(row.comments ?? 0),
+    shares: Number(row.shares ?? 0),
+    link: row.link ?? "",
+    contentType: row.content_type,
+    mediaUrl: row.media_url,
+    description: row.description,
+    publishedDate: toDateString(row.published_date),
+    published: row.published ?? false,
+    sortOrder: row.sort_order ?? 0,
+    createdAt: toIsoString(row.created_at),
+    updatedAt: toIsoString(row.updated_at),
+  };
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function mapBroadcastReportFromDb(row: any): BroadcastReport {
+  const summary =
+    typeof row.summary_data === "string"
+      ? JSON.parse(row.summary_data)
+      : (row.summary_data ?? {});
+
+  return {
+    id: row.id,
+    campaignId: row.campaign_id,
+    ownerUserId: row.owner_user_id ?? null,
+    ownerName: row.owner_name ?? null,
+    title: row.title,
+    reportDate: toDateString(row.report_date),
+    pdfUrl: row.pdf_url,
+    fileName: row.file_name,
+    summaryData: summary,
+    published: row.published ?? false,
+    sortOrder: row.sort_order ?? 0,
+    createdAt: toIsoString(row.created_at),
+    updatedAt: toIsoString(row.updated_at),
+  };
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function mapUserFromDb(row: any, campaignIds: string[] = []): AdminUser {
+  return {
+    id: row.id,
+    email: row.email,
+    name: row.name,
+    role: row.role,
+    campaignIds,
+    createdAt: toIsoString(row.created_at),
   };
 }
 
@@ -226,6 +305,8 @@ export function mapCampaignFileFromDb(row: any): CampaignFile {
     fileSize: Number(row.file_size ?? 0),
     published: row.published ?? false,
     sortOrder: row.sort_order ?? 0,
+    ownerUserId: row.owner_user_id ?? null,
+    ownerName: row.owner_name ?? null,
     createdAt: toIsoString(row.created_at),
     updatedAt: toIsoString(row.updated_at),
   };

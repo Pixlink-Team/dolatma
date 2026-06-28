@@ -23,6 +23,8 @@ import { AnalyticsSection } from "@/components/public/analytics-section";
 import { SocialAnalyticsSection } from "@/components/public/social-analytics-section";
 import { SubmissionsSection } from "@/components/public/submissions-section";
 import { CampaignFilesSection } from "@/components/public/campaign-files-section";
+import { SocialPostsSection } from "@/components/public/social-posts-section";
+import { BroadcastSection } from "@/components/public/broadcast-section";
 import { DeferredSection } from "@/components/public/deferred-section";
 import type { PublicCampaignData } from "@/lib/types";
 import { formatPersianDate, formatPersianDateTime } from "@/lib/utils";
@@ -150,6 +152,16 @@ export function CampaignDashboard({ initialData, slug }: CampaignDashboardProps)
         {sections.submissions && (
           <DeferredSection minHeight={280}>
             <SubmissionsSection submissions={data.submissions} summary={data.submissionSummary} />
+          </DeferredSection>
+        )}
+        {sections.socialPosts && (
+          <DeferredSection minHeight={280}>
+            <SocialPostsSection posts={data.socialPosts} groups={data.socialPostGroups} />
+          </DeferredSection>
+        )}
+        {sections.broadcastReports && (
+          <DeferredSection minHeight={240}>
+            <BroadcastSection reports={data.broadcastReports} groups={data.broadcastReportGroups} />
           </DeferredSection>
         )}
         {sections.files && (

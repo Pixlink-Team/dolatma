@@ -1,0 +1,92 @@
+import type { AuthSession, SessionRole } from "@/lib/types";
+
+const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
+
+function getAuthSecret(): string {
+  return (
+    process.env.AUTH_SECRET ??
+    process.env.ADMIN_PASSWORD ??
+    "dev-insecure-secret-change-me"
+  );
+}
+
+async function signPayloadAsync(payload: string): Promise<string> {
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(getAuthSecret()),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  const signature = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(payload));
+  return Array.from(new Uint8Array(signature))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+function parsePayload(payload: string): AuthSession | null {
+  const parts = payload.split(":");
+  if (parts[0] === "admin" && parts.length === 2) {
+    const expiresAt = Number(parts[1]);
+    if (!Number.isFinite(expiresAt) || expiresAt <= Date.now()) return null;
+    return { type: "env_admin", userId: null, role: "admin" };
+  }
+
+  if (parts[0] === "user" && parts.length === 4) {
+    const [, userId, role, expiresAtRaw] = parts;
+    const expiresAt = Number(expiresAtRaw);
+    if (!userId || (role !== "admin" && role !== "contributor")) return null;
+    if (!Number.isFinite(expiresAt) || expiresAt <= Date.now()) return null;
+    return {
+      type: "db_user",
+      userId,
+      role: role as SessionRole,
+    };
+  }
+
+  return null;
+}
+
+export function buildEnvAdminPayload(expiresAt = Date.now() + SESSION_TTL_MS): string {
+  return `admin:${expiresAt}`;
+}
+
+export function buildUserSessionPayload(
+  userId: string,
+  role: SessionRole,
+  expiresAt = Date.now() + SESSION_TTL_MS
+): string {
+  return `user:${userId}:${role}:${expiresAt}`;
+}
+
+export async function createSignedSessionToken(payload: string): Promise<string> {
+  const signature = await signPayloadAsync(payload);
+  return `${payload}.${signature}`;
+}
+
+export async function parseSessionToken(token: string | undefined | null): Promise<AuthSession | null> {
+  if (!token) return null;
+
+  const [payload, signature] = token.split(".");
+  if (!payload || !signature) return null;
+
+  const expected = await signPayloadAsync(payload);
+  if (signature.length !== expected.length) return null;
+
+  let mismatch = 0;
+  for (let i = 0; i < signature.length; i += 1) {
+    mismatch |= signature.charCodeAt(i) ^ expected.charCodeAt(i);
+  }
+  if (mismatch !== 0) return null;
+
+  return parsePayload(payload);
+}
+
+export async function verifyAdminSessionToken(token: string | undefined | null): Promise<boolean> {
+  const session = await parseSessionToken(token);
+  return session !== null;
+}
+
+export function getSessionTtlMs() {
+  return SESSION_TTL_MS;
+}

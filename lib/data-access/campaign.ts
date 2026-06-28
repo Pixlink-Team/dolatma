@@ -12,6 +12,7 @@ import type {
   SectionVisibility,
   SubmissionSummary,
 } from "@/lib/types";
+import { groupByOwner } from "@/lib/owner-groups";
 import { isPostgresConfigured, isSupabaseConfigured } from "@/lib/utils";
 import * as pg from "@/lib/db/repository";
 import { fetchMetabaseMetrics, resolveChannelMetabaseEmbedUrl } from "@/lib/services/metabase";
@@ -178,6 +179,8 @@ function buildSectionVisibility(
     videos: unknown[];
     analytics: AnalyticsSummary;
     socialAnalytics: AnalyticsSummary;
+    socialPosts: unknown[];
+    broadcastReports: unknown[];
     submissions: unknown[];
     files: unknown[];
   }
@@ -192,6 +195,8 @@ function buildSectionVisibility(
     socialAnalytics:
       features.socialAnalytics &&
       (data.socialAnalytics.hasData || Boolean(data.socialAnalytics.metabaseEmbedUrl)),
+    socialPosts: (features.socialPosts ?? true) && data.socialPosts.length > 0,
+    broadcastReports: (features.broadcastReports ?? true) && data.broadcastReports.length > 0,
     submissions: features.submissions && data.submissions.length > 0,
     files: features.files && data.files.length > 0,
   };
@@ -275,6 +280,14 @@ function assemblePublicData(
     .filter((file) => file.published)
     .sort((a, b) => a.sortOrder - b.sortOrder);
 
+  const socialPosts = (store.socialPosts ?? [])
+    .filter((post) => post.published)
+    .sort((a, b) => a.sortOrder - b.sortOrder);
+
+  const broadcastReports = (store.broadcastReports ?? [])
+    .filter((report) => report.published)
+    .sort((a, b) => a.sortOrder - b.sortOrder);
+
   const submissionSummary = buildSubmissionSummary(store.submissions);
 
   const sections = buildSectionVisibility(settings.features, {
@@ -283,6 +296,8 @@ function assemblePublicData(
     videos,
     analytics,
     socialAnalytics,
+    socialPosts,
+    broadcastReports,
     submissions,
     files,
   });
@@ -301,15 +316,24 @@ function assemblePublicData(
     kpis,
     sections,
     billboards,
+    billboardGroups: groupByOwner(billboards),
     posterCategories,
     posters,
+    posterGroups: groupByOwner(posters),
     videoCategories,
     videos,
+    videoGroups: groupByOwner(videos),
     analytics,
     socialAnalytics,
+    socialPosts,
+    socialPostGroups: groupByOwner(socialPosts),
+    broadcastReports,
+    broadcastReportGroups: groupByOwner(broadcastReports),
     submissions,
+    submissionGroups: groupByOwner(submissions),
     submissionSummary,
     files,
+    fileGroups: groupByOwner(files),
     lastUpdated: new Date().toISOString(),
   };
 }
@@ -473,6 +497,8 @@ export async function getPublicCampaignData(slug: string): Promise<PublicCampaig
       analytics: (analyticsRes.data ?? []).map(mapAnalyticsFromDb),
       submissions: (submissionsRes.data ?? []).map(mapSubmissionFromDb),
       files: [],
+      socialPosts: [],
+      broadcastReports: [],
     };
 
     return assemblePublicData(
