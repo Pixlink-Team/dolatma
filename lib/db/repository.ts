@@ -1,5 +1,5 @@
 import { getSql } from "@/lib/db/client";
-import { pgGetMeetingsWithTasks, pgGetPublicMeetingPreviews } from "@/lib/db/repository-extended";
+import { pgGetCampaignActivities, pgGetMeetingsWithTasks, pgGetPublicMeetingPreviews } from "@/lib/db/repository-extended";
 import {
   mapAnalyticsFromDb,
   mapBillboardFromDb,
@@ -37,8 +37,10 @@ const defaultFeatures = {
   analytics: true,
   socialAnalytics: true,
   socialPosts: true,
+  sitePublications: true,
   broadcastReports: true,
   meetings: true,
+  activities: true,
   submissions: true,
   files: true,
 };
@@ -78,6 +80,7 @@ export async function pgGetAdminData(campaignId: string, ownerUserId?: string | 
     broadcastReports,
     socialPlatformStats,
     meetings,
+    activities,
   ] = await Promise.all([
     sql`SELECT * FROM campaign_settings ORDER BY updated_at DESC`,
     sql`SELECT * FROM campaign_settings WHERE id = ${campaignId} LIMIT 1`,
@@ -168,6 +171,7 @@ export async function pgGetAdminData(campaignId: string, ownerUserId?: string | 
       ORDER BY sps.sort_order, sps.platform
     `,
     pgGetMeetingsWithTasks(campaignId, { ownerUserId }),
+    pgGetCampaignActivities(campaignId, ownerUserId),
   ]);
 
   return {
@@ -187,6 +191,7 @@ export async function pgGetAdminData(campaignId: string, ownerUserId?: string | 
     broadcastReports: broadcastReports.map(mapBroadcastReportFromDb),
     socialPlatformStats: socialPlatformStats.map(mapSocialPlatformStatFromDb),
     meetings,
+    activities,
   };
 }
 
@@ -737,6 +742,7 @@ export async function pgGetPublicCampaignData(campaignId: string) {
     broadcastReports,
     socialPlatformStats,
     meetings,
+    activities,
   ] = await Promise.all([
     sql`
       SELECT b.*, u.name AS owner_name
@@ -816,6 +822,7 @@ export async function pgGetPublicCampaignData(campaignId: string) {
       ORDER BY sps.sort_order, sps.platform
     `,
     pgGetPublicMeetingPreviews(campaignId),
+    pgGetCampaignActivities(campaignId),
   ]);
 
   return {
@@ -833,6 +840,7 @@ export async function pgGetPublicCampaignData(campaignId: string) {
     broadcastReports: broadcastReports.map(mapBroadcastReportFromDb),
     socialPlatformStats: socialPlatformStats.map(mapSocialPlatformStatFromDb),
     meetings,
+    activities,
   };
 }
 

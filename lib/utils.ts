@@ -106,6 +106,7 @@ export function getStatusLabel(status: string): string {
     rubika: "روبیکا",
     eitaa: "ایتا",
     bale: "بله",
+    site: "سایت",
     image: "تصویر",
     text: "متن",
     video: "ویدیو",

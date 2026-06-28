@@ -7,6 +7,17 @@ export type TrafficSource = "instagram" | "telegram" | "direct" | "google" | "re
 export type DeviceType = "mobile" | "desktop" | "tablet";
 export type AdminRole = "admin" | "contributor";
 export type SocialPlatform = "instagram" | "x" | "telegram" | "linkedin" | "youtube" | "aparat" | "rubika" | "eitaa" | "bale" | "other";
+export type SocialPostPlatform = SocialPlatform | "site";
+export type ActivityType =
+  | "magazine"
+  | "newspaper"
+  | "tract"
+  | "booth"
+  | "field"
+  | "poetry"
+  | "painting"
+  | "exhibition"
+  | "other";
 export type SocialContentType = "image" | "text" | "video" | "carousel" | "story" | "reel";
 export type SessionRole = "admin" | "contributor";
 
@@ -17,8 +28,10 @@ export interface CampaignFeatures {
   analytics: boolean;
   socialAnalytics: boolean;
   socialPosts: boolean;
+  sitePublications: boolean;
   broadcastReports: boolean;
   meetings: boolean;
+  activities: boolean;
   submissions: boolean;
   files: boolean;
 }
@@ -271,7 +284,7 @@ export interface SocialMediaPost {
   campaignId: string;
   ownerUserId?: string | null;
   ownerName?: string | null;
-  platform: SocialPlatform;
+  platform: SocialPostPlatform;
   title: string;
   coverImageUrl?: string | null;
   views: number;
@@ -332,6 +345,23 @@ export interface BroadcastReport {
   pdfUrl: string;
   fileName: string;
   summaryData: BroadcastReportSummary;
+  published: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CampaignActivity {
+  id: string;
+  campaignId: string;
+  ownerUserId?: string | null;
+  ownerName?: string | null;
+  title: string;
+  activityType: ActivityType;
+  activityDate: string;
+  location: string;
+  imageUrl?: string | null;
+  description?: string | null;
   published: boolean;
   sortOrder: number;
   createdAt: string;
@@ -464,8 +494,10 @@ export interface SectionVisibility {
   analytics: boolean;
   socialAnalytics: boolean;
   socialPosts: boolean;
+  sitePublications: boolean;
   broadcastReports: boolean;
   meetings: boolean;
+  activities: boolean;
   submissions: boolean;
   files: boolean;
 }
@@ -486,11 +518,15 @@ export interface PublicCampaignData {
   socialAnalytics: SocialAnalyticsSummary;
   socialPosts: SocialMediaPost[];
   socialPostGroups: DataOwnerGroup<SocialMediaPost>[];
+  sitePublications: SocialMediaPost[];
+  sitePublicationGroups: DataOwnerGroup<SocialMediaPost>[];
   broadcastReports: BroadcastReport[];
   broadcastReportGroups: DataOwnerGroup<BroadcastReport>[];
   meetings: MeetingPublicPreview[];
   meetingGroups: DataOwnerGroup<MeetingPublicPreview>[];
   meetingsHasPassword: boolean;
+  activities: CampaignActivity[];
+  activityGroups: DataOwnerGroup<CampaignActivity>[];
   submissions: CampaignSubmission[];
   submissionGroups: DataOwnerGroup<CampaignSubmission>[];
   submissionSummary: SubmissionSummary;

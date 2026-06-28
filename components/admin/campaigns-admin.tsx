@@ -31,8 +31,10 @@ const featuresSchema = z.object({
   analytics: z.boolean(),
   socialAnalytics: z.boolean(),
   socialPosts: z.boolean(),
+  sitePublications: z.boolean(),
   broadcastReports: z.boolean(),
   meetings: z.boolean(),
+  activities: z.boolean(),
   submissions: z.boolean(),
   files: z.boolean(),
 });
@@ -58,8 +60,10 @@ const defaultFeatures: CampaignFeatures = {
   analytics: false,
   socialAnalytics: false,
   socialPosts: false,
+  sitePublications: false,
   broadcastReports: false,
   meetings: false,
+  activities: false,
   submissions: false,
   files: false,
 };

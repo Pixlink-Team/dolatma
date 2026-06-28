@@ -5,8 +5,10 @@ export interface ContributorPermissions {
   files: boolean;
   analytics: boolean;
   socialPosts: boolean;
+  sitePublications: boolean;
   broadcast: boolean;
   meetings: boolean;
+  activities: boolean;
   submissions: boolean;
 }
 
@@ -19,8 +21,10 @@ export const defaultContributorPermissions = (): ContributorPermissions => ({
   files: true,
   analytics: true,
   socialPosts: true,
+  sitePublications: true,
   broadcast: true,
   meetings: true,
+  activities: true,
   submissions: true,
 });
 
@@ -31,8 +35,10 @@ export const contributorPermissionLabels: Record<ContributorPermissionKey, strin
   files: "فایل‌ها",
   analytics: "آمار سایت",
   socialPosts: "شبکه‌های اجتماعی",
+  sitePublications: "انتشار در سایت",
   broadcast: "پخش صدا و سیما",
   meetings: "جلسات و مصوبات",
+  activities: "اقدامات",
   submissions: "مشارکت‌ها",
 };
 
@@ -50,8 +56,10 @@ export function normalizeContributorPermissions(
     files: record.files ?? defaults.files,
     analytics: record.analytics ?? defaults.analytics,
     socialPosts: record.socialPosts ?? defaults.socialPosts,
+    sitePublications: record.sitePublications ?? defaults.sitePublications,
     broadcast: record.broadcast ?? defaults.broadcast,
     meetings: record.meetings ?? defaults.meetings,
+    activities: record.activities ?? defaults.activities,
     submissions: record.submissions ?? defaults.submissions,
   };
 }

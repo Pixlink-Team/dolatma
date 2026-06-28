@@ -10,11 +10,13 @@ import {
 import { hashPassword } from "@/lib/auth/password";
 import * as pgExt from "@/lib/db/repository-extended";
 import type { MeetingDecisionPayload, MeetingTaskPayload } from "@/lib/db/repository-extended";
-import type { BroadcastReport, CampaignMeeting, SocialMediaPost, SocialPlatformStat } from "@/lib/types";
+import type { BroadcastReport, CampaignActivity, CampaignMeeting, SocialMediaPost, SocialPlatformStat } from "@/lib/types";
 import { isPostgresConfigured } from "@/lib/utils";
 
 async function revalidateExtended(slug?: string) {
   revalidatePath("/admin/social-posts");
+  revalidatePath("/admin/site-publications");
+  revalidatePath("/admin/activities");
   revalidatePath("/admin/broadcast");
   revalidatePath("/admin/meetings");
   revalidatePath("/admin/users");
@@ -114,6 +116,38 @@ export async function deleteBroadcastReportAction(id: string) {
   if (!session) return { success: false, error: "Unauthorized" };
   if (!isPostgresConfigured()) return { success: false, error: "Database required" };
   await pgExt.pgDeleteBroadcastReport(id);
+  await revalidateExtended();
+  return { success: true };
+}
+
+export async function saveCampaignActivityAction(data: Partial<CampaignActivity> & { id?: string }) {
+  const session = await getAuthSession();
+  if (!session) return { success: false, error: "Unauthorized" };
+
+  if (!isFullAdmin(session) && data.campaignId) {
+    const permissions = await pgExt.pgGetUserPermissionsForCampaign(session.userId!, data.campaignId);
+    if (!hasContributorPermission(permissions, "activities")) {
+      return { success: false, error: "دسترسی ندارید" };
+    }
+  }
+
+  const ownerUserId = isFullAdmin(session) ? (data.ownerUserId ?? null) : session.userId;
+  const payload = { ...data, ownerUserId };
+
+  if (!isPostgresConfigured()) {
+    return { success: false, error: "Database required" };
+  }
+
+  const result = await pgExt.pgSaveCampaignActivity(payload);
+  await revalidateExtended();
+  return result;
+}
+
+export async function deleteCampaignActivityAction(id: string) {
+  const session = await getAuthSession();
+  if (!session) return { success: false, error: "Unauthorized" };
+  if (!isPostgresConfigured()) return { success: false, error: "Database required" };
+  await pgExt.pgDeleteCampaignActivity(id);
   await revalidateExtended();
   return { success: true };
 }

@@ -1,6 +1,7 @@
 import { getSql } from "@/lib/db/client";
 import {
   mapBroadcastReportFromDb,
+  mapCampaignActivityFromDb,
   mapMeetingDecisionFromDb,
   mapMeetingFromDb,
   mapMeetingPreviewFromDb,
@@ -13,6 +14,7 @@ import {
 import type {
   AdminUser,
   BroadcastReport,
+  CampaignActivity,
   CampaignMeeting,
   MeetingDecision,
   MeetingPublicDetail,
@@ -531,6 +533,82 @@ export async function pgSaveBroadcastReport(data: Partial<BroadcastReport> & { i
 export async function pgDeleteBroadcastReport(id: string) {
   const sql = getSql();
   await sql`DELETE FROM broadcast_reports WHERE id = ${id}`;
+  return { success: true };
+}
+
+export async function pgGetCampaignActivities(
+  campaignId: string,
+  ownerUserId?: string | null
+): Promise<CampaignActivity[]> {
+  const sql = getSql();
+  const rows =
+    ownerUserId === undefined
+      ? await sql`
+          SELECT ca.*, u.name AS owner_name
+          FROM campaign_activities ca
+          LEFT JOIN users u ON u.id = ca.owner_user_id
+          WHERE ca.campaign_id = ${campaignId}
+          ORDER BY ca.activity_date DESC, ca.sort_order
+        `
+      : await sql`
+          SELECT ca.*, u.name AS owner_name
+          FROM campaign_activities ca
+          LEFT JOIN users u ON u.id = ca.owner_user_id
+          WHERE ca.campaign_id = ${campaignId}
+            AND ca.owner_user_id IS NOT DISTINCT FROM ${ownerUserId}
+          ORDER BY ca.activity_date DESC, ca.sort_order
+        `;
+
+  return rows.map(mapCampaignActivityFromDb);
+}
+
+export async function pgSaveCampaignActivity(data: Partial<CampaignActivity> & { id?: string }) {
+  const sql = getSql();
+  const now = new Date().toISOString();
+  const id = data.id ?? generateId();
+
+  const countRows = await sql`
+    SELECT COUNT(*)::int AS count FROM campaign_activities WHERE campaign_id = ${data.campaignId ?? ""}
+  `;
+  const sortOrder = data.sortOrder ?? (Number(countRows[0]?.count) || 0) + 1;
+
+  await sql`
+    INSERT INTO campaign_activities (
+      id, campaign_id, owner_user_id, title, activity_type, activity_date,
+      location, image_url, description, published, sort_order, created_at, updated_at
+    ) VALUES (
+      ${id},
+      ${data.campaignId ?? ""},
+      ${data.ownerUserId ?? null},
+      ${data.title ?? ""},
+      ${data.activityType ?? "other"},
+      ${data.activityDate ?? now.split("T")[0]},
+      ${data.location ?? ""},
+      ${data.imageUrl ?? null},
+      ${data.description ?? null},
+      ${data.published ?? false},
+      ${sortOrder},
+      ${now},
+      ${now}
+    )
+    ON CONFLICT (id) DO UPDATE SET
+      title = EXCLUDED.title,
+      activity_type = EXCLUDED.activity_type,
+      activity_date = EXCLUDED.activity_date,
+      location = EXCLUDED.location,
+      image_url = EXCLUDED.image_url,
+      description = EXCLUDED.description,
+      published = EXCLUDED.published,
+      sort_order = EXCLUDED.sort_order,
+      updated_at = EXCLUDED.updated_at
+  `;
+
+  return { success: true, id };
+}
+
+export async function pgDeleteCampaignActivity(id: string) {
+  const sql = getSql();
+  await sql`DELETE FROM campaign_activities WHERE id = ${id}`;
   return { success: true };
 }
 

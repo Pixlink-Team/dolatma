@@ -18,6 +18,7 @@ import { MediaUpload } from "@/components/ui/media-upload";
 import { PersianDateField } from "@/components/ui/persian-date-input";
 import { deleteSocialPostAction, saveSocialPostAction } from "@/lib/actions/extended-actions";
 import { todayISO } from "@/lib/jalali";
+import { isSitePublication } from "@/lib/social-posts";
 import type { SocialContentType, SocialMediaPost, SocialPlatform } from "@/lib/types";
 import { formatPersianDate, formatPersianNumber, getStatusLabel } from "@/lib/utils";
 
@@ -61,7 +62,7 @@ interface SocialPostsAdminProps {
 export function SocialPostsAdmin({ campaignId, initialPosts, embedded = false }: SocialPostsAdminProps) {
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [rows, setRows] = useState(initialPosts);
+  const [rows, setRows] = useState(initialPosts.filter((post) => !isSitePublication(post)));
   const [isPending, startTransition] = useTransition();
 
   const form = useForm({
@@ -104,9 +105,10 @@ export function SocialPostsAdmin({ campaignId, initialPosts, embedded = false }:
   };
 
   const openEdit = (post: SocialMediaPost) => {
+    if (isSitePublication(post)) return;
     setEditingId(post.id);
     form.reset({
-      platform: post.platform,
+      platform: post.platform as SocialPlatform,
       title: post.title,
       coverImageUrl: post.coverImageUrl ?? "",
       views: post.views,

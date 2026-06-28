@@ -21,8 +21,10 @@ const fullFeatures = {
   analytics: true,
   socialAnalytics: true,
   socialPosts: true,
+  sitePublications: true,
   broadcastReports: true,
   meetings: true,
+  activities: true,
   submissions: true,
   files: true,
 };
@@ -66,8 +68,10 @@ export const mockCampaigns: CampaignSettings[] = [
       analytics: false,
       socialAnalytics: false,
       socialPosts: false,
+      sitePublications: false,
       broadcastReports: false,
       meetings: false,
+      activities: false,
       submissions: false,
       files: false,
     },
@@ -92,8 +96,10 @@ export const mockCampaigns: CampaignSettings[] = [
       analytics: false,
       socialAnalytics: true,
       socialPosts: true,
+      sitePublications: false,
       broadcastReports: false,
       meetings: false,
+      activities: false,
       submissions: false,
       files: false,
     },
@@ -273,6 +279,7 @@ let mockStore = {
   socialPosts: [] as import("./types").SocialMediaPost[],
   broadcastReports: [] as import("./types").BroadcastReport[],
   meetings: [] as import("./types").MeetingWithTasks[],
+  activities: [] as import("./types").CampaignActivity[],
 };
 
 export function getMockStore() {
@@ -302,6 +309,7 @@ export function getMockStoreForCampaign(campaignId: string) {
     broadcastReports: store.broadcastReports.filter((report) => report.campaignId === campaignId),
     socialPlatformStats: store.socialPlatformStats.filter((stat) => stat.campaignId === campaignId),
     meetings: store.meetings.filter((meeting) => meeting.campaignId === campaignId),
+    activities: store.activities.filter((activity) => activity.campaignId === campaignId),
   };
 }
 
@@ -321,6 +329,7 @@ export function resetMockStore() {
     socialPosts: [],
     broadcastReports: [],
     meetings: [],
+    activities: [],
     socialPlatformStats: [...mockSocialPlatformStats],
   };
 }

@@ -23,6 +23,8 @@ import { AnalyticsSection } from "@/components/public/analytics-section";
 import { SocialAnalyticsSection } from "@/components/public/social-analytics-section";
 import { SubmissionsSection } from "@/components/public/submissions-section";
 import { CampaignFilesSection } from "@/components/public/campaign-files-section";
+import { SitePublicationsSection } from "@/components/public/site-publications-section";
+import { ActivitiesSection } from "@/components/public/activities-section";
 import { SocialPostsSection } from "@/components/public/social-posts-section";
 import { BroadcastSection } from "@/components/public/broadcast-section";
 import { MeetingsSection } from "@/components/public/meetings-section";
@@ -187,10 +189,27 @@ export function CampaignDashboard({ initialData, slug, exportMode = false }: Cam
             </section>
           </DeferredSection>
         )}
+        {sections.sitePublications && (
+          <DeferredSection minHeight={240} forceRender={exportMode}>
+            <section data-export-section data-export-label="انتشار در سایت">
+              <SitePublicationsSection
+                publications={data.sitePublications}
+                groups={data.sitePublicationGroups}
+              />
+            </section>
+          </DeferredSection>
+        )}
         {sections.socialPosts && (
           <DeferredSection minHeight={280} forceRender={exportMode}>
             <section data-export-section data-export-label="پست‌های شبکه اجتماعی">
               <SocialPostsSection posts={data.socialPosts} groups={data.socialPostGroups} />
+            </section>
+          </DeferredSection>
+        )}
+        {sections.activities && (
+          <DeferredSection minHeight={320} forceRender={exportMode}>
+            <section data-export-section data-export-label="اقدامات">
+              <ActivitiesSection activities={data.activities} groups={data.activityGroups} />
             </section>
           </DeferredSection>
         )}

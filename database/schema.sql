@@ -205,7 +205,7 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS city TEXT;
 CREATE TABLE IF NOT EXISTS user_campaign_access (
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   campaign_id UUID NOT NULL REFERENCES campaign_settings(id) ON DELETE CASCADE,
-  permissions JSONB NOT NULL DEFAULT '{"billboards":true,"posters":true,"videos":true,"files":true,"analytics":true,"socialPosts":true,"broadcast":true,"submissions":true}'::jsonb,
+  permissions JSONB NOT NULL DEFAULT '{"billboards":true,"posters":true,"videos":true,"files":true,"analytics":true,"socialPosts":true,"sitePublications":true,"broadcast":true,"meetings":true,"activities":true,"submissions":true}'::jsonb,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   PRIMARY KEY (user_id, campaign_id)
 );
@@ -330,8 +330,26 @@ CREATE INDEX IF NOT EXISTS idx_meeting_decisions_meeting ON meeting_decisions(me
 -- Expand social platform enum for existing databases
 ALTER TABLE social_media_posts DROP CONSTRAINT IF EXISTS social_media_posts_platform_check;
 ALTER TABLE social_media_posts ADD CONSTRAINT social_media_posts_platform_check
-  CHECK (platform IN ('instagram', 'x', 'telegram', 'linkedin', 'youtube', 'aparat', 'rubika', 'eitaa', 'bale', 'other'));
+  CHECK (platform IN ('site', 'instagram', 'x', 'telegram', 'linkedin', 'youtube', 'aparat', 'rubika', 'eitaa', 'bale', 'other'));
 
 ALTER TABLE social_platform_stats DROP CONSTRAINT IF EXISTS social_platform_stats_platform_check;
 ALTER TABLE social_platform_stats ADD CONSTRAINT social_platform_stats_platform_check
   CHECK (platform IN ('instagram', 'x', 'telegram', 'linkedin', 'youtube', 'aparat', 'rubika', 'eitaa', 'bale', 'other'));
+
+CREATE TABLE IF NOT EXISTS campaign_activities (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  campaign_id UUID NOT NULL REFERENCES campaign_settings(id) ON DELETE CASCADE,
+  owner_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  title TEXT NOT NULL,
+  activity_type TEXT NOT NULL DEFAULT 'other',
+  activity_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  location TEXT NOT NULL DEFAULT '',
+  image_url TEXT,
+  description TEXT,
+  published BOOLEAN NOT NULL DEFAULT false,
+  sort_order INT NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_campaign_activities_campaign ON campaign_activities(campaign_id, published, sort_order);

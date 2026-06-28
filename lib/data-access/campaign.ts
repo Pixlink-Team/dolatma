@@ -7,6 +7,7 @@ import type {
   CampaignKPIs,
   CampaignListItem,
   CampaignSettings,
+  CampaignActivity,
   ChannelAnalyticsConfig,
   PublicCampaignData,
   SectionVisibility,
@@ -19,6 +20,7 @@ import type {
 import { truncateMeetingSummary } from "@/lib/meeting-preview";
 import { compareMeetingsByDateDesc } from "@/lib/meeting-tasks";
 import { groupByOwner } from "@/lib/owner-groups";
+import { splitSocialPosts } from "@/lib/social-posts";
 import { buildSocialAnalyticsSummary } from "@/lib/social-analytics";
 import { isPostgresConfigured, isSupabaseConfigured } from "@/lib/utils";
 import * as pg from "@/lib/db/repository";
@@ -216,8 +218,10 @@ function buildSectionVisibility(
     analytics: AnalyticsSummary;
     socialAnalytics: SocialAnalyticsSummary;
     socialPosts: unknown[];
+    sitePublications: unknown[];
     broadcastReports: unknown[];
     meetings: unknown[];
+    activities: unknown[];
     submissions: unknown[];
     files: unknown[];
   }
@@ -232,8 +236,10 @@ function buildSectionVisibility(
     socialAnalytics:
       features.socialAnalytics && data.socialAnalytics.hasData,
     socialPosts: (features.socialPosts ?? true) && data.socialPosts.length > 0,
+    sitePublications: (features.sitePublications ?? true) && data.sitePublications.length > 0,
     broadcastReports: (features.broadcastReports ?? true) && data.broadcastReports.length > 0,
     meetings: (features.meetings ?? true) && data.meetings.length > 0,
+    activities: (features.activities ?? true) && data.activities.length > 0,
     submissions: features.submissions && data.submissions.length > 0,
     files: features.files && data.files.length > 0,
   };
@@ -265,6 +271,7 @@ function buildKPIs(
 type CampaignPublicStore = Omit<ReturnType<typeof getMockStoreForCampaign>, "meetings"> & {
   meetings?: (MeetingPublicPreview | MeetingWithTasks)[];
   socialPlatformStats?: SocialPlatformStat[];
+  activities?: CampaignActivity[];
 };
 
 function assemblePublicData(
@@ -318,15 +325,24 @@ function assemblePublicData(
     .filter((file) => file.published)
     .sort((a, b) => a.sortOrder - b.sortOrder);
 
-  const socialPosts = (store.socialPosts ?? [])
+  const allSocialPosts = (store.socialPosts ?? [])
     .filter((post) => post.published)
-    .sort((a, b) => a.sortOrder - b.sortOrder);
+    .sort((a, b) => a.sortOrder - b.sortOrder || b.publishedDate.localeCompare(a.publishedDate));
+
+  const { sitePublications, socialPosts } = splitSocialPosts(allSocialPosts);
 
   const broadcastReports = (store.broadcastReports ?? [])
     .filter((report) => report.published)
     .sort((a, b) => a.sortOrder - b.sortOrder);
 
   const meetingsHasPassword = Boolean(settings.meetingsViewPasswordHash);
+
+  const activities = (store.activities ?? [])
+    .filter((activity) => activity.published)
+    .sort(
+      (a, b) =>
+        b.activityDate.localeCompare(a.activityDate) || a.sortOrder - b.sortOrder
+    );
 
   const meetings = normalizeMeetingPreviews(
     (store.meetings ?? [])
@@ -344,8 +360,10 @@ function assemblePublicData(
     analytics,
     socialAnalytics,
     socialPosts,
+    sitePublications,
     broadcastReports,
     meetings,
+    activities,
     submissions,
     files,
   });
@@ -375,11 +393,15 @@ function assemblePublicData(
     socialAnalytics,
     socialPosts,
     socialPostGroups: groupByOwner(socialPosts),
+    sitePublications,
+    sitePublicationGroups: groupByOwner(sitePublications),
     broadcastReports,
     broadcastReportGroups: groupByOwner(broadcastReports),
     meetings,
     meetingGroups: groupByOwner(meetings),
     meetingsHasPassword,
+    activities,
+    activityGroups: groupByOwner(activities),
     submissions,
     submissionGroups: groupByOwner(submissions),
     submissionSummary,
@@ -556,6 +578,7 @@ export async function getPublicCampaignData(slug: string): Promise<PublicCampaig
       socialPosts: [],
       broadcastReports: [],
       meetings: [],
+      activities: [],
       socialPlatformStats: [],
     };
 

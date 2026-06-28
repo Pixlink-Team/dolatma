@@ -72,6 +72,9 @@ export async function getAdminData(campaignId: string) {
       broadcastReports: filterByOwner([...(store.broadcastReports ?? [])]).sort((a, b) => a.sortOrder - b.sortOrder),
       socialPlatformStats: filterByOwner([...(store.socialPlatformStats ?? [])]).sort((a, b) => a.sortOrder - b.sortOrder),
       meetings: filterByOwner([...(store.meetings ?? [])]).sort(compareMeetingsByDateDesc),
+      activities: filterByOwner([...(store.activities ?? [])]).sort(
+        (a, b) => b.activityDate.localeCompare(a.activityDate) || a.sortOrder - b.sortOrder
+      ),
     };
   }
 
@@ -111,6 +114,7 @@ export async function getAdminData(campaignId: string) {
       broadcastReports: [],
       socialPlatformStats: [],
       meetings: [],
+      activities: [],
     };
   } catch {
     return getAdminDataMock(campaignId);
@@ -136,6 +140,9 @@ function getAdminDataMock(campaignId: string) {
     broadcastReports: [...(store.broadcastReports ?? [])].sort((a, b) => a.sortOrder - b.sortOrder),
     socialPlatformStats: [...(store.socialPlatformStats ?? [])].sort((a, b) => a.sortOrder - b.sortOrder),
     meetings: [...(store.meetings ?? [])].sort(compareMeetingsByDateDesc),
+    activities: [...(store.activities ?? [])].sort(
+      (a, b) => b.activityDate.localeCompare(a.activityDate) || a.sortOrder - b.sortOrder
+    ),
   };
 }
 
@@ -170,8 +177,10 @@ export async function saveCampaign(data: Partial<CampaignSettings> & { id?: stri
           analytics: false,
           socialAnalytics: false,
           socialPosts: false,
+          sitePublications: false,
           broadcastReports: false,
           meetings: false,
+          activities: false,
           submissions: false,
           files: false,
         },

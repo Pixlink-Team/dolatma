@@ -18,7 +18,7 @@ export function SocialPostsSection({ posts, groups }: SocialPostsSectionProps) {
     <section id="social-posts">
       <SectionHeader
         title="شبکه‌های اجتماعی"
-        description="پست‌های ثبت‌شده با جزئیات کانال، بازدید و نوع محتوا"
+        description="پست‌های اینستاگرام، تلگرام و سایر شبکه‌ها — انتشار در سایت از بخش جداگانه ثبت می‌شود"
       />
 
       <OwnerGroupedSection groups={groups}>
@@ -34,7 +34,15 @@ export function SocialPostsSection({ posts, groups }: SocialPostsSectionProps) {
                   <Badge variant="outline">{getStatusLabel(post.platform)}</Badge>
                   <Badge variant="secondary">{getStatusLabel(post.contentType)}</Badge>
                 </div>
-                <h3 className="font-semibold">{post.title}</h3>
+                <h3 className="font-semibold">
+                  {post.link ? (
+                    <a href={post.link} target="_blank" rel="noreferrer" className="hover:text-primary hover:underline">
+                      {post.title}
+                    </a>
+                  ) : (
+                    post.title
+                  )}
+                </h3>
                 {post.description && (
                   <p className="text-sm text-muted-foreground line-clamp-4">{post.description}</p>
                 )}
