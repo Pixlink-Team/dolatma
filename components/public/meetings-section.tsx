@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useState, useTransition } from "react";
 import Image from "next/image";
-import { Lock } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,11 +32,9 @@ interface MeetingsSectionProps {
 function MeetingPreviewCard({
   meeting,
   onOpen,
-  locked,
 }: {
   meeting: MeetingPublicPreview;
   onOpen: () => void;
-  locked: boolean;
 }) {
   return (
     <Card className="overflow-hidden h-full flex flex-col">
@@ -55,12 +52,6 @@ function MeetingPreviewCard({
             بدون تصویر
           </div>
         )}
-        {locked && (
-          <span className="absolute top-2 left-2 inline-flex items-center gap-1 rounded-full bg-background/90 px-2 py-1 text-[11px] border">
-            <Lock className="h-3 w-3" />
-            محافظت‌شده
-          </span>
-        )}
       </div>
 
       <CardContent className="p-4 flex flex-col gap-3 flex-1">
@@ -69,15 +60,13 @@ function MeetingPreviewCard({
           <p className="text-xs text-muted-foreground">{formatPersianDate(meeting.meetingDate)}</p>
         </div>
 
-        {meeting.summaryPreview && !locked && (
+        {meeting.summaryPreview && (
           <p className="text-sm text-muted-foreground line-clamp-3 flex-1">{meeting.summaryPreview}</p>
         )}
 
-        {!locked && (
         <Button variant="outline" size="sm" className="w-full mt-auto" onClick={onOpen} data-export-hide>
           مشاهده جزئیات
         </Button>
-        )}
       </CardContent>
     </Card>
   );
@@ -119,31 +108,24 @@ function MeetingsUnlockBanner({
   };
 
   return (
-    <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Lock className="h-4 w-4 shrink-0" />
-        برای مشاهده جزئیات همه جلسات، یک‌بار رمز را وارد کنید.
+    <div className="flex flex-col sm:flex-row gap-2 max-w-md">
+      <div className="flex-1 space-y-1">
+        <Label htmlFor="meetings-section-password" className="sr-only">
+          دسترسی جلسات
+        </Label>
+        <Input
+          id="meetings-section-password"
+          type="password"
+          value={password}
+          onChange={(event) => setPassword(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") handleUnlock();
+          }}
+        />
       </div>
-      <div className="flex flex-col sm:flex-row gap-2">
-        <div className="flex-1 space-y-1">
-          <Label htmlFor="meetings-section-password" className="sr-only">
-            رمز جلسات
-          </Label>
-          <Input
-            id="meetings-section-password"
-            type="password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            placeholder="رمز مشاهده جلسات"
-            onKeyDown={(event) => {
-              if (event.key === "Enter") handleUnlock();
-            }}
-          />
-        </div>
-        <Button onClick={handleUnlock} disabled={isPending || !password.trim()} className="shrink-0">
-          باز کردن همه جلسات
-        </Button>
-      </div>
+      <Button onClick={handleUnlock} disabled={isPending || !password.trim()} className="shrink-0">
+        باز کردن
+      </Button>
     </div>
   );
 }
@@ -167,10 +149,8 @@ function MeetingsGrid({
   const effectiveCount = exportMode ? meetings.length : Math.min(visibleCount, meetings.length);
   const visibleMeetings = meetings.slice(0, effectiveCount);
   const hasMore = !exportMode && effectiveCount < meetings.length;
-  const sectionLocked = meetingsHasPassword && !isUnlocked;
 
   const openMeeting = (meeting: MeetingPublicPreview) => {
-    if (sectionLocked) return;
     setSelectedMeeting(meeting);
     setDialogOpen(true);
   };
@@ -183,7 +163,6 @@ function MeetingsGrid({
             <MeetingPreviewCard
               key={meeting.id}
               meeting={meeting}
-              locked={sectionLocked}
               onOpen={() => openMeeting(meeting)}
             />
           ))}
@@ -242,28 +221,28 @@ export function MeetingsSection({
 
   if (meetings.length === 0) return null;
 
+  const sectionLocked = meetingsHasPassword && !isUnlocked;
+
   return (
     <CollapsibleSection
       id="meetings"
       title="جلسات و مصوبات"
-      description="آخرین جلسات — جزئیات با رمز مشترک در بالا قابل مشاهده است"
+      description={sectionLocked ? undefined : "آخرین جلسات و مصوبات"}
     >
-      {meetingsHasPassword && !isUnlocked && (
-        <div className="mb-6">
-          <MeetingsUnlockBanner campaignSlug={campaignSlug} onUnlocked={applyUnlock} />
-        </div>
+      {sectionLocked ? (
+        <MeetingsUnlockBanner campaignSlug={campaignSlug} onUnlocked={applyUnlock} />
+      ) : (
+        <OwnerGroupedSection groups={groups}>
+          {(groupMeetings) => (
+            <MeetingsGrid
+              meetings={groupMeetings}
+              meetingsHasPassword={meetingsHasPassword}
+              isUnlocked={isUnlocked}
+              detailCache={detailCache}
+            />
+          )}
+        </OwnerGroupedSection>
       )}
-
-      <OwnerGroupedSection groups={groups}>
-        {(groupMeetings) => (
-          <MeetingsGrid
-            meetings={groupMeetings}
-            meetingsHasPassword={meetingsHasPassword}
-            isUnlocked={isUnlocked}
-            detailCache={detailCache}
-          />
-        )}
-      </OwnerGroupedSection>
     </CollapsibleSection>
   );
 }
