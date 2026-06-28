@@ -1,14 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState, useTransition } from "react";
 import Image from "next/image";
 import { Lock } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { MeetingDetailDialog } from "@/components/public/meeting-detail-dialog";
 import { CollapsibleSection } from "@/components/public/collapsible-section";
 import { OwnerGroupedSection } from "@/components/public/owner-grouped-section";
 import { useCampaignExportMode } from "@/lib/context/campaign-export-context";
+import {
+  loadUnlockedMeetings,
+  saveUnlockedMeetings,
+} from "@/lib/client/meetings-unlock-storage";
 import type { DataOwnerGroup, MeetingPublicDetail, MeetingPublicPreview } from "@/lib/types";
 import { formatPersianDate } from "@/lib/utils";
 
@@ -16,6 +23,8 @@ const MEETINGS_INITIAL_COUNT = 9;
 const MEETINGS_PAGE_SIZE = 9;
 
 interface MeetingsSectionProps {
+  campaignSlug: string;
+  meetingsHasPassword: boolean;
   meetings: MeetingPublicPreview[];
   groups: DataOwnerGroup<MeetingPublicPreview>[];
 }
@@ -23,9 +32,11 @@ interface MeetingsSectionProps {
 function MeetingPreviewCard({
   meeting,
   onOpen,
+  locked,
 }: {
   meeting: MeetingPublicPreview;
   onOpen: () => void;
+  locked: boolean;
 }) {
   return (
     <Card className="overflow-hidden h-full flex flex-col">
@@ -43,7 +54,7 @@ function MeetingPreviewCard({
             بدون تصویر
           </div>
         )}
-        {meeting.hasPassword && (
+        {locked && (
           <span className="absolute top-2 left-2 inline-flex items-center gap-1 rounded-full bg-background/90 px-2 py-1 text-[11px] border">
             <Lock className="h-3 w-3" />
             محافظت‌شده
@@ -69,28 +80,120 @@ function MeetingPreviewCard({
   );
 }
 
-function MeetingsGrid({ meetings }: { meetings: MeetingPublicPreview[] }) {
+function MeetingsUnlockBanner({
+  campaignSlug,
+  onUnlocked,
+}: {
+  campaignSlug: string;
+  onUnlocked: (details: Record<string, MeetingPublicDetail>) => void;
+}) {
+  const [password, setPassword] = useState("");
+  const [isPending, startTransition] = useTransition();
+
+  const handleUnlock = () => {
+    startTransition(async () => {
+      const response = await fetch(`/api/campaign/${encodeURIComponent(campaignSlug)}/meetings/unlock`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password }),
+      });
+
+      if (response.status === 401) {
+        toast.error("رمز اشتباه است");
+        return;
+      }
+
+      if (!response.ok) {
+        toast.error("دسترسی به جلسات ممکن نشد");
+        return;
+      }
+
+      const data = (await response.json()) as { meetings: MeetingPublicDetail[] };
+      saveUnlockedMeetings(campaignSlug, data.meetings);
+      onUnlocked(Object.fromEntries(data.meetings.map((meeting) => [meeting.id, meeting])));
+      toast.success("همه جلسات باز شدند");
+    });
+  };
+
+  return (
+    <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <Lock className="h-4 w-4 shrink-0" />
+        برای مشاهده جزئیات همه جلسات، یک‌بار رمز را وارد کنید.
+      </div>
+      <div className="flex flex-col sm:flex-row gap-2">
+        <div className="flex-1 space-y-1">
+          <Label htmlFor="meetings-section-password" className="sr-only">
+            رمز جلسات
+          </Label>
+          <Input
+            id="meetings-section-password"
+            type="password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            placeholder="رمز مشاهده جلسات"
+            onKeyDown={(event) => {
+              if (event.key === "Enter") handleUnlock();
+            }}
+          />
+        </div>
+        <Button onClick={handleUnlock} disabled={isPending || !password.trim()} className="shrink-0">
+          باز کردن همه جلسات
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function MeetingsGrid({
+  meetings,
+  campaignSlug,
+  meetingsHasPassword,
+  isUnlocked,
+  detailCache,
+  onUnlock,
+}: {
+  meetings: MeetingPublicPreview[];
+  campaignSlug: string;
+  meetingsHasPassword: boolean;
+  isUnlocked: boolean;
+  detailCache: Record<string, MeetingPublicDetail>;
+  onUnlock: (details: Record<string, MeetingPublicDetail>) => void;
+}) {
   const exportMode = useCampaignExportMode();
   const [visibleCount, setVisibleCount] = useState(MEETINGS_INITIAL_COUNT);
   const [selectedMeeting, setSelectedMeeting] = useState<MeetingPublicPreview | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [detailCache, setDetailCache] = useState<Record<string, MeetingPublicDetail>>({});
 
   const effectiveCount = exportMode ? meetings.length : visibleCount;
   const visibleMeetings = meetings.slice(0, effectiveCount);
   const hasMore = !exportMode && visibleCount < meetings.length;
+  const sectionLocked = meetingsHasPassword && !isUnlocked;
 
   const openMeeting = (meeting: MeetingPublicPreview) => {
+    if (sectionLocked) {
+      toast.error("ابتدا رمز جلسات را در بالای بخش وارد کنید");
+      return;
+    }
     setSelectedMeeting(meeting);
     setDialogOpen(true);
   };
 
   return (
     <>
+      {meetingsHasPassword && !isUnlocked && (
+        <MeetingsUnlockBanner campaignSlug={campaignSlug} onUnlocked={onUnlock} />
+      )}
+
       <div className="space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {visibleMeetings.map((meeting) => (
-            <MeetingPreviewCard key={meeting.id} meeting={meeting} onOpen={() => openMeeting(meeting)} />
+            <MeetingPreviewCard
+              key={meeting.id}
+              meeting={meeting}
+              locked={sectionLocked}
+              onOpen={() => openMeeting(meeting)}
+            />
           ))}
         </div>
 
@@ -111,25 +214,59 @@ function MeetingsGrid({ meetings }: { meetings: MeetingPublicPreview[] }) {
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         cachedDetail={selectedMeeting ? detailCache[selectedMeeting.id] : null}
-        onDetailLoaded={(meeting) =>
-          setDetailCache((prev) => ({ ...prev, [meeting.id]: meeting }))
-        }
+        meetingsHasPassword={meetingsHasPassword}
+        isUnlocked={isUnlocked}
       />
     </>
   );
 }
 
-export function MeetingsSection({ meetings, groups }: MeetingsSectionProps) {
+export function MeetingsSection({
+  campaignSlug,
+  meetingsHasPassword,
+  meetings,
+  groups,
+}: MeetingsSectionProps) {
+  const exportMode = useCampaignExportMode();
+  const [detailCache, setDetailCache] = useState<Record<string, MeetingPublicDetail>>({});
+  const [isUnlocked, setIsUnlocked] = useState(!meetingsHasPassword);
+
+  const applyUnlock = useCallback((details: Record<string, MeetingPublicDetail>) => {
+    setDetailCache(details);
+    setIsUnlocked(true);
+  }, []);
+
+  useEffect(() => {
+    if (!meetingsHasPassword || exportMode) {
+      setIsUnlocked(true);
+      return;
+    }
+
+    const cached = loadUnlockedMeetings(campaignSlug);
+    if (cached) {
+      applyUnlock(cached);
+    }
+  }, [campaignSlug, meetingsHasPassword, exportMode, applyUnlock]);
+
   if (meetings.length === 0) return null;
 
   return (
     <CollapsibleSection
       id="meetings"
       title="جلسات و مصوبات"
-      description="خلاصه جلسات — جزئیات با رمز قابل مشاهده است"
+      description="خلاصه جلسات — جزئیات با رمز مشترک قابل مشاهده است"
     >
       <OwnerGroupedSection groups={groups}>
-        {(groupMeetings) => <MeetingsGrid meetings={groupMeetings} />}
+        {(groupMeetings) => (
+          <MeetingsGrid
+            meetings={groupMeetings}
+            campaignSlug={campaignSlug}
+            meetingsHasPassword={meetingsHasPassword}
+            isUnlocked={isUnlocked}
+            detailCache={detailCache}
+            onUnlock={applyUnlock}
+          />
+        )}
       </OwnerGroupedSection>
     </CollapsibleSection>
   );

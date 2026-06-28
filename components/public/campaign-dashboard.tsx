@@ -192,7 +192,12 @@ export function CampaignDashboard({ initialData, slug, exportMode = false }: Cam
         {sections.meetings && (
           <DeferredSection minHeight={280} forceRender={exportMode}>
             <section data-export-section data-export-label="جلسات و مصوبات">
-              <MeetingsSection meetings={data.meetings} groups={data.meetingGroups} />
+              <MeetingsSection
+                meetings={data.meetings}
+                groups={data.meetingGroups}
+                campaignSlug={slug}
+                meetingsHasPassword={data.meetingsHasPassword}
+              />
             </section>
           </DeferredSection>
         )}

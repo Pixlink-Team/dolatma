@@ -157,6 +157,9 @@ ALTER TABLE campaign_settings
 ALTER TABLE campaign_settings
   ADD COLUMN IF NOT EXISTS billboard_config JSONB NOT NULL DEFAULT '{}'::jsonb;
 
+ALTER TABLE campaign_settings
+  ADD COLUMN IF NOT EXISTS meetings_view_password_hash TEXT;
+
 ALTER TABLE billboards
   ADD COLUMN IF NOT EXISTS image_url TEXT,
   ADD COLUMN IF NOT EXISTS latitude DOUBLE PRECISION,

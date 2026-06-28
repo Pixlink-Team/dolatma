@@ -455,8 +455,9 @@ export async function pgGetPublicMeetingPreviews(campaignId: string): Promise<Me
         m.sort_order,
         m.owner_user_id,
         u.name AS owner_name,
-        (m.view_password_hash IS NOT NULL AND LENGTH(m.view_password_hash) > 0) AS has_password
+        (cs.meetings_view_password_hash IS NOT NULL AND LENGTH(cs.meetings_view_password_hash) > 0) AS has_password
       FROM campaign_meetings m
+      INNER JOIN campaign_settings cs ON cs.id = m.campaign_id
       LEFT JOIN users u ON u.id = m.owner_user_id
       WHERE m.campaign_id = ${campaignId} AND m.published = true
       ORDER BY m.sort_order, m.meeting_date DESC
@@ -474,20 +475,115 @@ export type MeetingUnlockResult =
   | { status: "not_found" }
   | { status: "wrong_password" };
 
+export type CampaignMeetingsUnlockResult =
+  | { status: "ok"; meetings: MeetingPublicDetail[] }
+  | { status: "not_found" }
+  | { status: "wrong_password" };
+
+async function loadMeetingDetailsForCampaign(
+  sql: ReturnType<typeof getSql>,
+  campaignId: string
+): Promise<MeetingPublicDetail[]> {
+  const meetingRows = await sql`
+    SELECT * FROM campaign_meetings
+    WHERE campaign_id = ${campaignId} AND published = true
+    ORDER BY sort_order, meeting_date DESC
+  `;
+
+  if (meetingRows.length === 0) return [];
+
+  const meetingIds = meetingRows.map((row) => row.id as string);
+
+  const taskRows = await sql`
+    SELECT * FROM meeting_tasks
+    WHERE meeting_id IN ${sql(meetingIds)}
+    ORDER BY sort_order
+  `;
+
+  const decisionRows = await sql`
+    SELECT * FROM meeting_decisions
+    WHERE meeting_id IN ${sql(meetingIds)}
+    ORDER BY sort_order
+  `;
+
+  const tasksByMeeting = new Map<string, Record<string, unknown>[]>();
+  for (const task of taskRows) {
+    const meetingId = task.meeting_id as string;
+    const list = tasksByMeeting.get(meetingId) ?? [];
+    list.push(task);
+    tasksByMeeting.set(meetingId, list);
+  }
+
+  const decisionsByMeeting = new Map<string, Record<string, unknown>[]>();
+  for (const decision of decisionRows) {
+    const meetingId = decision.meeting_id as string;
+    const list = decisionsByMeeting.get(meetingId) ?? [];
+    list.push(decision);
+    decisionsByMeeting.set(meetingId, list);
+  }
+
+  return meetingRows.map((row) =>
+    mapMeetingPublicDetailFromDb(
+      row,
+      tasksByMeeting.get(row.id as string) ?? [],
+      decisionsByMeeting.get(row.id as string) ?? []
+    )
+  );
+}
+
+export async function pgUnlockCampaignMeetings(
+  slug: string,
+  password: string
+): Promise<CampaignMeetingsUnlockResult> {
+  const sql = getSql();
+  const rows = await sql`
+    SELECT id, meetings_view_password_hash
+    FROM campaign_settings
+    WHERE slug = ${slug} AND published = true
+    LIMIT 1
+  `;
+
+  if (!rows[0]) return { status: "not_found" };
+
+  const campaignId = rows[0].id as string;
+  const hash = rows[0].meetings_view_password_hash as string | null;
+
+  if (hash) {
+    const valid = await verifyPassword(password, hash);
+    if (!valid) return { status: "wrong_password" };
+  }
+
+  const meetings = await loadMeetingDetailsForCampaign(sql, campaignId);
+  return { status: "ok", meetings };
+}
+
+export async function pgUpdateMeetingsViewPassword(campaignId: string, passwordHash: string | null) {
+  const sql = getSql();
+  const now = new Date().toISOString();
+  await sql`
+    UPDATE campaign_settings
+    SET meetings_view_password_hash = ${passwordHash}, updated_at = ${now}
+    WHERE id = ${campaignId}
+  `;
+  return { success: true };
+}
+
 export async function pgUnlockMeetingDetail(
   meetingId: string,
   password: string
 ): Promise<MeetingUnlockResult> {
   const sql = getSql();
   const rows = await sql`
-    SELECT * FROM campaign_meetings
-    WHERE id = ${meetingId} AND published = true
+    SELECT m.*, cs.meetings_view_password_hash
+    FROM campaign_meetings m
+    INNER JOIN campaign_settings cs ON cs.id = m.campaign_id
+    WHERE m.id = ${meetingId} AND m.published = true
     LIMIT 1
   `;
 
   if (!rows[0]) return { status: "not_found" };
 
-  const hash = rows[0].view_password_hash as string | null;
+  const hash = rows[0].meetings_view_password_hash as string | null;
   if (hash) {
     const valid = await verifyPassword(password, hash);
     if (!valid) return { status: "wrong_password" };
@@ -573,8 +669,7 @@ export async function pgGetMeetingsWithTasks(
 export async function pgSaveMeetingWithTasks(
   data: Partial<CampaignMeeting> & { id?: string },
   tasks: MeetingTaskPayload[],
-  decisions: MeetingDecisionPayload[] = [],
-  options?: { updatePasswordHash?: boolean }
+  decisions: MeetingDecisionPayload[] = []
 ) {
   const sql = getSql();
   const now = new Date().toISOString();
@@ -585,9 +680,8 @@ export async function pgSaveMeetingWithTasks(
   `;
   const sortOrder = data.sortOrder ?? (Number(countRows[0]?.count) || 0) + 1;
   const attendees = JSON.stringify(data.attendees ?? []);
-  const updatePassword = options?.updatePasswordHash && data.viewPasswordHash !== undefined;
 
-  if (data.id && updatePassword) {
+  if (data.id) {
     await sql`
       INSERT INTO campaign_meetings (
         id, campaign_id, owner_user_id, title, meeting_date, location, image_url,
@@ -604,43 +698,7 @@ export async function pgSaveMeetingWithTasks(
         ${data.discussionSummary ?? ""},
         ${sql.json(JSON.parse(attendees))},
         ${data.audioUrl ?? null},
-        ${data.viewPasswordHash ?? null},
-        ${data.published ?? false},
-        ${sortOrder},
-        ${now},
-        ${now}
-      )
-      ON CONFLICT (id) DO UPDATE SET
-        title = EXCLUDED.title,
-        meeting_date = EXCLUDED.meeting_date,
-        location = EXCLUDED.location,
-        image_url = EXCLUDED.image_url,
-        discussion_summary = EXCLUDED.discussion_summary,
-        attendees = EXCLUDED.attendees,
-        audio_url = EXCLUDED.audio_url,
-        view_password_hash = EXCLUDED.view_password_hash,
-        published = EXCLUDED.published,
-        sort_order = EXCLUDED.sort_order,
-        updated_at = EXCLUDED.updated_at
-    `;
-  } else if (data.id) {
-    await sql`
-      INSERT INTO campaign_meetings (
-        id, campaign_id, owner_user_id, title, meeting_date, location, image_url,
-        discussion_summary, attendees, audio_url, view_password_hash,
-        published, sort_order, created_at, updated_at
-      ) VALUES (
-        ${id},
-        ${data.campaignId ?? ""},
-        ${data.ownerUserId ?? null},
-        ${data.title ?? ""},
-        ${data.meetingDate ?? now.split("T")[0]},
-        ${data.location ?? ""},
-        ${data.imageUrl ?? null},
-        ${data.discussionSummary ?? ""},
-        ${sql.json(JSON.parse(attendees))},
-        ${data.audioUrl ?? null},
-        ${data.viewPasswordHash ?? null},
+        ${null},
         ${data.published ?? false},
         ${sortOrder},
         ${now},
@@ -675,7 +733,7 @@ export async function pgSaveMeetingWithTasks(
         ${data.discussionSummary ?? ""},
         ${sql.json(JSON.parse(attendees))},
         ${data.audioUrl ?? null},
-        ${data.viewPasswordHash ?? null},
+        ${null},
         ${data.published ?? false},
         ${sortOrder},
         ${now},

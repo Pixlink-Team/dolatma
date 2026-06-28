@@ -119,7 +119,7 @@ export async function deleteBroadcastReportAction(id: string) {
 }
 
 export async function saveMeetingAction(
-  data: Partial<CampaignMeeting> & { id?: string; viewPassword?: string },
+  data: Partial<CampaignMeeting> & { id?: string },
   tasks: MeetingTaskPayload[],
   decisions: MeetingDecisionPayload[] = []
 ) {
@@ -134,31 +134,50 @@ export async function saveMeetingAction(
   }
 
   const ownerUserId = isFullAdmin(session) ? (data.ownerUserId ?? null) : session.userId;
-  const { viewPassword, ...meetingData } = data;
-
-  let viewPasswordHash: string | undefined;
-  let updatePasswordHash = false;
-
-  if (viewPassword?.trim()) {
-    viewPasswordHash = await hashPassword(viewPassword.trim());
-    updatePasswordHash = true;
-  } else if (!data.id) {
-    return { success: false, error: "رمز مشاهده الزامی است" };
-  }
-
-  const payload = {
-    ...meetingData,
-    ownerUserId,
-    ...(updatePasswordHash ? { viewPasswordHash } : {}),
-  };
+  const payload = { ...data, ownerUserId };
 
   if (!isPostgresConfigured()) {
     return { success: false, error: "Database required" };
   }
 
-  const result = await pgExt.pgSaveMeetingWithTasks(payload, tasks, decisions, { updatePasswordHash });
+  const result = await pgExt.pgSaveMeetingWithTasks(payload, tasks, decisions);
   await revalidateExtended();
   return result;
+}
+
+export async function saveMeetingsViewPasswordAction(
+  campaignId: string,
+  options: { password?: string; removePassword?: boolean }
+) {
+  const session = await getAuthSession();
+  if (!session) return { success: false, error: "Unauthorized" };
+
+  if (!isFullAdmin(session)) {
+    const permissions = await pgExt.pgGetUserPermissionsForCampaign(session.userId!, campaignId);
+    if (!hasContributorPermission(permissions, "meetings")) {
+      return { success: false, error: "دسترسی ندارید" };
+    }
+  }
+
+  if (!isPostgresConfigured()) {
+    return { success: false, error: "Database required" };
+  }
+
+  if (options.removePassword) {
+    await pgExt.pgUpdateMeetingsViewPassword(campaignId, null);
+    await revalidateExtended();
+    return { success: true };
+  }
+
+  const password = options.password?.trim();
+  if (!password) {
+    return { success: false, error: "رمز الزامی است" };
+  }
+
+  const passwordHash = await hashPassword(password);
+  await pgExt.pgUpdateMeetingsViewPassword(campaignId, passwordHash);
+  await revalidateExtended();
+  return { success: true };
 }
 
 export async function deleteMeetingAction(id: string) {

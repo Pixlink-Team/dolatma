@@ -64,6 +64,7 @@ export interface CampaignSettings {
   features: CampaignFeatures;
   analyticsConfig: AnalyticsConfig;
   billboardConfig: BillboardConfig;
+  meetingsViewPasswordHash?: string | null;
   updatedAt: string;
 }
 
@@ -487,6 +488,7 @@ export interface PublicCampaignData {
   broadcastReportGroups: DataOwnerGroup<BroadcastReport>[];
   meetings: MeetingPublicPreview[];
   meetingGroups: DataOwnerGroup<MeetingPublicPreview>[];
+  meetingsHasPassword: boolean;
   submissions: CampaignSubmission[];
   submissionGroups: DataOwnerGroup<CampaignSubmission>[];
   submissionSummary: SubmissionSummary;

@@ -179,7 +179,10 @@ function buildSubmissionSummary(
   };
 }
 
-function toMeetingPreview(meeting: MeetingWithTasks): MeetingPublicPreview {
+function toMeetingPreview(
+  meeting: MeetingWithTasks,
+  meetingsHasPassword: boolean
+): MeetingPublicPreview {
   return {
     id: meeting.id,
     campaignId: meeting.campaignId,
@@ -189,16 +192,17 @@ function toMeetingPreview(meeting: MeetingWithTasks): MeetingPublicPreview {
     meetingDate: meeting.meetingDate,
     imageUrl: meeting.imageUrl,
     summaryPreview: truncateMeetingSummary(meeting.discussionSummary),
-    hasPassword: Boolean(meeting.viewPasswordHash),
+    hasPassword: meetingsHasPassword,
     sortOrder: meeting.sortOrder,
   };
 }
 
 function normalizeMeetingPreviews(
-  items: (MeetingPublicPreview | MeetingWithTasks)[]
+  items: (MeetingPublicPreview | MeetingWithTasks)[],
+  meetingsHasPassword = false
 ): MeetingPublicPreview[] {
   return items.map((item) =>
-    "summaryPreview" in item ? item : toMeetingPreview(item)
+    "summaryPreview" in item ? { ...item, hasPassword: meetingsHasPassword } : toMeetingPreview(item, meetingsHasPassword)
   );
 }
 
@@ -321,10 +325,13 @@ function assemblePublicData(
     .filter((report) => report.published)
     .sort((a, b) => a.sortOrder - b.sortOrder);
 
+  const meetingsHasPassword = Boolean(settings.meetingsViewPasswordHash);
+
   const meetings = normalizeMeetingPreviews(
     (store.meetings ?? [])
       .filter((meeting) => ("published" in meeting ? meeting.published : true))
-      .sort((a, b) => a.sortOrder - b.sortOrder)
+      .sort((a, b) => a.sortOrder - b.sortOrder),
+    meetingsHasPassword
   );
 
   const submissionSummary = buildSubmissionSummary(store.submissions);
@@ -371,6 +378,7 @@ function assemblePublicData(
     broadcastReportGroups: groupByOwner(broadcastReports),
     meetings,
     meetingGroups: groupByOwner(meetings),
+    meetingsHasPassword,
     submissions,
     submissionGroups: groupByOwner(submissions),
     submissionSummary,

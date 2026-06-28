@@ -15,9 +15,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { AdminDataTable } from "@/components/admin/admin-data-table";
 import { MediaUpload } from "@/components/ui/media-upload";
 import { PersianDateField } from "@/components/ui/persian-date-input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   deleteMeetingAction,
   saveMeetingAction,
+  saveMeetingsViewPasswordAction,
 } from "@/lib/actions/extended-actions";
 import {
   appendMultilineDecisions,
@@ -39,13 +41,13 @@ const schema = z.object({
   imageUrl: z.string().optional(),
   discussionSummary: z.string(),
   audioUrl: z.string().optional(),
-  viewPassword: z.string().optional(),
   published: z.boolean(),
 });
 
 interface MeetingsAdminProps {
   campaignId: string;
   initialMeetings: MeetingWithTasks[];
+  hasMeetingsPassword: boolean;
 }
 
 function taskProgress(tasks: MeetingTaskInput[]) {
@@ -59,10 +61,12 @@ function decisionSummary(decisions: MeetingDecisionInput[]) {
   return `${decisions.length} مورد`;
 }
 
-export function MeetingsAdmin({ campaignId, initialMeetings }: MeetingsAdminProps) {
+export function MeetingsAdmin({ campaignId, initialMeetings, hasMeetingsPassword }: MeetingsAdminProps) {
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [rows, setRows] = useState(initialMeetings);
+  const [meetingsPassword, setMeetingsPassword] = useState("");
+  const [passwordConfigured, setPasswordConfigured] = useState(hasMeetingsPassword);
   const [tasks, setTasks] = useState<MeetingTaskInput[]>([]);
   const [decisions, setDecisions] = useState<MeetingDecisionInput[]>([]);
   const [attendees, setAttendees] = useState<string[]>([]);
@@ -82,10 +86,27 @@ export function MeetingsAdmin({ campaignId, initialMeetings }: MeetingsAdminProp
       imageUrl: "",
       discussionSummary: "",
       audioUrl: "",
-      viewPassword: "",
       published: false,
     },
   });
+
+  const saveMeetingsPassword = (removePassword = false) => {
+    startTransition(async () => {
+      const result = await saveMeetingsViewPasswordAction(campaignId, {
+        password: meetingsPassword.trim() || undefined,
+        removePassword,
+      });
+
+      if (!result.success) {
+        toast.error("error" in result && result.error ? result.error : "ذخیره رمز نشد");
+        return;
+      }
+
+      setPasswordConfigured(!removePassword);
+      setMeetingsPassword("");
+      toast.success(removePassword ? "رمز جلسات حذف شد" : "رمز جلسات ذخیره شد");
+    });
+  };
 
   const resetDialog = () => {
     setTasks([]);
@@ -108,7 +129,6 @@ export function MeetingsAdmin({ campaignId, initialMeetings }: MeetingsAdminProp
       imageUrl: "",
       discussionSummary: "",
       audioUrl: "",
-      viewPassword: "",
       published: false,
     });
     setOpen(true);
@@ -124,7 +144,6 @@ export function MeetingsAdmin({ campaignId, initialMeetings }: MeetingsAdminProp
       imageUrl: meeting.imageUrl ?? "",
       discussionSummary: meeting.discussionSummary,
       audioUrl: meeting.audioUrl ?? "",
-      viewPassword: "",
       published: meeting.published,
     });
     setAttendees([...meeting.attendees]);
@@ -214,11 +233,6 @@ export function MeetingsAdmin({ campaignId, initialMeetings }: MeetingsAdminProp
   };
 
   const onSubmit = form.handleSubmit((data) => {
-    if (!editingId && !data.viewPassword?.trim()) {
-      toast.error("رمز مشاهده الزامی است");
-      return;
-    }
-
     const normalizedTasks = reindexMeetingTasks(
       tasks
         .map((task) => ({ ...task, title: task.title.trim() }))
@@ -244,7 +258,6 @@ export function MeetingsAdmin({ campaignId, initialMeetings }: MeetingsAdminProp
           audioUrl: data.audioUrl || null,
           attendees,
           published: data.published,
-          viewPassword: data.viewPassword?.trim() || undefined,
         },
         normalizedTasks,
         normalizedDecisions
@@ -268,7 +281,6 @@ export function MeetingsAdmin({ campaignId, initialMeetings }: MeetingsAdminProp
         discussionSummary: data.discussionSummary,
         audioUrl: data.audioUrl || null,
         attendees,
-        viewPasswordHash: existing?.viewPasswordHash ?? "set",
         published: data.published,
         sortOrder: existing?.sortOrder ?? 0,
         createdAt: existing?.createdAt ?? now,
@@ -308,7 +320,7 @@ export function MeetingsAdmin({ campaignId, initialMeetings }: MeetingsAdminProp
         <div>
           <h1 className="text-2xl font-bold">جلسات و مصوبات</h1>
           <p className="text-sm text-muted-foreground">
-            ثبت جلسه با رمز مشاهده، حاضرین، صوت، مصوبات و تصمیم‌ها
+            ثبت جلسه با رمز مشترک، حاضرین، صوت، مصوبات و تصمیم‌ها
           </p>
         </div>
         <Button onClick={openCreate}>
@@ -316,6 +328,46 @@ export function MeetingsAdmin({ campaignId, initialMeetings }: MeetingsAdminProp
           افزودن جلسه
         </Button>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">رمز مشاهده همه جلسات</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-sm text-muted-foreground">
+            یک رمز برای کل بخش جلسات. با وارد کردن آن، جزئیات همه جلسات در صفحه عمومی باز می‌شود.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Input
+              type="password"
+              value={meetingsPassword}
+              onChange={(event) => setMeetingsPassword(event.target.value)}
+              placeholder={passwordConfigured ? "رمز جدید (برای تغییر)" : "رمز مشاهده جلسات"}
+            />
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={isPending || !meetingsPassword.trim()}
+              onClick={() => saveMeetingsPassword(false)}
+            >
+              {passwordConfigured ? "تغییر رمز" : "تنظیم رمز"}
+            </Button>
+            {passwordConfigured && (
+              <Button
+                type="button"
+                variant="outline"
+                disabled={isPending}
+                onClick={() => saveMeetingsPassword(true)}
+              >
+                حذف رمز
+              </Button>
+            )}
+          </div>
+          {passwordConfigured && (
+            <p className="text-xs text-muted-foreground">رمز فعلی تنظیم شده است.</p>
+          )}
+        </CardContent>
+      </Card>
 
       <AdminDataTable
         data={rows}
@@ -362,15 +414,6 @@ export function MeetingsAdmin({ campaignId, initialMeetings }: MeetingsAdminProp
             <div className="space-y-2">
               <Label>مکان جلسه</Label>
               <Input {...form.register("location")} placeholder="مثلاً سالن جلسات مرکز" />
-            </div>
-
-            <div className="space-y-2">
-              <Label>{editingId ? "رمز مشاهده (برای تغییر وارد کنید)" : "رمز مشاهده"}</Label>
-              <Input
-                type="password"
-                {...form.register("viewPassword")}
-                placeholder={editingId ? "خالی = بدون تغییر" : "برای دیدن جزئیات در صفحه عمومی"}
-              />
             </div>
 
             <MediaUpload

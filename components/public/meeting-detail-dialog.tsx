@@ -4,10 +4,8 @@ import { useEffect, useState, useTransition } from "react";
 import Image from "next/image";
 import { CalendarDays, Lock, MapPin, Users } from "lucide-react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import type { MeetingPublicDetail, MeetingPublicPreview } from "@/lib/types";
 import { cn, formatPersianDate } from "@/lib/utils";
 
@@ -16,7 +14,8 @@ interface MeetingDetailDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   cachedDetail?: MeetingPublicDetail | null;
-  onDetailLoaded?: (meeting: MeetingPublicDetail) => void;
+  meetingsHasPassword: boolean;
+  isUnlocked: boolean;
 }
 
 export function MeetingDetailDialog({
@@ -24,82 +23,48 @@ export function MeetingDetailDialog({
   open,
   onOpenChange,
   cachedDetail,
-  onDetailLoaded,
+  meetingsHasPassword,
+  isUnlocked,
 }: MeetingDetailDialogProps) {
-  const [password, setPassword] = useState("");
   const [detail, setDetail] = useState<MeetingPublicDetail | null>(null);
-  const [needsPassword, setNeedsPassword] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
     if (!open || !preview) {
-      setPassword("");
       setDetail(null);
-      setNeedsPassword(false);
       return;
     }
 
     if (cachedDetail) {
       setDetail(cachedDetail);
-      setNeedsPassword(false);
       return;
     }
 
-    if (!preview.hasPassword) {
-      startTransition(async () => {
-        const response = await fetch(`/api/meetings/${preview.id}/unlock`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ password: "" }),
-        });
-        if (!response.ok) {
-          toast.error("بارگذاری جزئیات ناموفق بود");
-          return;
-        }
-        const data = (await response.json()) as { meeting: MeetingPublicDetail };
-        setDetail(data.meeting);
-        onDetailLoaded?.(data.meeting);
-        setNeedsPassword(false);
-      });
+    if (meetingsHasPassword && !isUnlocked) {
+      setDetail(null);
       return;
     }
-
-    setNeedsPassword(true);
-    setDetail(null);
-  }, [open, preview, cachedDetail, onDetailLoaded]);
-
-  const handleUnlock = () => {
-    if (!preview) return;
 
     startTransition(async () => {
       const response = await fetch(`/api/meetings/${preview.id}/unlock`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify({ password: "" }),
       });
-
-      if (response.status === 401) {
-        toast.error("رمز اشتباه است");
-        return;
-      }
-
       if (!response.ok) {
-        toast.error("دسترسی به جزئیات ممکن نشد");
+        toast.error("بارگذاری جزئیات ناموفق بود");
         return;
       }
-
       const data = (await response.json()) as { meeting: MeetingPublicDetail };
       setDetail(data.meeting);
-      onDetailLoaded?.(data.meeting);
-      setNeedsPassword(false);
-      toast.success("جزئیات جلسه نمایش داده شد");
     });
-  };
+  }, [open, preview, cachedDetail, meetingsHasPassword, isUnlocked]);
 
   if (!preview) return null;
 
   const completedCount = detail?.tasks.filter((task) => task.completed).length ?? 0;
   const totalTasks = detail?.tasks.length ?? 0;
+  const needsSectionUnlock = meetingsHasPassword && !isUnlocked && !cachedDetail;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -108,27 +73,12 @@ export function MeetingDetailDialog({
           <DialogTitle>{preview.title}</DialogTitle>
         </DialogHeader>
 
-        {needsPassword && !detail ? (
-          <div className="space-y-4 py-2">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        {needsSectionUnlock ? (
+          <div className="space-y-3 py-4 text-sm text-muted-foreground">
+            <div className="flex items-center gap-2">
               <Lock className="h-4 w-4" />
-              برای مشاهده جزئیات جلسه، رمز را وارد کنید.
+              برای مشاهده جزئیات، ابتدا رمز جلسات را در بالای بخش وارد کنید.
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="meeting-password">رمز مشاهده</Label>
-              <Input
-                id="meeting-password"
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") handleUnlock();
-                }}
-              />
-            </div>
-            <Button onClick={handleUnlock} disabled={isPending || !password.trim()} className="w-full">
-              نمایش جزئیات
-            </Button>
           </div>
         ) : detail ? (
           <div className="space-y-4">
@@ -230,7 +180,9 @@ export function MeetingDetailDialog({
             )}
           </div>
         ) : (
-          <div className="py-8 text-center text-sm text-muted-foreground">در حال بارگذاری…</div>
+          <div className="py-8 text-center text-sm text-muted-foreground">
+            {isPending ? "در حال بارگذاری…" : "جزئیات در دسترس نیست"}
+          </div>
         )}
       </DialogContent>
     </Dialog>
