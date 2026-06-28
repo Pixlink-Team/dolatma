@@ -6,6 +6,7 @@ export interface ContributorPermissions {
   analytics: boolean;
   socialPosts: boolean;
   broadcast: boolean;
+  meetings: boolean;
   submissions: boolean;
 }
 
@@ -19,6 +20,7 @@ export const defaultContributorPermissions = (): ContributorPermissions => ({
   analytics: true,
   socialPosts: true,
   broadcast: true,
+  meetings: true,
   submissions: true,
 });
 
@@ -30,6 +32,7 @@ export const contributorPermissionLabels: Record<ContributorPermissionKey, strin
   analytics: "آمار سایت",
   socialPosts: "شبکه‌های اجتماعی",
   broadcast: "پخش صدا و سیما",
+  meetings: "جلسات و مصوبات",
   submissions: "مشارکت‌ها",
 };
 
@@ -48,6 +51,7 @@ export function normalizeContributorPermissions(
     analytics: record.analytics ?? defaults.analytics,
     socialPosts: record.socialPosts ?? defaults.socialPosts,
     broadcast: record.broadcast ?? defaults.broadcast,
+    meetings: record.meetings ?? defaults.meetings,
     submissions: record.submissions ?? defaults.submissions,
   };
 }

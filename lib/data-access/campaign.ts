@@ -186,6 +186,7 @@ function buildSectionVisibility(
     socialAnalytics: SocialAnalyticsSummary;
     socialPosts: unknown[];
     broadcastReports: unknown[];
+    meetings: unknown[];
     submissions: unknown[];
     files: unknown[];
   }
@@ -201,6 +202,7 @@ function buildSectionVisibility(
       features.socialAnalytics && data.socialAnalytics.hasData,
     socialPosts: (features.socialPosts ?? true) && data.socialPosts.length > 0,
     broadcastReports: (features.broadcastReports ?? true) && data.broadcastReports.length > 0,
+    meetings: (features.meetings ?? true) && data.meetings.length > 0,
     submissions: features.submissions && data.submissions.length > 0,
     files: features.files && data.files.length > 0,
   };
@@ -288,6 +290,10 @@ function assemblePublicData(
     .filter((report) => report.published)
     .sort((a, b) => a.sortOrder - b.sortOrder);
 
+  const meetings = (store.meetings ?? [])
+    .filter((meeting) => meeting.published)
+    .sort((a, b) => a.sortOrder - b.sortOrder);
+
   const submissionSummary = buildSubmissionSummary(store.submissions);
 
   const sections = buildSectionVisibility(settings.features, {
@@ -298,6 +304,7 @@ function assemblePublicData(
     socialAnalytics,
     socialPosts,
     broadcastReports,
+    meetings,
     submissions,
     files,
   });
@@ -329,6 +336,8 @@ function assemblePublicData(
     socialPostGroups: groupByOwner(socialPosts),
     broadcastReports,
     broadcastReportGroups: groupByOwner(broadcastReports),
+    meetings,
+    meetingGroups: groupByOwner(meetings),
     submissions,
     submissionGroups: groupByOwner(submissions),
     submissionSummary,
@@ -494,6 +503,7 @@ export async function getPublicCampaignData(slug: string): Promise<PublicCampaig
       files: [],
       socialPosts: [],
       broadcastReports: [],
+      meetings: [],
       socialPlatformStats: [],
     };
 

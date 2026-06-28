@@ -29,6 +29,7 @@ const featuresSchema = z.object({
   socialAnalytics: z.boolean(),
   socialPosts: z.boolean(),
   broadcastReports: z.boolean(),
+  meetings: z.boolean(),
   submissions: z.boolean(),
   files: z.boolean(),
 });
@@ -75,6 +76,7 @@ const featureLabels: { key: keyof CampaignFeatures; label: string }[] = [
   { key: "socialAnalytics", label: "آمار شبکه‌های اجتماعی (کلی)" },
   { key: "socialPosts", label: "پست‌های شبکه اجتماعی" },
   { key: "broadcastReports", label: "گزارش پخش صدا و سیما" },
+  { key: "meetings", label: "جلسات و مصوبات" },
   { key: "submissions", label: "مشارکت کاربران" },
   { key: "files", label: "فایل‌های کمپین" },
 ];

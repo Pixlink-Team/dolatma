@@ -1,11 +1,21 @@
 import { getSql } from "@/lib/db/client";
 import {
   mapBroadcastReportFromDb,
+  mapMeetingFromDb,
+  mapMeetingTaskFromDb,
   mapSocialPlatformStatFromDb,
   mapSocialPostFromDb,
   mapUserFromDb,
 } from "@/lib/db/mappers";
-import type { AdminUser, BroadcastReport, SocialMediaPost, SocialPlatformStat } from "@/lib/types";
+import type {
+  AdminUser,
+  BroadcastReport,
+  CampaignMeeting,
+  MeetingTask,
+  MeetingWithTasks,
+  SocialMediaPost,
+  SocialPlatformStat,
+} from "@/lib/types";
 import {
   defaultContributorPermissions,
   normalizeContributorPermissions,
@@ -388,6 +398,159 @@ export async function pgSaveBroadcastReport(data: Partial<BroadcastReport> & { i
 export async function pgDeleteBroadcastReport(id: string) {
   const sql = getSql();
   await sql`DELETE FROM broadcast_reports WHERE id = ${id}`;
+  return { success: true };
+}
+
+export interface MeetingTaskPayload {
+  id?: string;
+  title: string;
+  completed: boolean;
+  sortOrder: number;
+}
+
+function groupMeetingTasks(rows: MeetingTask[]): Map<string, MeetingTask[]> {
+  const map = new Map<string, MeetingTask[]>();
+  for (const task of rows) {
+    const list = map.get(task.meetingId) ?? [];
+    list.push(task);
+    map.set(task.meetingId, list);
+  }
+  return map;
+}
+
+export async function pgGetMeetingsWithTasks(
+  campaignId: string,
+  options?: { publishedOnly?: boolean; ownerUserId?: string | null }
+): Promise<MeetingWithTasks[]> {
+  const sql = getSql();
+  const publishedOnly = options?.publishedOnly ?? false;
+  const ownerUserId = options?.ownerUserId;
+
+  const ownerFilter =
+    ownerUserId === undefined ? sql`` : sql`AND m.owner_user_id IS NOT DISTINCT FROM ${ownerUserId}`;
+  const publishedFilter = publishedOnly ? sql`AND m.published = true` : sql``;
+
+  const meetingRows = await sql`
+    SELECT m.*, u.name AS owner_name
+    FROM campaign_meetings m
+    LEFT JOIN users u ON u.id = m.owner_user_id
+    WHERE m.campaign_id = ${campaignId}
+    ${ownerFilter}
+    ${publishedFilter}
+    ORDER BY m.sort_order, m.meeting_date DESC
+  `;
+
+  if (meetingRows.length === 0) return [];
+
+  const taskRows = await sql`
+    SELECT mt.*
+    FROM meeting_tasks mt
+    INNER JOIN campaign_meetings m ON m.id = mt.meeting_id
+    WHERE m.campaign_id = ${campaignId}
+    ${ownerFilter}
+    ${publishedFilter}
+    ORDER BY mt.sort_order
+  `;
+
+  const tasksByMeeting = groupMeetingTasks(taskRows.map(mapMeetingTaskFromDb));
+
+  return meetingRows.map((row) => ({
+    ...mapMeetingFromDb(row),
+    tasks: tasksByMeeting.get(row.id) ?? [],
+  }));
+}
+
+export async function pgSaveMeetingWithTasks(
+  data: Partial<CampaignMeeting> & { id?: string },
+  tasks: MeetingTaskPayload[]
+) {
+  const sql = getSql();
+  const now = new Date().toISOString();
+  const id = data.id ?? generateId();
+
+  const countRows = await sql`
+    SELECT COUNT(*)::int AS count FROM campaign_meetings WHERE campaign_id = ${data.campaignId ?? ""}
+  `;
+  const sortOrder = data.sortOrder ?? (Number(countRows[0]?.count) || 0) + 1;
+
+  await sql`
+    INSERT INTO campaign_meetings (
+      id, campaign_id, owner_user_id, meeting_date, location, image_url,
+      discussion_summary, published, sort_order, created_at, updated_at
+    ) VALUES (
+      ${id},
+      ${data.campaignId ?? ""},
+      ${data.ownerUserId ?? null},
+      ${data.meetingDate ?? now.split("T")[0]},
+      ${data.location ?? ""},
+      ${data.imageUrl ?? null},
+      ${data.discussionSummary ?? ""},
+      ${data.published ?? false},
+      ${sortOrder},
+      ${now},
+      ${now}
+    )
+    ON CONFLICT (id) DO UPDATE SET
+      meeting_date = EXCLUDED.meeting_date,
+      location = EXCLUDED.location,
+      image_url = EXCLUDED.image_url,
+      discussion_summary = EXCLUDED.discussion_summary,
+      published = EXCLUDED.published,
+      sort_order = EXCLUDED.sort_order,
+      updated_at = EXCLUDED.updated_at
+  `;
+
+  const keptIds: string[] = [];
+  for (const task of tasks) {
+    const taskId = task.id ?? generateId();
+    keptIds.push(taskId);
+    await sql`
+      INSERT INTO meeting_tasks (
+        id, meeting_id, title, completed, sort_order, created_at, updated_at
+      ) VALUES (
+        ${taskId},
+        ${id},
+        ${task.title},
+        ${task.completed},
+        ${task.sortOrder},
+        ${now},
+        ${now}
+      )
+      ON CONFLICT (id) DO UPDATE SET
+        title = EXCLUDED.title,
+        completed = EXCLUDED.completed,
+        sort_order = EXCLUDED.sort_order,
+        updated_at = EXCLUDED.updated_at
+    `;
+  }
+
+  if (keptIds.length === 0) {
+    await sql`DELETE FROM meeting_tasks WHERE meeting_id = ${id}`;
+  } else {
+    await sql`
+      DELETE FROM meeting_tasks
+      WHERE meeting_id = ${id}
+      AND id NOT IN ${sql(keptIds)}
+    `;
+  }
+
+  return { success: true, id };
+}
+
+export async function pgDeleteMeeting(id: string) {
+  const sql = getSql();
+  await sql`DELETE FROM campaign_meetings WHERE id = ${id}`;
+  return { success: true };
+}
+
+export async function pgToggleMeetingTask(taskId: string, completed: boolean) {
+  const sql = getSql();
+  const now = new Date().toISOString();
+  await sql`
+    UPDATE meeting_tasks
+    SET completed = ${completed}, updated_at = ${now}
+    WHERE id = ${taskId}
+  `;
   return { success: true };
 }
 

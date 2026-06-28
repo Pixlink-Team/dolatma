@@ -18,6 +18,7 @@ export interface CampaignFeatures {
   socialAnalytics: boolean;
   socialPosts: boolean;
   broadcastReports: boolean;
+  meetings: boolean;
   submissions: boolean;
   files: boolean;
 }
@@ -334,6 +335,35 @@ export interface BroadcastReport {
   updatedAt: string;
 }
 
+export interface MeetingTask {
+  id: string;
+  meetingId: string;
+  title: string;
+  completed: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CampaignMeeting {
+  id: string;
+  campaignId: string;
+  ownerUserId?: string | null;
+  ownerName?: string | null;
+  meetingDate: string;
+  location: string;
+  imageUrl?: string | null;
+  discussionSummary: string;
+  published: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MeetingWithTasks extends CampaignMeeting {
+  tasks: MeetingTask[];
+}
+
 export interface DataOwnerGroup<T> {
   ownerKey: string;
   ownerLabel: string;
@@ -392,6 +422,7 @@ export interface SectionVisibility {
   socialAnalytics: boolean;
   socialPosts: boolean;
   broadcastReports: boolean;
+  meetings: boolean;
   submissions: boolean;
   files: boolean;
 }
@@ -414,6 +445,8 @@ export interface PublicCampaignData {
   socialPostGroups: DataOwnerGroup<SocialMediaPost>[];
   broadcastReports: BroadcastReport[];
   broadcastReportGroups: DataOwnerGroup<BroadcastReport>[];
+  meetings: MeetingWithTasks[];
+  meetingGroups: DataOwnerGroup<MeetingWithTasks>[];
   submissions: CampaignSubmission[];
   submissionGroups: DataOwnerGroup<CampaignSubmission>[];
   submissionSummary: SubmissionSummary;

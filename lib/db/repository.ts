@@ -1,4 +1,5 @@
 import { getSql } from "@/lib/db/client";
+import { pgGetMeetingsWithTasks } from "@/lib/db/repository-extended";
 import {
   mapAnalyticsFromDb,
   mapBillboardFromDb,
@@ -37,6 +38,7 @@ const defaultFeatures = {
   socialAnalytics: true,
   socialPosts: true,
   broadcastReports: true,
+  meetings: true,
   submissions: true,
   files: true,
 };
@@ -75,6 +77,7 @@ export async function pgGetAdminData(campaignId: string, ownerUserId?: string | 
     socialPosts,
     broadcastReports,
     socialPlatformStats,
+    meetings,
   ] = await Promise.all([
     sql`SELECT * FROM campaign_settings ORDER BY updated_at DESC`,
     sql`SELECT * FROM campaign_settings WHERE id = ${campaignId} LIMIT 1`,
@@ -164,6 +167,7 @@ export async function pgGetAdminData(campaignId: string, ownerUserId?: string | 
       ${ownerUserId === undefined ? sql`` : sql`AND sps.owner_user_id IS NOT DISTINCT FROM ${ownerUserId}`}
       ORDER BY sps.sort_order, sps.platform
     `,
+    pgGetMeetingsWithTasks(campaignId, { ownerUserId }),
   ]);
 
   return {
@@ -182,6 +186,7 @@ export async function pgGetAdminData(campaignId: string, ownerUserId?: string | 
     socialPosts: socialPosts.map(mapSocialPostFromDb),
     broadcastReports: broadcastReports.map(mapBroadcastReportFromDb),
     socialPlatformStats: socialPlatformStats.map(mapSocialPlatformStatFromDb),
+    meetings,
   };
 }
 
@@ -731,6 +736,7 @@ export async function pgGetPublicCampaignData(campaignId: string) {
     socialPosts,
     broadcastReports,
     socialPlatformStats,
+    meetings,
   ] = await Promise.all([
     sql`
       SELECT b.*, u.name AS owner_name
@@ -809,6 +815,7 @@ export async function pgGetPublicCampaignData(campaignId: string) {
       WHERE sps.campaign_id = ${campaignId}
       ORDER BY sps.sort_order, sps.platform
     `,
+    pgGetMeetingsWithTasks(campaignId, { publishedOnly: true }),
   ]);
 
   return {
@@ -825,6 +832,7 @@ export async function pgGetPublicCampaignData(campaignId: string) {
     socialPosts: socialPosts.map(mapSocialPostFromDb),
     broadcastReports: broadcastReports.map(mapBroadcastReportFromDb),
     socialPlatformStats: socialPlatformStats.map(mapSocialPlatformStatFromDb),
+    meetings,
   };
 }
 

@@ -8,12 +8,14 @@ import {
   type ContributorPermissions,
 } from "@/lib/contributor-permissions";
 import * as pgExt from "@/lib/db/repository-extended";
-import type { BroadcastReport, SocialMediaPost, SocialPlatformStat } from "@/lib/types";
+import type { MeetingTaskPayload } from "@/lib/db/repository-extended";
+import type { BroadcastReport, CampaignMeeting, SocialMediaPost, SocialPlatformStat } from "@/lib/types";
 import { isPostgresConfigured } from "@/lib/utils";
 
 async function revalidateExtended(slug?: string) {
   revalidatePath("/admin/social-posts");
   revalidatePath("/admin/broadcast");
+  revalidatePath("/admin/meetings");
   revalidatePath("/admin/users");
   revalidatePath("/admin/analytics");
   if (slug) revalidatePath(`/campaign/${slug}`);
@@ -111,6 +113,50 @@ export async function deleteBroadcastReportAction(id: string) {
   if (!session) return { success: false, error: "Unauthorized" };
   if (!isPostgresConfigured()) return { success: false, error: "Database required" };
   await pgExt.pgDeleteBroadcastReport(id);
+  await revalidateExtended();
+  return { success: true };
+}
+
+export async function saveMeetingAction(
+  data: Partial<CampaignMeeting> & { id?: string },
+  tasks: MeetingTaskPayload[]
+) {
+  const session = await getAuthSession();
+  if (!session) return { success: false, error: "Unauthorized" };
+
+  if (!isFullAdmin(session) && data.campaignId) {
+    const permissions = await pgExt.pgGetUserPermissionsForCampaign(session.userId!, data.campaignId);
+    if (!hasContributorPermission(permissions, "meetings")) {
+      return { success: false, error: "دسترسی ندارید" };
+    }
+  }
+
+  const ownerUserId = isFullAdmin(session) ? (data.ownerUserId ?? null) : session.userId;
+  const payload = { ...data, ownerUserId };
+
+  if (!isPostgresConfigured()) {
+    return { success: false, error: "Database required" };
+  }
+
+  const result = await pgExt.pgSaveMeetingWithTasks(payload, tasks);
+  await revalidateExtended();
+  return result;
+}
+
+export async function deleteMeetingAction(id: string) {
+  const session = await getAuthSession();
+  if (!session) return { success: false, error: "Unauthorized" };
+  if (!isPostgresConfigured()) return { success: false, error: "Database required" };
+  await pgExt.pgDeleteMeeting(id);
+  await revalidateExtended();
+  return { success: true };
+}
+
+export async function toggleMeetingTaskAction(taskId: string, completed: boolean) {
+  const session = await getAuthSession();
+  if (!session) return { success: false, error: "Unauthorized" };
+  if (!isPostgresConfigured()) return { success: false, error: "Database required" };
+  await pgExt.pgToggleMeetingTask(taskId, completed);
   await revalidateExtended();
   return { success: true };
 }

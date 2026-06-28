@@ -25,6 +25,7 @@ import { SubmissionsSection } from "@/components/public/submissions-section";
 import { CampaignFilesSection } from "@/components/public/campaign-files-section";
 import { SocialPostsSection } from "@/components/public/social-posts-section";
 import { BroadcastSection } from "@/components/public/broadcast-section";
+import { MeetingsSection } from "@/components/public/meetings-section";
 import { DeferredSection } from "@/components/public/deferred-section";
 import { CampaignScreenshotExporter } from "@/components/public/campaign-screenshot-exporter";
 import type { PublicCampaignData } from "@/lib/types";
@@ -180,6 +181,13 @@ export function CampaignDashboard({ initialData, slug, exportMode = false }: Cam
           <DeferredSection minHeight={240} forceRender={exportMode}>
             <section data-export-section data-export-label="پخش صدا و سیما">
               <BroadcastSection reports={data.broadcastReports} groups={data.broadcastReportGroups} />
+            </section>
+          </DeferredSection>
+        )}
+        {sections.meetings && (
+          <DeferredSection minHeight={280} forceRender={exportMode}>
+            <section data-export-section data-export-label="جلسات و مصوبات">
+              <MeetingsSection meetings={data.meetings} groups={data.meetingGroups} />
             </section>
           </DeferredSection>
         )}

@@ -270,3 +270,31 @@ CREATE TABLE IF NOT EXISTS broadcast_reports (
 );
 
 CREATE INDEX IF NOT EXISTS idx_broadcast_reports_campaign ON broadcast_reports(campaign_id, published, sort_order);
+
+CREATE TABLE IF NOT EXISTS campaign_meetings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  campaign_id UUID NOT NULL REFERENCES campaign_settings(id) ON DELETE CASCADE,
+  owner_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  meeting_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  location TEXT NOT NULL DEFAULT '',
+  image_url TEXT,
+  discussion_summary TEXT NOT NULL DEFAULT '',
+  published BOOLEAN NOT NULL DEFAULT false,
+  sort_order INT NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_campaign_meetings_campaign ON campaign_meetings(campaign_id, published, sort_order);
+
+CREATE TABLE IF NOT EXISTS meeting_tasks (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  meeting_id UUID NOT NULL REFERENCES campaign_meetings(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  completed BOOLEAN NOT NULL DEFAULT false,
+  sort_order INT NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_meeting_tasks_meeting ON meeting_tasks(meeting_id, sort_order);

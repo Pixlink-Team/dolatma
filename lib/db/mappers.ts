@@ -4,9 +4,11 @@ import type {
   Billboard,
   BroadcastReport,
   CampaignFile,
+  CampaignMeeting,
   CampaignSettings,
   CampaignSubmission,
   MediaCategory,
+  MeetingTask,
   Poster,
   PosterVersion,
   SocialMediaPost,
@@ -51,6 +53,7 @@ export function mapSettingsFromDb(row: any): CampaignSettings {
             socialAnalytics: true,
             socialPosts: true,
             broadcastReports: true,
+            meetings: true,
             submissions: true,
             files: true,
             ...JSON.parse(row.features),
@@ -63,6 +66,7 @@ export function mapSettingsFromDb(row: any): CampaignSettings {
             socialAnalytics: true,
             socialPosts: true,
             broadcastReports: true,
+            meetings: true,
             submissions: true,
             files: true,
             ...(row.features ?? {}),
@@ -294,6 +298,37 @@ export function mapBroadcastReportFromDb(row: any): BroadcastReport {
     fileName: row.file_name,
     summaryData: summary,
     published: row.published ?? false,
+    sortOrder: row.sort_order ?? 0,
+    createdAt: toIsoString(row.created_at),
+    updatedAt: toIsoString(row.updated_at),
+  };
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function mapMeetingFromDb(row: any): CampaignMeeting {
+  return {
+    id: row.id,
+    campaignId: row.campaign_id,
+    ownerUserId: row.owner_user_id ?? null,
+    ownerName: row.owner_name ?? null,
+    meetingDate: toDateString(row.meeting_date),
+    location: row.location ?? "",
+    imageUrl: row.image_url ?? null,
+    discussionSummary: row.discussion_summary ?? "",
+    published: row.published ?? false,
+    sortOrder: row.sort_order ?? 0,
+    createdAt: toIsoString(row.created_at),
+    updatedAt: toIsoString(row.updated_at),
+  };
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function mapMeetingTaskFromDb(row: any): MeetingTask {
+  return {
+    id: row.id,
+    meetingId: row.meeting_id,
+    title: row.title,
+    completed: row.completed ?? false,
     sortOrder: row.sort_order ?? 0,
     createdAt: toIsoString(row.created_at),
     updatedAt: toIsoString(row.updated_at),

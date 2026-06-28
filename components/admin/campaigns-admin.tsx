@@ -32,6 +32,7 @@ const featuresSchema = z.object({
   socialAnalytics: z.boolean(),
   socialPosts: z.boolean(),
   broadcastReports: z.boolean(),
+  meetings: z.boolean(),
   submissions: z.boolean(),
   files: z.boolean(),
 });
@@ -58,6 +59,7 @@ const defaultFeatures: CampaignFeatures = {
   socialAnalytics: false,
   socialPosts: false,
   broadcastReports: false,
+  meetings: false,
   submissions: false,
   files: false,
 };
@@ -150,6 +152,7 @@ export function CampaignsAdmin({ initialCampaigns }: CampaignsAdminProps) {
     { key: "videos", label: "ویدیو" },
     { key: "analytics", label: "آمار سایت" },
     { key: "socialAnalytics", label: "آمار شبکه‌های اجتماعی" },
+    { key: "meetings", label: "جلسات و مصوبات" },
     { key: "submissions", label: "مشارکت کاربران" },
     { key: "files", label: "فایل‌های کمپین" },
   ];

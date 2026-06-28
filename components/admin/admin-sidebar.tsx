@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   BarChart3,
+  ClipboardList,
   FileStack,
   FileText,
   ImageIcon,
@@ -54,6 +55,7 @@ const allNavItems: {
   { href: "/admin/analytics", label: "آمار سایت", icon: BarChart3, permissionKey: "analytics" },
   { href: "/admin/social-posts", label: "شبکه‌های اجتماعی", icon: Share2, permissionKey: "socialPosts" },
   { href: "/admin/broadcast", label: "پخش صدا و سیما", icon: Radio, permissionKey: "broadcast" },
+  { href: "/admin/meetings", label: "جلسات و مصوبات", icon: ClipboardList, permissionKey: "meetings" },
   { href: "/admin/submissions", label: "مشارکت‌ها", icon: FileText, permissionKey: "submissions" },
   { href: "/admin/users", label: "کاربران", icon: Users, adminOnly: true },
 ];
