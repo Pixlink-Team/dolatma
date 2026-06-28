@@ -75,7 +75,7 @@ export function CampaignDashboard({ initialData, slug, exportMode = false }: Cam
       value: kpis.totalSiteVisitors,
       icon: MonitorPlay,
     },
-    { show: sections.socialAnalytics, title: "دسترسی اجتماعی", value: kpis.totalSocialReach, icon: Share2 },
+    { show: sections.socialAnalytics, title: "فالوور اجتماعی", value: kpis.totalSocialFollowers, icon: Share2 },
     { show: sections.submissions, title: "شرکت‌کنندگان", value: kpis.totalParticipants, icon: Users },
   ].filter((k) => k.show);
 

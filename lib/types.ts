@@ -240,6 +240,27 @@ export interface AuthSession {
   name?: string;
 }
 
+export interface SocialPlatformStat {
+  id: string;
+  campaignId: string;
+  ownerUserId?: string | null;
+  ownerName?: string | null;
+  platform: SocialPlatform;
+  followers: number;
+  posts: number;
+  profileUrl?: string | null;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SocialAnalyticsSummary {
+  platforms: SocialPlatformStat[];
+  totalFollowers: number;
+  totalPosts: number;
+  hasData: boolean;
+}
+
 export interface SocialMediaPost {
   id: string;
   campaignId: string;
@@ -334,7 +355,7 @@ export interface CampaignKPIs {
   totalPosters: number;
   totalVideos: number;
   totalSiteVisitors: number;
-  totalSocialReach: number;
+  totalSocialFollowers: number;
   totalParticipants: number;
 }
 
@@ -387,7 +408,7 @@ export interface PublicCampaignData {
   videos: VideoWithVersions[];
   videoGroups: DataOwnerGroup<VideoWithVersions>[];
   analytics: AnalyticsSummary;
-  socialAnalytics: AnalyticsSummary;
+  socialAnalytics: SocialAnalyticsSummary;
   socialPosts: SocialMediaPost[];
   socialPostGroups: DataOwnerGroup<SocialMediaPost>[];
   broadcastReports: BroadcastReport[];

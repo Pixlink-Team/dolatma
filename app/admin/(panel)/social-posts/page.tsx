@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { getAdminData } from "@/lib/data-access/admin";
 import { resolveAdminCampaignId } from "@/lib/admin-campaign";
 import { requireContributorAccess } from "@/lib/auth/require-contributor-access";
-import { SocialPostsAdmin } from "@/components/admin/social-posts-admin";
+import { SocialHubAdmin } from "@/components/admin/social-hub-admin";
 
 interface PageProps {
   searchParams: Promise<{ campaign?: string }>;
@@ -14,5 +14,11 @@ export default async function SocialPostsPage({ searchParams }: PageProps) {
   if (!campaignId) redirect("/admin/campaigns");
   await requireContributorAccess(campaignId, "socialPosts");
   const data = await getAdminData(campaignId);
-  return <SocialPostsAdmin campaignId={campaignId} initialPosts={data.socialPosts ?? []} />;
+  return (
+    <SocialHubAdmin
+      campaignId={campaignId}
+      initialPosts={data.socialPosts ?? []}
+      initialPlatformStats={data.socialPlatformStats ?? []}
+    />
+  );
 }

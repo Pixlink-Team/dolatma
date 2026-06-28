@@ -10,9 +10,12 @@ import type {
   ChannelAnalyticsConfig,
   PublicCampaignData,
   SectionVisibility,
+  SocialAnalyticsSummary,
+  SocialPlatformStat,
   SubmissionSummary,
 } from "@/lib/types";
 import { groupByOwner } from "@/lib/owner-groups";
+import { buildSocialAnalyticsSummary } from "@/lib/social-analytics";
 import { isPostgresConfigured, isSupabaseConfigured } from "@/lib/utils";
 import * as pg from "@/lib/db/repository";
 import { fetchMetabaseMetrics, resolveChannelMetabaseEmbedUrl } from "@/lib/services/metabase";
@@ -89,7 +92,9 @@ function buildAnalyticsSummary(
   const dateMap = new Map<string, { visitors: number; pageViews: number }>();
 
   metrics.forEach((m) => {
-    if (m.source) sourceMap.set(m.source, (sourceMap.get(m.source) ?? 0) + m.visitors);
+    if (m.source && !["instagram", "telegram"].includes(m.source)) {
+      sourceMap.set(m.source, (sourceMap.get(m.source) ?? 0) + m.visitors);
+    }
     if (m.device) deviceMap.set(m.device, (deviceMap.get(m.device) ?? 0) + m.visitors);
     if (m.page) pageMap.set(m.page, (pageMap.get(m.page) ?? 0) + m.pageViews);
     if (m.city) cityMap.set(m.city, (cityMap.get(m.city) ?? 0) + m.visitors);
@@ -178,7 +183,7 @@ function buildSectionVisibility(
     posters: unknown[];
     videos: unknown[];
     analytics: AnalyticsSummary;
-    socialAnalytics: AnalyticsSummary;
+    socialAnalytics: SocialAnalyticsSummary;
     socialPosts: unknown[];
     broadcastReports: unknown[];
     submissions: unknown[];
@@ -193,8 +198,7 @@ function buildSectionVisibility(
       features.analytics &&
       (data.analytics.hasData || Boolean(data.analytics.metabaseEmbedUrl)),
     socialAnalytics:
-      features.socialAnalytics &&
-      (data.socialAnalytics.hasData || Boolean(data.socialAnalytics.metabaseEmbedUrl)),
+      features.socialAnalytics && data.socialAnalytics.hasData,
     socialPosts: (features.socialPosts ?? true) && data.socialPosts.length > 0,
     broadcastReports: (features.broadcastReports ?? true) && data.broadcastReports.length > 0,
     submissions: features.submissions && data.submissions.length > 0,
@@ -209,7 +213,7 @@ function buildKPIs(
     posters: unknown[];
     videos: unknown[];
     analytics: AnalyticsSummary;
-    socialAnalytics: AnalyticsSummary;
+    socialAnalytics: SocialAnalyticsSummary;
     submissions: { participantName: string }[];
   }
 ): CampaignKPIs {
@@ -218,7 +222,7 @@ function buildKPIs(
     totalPosters: sections.posters ? data.posters.length : 0,
     totalVideos: sections.videos ? data.videos.length : 0,
     totalSiteVisitors: sections.analytics ? data.analytics.totalVisitors : 0,
-    totalSocialReach: sections.socialAnalytics ? data.socialAnalytics.totalVisitors : 0,
+    totalSocialFollowers: sections.socialAnalytics ? data.socialAnalytics.totalFollowers : 0,
     totalParticipants: sections.submissions
       ? new Set(data.submissions.map((s) => s.participantName)).size
       : 0,
@@ -227,7 +231,7 @@ function buildKPIs(
 
 function assemblePublicData(
   settings: CampaignSettings,
-  store: ReturnType<typeof getMockStoreForCampaign>,
+  store: ReturnType<typeof getMockStoreForCampaign> & { socialPlatformStats?: SocialPlatformStat[] },
   billboards: ReturnType<typeof getMockStoreForCampaign>["billboards"]
 ): PublicCampaignData {
   const posterCategories = store.posterCategories
@@ -263,15 +267,11 @@ function assemblePublicData(
     .filter((v) => v.versions.length > 0);
 
   const siteMetrics = store.analytics.filter((metric) => (metric.channel ?? "site") === "site");
-  const socialMetrics = store.analytics.filter((metric) => (metric.channel ?? "site") === "social");
   const analytics = withMetabaseEmbed(
     buildAnalyticsSummary(siteMetrics),
     settings.analyticsConfig.site
   );
-  const socialAnalytics = withMetabaseEmbed(
-    buildAnalyticsSummary(socialMetrics),
-    settings.analyticsConfig.social
-  );
+  const socialAnalytics = buildSocialAnalyticsSummary(store.socialPlatformStats ?? []);
   const submissions = store.submissions
     .filter((s) => s.published && s.status === "approved")
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
@@ -410,18 +410,12 @@ export async function getPublicCampaignData(slug: string): Promise<PublicCampaig
     const settings = await pg.pgGetPublishedCampaignBySlug(slug);
     if (!settings) return null;
     const campaignStore = await pg.pgGetPublicCampaignData(settings.id);
-    const [siteMetrics, socialMetrics, billboards] = await Promise.all([
+    const [siteMetrics, billboards] = await Promise.all([
       resolveChannelAnalyticsMetrics(
         settings,
         campaignStore.analytics,
         "site",
         settings.analyticsConfig.site
-      ),
-      resolveChannelAnalyticsMetrics(
-        settings,
-        campaignStore.analytics,
-        "social",
-        settings.analyticsConfig.social
       ),
       resolvePublicBillboards(settings, campaignStore.billboards),
     ]);
@@ -430,8 +424,9 @@ export async function getPublicCampaignData(slug: string): Promise<PublicCampaig
       {
         settings,
         ...campaignStore,
-        analytics: [...siteMetrics, ...socialMetrics],
-      } as ReturnType<typeof getMockStoreForCampaign>,
+        analytics: siteMetrics,
+        socialPlatformStats: campaignStore.socialPlatformStats ?? [],
+      } as ReturnType<typeof getMockStoreForCampaign> & { socialPlatformStats: SocialPlatformStat[] },
       billboards
     );
   }
@@ -499,6 +494,7 @@ export async function getPublicCampaignData(slug: string): Promise<PublicCampaig
       files: [],
       socialPosts: [],
       broadcastReports: [],
+      socialPlatformStats: [],
     };
 
     return assemblePublicData(

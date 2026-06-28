@@ -201,37 +201,27 @@ export const mockVideoVersions: VideoVersion[] = [
   { id: "vv-3", videoId: "v-2", versionNumber: 1, videoUrl: "https://www.w3schools.com/html/movie.mp4", thumbnailUrl: "https://images.unsplash.com/photo-1611162616305-c69b3fa7a162?w=400&h=225&fit=crop", duration: "0:15", notes: "نهایی", status: "final", isFinal: true, date: "2025-01-10", createdAt: now },
 ];
 
-export const mockAnalyticsMetrics: AnalyticsMetric[] = [
-  ...Array.from({ length: 14 }, (_, i) => ({
-    id: `am-site-${i}`,
-    campaignId: "campaign-1",
-    channel: "site" as const,
-    date: daysAgo(13 - i),
-    visitors: 800 + Math.floor(Math.random() * 400),
-    uniqueVisitors: 600 + Math.floor(Math.random() * 300),
-    pageViews: 1200 + Math.floor(Math.random() * 600),
-    avgSessionDuration: 120 + Math.floor(Math.random() * 60),
-    source: (["direct", "google", "referral", "other"] as const)[i % 4],
-    device: (["mobile", "desktop", "tablet"] as const)[i % 3],
-    page: ["/", "/about", "/contact", "/campaign"][i % 4],
-    city: ["تهران", "مشهد", "اصفهان", "شیراز", "تبریز"][i % 5],
-    createdAt: now,
-  })),
-  ...Array.from({ length: 10 }, (_, i) => ({
-    id: `am-social-${i}`,
-    campaignId: "campaign-1",
-    channel: "social" as const,
-    date: daysAgo(9 - i),
-    visitors: 5000 + Math.floor(Math.random() * 2000),
-    uniqueVisitors: 3200 + Math.floor(Math.random() * 1200),
-    pageViews: 900 + Math.floor(Math.random() * 500),
-    avgSessionDuration: 45 + Math.floor(Math.random() * 30),
-    source: (["instagram", "telegram"] as const)[i % 2],
-    device: (["mobile", "desktop"] as const)[i % 2],
-    page: ["reels", "story", "post", "channel"][i % 4],
-    city: ["تهران", "مشهد", "اصفهان"][i % 3],
-    createdAt: now,
-  })),
+export const mockAnalyticsMetrics: AnalyticsMetric[] = Array.from({ length: 14 }, (_, i) => ({
+  id: `am-site-${i}`,
+  campaignId: "campaign-1",
+  channel: "site" as const,
+  date: daysAgo(13 - i),
+  visitors: 800 + Math.floor(Math.random() * 400),
+  uniqueVisitors: 600 + Math.floor(Math.random() * 300),
+  pageViews: 1200 + Math.floor(Math.random() * 600),
+  avgSessionDuration: 120 + Math.floor(Math.random() * 60),
+  source: (["direct", "google", "referral", "other"] as const)[i % 4],
+  device: (["mobile", "desktop", "tablet"] as const)[i % 3],
+  page: ["/", "/about", "/contact", "/campaign"][i % 4],
+  city: ["تهران", "مشهد", "اصفهان", "شیراز", "تبریز"][i % 5],
+  createdAt: now,
+}));
+
+export const mockSocialPlatformStats: import("./types").SocialPlatformStat[] = [
+  { id: "sps-1", campaignId: "campaign-1", platform: "instagram", followers: 125000, posts: 342, profileUrl: "https://instagram.com/", sortOrder: 1, createdAt: now, updatedAt: now },
+  { id: "sps-2", campaignId: "campaign-1", platform: "telegram", followers: 48000, posts: 890, profileUrl: "https://t.me/", sortOrder: 2, createdAt: now, updatedAt: now },
+  { id: "sps-3", campaignId: "campaign-1", platform: "x", followers: 22000, posts: 156, sortOrder: 3, createdAt: now, updatedAt: now },
+  { id: "sps-4", campaignId: "campaign-1", platform: "aparat", followers: 15000, posts: 48, sortOrder: 4, createdAt: now, updatedAt: now },
 ];
 
 export const mockSubmissions: CampaignSubmission[] = [
@@ -274,6 +264,7 @@ let mockStore = {
   videos: [...mockVideos],
   videoVersions: [...mockVideoVersions],
   analytics: [...mockAnalyticsMetrics],
+  socialPlatformStats: [...mockSocialPlatformStats],
   submissions: [...mockSubmissions],
   files: [] as import("./types").CampaignFile[],
   socialPosts: [] as import("./types").SocialMediaPost[],
@@ -305,6 +296,7 @@ export function getMockStoreForCampaign(campaignId: string) {
     files: store.files.filter((file) => file.campaignId === campaignId),
     socialPosts: store.socialPosts.filter((post) => post.campaignId === campaignId),
     broadcastReports: store.broadcastReports.filter((report) => report.campaignId === campaignId),
+    socialPlatformStats: store.socialPlatformStats.filter((stat) => stat.campaignId === campaignId),
   };
 }
 
@@ -323,6 +315,7 @@ export function resetMockStore() {
     files: [],
     socialPosts: [],
     broadcastReports: [],
+    socialPlatformStats: [...mockSocialPlatformStats],
   };
 }
 

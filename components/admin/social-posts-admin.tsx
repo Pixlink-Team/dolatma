@@ -54,9 +54,10 @@ const contentTypeOptions: SocialContentType[] = ["image", "text", "video", "caro
 interface SocialPostsAdminProps {
   campaignId: string;
   initialPosts: SocialMediaPost[];
+  embedded?: boolean;
 }
 
-export function SocialPostsAdmin({ campaignId, initialPosts }: SocialPostsAdminProps) {
+export function SocialPostsAdmin({ campaignId, initialPosts, embedded = false }: SocialPostsAdminProps) {
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [rows, setRows] = useState(initialPosts);
@@ -161,16 +162,27 @@ export function SocialPostsAdmin({ campaignId, initialPosts }: SocialPostsAdminP
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold">شبکه‌های اجتماعی</h1>
-          <p className="text-sm text-muted-foreground">ثبت پست‌ها، بازدید، لینک و نوع محتوا به‌صورت جدا از آمار کلی</p>
+      {!embedded && (
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold">شبکه‌های اجتماعی</h1>
+            <p className="text-sm text-muted-foreground">ثبت پست‌ها، بازدید، لینک و نوع محتوا</p>
+          </div>
+          <Button onClick={openCreate}>
+            <Plus className="h-4 w-4" />
+            افزودن پست
+          </Button>
         </div>
-        <Button onClick={openCreate}>
-          <Plus className="h-4 w-4" />
-          افزودن پست
-        </Button>
-      </div>
+      )}
+
+      {embedded && (
+        <div className="flex items-center justify-end">
+          <Button onClick={openCreate}>
+            <Plus className="h-4 w-4" />
+            افزودن پست
+          </Button>
+        </div>
+      )}
 
       <AdminDataTable
         data={rows}

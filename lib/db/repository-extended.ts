@@ -1,10 +1,11 @@
 import { getSql } from "@/lib/db/client";
 import {
   mapBroadcastReportFromDb,
+  mapSocialPlatformStatFromDb,
   mapSocialPostFromDb,
   mapUserFromDb,
 } from "@/lib/db/mappers";
-import type { AdminUser, BroadcastReport, SocialMediaPost } from "@/lib/types";
+import type { AdminUser, BroadcastReport, SocialMediaPost, SocialPlatformStat } from "@/lib/types";
 import {
   defaultContributorPermissions,
   normalizeContributorPermissions,
@@ -244,6 +245,75 @@ export async function pgSaveSocialPost(data: Partial<SocialMediaPost> & { id?: s
 export async function pgDeleteSocialPost(id: string) {
   const sql = getSql();
   await sql`DELETE FROM social_media_posts WHERE id = ${id}`;
+  return { success: true };
+}
+
+export async function pgGetSocialPlatformStats(
+  campaignId: string,
+  ownerUserId?: string | null
+): Promise<SocialPlatformStat[]> {
+  const sql = getSql();
+  const rows =
+    ownerUserId === undefined
+      ? await sql`
+          SELECT sps.*, u.name AS owner_name
+          FROM social_platform_stats sps
+          LEFT JOIN users u ON u.id = sps.owner_user_id
+          WHERE sps.campaign_id = ${campaignId}
+          ORDER BY sps.sort_order, sps.platform
+        `
+      : await sql`
+          SELECT sps.*, u.name AS owner_name
+          FROM social_platform_stats sps
+          LEFT JOIN users u ON u.id = sps.owner_user_id
+          WHERE sps.campaign_id = ${campaignId}
+            AND sps.owner_user_id IS NOT DISTINCT FROM ${ownerUserId}
+          ORDER BY sps.sort_order, sps.platform
+        `;
+
+  return rows.map(mapSocialPlatformStatFromDb);
+}
+
+export async function pgSaveSocialPlatformStat(data: Partial<SocialPlatformStat> & { id?: string }) {
+  const sql = getSql();
+  const now = new Date().toISOString();
+  const id = data.id ?? generateId();
+
+  const countRows = await sql`
+    SELECT COUNT(*)::int AS count FROM social_platform_stats WHERE campaign_id = ${data.campaignId ?? ""}
+  `;
+  const sortOrder = data.sortOrder ?? (Number(countRows[0]?.count) || 0) + 1;
+
+  await sql`
+    INSERT INTO social_platform_stats (
+      id, campaign_id, owner_user_id, platform, followers, posts, profile_url,
+      sort_order, created_at, updated_at
+    ) VALUES (
+      ${id},
+      ${data.campaignId ?? ""},
+      ${data.ownerUserId ?? null},
+      ${data.platform ?? "instagram"},
+      ${data.followers ?? 0},
+      ${data.posts ?? 0},
+      ${data.profileUrl ?? null},
+      ${sortOrder},
+      ${now},
+      ${now}
+    )
+    ON CONFLICT (campaign_id, platform) DO UPDATE SET
+      followers = EXCLUDED.followers,
+      posts = EXCLUDED.posts,
+      profile_url = EXCLUDED.profile_url,
+      sort_order = EXCLUDED.sort_order,
+      updated_at = EXCLUDED.updated_at
+  `;
+
+  return { success: true, id };
+}
+
+export async function pgDeleteSocialPlatformStat(id: string) {
+  const sql = getSql();
+  await sql`DELETE FROM social_platform_stats WHERE id = ${id}`;
   return { success: true };
 }
 

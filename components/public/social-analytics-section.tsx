@@ -1,59 +1,73 @@
 "use client";
 
-import { Heart, Share2, Users } from "lucide-react";
+import { ExternalLink, FileText, Users } from "lucide-react";
 import { KPICard } from "@/components/public/kpi-card";
 import { CollapsibleSection } from "@/components/public/collapsible-section";
-import { VisitsLineChart } from "@/components/charts/visits-line-chart";
-import { TrafficSourcesChart } from "@/components/charts/traffic-sources-chart";
-import { BarChartCard } from "@/components/charts/bar-chart-card";
-import type { AnalyticsSummary } from "@/lib/types";
-import { formatDuration } from "@/lib/utils";
+import {
+  SocialPlatformIcon,
+  getSocialPlatformLabel,
+} from "@/components/public/social-platform-icon";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import type { SocialAnalyticsSummary } from "@/lib/types";
+import { formatPersianNumber } from "@/lib/utils";
 
 interface SocialAnalyticsSectionProps {
-  analytics: AnalyticsSummary;
+  analytics: SocialAnalyticsSummary;
 }
 
 export function SocialAnalyticsSection({ analytics }: SocialAnalyticsSectionProps) {
+  if (!analytics.hasData) return null;
+
   return (
     <CollapsibleSection
       id="social-analytics"
-      title="آمار شبکه‌های اجتماعی"
-      description="آمار بازدید، تعامل و دسترسی در پلتفرم‌های اجتماعی کمپین"
+      title="آمار صفحات شبکه‌های اجتماعی"
+      description="فالوور و تعداد پست هر پلتفرم"
     >
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <KPICard title="کل بازدید/دسترسی" value={analytics.totalVisitors} icon={Users} />
-        <KPICard title="کاربران یکتا" value={analytics.uniqueVisitors} icon={Share2} />
-        <KPICard title="تعامل / بازدید محتوا" value={analytics.pageViews} icon={Heart} />
-        <KPICard
-          title="میانگین مدت مشاهده"
-          value={formatDuration(analytics.avgSessionDuration)}
-          icon={Heart}
-        />
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <KPICard title="کل فالوورها" value={analytics.totalFollowers} icon={Users} />
+        <KPICard title="کل پست‌ها" value={analytics.totalPosts} icon={FileText} />
       </div>
 
-      <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <VisitsLineChart data={analytics.visitsOverTime} />
-        <TrafficSourcesChart data={analytics.trafficSources} />
-      </div>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        {analytics.platforms.map((platform) => (
+          <Card key={platform.id} className="overflow-hidden hover:shadow-md transition-shadow">
+            <CardContent className="p-5">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <SocialPlatformIcon platform={platform.platform} size="lg" />
+                  <div>
+                    <h3 className="font-semibold">{getSocialPlatformLabel(platform.platform)}</h3>
+                    {platform.profileUrl && (
+                      <p className="text-xs text-muted-foreground truncate max-w-[180px]" dir="ltr">
+                        {platform.profileUrl}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                {platform.profileUrl && (
+                  <Button variant="ghost" size="icon" className="shrink-0" asChild>
+                    <a href={platform.profileUrl} target="_blank" rel="noreferrer">
+                      <ExternalLink className="h-4 w-4" />
+                    </a>
+                  </Button>
+                )}
+              </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <BarChartCard
-          title="پلتفرم‌ها"
-          data={analytics.deviceSplit.map((d) => ({ label: d.device, value: d.count }))}
-          color="#db2777"
-        />
-        <BarChartCard
-          title="محتوای پربازدید"
-          data={analytics.topPages.map((p) => ({ label: p.page, value: p.views }))}
-          color="#9333ea"
-        />
-        {analytics.visitorLocations.length > 0 && (
-          <BarChartCard
-            title="موقعیت مخاطبان"
-            data={analytics.visitorLocations.map((l) => ({ label: l.city, value: l.count }))}
-            color="#ea580c"
-          />
-        )}
+              <div className="mt-4 grid grid-cols-2 gap-3">
+                <div className="rounded-lg bg-muted/50 p-3 text-center">
+                  <p className="text-xs text-muted-foreground">فالوور</p>
+                  <p className="text-xl font-bold">{formatPersianNumber(platform.followers)}</p>
+                </div>
+                <div className="rounded-lg bg-muted/50 p-3 text-center">
+                  <p className="text-xs text-muted-foreground">پست</p>
+                  <p className="text-xl font-bold">{formatPersianNumber(platform.posts)}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
     </CollapsibleSection>
   );

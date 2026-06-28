@@ -231,6 +231,22 @@ CREATE TABLE IF NOT EXISTS social_media_posts (
 
 CREATE INDEX IF NOT EXISTS idx_social_posts_campaign ON social_media_posts(campaign_id, published, sort_order);
 
+CREATE TABLE IF NOT EXISTS social_platform_stats (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  campaign_id UUID NOT NULL REFERENCES campaign_settings(id) ON DELETE CASCADE,
+  owner_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  platform TEXT NOT NULL CHECK (platform IN ('instagram', 'x', 'telegram', 'linkedin', 'youtube', 'aparat', 'rubika', 'eitaa', 'other')),
+  followers INT NOT NULL DEFAULT 0,
+  posts INT NOT NULL DEFAULT 0,
+  profile_url TEXT,
+  sort_order INT NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (campaign_id, platform)
+);
+
+CREATE INDEX IF NOT EXISTS idx_social_platform_stats_campaign ON social_platform_stats(campaign_id, sort_order);
+
 CREATE TABLE IF NOT EXISTS broadcast_reports (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   campaign_id UUID NOT NULL REFERENCES campaign_settings(id) ON DELETE CASCADE,

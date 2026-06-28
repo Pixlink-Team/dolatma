@@ -9,6 +9,7 @@ import {
   mapPosterVersionFromDb,
   mapSettingsFromDb,
   mapSocialPostFromDb,
+  mapSocialPlatformStatFromDb,
   mapSubmissionFromDb,
   mapVideoFromDb,
   mapVideoVersionFromDb,
@@ -73,6 +74,7 @@ export async function pgGetAdminData(campaignId: string, ownerUserId?: string | 
     files,
     socialPosts,
     broadcastReports,
+    socialPlatformStats,
   ] = await Promise.all([
     sql`SELECT * FROM campaign_settings ORDER BY updated_at DESC`,
     sql`SELECT * FROM campaign_settings WHERE id = ${campaignId} LIMIT 1`,
@@ -154,6 +156,14 @@ export async function pgGetAdminData(campaignId: string, ownerUserId?: string | 
       ${ownerUserId === undefined ? sql`` : sql`AND br.owner_user_id IS NOT DISTINCT FROM ${ownerUserId}`}
       ORDER BY br.sort_order
     `,
+    sql`
+      SELECT sps.*, u.name AS owner_name
+      FROM social_platform_stats sps
+      LEFT JOIN users u ON u.id = sps.owner_user_id
+      WHERE sps.campaign_id = ${campaignId}
+      ${ownerUserId === undefined ? sql`` : sql`AND sps.owner_user_id IS NOT DISTINCT FROM ${ownerUserId}`}
+      ORDER BY sps.sort_order, sps.platform
+    `,
   ]);
 
   return {
@@ -171,6 +181,7 @@ export async function pgGetAdminData(campaignId: string, ownerUserId?: string | 
     files: files.map(mapCampaignFileFromDb),
     socialPosts: socialPosts.map(mapSocialPostFromDb),
     broadcastReports: broadcastReports.map(mapBroadcastReportFromDb),
+    socialPlatformStats: socialPlatformStats.map(mapSocialPlatformStatFromDb),
   };
 }
 
@@ -645,6 +656,7 @@ export async function pgGetPublicCampaignData(campaignId: string) {
     files,
     socialPosts,
     broadcastReports,
+    socialPlatformStats,
   ] = await Promise.all([
     sql`
       SELECT b.*, u.name AS owner_name
@@ -716,6 +728,13 @@ export async function pgGetPublicCampaignData(campaignId: string) {
       WHERE br.campaign_id = ${campaignId} AND br.published = true
       ORDER BY br.sort_order, br.report_date DESC
     `,
+    sql`
+      SELECT sps.*, u.name AS owner_name
+      FROM social_platform_stats sps
+      LEFT JOIN users u ON u.id = sps.owner_user_id
+      WHERE sps.campaign_id = ${campaignId}
+      ORDER BY sps.sort_order, sps.platform
+    `,
   ]);
 
   return {
@@ -731,6 +750,7 @@ export async function pgGetPublicCampaignData(campaignId: string) {
     files: files.map(mapCampaignFileFromDb),
     socialPosts: socialPosts.map(mapSocialPostFromDb),
     broadcastReports: broadcastReports.map(mapBroadcastReportFromDb),
+    socialPlatformStats: socialPlatformStats.map(mapSocialPlatformStatFromDb),
   };
 }
 

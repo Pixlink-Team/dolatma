@@ -68,6 +68,7 @@ export async function getAdminData(campaignId: string) {
       files: filterByOwner([...(store.files ?? [])]).sort((a, b) => a.sortOrder - b.sortOrder),
       socialPosts: filterByOwner([...(store.socialPosts ?? [])]).sort((a, b) => a.sortOrder - b.sortOrder),
       broadcastReports: filterByOwner([...(store.broadcastReports ?? [])]).sort((a, b) => a.sortOrder - b.sortOrder),
+      socialPlatformStats: filterByOwner([...(store.socialPlatformStats ?? [])]).sort((a, b) => a.sortOrder - b.sortOrder),
     };
   }
 
@@ -105,6 +106,7 @@ export async function getAdminData(campaignId: string) {
       files: [],
       socialPosts: [],
       broadcastReports: [],
+      socialPlatformStats: [],
     };
   } catch {
     return getAdminDataMock(campaignId);
@@ -128,6 +130,7 @@ function getAdminDataMock(campaignId: string) {
     files: [...(store.files ?? [])].sort((a, b) => a.sortOrder - b.sortOrder),
     socialPosts: [...(store.socialPosts ?? [])].sort((a, b) => a.sortOrder - b.sortOrder),
     broadcastReports: [...(store.broadcastReports ?? [])].sort((a, b) => a.sortOrder - b.sortOrder),
+    socialPlatformStats: [...(store.socialPlatformStats ?? [])].sort((a, b) => a.sortOrder - b.sortOrder),
   };
 }
 

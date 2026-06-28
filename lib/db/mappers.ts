@@ -10,6 +10,7 @@ import type {
   Poster,
   PosterVersion,
   SocialMediaPost,
+  SocialPlatformStat,
   Video,
   VideoVersion,
 } from "@/lib/types";
@@ -258,6 +259,23 @@ export function mapSocialPostFromDb(row: any): SocialMediaPost {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function mapSocialPlatformStatFromDb(row: any): SocialPlatformStat {
+  return {
+    id: row.id,
+    campaignId: row.campaign_id,
+    ownerUserId: row.owner_user_id ?? null,
+    ownerName: row.owner_name ?? null,
+    platform: row.platform,
+    followers: Number(row.followers ?? 0),
+    posts: Number(row.posts ?? 0),
+    profileUrl: row.profile_url ?? null,
+    sortOrder: row.sort_order ?? 0,
+    createdAt: toIsoString(row.created_at),
+    updatedAt: toIsoString(row.updated_at),
+  };
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function mapBroadcastReportFromDb(row: any): BroadcastReport {
   const summary =
     typeof row.summary_data === "string"
@@ -281,7 +299,6 @@ export function mapBroadcastReportFromDb(row: any): BroadcastReport {
   };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function mapUserFromDb(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   row: any,

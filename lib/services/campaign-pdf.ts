@@ -28,7 +28,7 @@ export function generateCampaignPdf(data: PublicCampaignData): Buffer {
       ["Posters", String(kpis.totalPosters)],
       ["Videos", String(kpis.totalVideos)],
       ["Site Visitors", String(kpis.totalSiteVisitors)],
-      ["Social Reach", String(kpis.totalSocialReach)],
+      ["Social Followers", String(kpis.totalSocialFollowers)],
       ["Participants", String(kpis.totalParticipants)],
       ["Social Posts", String(data.socialPosts.length)],
       ["Broadcast Reports", String(data.broadcastReports.length)],
