@@ -58,3 +58,12 @@ export function appendMultilineDecisions(
 export function reindexMeetingDecisions(decisions: MeetingDecisionInput[]): MeetingDecisionInput[] {
   return decisions.map((item, index) => ({ ...item, sortOrder: index }));
 }
+
+export function compareMeetingsByDateDesc(
+  a: { meetingDate: string; sortOrder?: number },
+  b: { meetingDate: string; sortOrder?: number }
+): number {
+  const byDate = b.meetingDate.localeCompare(a.meetingDate);
+  if (byDate !== 0) return byDate;
+  return (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
+}

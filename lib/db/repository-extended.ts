@@ -460,7 +460,7 @@ export async function pgGetPublicMeetingPreviews(campaignId: string): Promise<Me
       INNER JOIN campaign_settings cs ON cs.id = m.campaign_id
       LEFT JOIN users u ON u.id = m.owner_user_id
       WHERE m.campaign_id = ${campaignId} AND m.published = true
-      ORDER BY m.sort_order, m.meeting_date DESC
+      ORDER BY m.meeting_date DESC, m.sort_order
     `;
 
     return rows.map(mapMeetingPreviewFromDb);
@@ -487,7 +487,7 @@ async function loadMeetingDetailsForCampaign(
   const meetingRows = await sql`
     SELECT * FROM campaign_meetings
     WHERE campaign_id = ${campaignId} AND published = true
-    ORDER BY sort_order, meeting_date DESC
+    ORDER BY meeting_date DESC, sort_order
   `;
 
   if (meetingRows.length === 0) return [];
@@ -627,7 +627,7 @@ export async function pgGetMeetingsWithTasks(
       WHERE m.campaign_id = ${campaignId}
       ${ownerFilter}
       ${publishedFilter}
-      ORDER BY m.sort_order, m.meeting_date DESC
+      ORDER BY m.meeting_date DESC, m.sort_order
     `;
 
     if (meetingRows.length === 0) return [];

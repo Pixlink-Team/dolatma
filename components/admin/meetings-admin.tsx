@@ -24,6 +24,7 @@ import {
 import {
   appendMultilineDecisions,
   appendMultilineTasks,
+  compareMeetingsByDateDesc,
   parseMultilineTasks,
   reindexMeetingDecisions,
   reindexMeetingTasks,
@@ -304,11 +305,12 @@ export function MeetingsAdmin({ campaignId, initialMeetings, hasMeetingsPassword
         })),
       };
 
-      setRows((prev) =>
-        editingId
+      setRows((prev) => {
+        const next = editingId
           ? prev.map((row) => (row.id === editingId ? { ...row, ...savedMeeting } : row))
-          : [...prev, savedMeeting]
-      );
+          : [...prev, savedMeeting];
+        return [...next].sort(compareMeetingsByDateDesc);
+      });
       toast.success("ذخیره شد");
       setOpen(false);
     });

@@ -17,6 +17,7 @@ import type {
   MeetingWithTasks,
 } from "@/lib/types";
 import { truncateMeetingSummary } from "@/lib/meeting-preview";
+import { compareMeetingsByDateDesc } from "@/lib/meeting-tasks";
 import { groupByOwner } from "@/lib/owner-groups";
 import { buildSocialAnalyticsSummary } from "@/lib/social-analytics";
 import { isPostgresConfigured, isSupabaseConfigured } from "@/lib/utils";
@@ -330,7 +331,7 @@ function assemblePublicData(
   const meetings = normalizeMeetingPreviews(
     (store.meetings ?? [])
       .filter((meeting) => ("published" in meeting ? meeting.published : true))
-      .sort((a, b) => a.sortOrder - b.sortOrder),
+      .sort(compareMeetingsByDateDesc),
     meetingsHasPassword
   );
 

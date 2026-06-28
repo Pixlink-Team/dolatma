@@ -16,6 +16,7 @@ import type {
   VideoVersion,
 } from "@/lib/types";
 import { generateId, isPostgresConfigured, isSupabaseConfigured, slugify } from "@/lib/utils";
+import { compareMeetingsByDateDesc } from "@/lib/meeting-tasks";
 import { createClient } from "@/lib/supabase/server";
 
 export async function getAllUsers() {
@@ -70,7 +71,7 @@ export async function getAdminData(campaignId: string) {
       socialPosts: filterByOwner([...(store.socialPosts ?? [])]).sort((a, b) => a.sortOrder - b.sortOrder),
       broadcastReports: filterByOwner([...(store.broadcastReports ?? [])]).sort((a, b) => a.sortOrder - b.sortOrder),
       socialPlatformStats: filterByOwner([...(store.socialPlatformStats ?? [])]).sort((a, b) => a.sortOrder - b.sortOrder),
-      meetings: filterByOwner([...(store.meetings ?? [])]).sort((a, b) => a.sortOrder - b.sortOrder),
+      meetings: filterByOwner([...(store.meetings ?? [])]).sort(compareMeetingsByDateDesc),
     };
   }
 
@@ -134,7 +135,7 @@ function getAdminDataMock(campaignId: string) {
     socialPosts: [...(store.socialPosts ?? [])].sort((a, b) => a.sortOrder - b.sortOrder),
     broadcastReports: [...(store.broadcastReports ?? [])].sort((a, b) => a.sortOrder - b.sortOrder),
     socialPlatformStats: [...(store.socialPlatformStats ?? [])].sort((a, b) => a.sortOrder - b.sortOrder),
-    meetings: [...(store.meetings ?? [])].sort((a, b) => a.sortOrder - b.sortOrder),
+    meetings: [...(store.meetings ?? [])].sort(compareMeetingsByDateDesc),
   };
 }
 
