@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useCampaignExportMode } from "@/lib/context/campaign-export-context";
 import {
   PUBLIC_MEDIA_MOBILE_INITIAL,
   PUBLIC_MEDIA_MOBILE_PAGE_SIZE,
@@ -13,6 +14,7 @@ function getInitialVisibleCount(isMobile: boolean): number {
 }
 
 export function usePublicMediaPagination(totalCount: number, resetKey: string) {
+  const exportMode = useCampaignExportMode();
   const [isMobile, setIsMobile] = useState(false);
   const [visibleCount, setVisibleCount] = useState(PUBLIC_MEDIA_PAGE_SIZE);
 
@@ -40,7 +42,8 @@ export function usePublicMediaPagination(totalCount: number, resetKey: string) {
     );
   }, [isMobile]);
 
-  const hasMore = visibleCount < totalCount;
+  const hasMore = !exportMode && visibleCount < totalCount;
+  const effectiveVisibleCount = exportMode ? totalCount : visibleCount;
 
-  return { visibleCount, hasMore, loadMore, isMobile };
+  return { visibleCount: effectiveVisibleCount, hasMore, loadMore, isMobile };
 }

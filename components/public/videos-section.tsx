@@ -140,9 +140,9 @@ export function VideosSection({ categories, videos }: VideosSectionProps) {
             ))}
           </div>
 
-          {hasMore && (
-            <div className="flex justify-center">
-              <Button variant="outline" onClick={loadMore}>
+            {hasMore && (
+              <div className="flex justify-center" data-export-hide>
+                <Button variant="outline" onClick={loadMore}>
                 مشاهده بیشتر ({formatPersianNumber(filteredVideos.length - visibleCount)} باقی‌مانده)
               </Button>
             </div>

@@ -10,7 +10,7 @@ interface CampaignScreenshotExporterProps {
 }
 
 export function CampaignScreenshotExporter({ slug, title }: CampaignScreenshotExporterProps) {
-  const [status, setStatus] = useState("در حال بارگذاری صفحه...");
+  const [status, setStatus] = useState("در حال بارگذاری کامل صفحه...");
 
   useEffect(() => {
     let cancelled = false;
@@ -19,23 +19,17 @@ export function CampaignScreenshotExporter({ slug, title }: CampaignScreenshotEx
       if (document.fonts?.ready) {
         await document.fonts.ready;
       }
-      await new Promise((resolve) => setTimeout(resolve, 2500));
 
-      const sections = document.querySelectorAll("[data-export-section]");
-      for (const section of sections) {
-        section.scrollIntoView({ block: "center" });
-        await new Promise((resolve) => setTimeout(resolve, 350));
-      }
+      // Let deferred sections and maps/charts render before capture.
+      await new Promise((resolve) => setTimeout(resolve, 3000));
 
       if (cancelled) return;
 
       try {
         await exportCampaignScreenshotPdf({
           filename: `report-${slug}-${new Date().toISOString().split("T")[0]}.pdf`,
-          onProgress: (current, total, label) => {
-            if (!cancelled) {
-              setStatus(`اسکرین‌شات ${current} از ${total}: ${label}`);
-            }
+          onProgress: (message) => {
+            if (!cancelled) setStatus(message);
           },
         });
 
@@ -58,7 +52,10 @@ export function CampaignScreenshotExporter({ slug, title }: CampaignScreenshotEx
   }, [slug, title]);
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/95 backdrop-blur-sm">
+    <div
+      data-export-overlay
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-background/95 backdrop-blur-sm"
+    >
       <div className="rounded-xl border bg-card p-8 text-center space-y-4 max-w-md mx-4 shadow-lg">
         <Loader2 className="h-10 w-10 animate-spin mx-auto text-primary" />
         <div>

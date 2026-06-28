@@ -138,7 +138,7 @@ export function BillboardSection({ billboards }: BillboardSectionProps) {
             </div>
 
             {hasMore && (
-              <div className="flex justify-center">
+              <div className="flex justify-center" data-export-hide>
                 <Button variant="outline" onClick={loadMore}>
                   مشاهده بیشتر ({formatPersianNumber(filtered.length - visibleCount)} باقی‌مانده)
                 </Button>

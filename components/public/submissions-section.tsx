@@ -5,6 +5,7 @@ import Image from "next/image";
 import { KPICard } from "@/components/public/kpi-card";
 import { CollapsibleSection } from "@/components/public/collapsible-section";
 import { ParticipationChart } from "@/components/charts/participation-chart";
+import { useCampaignExportMode } from "@/lib/context/campaign-export-context";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -21,9 +22,11 @@ interface SubmissionsSectionProps {
 }
 
 export function SubmissionsSection({ submissions, summary }: SubmissionsSectionProps) {
+  const exportMode = useCampaignExportMode();
   const [visibleCount, setVisibleCount] = useState(SUBMISSIONS_INITIAL_COUNT);
-  const visibleSubmissions = submissions.slice(0, visibleCount);
-  const hasMore = visibleCount < submissions.length;
+  const effectiveCount = exportMode ? submissions.length : visibleCount;
+  const visibleSubmissions = submissions.slice(0, effectiveCount);
+  const hasMore = !exportMode && visibleCount < submissions.length;
 
   return (
     <CollapsibleSection
@@ -83,7 +86,7 @@ export function SubmissionsSection({ submissions, summary }: SubmissionsSectionP
           </div>
 
           {hasMore && (
-            <div className="flex justify-center">
+            <div className="flex justify-center" data-export-hide>
               <Button
                 variant="outline"
                 onClick={() => setVisibleCount((count) => count + SUBMISSIONS_PAGE_SIZE)}

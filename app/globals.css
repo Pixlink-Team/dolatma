@@ -57,3 +57,15 @@ html {
   font-family: var(--font-sans);
   z-index: 0;
 }
+
+html[data-campaign-export="true"] [data-export-hide] {
+  display: none !important;
+}
+
+html[data-campaign-export="true"] .sticky {
+  position: static !important;
+}
+
+html[data-campaign-export="true"] {
+  scroll-behavior: auto;
+}

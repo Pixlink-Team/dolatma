@@ -61,12 +61,12 @@ export function CampaignTools({ isFullAdmin }: CampaignToolsProps) {
             window.open(
               `/campaign/${currentCampaign.slug}?export=screenshot`,
               "_blank",
-              "noopener,noreferrer,width=1400,height=900"
+              "noopener,noreferrer"
             );
           }}
         >
           <Camera className="h-4 w-4" />
-          دانلود PDF (اسکرین‌شات)
+          دانلود PDF گزارش کامل
         </Button>
 
         {isFullAdmin && (

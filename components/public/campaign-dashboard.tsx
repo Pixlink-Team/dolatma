@@ -28,6 +28,7 @@ import { BroadcastSection } from "@/components/public/broadcast-section";
 import { MeetingsSection } from "@/components/public/meetings-section";
 import { DeferredSection } from "@/components/public/deferred-section";
 import { CampaignScreenshotExporter } from "@/components/public/campaign-screenshot-exporter";
+import { CampaignExportProvider } from "@/lib/context/campaign-export-context";
 import type { PublicCampaignData } from "@/lib/types";
 import { formatPersianDate, formatPersianDateTime } from "@/lib/utils";
 
@@ -83,6 +84,7 @@ export function CampaignDashboard({ initialData, slug, exportMode = false }: Cam
   ].filter((k) => k.show);
 
   return (
+    <CampaignExportProvider exportMode={exportMode}>
     <div className="min-h-screen" data-campaign-export-root>
       {exportMode && <CampaignScreenshotExporter slug={slug} title={settings.title} />}
       <header className="border-b bg-card/80 backdrop-blur-sm sticky top-0 z-40">
@@ -91,6 +93,7 @@ export function CampaignDashboard({ initialData, slug, exportMode = false }: Cam
             <Link
               href="/"
               className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 mb-1 transition-colors"
+              data-export-hide
             >
               <ArrowRight className="h-3 w-3" />
               همه کمپین‌ها
@@ -101,7 +104,7 @@ export function CampaignDashboard({ initialData, slug, exportMode = false }: Cam
             <p className="text-xs text-muted-foreground hidden sm:block">
               آخرین بروزرسانی: {formatPersianDateTime(lastRefresh.toISOString())}
             </p>
-            <Button variant="outline" size="sm" onClick={refreshData} disabled={isRefreshing}>
+            <Button variant="outline" size="sm" onClick={refreshData} disabled={isRefreshing} data-export-hide>
               <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
               بروزرسانی
             </Button>
@@ -206,5 +209,6 @@ export function CampaignDashboard({ initialData, slug, exportMode = false }: Cam
         <p>گزارش زنده کمپین — {settings.title}</p>
       </footer>
     </div>
+    </CampaignExportProvider>
   );
 }

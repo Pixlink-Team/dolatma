@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { MeetingDetailDialog } from "@/components/public/meeting-detail-dialog";
 import { CollapsibleSection } from "@/components/public/collapsible-section";
 import { OwnerGroupedSection } from "@/components/public/owner-grouped-section";
+import { useCampaignExportMode } from "@/lib/context/campaign-export-context";
 import type { DataOwnerGroup, MeetingPublicDetail, MeetingPublicPreview } from "@/lib/types";
 import { formatPersianDate } from "@/lib/utils";
 
@@ -60,7 +61,7 @@ function MeetingPreviewCard({
           <p className="text-sm text-muted-foreground line-clamp-3 flex-1">{meeting.summaryPreview}</p>
         )}
 
-        <Button variant="outline" size="sm" className="w-full mt-auto" onClick={onOpen}>
+        <Button variant="outline" size="sm" className="w-full mt-auto" onClick={onOpen} data-export-hide>
           مشاهده جزئیات
         </Button>
       </CardContent>
@@ -69,13 +70,15 @@ function MeetingPreviewCard({
 }
 
 function MeetingsGrid({ meetings }: { meetings: MeetingPublicPreview[] }) {
+  const exportMode = useCampaignExportMode();
   const [visibleCount, setVisibleCount] = useState(MEETINGS_INITIAL_COUNT);
   const [selectedMeeting, setSelectedMeeting] = useState<MeetingPublicPreview | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [detailCache, setDetailCache] = useState<Record<string, MeetingPublicDetail>>({});
 
-  const visibleMeetings = meetings.slice(0, visibleCount);
-  const hasMore = visibleCount < meetings.length;
+  const effectiveCount = exportMode ? meetings.length : visibleCount;
+  const visibleMeetings = meetings.slice(0, effectiveCount);
+  const hasMore = !exportMode && visibleCount < meetings.length;
 
   const openMeeting = (meeting: MeetingPublicPreview) => {
     setSelectedMeeting(meeting);
@@ -92,7 +95,7 @@ function MeetingsGrid({ meetings }: { meetings: MeetingPublicPreview[] }) {
         </div>
 
         {hasMore && (
-          <div className="flex justify-center">
+          <div className="flex justify-center" data-export-hide>
             <Button
               variant="outline"
               onClick={() => setVisibleCount((count) => count + MEETINGS_PAGE_SIZE)}
