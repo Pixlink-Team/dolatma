@@ -137,6 +137,13 @@ CREATE TABLE IF NOT EXISTS campaign_submissions (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+ALTER TABLE campaign_submissions
+  ADD COLUMN IF NOT EXISTS external_uuid TEXT;
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_submissions_campaign_external_uuid
+  ON campaign_submissions(campaign_id, external_uuid)
+  WHERE external_uuid IS NOT NULL;
+
 CREATE INDEX IF NOT EXISTS idx_campaign_settings_published ON campaign_settings(published, updated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_billboards_campaign ON billboards(campaign_id, published, sort_order);
 CREATE INDEX IF NOT EXISTS idx_posters_campaign ON posters(campaign_id, published, sort_order);

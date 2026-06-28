@@ -216,6 +216,7 @@ export function mapSubmissionFromDb(row: any): CampaignSubmission {
   return {
     id: row.id,
     campaignId: row.campaign_id,
+    externalUuid: row.external_uuid ?? null,
     submissionType: row.submission_type ?? "",
     participantName: row.participant_name,
     participantPhone: row.participant_phone,

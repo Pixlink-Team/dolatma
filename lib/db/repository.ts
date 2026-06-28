@@ -620,6 +620,80 @@ export async function pgDeleteSubmission(id: string) {
   return { success: true };
 }
 
+export async function pgBulkImportSubmissions(
+  campaignId: string,
+  rows: {
+    externalUuid: string;
+    submissionType: string;
+    participantName: string;
+    participantPhone?: string;
+    title: string;
+    text: string;
+    mediaUrl?: string;
+    status: CampaignSubmission["status"];
+    published: boolean;
+    createdAt: string;
+  }[],
+  ownerUserId?: string | null
+) {
+  const sql = getSql();
+  let created = 0;
+  let updated = 0;
+
+  for (const row of rows) {
+    const existing = await sql`
+      SELECT id FROM campaign_submissions
+      WHERE campaign_id = ${campaignId} AND external_uuid = ${row.externalUuid}
+      LIMIT 1
+    `;
+
+    if (existing[0]?.id) {
+      await sql`
+        UPDATE campaign_submissions SET
+          submission_type = ${row.submissionType},
+          participant_name = ${row.participantName},
+          participant_phone = ${row.participantPhone ?? null},
+          title = ${row.title},
+          text = ${row.text},
+          media_url = ${row.mediaUrl ?? null},
+          status = ${row.status},
+          published = ${row.published},
+          created_at = ${row.createdAt},
+          updated_at = ${new Date().toISOString()}
+        WHERE id = ${existing[0].id}
+      `;
+      updated += 1;
+      continue;
+    }
+
+    await sql`
+      INSERT INTO campaign_submissions (
+        id, campaign_id, owner_user_id, external_uuid, submission_type,
+        participant_name, participant_phone, title, text, media_url,
+        status, published, created_at, updated_at
+      ) VALUES (
+        ${generateId()},
+        ${campaignId},
+        ${ownerUserId ?? null},
+        ${row.externalUuid},
+        ${row.submissionType},
+        ${row.participantName},
+        ${row.participantPhone ?? null},
+        ${row.title},
+        ${row.text},
+        ${row.mediaUrl ?? null},
+        ${row.status},
+        ${row.published},
+        ${row.createdAt},
+        ${new Date().toISOString()}
+      )
+    `;
+    created += 1;
+  }
+
+  return { created, updated, total: rows.length };
+}
+
 export async function pgGetCampaignList() {
   const sql = getSql();
   const rows = await sql`

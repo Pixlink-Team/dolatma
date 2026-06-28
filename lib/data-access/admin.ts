@@ -1,6 +1,7 @@
 import { getMockStore, getMockStoreForCampaign, updateMockStore } from "@/lib/mock-data";
 import { getAuthSession, getOwnerFilter } from "@/lib/auth/get-session";
 import * as pg from "@/lib/db/repository";
+import type { ParsedSubmissionRow } from "@/lib/services/submissions-excel-parser";
 import * as pgExt from "@/lib/db/repository-extended";
 import type {
   AnalyticsMetric,
@@ -598,6 +599,64 @@ export async function deleteSubmission(id: string) {
     return { success: true };
   }
   return { success: true };
+}
+
+export async function importSubmissionsFromExcel(
+  campaignId: string,
+  rows: ParsedSubmissionRow[],
+  ownerUserId?: string | null
+) {
+  if (isPostgresConfigured()) {
+    return pg.pgBulkImportSubmissions(campaignId, rows, ownerUserId);
+  }
+
+  if (!isSupabaseConfigured()) {
+    const now = new Date().toISOString();
+    let created = 0;
+    let updated = 0;
+
+    updateMockStore((store) => {
+      const nextSubmissions = [...store.submissions];
+
+      for (const row of rows) {
+        const existingIndex = nextSubmissions.findIndex(
+          (item) => item.campaignId === campaignId && item.externalUuid === row.externalUuid
+        );
+
+        const payload: CampaignSubmission = {
+          id: existingIndex >= 0 ? nextSubmissions[existingIndex].id : generateId(),
+          campaignId,
+          externalUuid: row.externalUuid,
+          submissionType: row.submissionType,
+          participantName: row.participantName,
+          participantPhone: row.participantPhone ?? null,
+          participantEmail: null,
+          title: row.title,
+          text: row.text,
+          mediaUrl: row.mediaUrl ?? null,
+          status: row.status,
+          published: row.published,
+          ownerUserId: ownerUserId ?? null,
+          createdAt: row.createdAt,
+          updatedAt: now,
+        };
+
+        if (existingIndex >= 0) {
+          nextSubmissions[existingIndex] = payload;
+          updated += 1;
+        } else {
+          nextSubmissions.push(payload);
+          created += 1;
+        }
+      }
+
+      return { ...store, submissions: nextSubmissions };
+    });
+
+    return { created, updated, total: rows.length };
+  }
+
+  return { created: 0, updated: 0, total: rows.length };
 }
 
 export async function saveCampaignFile(data: Partial<CampaignFile> & { id?: string }) {

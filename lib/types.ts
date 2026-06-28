@@ -192,6 +192,7 @@ export interface AnalyticsMetric extends Ownable {
 export interface CampaignSubmission extends Ownable {
   id: string;
   campaignId: string;
+  externalUuid?: string | null;
   submissionType: string;
   participantName: string;
   participantPhone?: string | null;

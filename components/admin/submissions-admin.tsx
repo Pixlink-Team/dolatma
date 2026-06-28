@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { FileSpreadsheet, Loader2, Upload } from "lucide-react";
 import { AdminDataTable } from "@/components/admin/admin-data-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,16 +15,24 @@ import {
 } from "@/components/ui/dialog";
 import { updateSubmissionAction, deleteSubmissionAction } from "@/lib/actions/admin-actions";
 import type { CampaignSubmission } from "@/lib/types";
-import { formatPersianDate, getStatusLabel, maskEmail, maskPhone } from "@/lib/utils";
+import { formatPersianDate, formatPersianNumber, getStatusLabel, maskEmail, maskPhone } from "@/lib/utils";
 
 interface SubmissionsAdminProps {
+  campaignId: string;
   initialSubmissions: CampaignSubmission[];
 }
 
-export function SubmissionsAdmin({ initialSubmissions }: SubmissionsAdminProps) {
+export function SubmissionsAdmin({ campaignId, initialSubmissions }: SubmissionsAdminProps) {
+  const router = useRouter();
+  const inputRef = useRef<HTMLInputElement>(null);
   const [submissions, setSubmissions] = useState(initialSubmissions);
   const [selected, setSelected] = useState<CampaignSubmission | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [isPending, startTransition] = useTransition();
+
+  useEffect(() => {
+    setSubmissions(initialSubmissions);
+  }, [initialSubmissions]);
 
   const updateStatus = (id: string, status: "pending" | "approved" | "rejected", published?: boolean) => {
     startTransition(async () => {
@@ -39,12 +49,84 @@ export function SubmissionsAdmin({ initialSubmissions }: SubmissionsAdminProps) 
     });
   };
 
+  const handleExcelUpload = async (file: File) => {
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("campaignId", campaignId);
+
+      const response = await fetch("/api/submissions/import-excel", {
+        method: "POST",
+        body: formData,
+      });
+
+      const body = (await response.json().catch(() => null)) as {
+        success?: boolean;
+        created?: number;
+        updated?: number;
+        total?: number;
+        error?: string;
+      } | null;
+
+      if (!response.ok || !body?.success) {
+        throw new Error(body?.error ?? "آپلود Excel ناموفق بود");
+      }
+
+      toast.success(
+        `${formatPersianNumber(body.created ?? 0)} مورد جدید · ${formatPersianNumber(body.updated ?? 0)} بروزرسانی از ${formatPersianNumber(body.total ?? 0)} ردیف`
+      );
+      router.refresh();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "آپلود Excel ناموفق بود");
+    } finally {
+      setUploading(false);
+      if (inputRef.current) inputRef.current.value = "";
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">مشارکت کاربران</h1>
-        <p className="text-sm text-muted-foreground">بررسی و تأیید ارسال‌های کاربران</p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">مشارکت کاربران</h1>
+          <p className="text-sm text-muted-foreground">
+            بررسی ارسال‌ها یا import از فایل Excel (ستون‌های uuid، title، caption، media_type، author_name و ...)
+          </p>
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          disabled={uploading}
+          onClick={() => inputRef.current?.click()}
+        >
+          {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+          آپلود Excel
+        </Button>
       </div>
+
+      <div className="rounded-xl border border-dashed bg-muted/20 p-4 text-sm text-muted-foreground">
+        <div className="flex items-start gap-3">
+          <FileSpreadsheet className="mt-0.5 h-5 w-5 shrink-0" />
+          <div className="space-y-1">
+            <p className="font-medium text-foreground">فرمت فایل posts_*.xlsx</p>
+            <p>
+              هر بار فایل جدید آپلود کنید؛ ردیف‌های تکراری با همان uuid بروزرسانی می‌شوند و موارد جدید اضافه می‌شوند.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <input
+        ref={inputRef}
+        type="file"
+        accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+        className="hidden"
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          if (file) void handleExcelUpload(file);
+        }}
+      />
 
       <AdminDataTable
         data={submissions}
@@ -85,6 +167,14 @@ export function SubmissionsAdmin({ initialSubmissions }: SubmissionsAdminProps) 
               <div><span className="text-muted-foreground">تلفن: </span>{maskPhone(selected.participantPhone)}</div>
               <div><span className="text-muted-foreground">ایمیل: </span>{maskEmail(selected.participantEmail)}</div>
               <div><span className="text-muted-foreground">متن: </span>{selected.text}</div>
+              {selected.mediaUrl && (
+                <div>
+                  <span className="text-muted-foreground">رسانه: </span>
+                  <a href={selected.mediaUrl} target="_blank" rel="noreferrer" className="text-primary underline" dir="ltr">
+                    مشاهده فایل
+                  </a>
+                </div>
+              )}
               <div className="flex flex-wrap gap-2 pt-4">
                 <Button size="sm" onClick={() => updateStatus(selected.id, "approved", true)} disabled={isPending}>
                   تأیید و انتشار
