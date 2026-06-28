@@ -263,10 +263,37 @@ export interface SocialMediaPost {
   updatedAt: string;
 }
 
+export interface BroadcastStatusRow {
+  label: string;
+  count: number;
+  rawLabel?: string;
+}
+
+export interface BroadcastCityRow {
+  name: string;
+  count: number;
+  rawName?: string;
+}
+
+export interface BroadcastBillboardRow {
+  location: string;
+  quality: string;
+  rawLocation?: string;
+  rawQuality?: string;
+}
+
 export interface BroadcastReportSummary {
   totalBillboards?: number;
   totalCities?: number;
+  temporaryCount?: number;
+  clientName?: string;
+  reportDateTime?: string;
   notes?: string;
+  statusBreakdown?: BroadcastStatusRow[];
+  cityBreakdown?: BroadcastCityRow[];
+  billboards?: BroadcastBillboardRow[];
+  parsedAt?: string;
+  parseError?: string;
 }
 
 export interface BroadcastReport {

@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus } from "lucide-react";
+import { Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,7 +17,7 @@ import { DocumentUpload } from "@/components/ui/document-upload";
 import { PersianDateField } from "@/components/ui/persian-date-input";
 import { deleteBroadcastReportAction, saveBroadcastReportAction } from "@/lib/actions/extended-actions";
 import { todayISO } from "@/lib/jalali";
-import type { BroadcastReport } from "@/lib/types";
+import type { BroadcastReport, BroadcastReportSummary } from "@/lib/types";
 import { formatPersianDate, formatPersianNumber } from "@/lib/utils";
 
 const schema = z.object({
@@ -25,8 +25,6 @@ const schema = z.object({
   reportDate: z.string(),
   pdfUrl: z.string().min(1),
   fileName: z.string().min(1),
-  totalBillboards: z.coerce.number().optional(),
-  totalCities: z.coerce.number().optional(),
   notes: z.string().optional(),
   published: z.boolean(),
 });
@@ -36,10 +34,26 @@ interface BroadcastAdminProps {
   initialReports: BroadcastReport[];
 }
 
+function formatSummaryPreview(summary: BroadcastReportSummary): string {
+  const parts: string[] = [];
+  if (summary.totalBillboards != null) {
+    parts.push(`${formatPersianNumber(summary.totalBillboards)} پوستر`);
+  }
+  if (summary.totalCities != null) {
+    parts.push(`${formatPersianNumber(summary.totalCities)} شهر`);
+  }
+  if (summary.temporaryCount != null) {
+    parts.push(`${formatPersianNumber(summary.temporaryCount)} موقت`);
+  }
+  return parts.length > 0 ? parts.join(" · ") : "بدون داده استخراج‌شده";
+}
+
 export function BroadcastAdmin({ campaignId, initialReports }: BroadcastAdminProps) {
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [rows, setRows] = useState(initialReports);
+  const [parsedSummary, setParsedSummary] = useState<BroadcastReportSummary | null>(null);
+  const [parsingPdf, setParsingPdf] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   const form = useForm({
@@ -49,22 +63,48 @@ export function BroadcastAdmin({ campaignId, initialReports }: BroadcastAdminPro
       reportDate: todayISO(),
       pdfUrl: "",
       fileName: "",
-      totalBillboards: 0,
-      totalCities: 0,
       notes: "",
       published: false,
     },
   });
 
+  const parsePdf = async (pdfUrl: string) => {
+    setParsingPdf(true);
+    try {
+      const response = await fetch("/api/broadcast/parse-pdf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pdfUrl }),
+      });
+
+      const body = (await response.json()) as {
+        success?: boolean;
+        summary?: BroadcastReportSummary;
+        error?: string;
+      };
+
+      if (!response.ok || !body.success || !body.summary) {
+        throw new Error(body.error ?? "استخراج داده از PDF ناموفق بود");
+      }
+
+      setParsedSummary(body.summary);
+      toast.success("داده‌های PDF استخراج شد");
+    } catch (error) {
+      setParsedSummary(null);
+      toast.error(error instanceof Error ? error.message : "استخراج داده از PDF ناموفق بود");
+    } finally {
+      setParsingPdf(false);
+    }
+  };
+
   const openCreate = () => {
     setEditingId(null);
+    setParsedSummary(null);
     form.reset({
       title: "",
       reportDate: todayISO(),
       pdfUrl: "",
       fileName: "",
-      totalBillboards: 0,
-      totalCities: 0,
       notes: "",
       published: false,
     });
@@ -73,13 +113,12 @@ export function BroadcastAdmin({ campaignId, initialReports }: BroadcastAdminPro
 
   const openEdit = (report: BroadcastReport) => {
     setEditingId(report.id);
+    setParsedSummary(report.summaryData);
     form.reset({
       title: report.title,
       reportDate: report.reportDate,
       pdfUrl: report.pdfUrl,
       fileName: report.fileName,
-      totalBillboards: report.summaryData.totalBillboards ?? 0,
-      totalCities: report.summaryData.totalCities ?? 0,
       notes: report.summaryData.notes ?? "",
       published: report.published,
     });
@@ -88,6 +127,11 @@ export function BroadcastAdmin({ campaignId, initialReports }: BroadcastAdminPro
 
   const onSubmit = form.handleSubmit((data) => {
     startTransition(async () => {
+      const summaryData: BroadcastReportSummary = {
+        ...(parsedSummary ?? {}),
+        notes: data.notes,
+      };
+
       const payload = {
         campaignId,
         id: editingId ?? undefined,
@@ -96,11 +140,7 @@ export function BroadcastAdmin({ campaignId, initialReports }: BroadcastAdminPro
         pdfUrl: data.pdfUrl,
         fileName: data.fileName,
         published: data.published,
-        summaryData: {
-          totalBillboards: data.totalBillboards,
-          totalCities: data.totalCities,
-          notes: data.notes,
-        },
+        summaryData,
       };
 
       const result = await saveBroadcastReportAction(payload);
@@ -118,7 +158,7 @@ export function BroadcastAdmin({ campaignId, initialReports }: BroadcastAdminPro
         reportDate: data.reportDate,
         pdfUrl: data.pdfUrl,
         fileName: data.fileName,
-        summaryData: payload.summaryData,
+        summaryData,
         published: data.published,
         sortOrder: 0,
         createdAt: new Date().toISOString(),
@@ -138,7 +178,9 @@ export function BroadcastAdmin({ campaignId, initialReports }: BroadcastAdminPro
       <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">گزارش پخش صدا و سیما</h1>
-          <p className="text-sm text-muted-foreground">آپلود PDF روزانه و ثبت خلاصه آمار قابل اندازه‌گیری</p>
+          <p className="text-sm text-muted-foreground">
+            آپلود PDF روزانه؛ آمار و جداول به‌صورت خودکار از فایل استخراج می‌شود
+          </p>
         </div>
         <Button onClick={openCreate}>
           <Plus className="h-4 w-4" />
@@ -155,8 +197,7 @@ export function BroadcastAdmin({ campaignId, initialReports }: BroadcastAdminPro
           {
             key: "summary",
             label: "خلاصه",
-            render: (item) =>
-              `${formatPersianNumber(item.summaryData.totalBillboards ?? 0)} بیلبورد / ${formatPersianNumber(item.summaryData.totalCities ?? 0)} شهر`,
+            render: (item) => formatSummaryPreview(item.summaryData),
           },
           { key: "published", label: "وضعیت", render: (item) => (item.published ? "منتشر" : "پیش‌نویس") },
         ]}
@@ -193,23 +234,37 @@ export function BroadcastAdmin({ campaignId, initialReports }: BroadcastAdminPro
                 if (!form.getValues("title")) {
                   form.setValue("title", payload.fileName?.replace(/\.pdf$/i, "") ?? "گزارش پخش");
                 }
+                void parsePdf(payload.url);
               }}
             />
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>تعداد بیلبورد (اختیاری)</Label>
-                <Input type="number" {...form.register("totalBillboards")} />
+            {parsingPdf && (
+              <div className="flex items-center gap-2 rounded-lg border bg-muted/40 p-3 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                در حال استخراج داده از PDF...
               </div>
-              <div className="space-y-2">
-                <Label>تعداد شهر (اختیاری)</Label>
-                <Input type="number" {...form.register("totalCities")} />
+            )}
+
+            {parsedSummary && !parsingPdf && (
+              <div className="rounded-lg border bg-muted/30 p-3 text-sm space-y-1">
+                <p className="font-medium">داده‌های استخراج‌شده از PDF</p>
+                <p className="text-muted-foreground">{formatSummaryPreview(parsedSummary)}</p>
+                {parsedSummary.clientName && (
+                  <p className="text-muted-foreground">مشتری: {parsedSummary.clientName}</p>
+                )}
+                {parsedSummary.statusBreakdown && parsedSummary.statusBreakdown.length > 0 && (
+                  <p className="text-muted-foreground">
+                    {formatPersianNumber(parsedSummary.statusBreakdown.length)} وضعیت ·{" "}
+                    {formatPersianNumber(parsedSummary.cityBreakdown?.length ?? 0)} شهر ·{" "}
+                    {formatPersianNumber(parsedSummary.billboards?.length ?? 0)} پوستر در لیست
+                  </p>
+                )}
               </div>
-            </div>
+            )}
 
             <div className="space-y-2">
-              <Label>یادداشت</Label>
-              <Textarea {...form.register("notes")} placeholder="خلاصه یا نکات مهم از گزارش" />
+              <Label>یادداشت (اختیاری)</Label>
+              <Textarea {...form.register("notes")} placeholder="نکات تکمیلی برای نمایش در داشبورد" />
             </div>
 
             <div className="flex items-center gap-2">
@@ -217,7 +272,9 @@ export function BroadcastAdmin({ campaignId, initialReports }: BroadcastAdminPro
               <Label>منتشر شود</Label>
             </div>
 
-            <Button type="submit" disabled={isPending} className="w-full">ذخیره</Button>
+            <Button type="submit" disabled={isPending || parsingPdf} className="w-full">
+              ذخیره
+            </Button>
           </form>
         </DialogContent>
       </Dialog>
