@@ -1,5 +1,6 @@
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
+import { buildHtml2CanvasOnClone, shouldIgnoreHtml2CanvasElement } from "@/lib/client/html2canvas-export";
 
 const EXPORT_WIDTH_PX = 1280;
 const PAGE_MARGIN_MM = 8;
@@ -19,6 +20,14 @@ async function waitForImages(root: HTMLElement) {
         })
     )
   );
+}
+
+async function waitForSectionReady(section: HTMLElement) {
+  await waitForImages(section);
+  if (document.fonts?.ready) {
+    await document.fonts.ready;
+  }
+  await new Promise((resolve) => setTimeout(resolve, 400));
 }
 
 function addCanvasToPdf(
@@ -59,6 +68,12 @@ function addCanvasToPdf(
   }
 }
 
+function addErrorPageToPdf(pdf: jsPDF, label: string, isFirstPage: boolean) {
+  if (!isFirstPage) pdf.addPage();
+  pdf.setFontSize(14);
+  pdf.text(`بخش "${label}" در گزارش تصویری قابل ضبط نبود.`, PAGE_MARGIN_MM, PAGE_MARGIN_MM + 10);
+}
+
 export async function exportCampaignScreenshotPdf(options: {
   rootSelector?: string;
   filename: string;
@@ -76,6 +91,7 @@ export async function exportCampaignScreenshotPdf(options: {
 
   const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   let isFirstPage = true;
+  let capturedCount = 0;
 
   for (let index = 0; index < sections.length; index += 1) {
     const section = sections[index];
@@ -83,20 +99,33 @@ export async function exportCampaignScreenshotPdf(options: {
     options.onProgress?.(index + 1, sections.length, label);
 
     section.scrollIntoView({ block: "start" });
-    await waitForImages(section);
-    await new Promise((resolve) => setTimeout(resolve, 300));
+    await waitForSectionReady(section);
 
-    const canvas = await html2canvas(section, {
-      scale: 2,
-      useCORS: true,
-      allowTaint: true,
-      backgroundColor: "#ffffff",
-      width: EXPORT_WIDTH_PX,
-      windowWidth: EXPORT_WIDTH_PX,
-    });
+    try {
+      const canvas = await html2canvas(section, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: "#ffffff",
+        width: EXPORT_WIDTH_PX,
+        windowWidth: EXPORT_WIDTH_PX,
+        logging: false,
+        onclone: buildHtml2CanvasOnClone(section),
+        ignoreElements: shouldIgnoreHtml2CanvasElement,
+      });
 
-    addCanvasToPdf(pdf, canvas, isFirstPage);
-    isFirstPage = false;
+      addCanvasToPdf(pdf, canvas, isFirstPage);
+      isFirstPage = false;
+      capturedCount += 1;
+    } catch (error) {
+      console.warn(`Screenshot failed for section "${label}"`, error);
+      addErrorPageToPdf(pdf, label, isFirstPage);
+      isFirstPage = false;
+    }
+  }
+
+  if (capturedCount === 0) {
+    throw new Error("No sections could be captured");
   }
 
   pdf.save(options.filename);

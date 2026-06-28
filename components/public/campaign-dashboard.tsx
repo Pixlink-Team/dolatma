@@ -39,10 +39,11 @@ interface CampaignDashboardProps {
 
 export function CampaignDashboard({ initialData, slug, exportMode = false }: CampaignDashboardProps) {
   const [data, setData] = useState(initialData);
-  const [lastRefresh, setLastRefresh] = useState(new Date());
+  const [lastRefresh, setLastRefresh] = useState(() => new Date(initialData.lastUpdated));
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const refreshData = useCallback(async () => {
+    if (exportMode) return;
     setIsRefreshing(true);
     try {
       const res = await fetch(`/api/campaign?slug=${encodeURIComponent(slug)}`, { cache: "no-store" });
@@ -56,12 +57,13 @@ export function CampaignDashboard({ initialData, slug, exportMode = false }: Cam
     } finally {
       setIsRefreshing(false);
     }
-  }, [slug]);
+  }, [slug, exportMode]);
 
   useEffect(() => {
+    if (exportMode) return;
     const interval = setInterval(refreshData, 5 * 60 * 1000);
     return () => clearInterval(interval);
-  }, [refreshData]);
+  }, [refreshData, exportMode]);
 
   const { settings, kpis, sections } = data;
   const usesMetabaseSiteEmbed = Boolean(data.analytics.metabaseEmbedUrl);

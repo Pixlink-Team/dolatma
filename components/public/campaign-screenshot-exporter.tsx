@@ -16,12 +16,15 @@ export function CampaignScreenshotExporter({ slug, title }: CampaignScreenshotEx
     let cancelled = false;
 
     const run = async () => {
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      if (document.fonts?.ready) {
+        await document.fonts.ready;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 2500));
 
       const sections = document.querySelectorAll("[data-export-section]");
       for (const section of sections) {
         section.scrollIntoView({ block: "center" });
-        await new Promise((resolve) => setTimeout(resolve, 200));
+        await new Promise((resolve) => setTimeout(resolve, 350));
       }
 
       if (cancelled) return;
