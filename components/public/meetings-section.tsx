@@ -6,8 +6,8 @@ import { Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { MeetingDetailDialog } from "@/components/public/meeting-detail-dialog";
+import { CollapsibleSection } from "@/components/public/collapsible-section";
 import { OwnerGroupedSection } from "@/components/public/owner-grouped-section";
-import { SectionHeader } from "@/components/public/section-header";
 import type { DataOwnerGroup, MeetingPublicDetail, MeetingPublicPreview } from "@/lib/types";
 import { formatPersianDate } from "@/lib/utils";
 
@@ -120,12 +120,14 @@ export function MeetingsSection({ meetings, groups }: MeetingsSectionProps) {
   if (meetings.length === 0) return null;
 
   return (
-    <section id="meetings">
-      <SectionHeader title="جلسات و مصوبات" description="خلاصه جلسات — جزئیات با رمز قابل مشاهده است" />
-
+    <CollapsibleSection
+      id="meetings"
+      title="جلسات و مصوبات"
+      description="خلاصه جلسات — جزئیات با رمز قابل مشاهده است"
+    >
       <OwnerGroupedSection groups={groups}>
         {(groupMeetings) => <MeetingsGrid meetings={groupMeetings} />}
       </OwnerGroupedSection>
-    </section>
+    </CollapsibleSection>
   );
 }

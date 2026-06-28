@@ -1,7 +1,7 @@
 import type { BroadcastReport, DataOwnerGroup } from "@/lib/types";
 import { formatPersianDate } from "@/lib/utils";
+import { CollapsibleSection } from "@/components/public/collapsible-section";
 import { OwnerGroupedSection } from "@/components/public/owner-grouped-section";
-import { SectionHeader } from "@/components/public/section-header";
 import { Button } from "@/components/ui/button";
 import { Download, FileText } from "lucide-react";
 
@@ -39,12 +39,11 @@ export function BroadcastSection({ reports, groups }: BroadcastSectionProps) {
   if (reports.length === 0) return null;
 
   return (
-    <section id="broadcast-reports">
-      <SectionHeader
-        title="گزارش پخش صدا و سیما"
-        description="گزارش‌های PDF روزانه"
-      />
-
+    <CollapsibleSection
+      id="broadcast-reports"
+      title="گزارش پخش صدا و سیما"
+      description="گزارش‌های PDF روزانه"
+    >
       <OwnerGroupedSection groups={groups}>
         {(groupReports) => (
           <div className="space-y-4">
@@ -54,6 +53,6 @@ export function BroadcastSection({ reports, groups }: BroadcastSectionProps) {
           </div>
         )}
       </OwnerGroupedSection>
-    </section>
+    </CollapsibleSection>
   );
 }
