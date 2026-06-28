@@ -361,6 +361,7 @@ export interface CampaignActivity {
   activityDate: string;
   location: string;
   imageUrl?: string | null;
+  videoUrl?: string | null;
   description?: string | null;
   published: boolean;
   sortOrder: number;

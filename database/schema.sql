@@ -345,6 +345,7 @@ CREATE TABLE IF NOT EXISTS campaign_activities (
   activity_date DATE NOT NULL DEFAULT CURRENT_DATE,
   location TEXT NOT NULL DEFAULT '',
   image_url TEXT,
+  video_url TEXT,
   description TEXT,
   published BOOLEAN NOT NULL DEFAULT false,
   sort_order INT NOT NULL DEFAULT 0,
@@ -353,3 +354,5 @@ CREATE TABLE IF NOT EXISTS campaign_activities (
 );
 
 CREATE INDEX IF NOT EXISTS idx_campaign_activities_campaign ON campaign_activities(campaign_id, published, sort_order);
+
+ALTER TABLE campaign_activities ADD COLUMN IF NOT EXISTS video_url TEXT;

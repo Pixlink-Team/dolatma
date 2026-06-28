@@ -575,7 +575,7 @@ export async function pgSaveCampaignActivity(data: Partial<CampaignActivity> & {
   await sql`
     INSERT INTO campaign_activities (
       id, campaign_id, owner_user_id, title, activity_type, activity_date,
-      location, image_url, description, published, sort_order, created_at, updated_at
+      location, image_url, video_url, description, published, sort_order, created_at, updated_at
     ) VALUES (
       ${id},
       ${data.campaignId ?? ""},
@@ -585,6 +585,7 @@ export async function pgSaveCampaignActivity(data: Partial<CampaignActivity> & {
       ${data.activityDate ?? now.split("T")[0]},
       ${data.location ?? ""},
       ${data.imageUrl ?? null},
+      ${data.videoUrl ?? null},
       ${data.description ?? null},
       ${data.published ?? false},
       ${sortOrder},
@@ -597,6 +598,7 @@ export async function pgSaveCampaignActivity(data: Partial<CampaignActivity> & {
       activity_date = EXCLUDED.activity_date,
       location = EXCLUDED.location,
       image_url = EXCLUDED.image_url,
+      video_url = EXCLUDED.video_url,
       description = EXCLUDED.description,
       published = EXCLUDED.published,
       sort_order = EXCLUDED.sort_order,

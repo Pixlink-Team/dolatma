@@ -22,6 +22,8 @@ import { todayISO } from "@/lib/jalali";
 import type { ActivityType, CampaignActivity } from "@/lib/types";
 import { formatPersianDate } from "@/lib/utils";
 
+const ACTIVITY_VIDEO_MAX_BYTES = 50 * 1024 * 1024;
+
 const schema = z.object({
   title: z.string().min(1, "عنوان الزامی است"),
   activityType: z.enum([
@@ -38,6 +40,7 @@ const schema = z.object({
   activityDate: z.string(),
   location: z.string().optional(),
   imageUrl: z.string().optional(),
+  videoUrl: z.string().optional(),
   description: z.string().optional(),
   published: z.boolean(),
 });
@@ -61,6 +64,7 @@ export function ActivitiesAdmin({ campaignId, initialActivities }: ActivitiesAdm
       activityDate: todayISO(),
       location: "",
       imageUrl: "",
+      videoUrl: "",
       description: "",
       published: false,
     },
@@ -74,6 +78,7 @@ export function ActivitiesAdmin({ campaignId, initialActivities }: ActivitiesAdm
       activityDate: todayISO(),
       location: "",
       imageUrl: "",
+      videoUrl: "",
       description: "",
       published: false,
     });
@@ -88,6 +93,7 @@ export function ActivitiesAdmin({ campaignId, initialActivities }: ActivitiesAdm
       activityDate: activity.activityDate,
       location: activity.location,
       imageUrl: activity.imageUrl ?? "",
+      videoUrl: activity.videoUrl ?? "",
       description: activity.description ?? "",
       published: activity.published,
     });
@@ -104,6 +110,7 @@ export function ActivitiesAdmin({ campaignId, initialActivities }: ActivitiesAdm
         activityDate: data.activityDate,
         location: data.location?.trim() ?? "",
         imageUrl: data.imageUrl || null,
+        videoUrl: data.videoUrl || null,
         description: data.description || null,
         published: data.published,
       });
@@ -122,6 +129,7 @@ export function ActivitiesAdmin({ campaignId, initialActivities }: ActivitiesAdm
         activityDate: data.activityDate,
         location: data.location?.trim() ?? "",
         imageUrl: data.imageUrl || null,
+        videoUrl: data.videoUrl || null,
         description: data.description || null,
         published: data.published,
         sortOrder: rows.length + 1,
@@ -216,11 +224,23 @@ export function ActivitiesAdmin({ campaignId, initialActivities }: ActivitiesAdm
               <Input {...form.register("location")} placeholder="شهر یا محل برگزاری" />
             </div>
             <div className="space-y-2">
-              <Label>تصویر (اختیاری)</Label>
               <MediaUpload
                 value={form.watch("imageUrl") ?? ""}
                 onChange={(url) => form.setValue("imageUrl", url)}
+                label="تصویر (اختیاری)"
                 accept="image/*"
+              />
+            </div>
+            <div className="space-y-2">
+              <MediaUpload
+                value={form.watch("videoUrl") ?? ""}
+                onChange={(url) => form.setValue("videoUrl", url)}
+                label="ویدیو (اختیاری — حداکثر ۵۰ مگابایت)"
+                kind="video"
+                uploadKind="activity-video"
+                fileOnly
+                maxFileSizeBytes={ACTIVITY_VIDEO_MAX_BYTES}
+                accept="video/mp4,video/webm,video/quicktime"
               />
             </div>
             <div className="space-y-2">

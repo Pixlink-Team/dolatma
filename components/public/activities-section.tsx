@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { MapPin } from "lucide-react";
+import { isDirectVideoUrl } from "@/lib/media-utils";
 import { getActivityTypeLabel } from "@/lib/activity-types";
 import { useCampaignExportMode } from "@/lib/context/campaign-export-context";
 import type { CampaignActivity, DataOwnerGroup } from "@/lib/types";
@@ -27,7 +28,15 @@ function ActivityCards({ activities }: { activities: CampaignActivity[] }) {
       {activities.map((activity) => (
         <Card key={activity.id} className="overflow-hidden h-full flex flex-col">
           <div className="relative aspect-[4/3] bg-muted">
-            {activity.imageUrl ? (
+            {activity.videoUrl && isDirectVideoUrl(activity.videoUrl) ? (
+              <video
+                src={activity.videoUrl}
+                className="h-full w-full object-cover"
+                controls
+                playsInline
+                preload="metadata"
+              />
+            ) : activity.imageUrl ? (
               <Image
                 src={activity.imageUrl}
                 alt={activity.title}

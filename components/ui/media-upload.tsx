@@ -17,8 +17,11 @@ interface MediaUploadProps {
   onUploaded?: (url: string) => void;
   label?: string;
   kind?: "image" | "video" | "audio";
+  uploadKind?: "image" | "video" | "audio" | "activity-video";
   accept?: string;
   dropzone?: boolean;
+  fileOnly?: boolean;
+  maxFileSizeBytes?: number;
 }
 
 export function MediaUpload({
@@ -27,19 +30,28 @@ export function MediaUpload({
   onUploaded,
   label,
   kind = "image",
+  uploadKind,
   accept,
   dropzone = true,
+  fileOnly = false,
+  maxFileSizeBytes,
 }: MediaUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
 
   const handleUpload = async (file: File) => {
+    if (maxFileSizeBytes && file.size > maxFileSizeBytes) {
+      const maxMb = Math.round(maxFileSizeBytes / (1024 * 1024));
+      toast.error(`حجم فایل نباید بیشتر از ${maxMb} مگابایت باشد`);
+      return;
+    }
+
     setUploading(true);
     try {
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("kind", kind);
+      formData.append("kind", uploadKind ?? kind);
 
       const response = await fetch("/api/upload", {
         method: "POST",
@@ -72,7 +84,9 @@ export function MediaUpload({
 
   const placeholder =
     kind === "video"
-      ? "کد embed آپارات را اینجا paste کنید، یا لینک/فایل ویدیو"
+      ? fileOnly
+        ? "فایل ویدیو را آپلود کنید یا لینک مستقیم وارد کنید"
+        : "کد embed آپارات را اینجا paste کنید، یا لینک/فایل ویدیو"
       : kind === "audio"
         ? "فایل صوتی را آپلود کنید یا لینک مستقیم وارد کنید"
         : "تصویر را بکشید و رها کنید یا لینک وارد کنید";
@@ -97,7 +111,7 @@ export function MediaUpload({
           !dropzone && "border-transparent p-0"
         )}
       >
-        {kind === "video" ? (
+        {kind === "video" && !fileOnly ? (
           <Textarea
             value={value}
             onChange={(event) => onChange(event.target.value)}
@@ -129,7 +143,7 @@ export function MediaUpload({
               className="shrink-0"
             >
               {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-              {dropzone ? "انتخاب فایل" : "آپلود"}
+              {kind === "video" && fileOnly ? "آپلود ویدیو" : dropzone ? "انتخاب فایل" : "آپلود"}
             </Button>
           </div>
         )}
@@ -149,7 +163,7 @@ export function MediaUpload({
           </div>
         )}
 
-        {kind === "video" && (
+        {kind === "video" && !fileOnly && (
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <Button
               type="button"
@@ -167,7 +181,7 @@ export function MediaUpload({
           </div>
         )}
 
-        {dropzone && kind !== "video" && (
+        {dropzone && (kind !== "video" || fileOnly) && (
           <p className="mt-2 text-center text-xs text-muted-foreground">
             فایل را اینجا بکشید و رها کنید
           </p>

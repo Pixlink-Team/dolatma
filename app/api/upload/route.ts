@@ -10,6 +10,7 @@ import { getUploadPublicUrl, getUploadsDir } from "@/lib/uploads";
 
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 const MAX_VIDEO_BYTES = 100 * 1024 * 1024;
+const MAX_ACTIVITY_VIDEO_BYTES = 50 * 1024 * 1024;
 const MAX_DOCUMENT_BYTES = 25 * 1024 * 1024;
 
 const MAX_AUDIO_BYTES = 50 * 1024 * 1024;
@@ -112,7 +113,7 @@ export async function POST(request: Request) {
   }
 
   const allowedTypes =
-    kind === "video"
+    kind === "video" || kind === "activity-video"
       ? VIDEO_TYPES
       : kind === "audio"
         ? AUDIO_TYPES
@@ -120,7 +121,9 @@ export async function POST(request: Request) {
           ? DOCUMENT_TYPES
           : IMAGE_TYPES;
   const maxBytes =
-    kind === "video"
+    kind === "activity-video"
+      ? MAX_ACTIVITY_VIDEO_BYTES
+      : kind === "video"
       ? MAX_VIDEO_BYTES
       : kind === "audio"
         ? MAX_AUDIO_BYTES

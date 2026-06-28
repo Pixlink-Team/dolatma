@@ -326,6 +326,7 @@ export function mapCampaignActivityFromDb(row: any): CampaignActivity {
     activityDate: toDateString(row.activity_date),
     location: row.location ?? "",
     imageUrl: row.image_url ?? null,
+    videoUrl: row.video_url ?? null,
     description: row.description ?? null,
     published: row.published ?? false,
     sortOrder: row.sort_order ?? 0,
