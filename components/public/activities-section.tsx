@@ -1,9 +1,8 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import Image from "next/image";
-import { MapPin } from "lucide-react";
-import { isDirectVideoUrl } from "@/lib/media-utils";
+import { MapPin, Play } from "lucide-react";
 import { getActivityTypeLabel } from "@/lib/activity-types";
 import { useFilteredOwnerGroups } from "@/lib/hooks/use-filtered-owner-groups";
 import { ShowMoreButton } from "@/components/public/show-more-button";
@@ -15,30 +14,54 @@ import { Card, CardContent } from "@/components/ui/card";
 import { CollapsibleSection } from "@/components/public/collapsible-section";
 import { OwnerGroupedSection } from "@/components/public/owner-grouped-section";
 import { SectionLocationFilter } from "@/components/public/section-location-filter";
+import { ActivityMediaDialog } from "@/components/public/activity-media-dialog";
 import { PUBLIC_MEDIA_GRID_CLASS } from "@/lib/public-media-section";
 import { VideoThumbnail } from "@/components/media/video-thumbnail";
+import { cn } from "@/lib/utils";
 
 interface ActivitiesSectionProps {
   activities: CampaignActivity[];
   groups: DataOwnerGroup<CampaignActivity>[];
 }
 
-function ActivityCard({ activity }: { activity: CampaignActivity }) {
+function hasActivityMedia(activity: CampaignActivity): boolean {
+  return Boolean(activity.imageUrl?.trim() || activity.videoUrl?.trim());
+}
+
+function ActivityCard({
+  activity,
+  onOpen,
+}: {
+  activity: CampaignActivity;
+  onOpen: () => void;
+}) {
+  const hasMedia = hasActivityMedia(activity);
+  const hasVideo = Boolean(activity.videoUrl?.trim());
+
   return (
     <Card className="h-full w-full overflow-hidden py-0 gap-0">
-      <div className="relative aspect-video bg-muted">
-        {activity.videoUrl && isDirectVideoUrl(activity.videoUrl) ? (
+      <button
+        type="button"
+        onClick={hasMedia ? onOpen : undefined}
+        disabled={!hasMedia}
+        className={cn(
+          "group relative block w-full aspect-video bg-muted text-right",
+          hasMedia && "cursor-pointer"
+        )}
+        aria-label={hasMedia ? `مشاهده ${activity.title}` : undefined}
+      >
+        {hasVideo ? (
           <VideoThumbnail
-            videoUrl={activity.videoUrl}
+            videoUrl={activity.videoUrl!}
             alt={activity.title}
-            className="object-cover"
+            className="object-cover transition-transform group-hover:scale-105"
           />
         ) : activity.imageUrl ? (
           <Image
             src={activity.imageUrl}
             alt={activity.title}
             fill
-            className="object-cover"
+            className="object-cover transition-transform group-hover:scale-105"
             sizes="(max-width: 1280px) 16vw, 200px"
           />
         ) : (
@@ -46,12 +69,19 @@ function ActivityCard({ activity }: { activity: CampaignActivity }) {
             {getActivityTypeLabel(activity.activityType)}
           </div>
         )}
+
+        {hasVideo && hasMedia && (
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 transition-opacity group-hover:opacity-100">
+            <Play className="h-10 w-10 text-white drop-shadow" />
+          </div>
+        )}
+
         <div className="absolute top-2 right-2">
           <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
             {getActivityTypeLabel(activity.activityType)}
           </Badge>
         </div>
-      </div>
+      </button>
 
       <CardContent className="space-y-1 p-2.5">
         <h3 className="line-clamp-2 text-xs font-semibold leading-snug">{activity.title}</h3>
@@ -68,12 +98,33 @@ function ActivityCard({ activity }: { activity: CampaignActivity }) {
 }
 
 function ActivityCards({ activities }: { activities: CampaignActivity[] }) {
+  const [selectedActivity, setSelectedActivity] = useState<CampaignActivity | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+
+  const openActivity = (activity: CampaignActivity) => {
+    if (!hasActivityMedia(activity)) return;
+    setSelectedActivity(activity);
+    setDialogOpen(true);
+  };
+
   return (
-    <div className={PUBLIC_MEDIA_GRID_CLASS}>
-      {activities.map((activity) => (
-        <ActivityCard key={activity.id} activity={activity} />
-      ))}
-    </div>
+    <>
+      <div className={PUBLIC_MEDIA_GRID_CLASS}>
+        {activities.map((activity) => (
+          <ActivityCard
+            key={activity.id}
+            activity={activity}
+            onOpen={() => openActivity(activity)}
+          />
+        ))}
+      </div>
+
+      <ActivityMediaDialog
+        activity={selectedActivity}
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+      />
+    </>
   );
 }
 
