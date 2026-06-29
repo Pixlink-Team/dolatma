@@ -1,10 +1,10 @@
 "use client";
 
 import { createContext, useContext, useMemo, useState } from "react";
-import type { DataOwnerGroup, Ownable, PublicCampaignData } from "@/lib/types";
+import { getCitiesForProvince, IRAN_PROVINCES } from "@/lib/iran-locations";
 import {
-  collectOwnerLocations,
   DEFAULT_OWNER_LOCATION_FILTER,
+  OWNER_LOCATION_ALL,
   type OwnerLocationFilter,
 } from "@/lib/owner-location-filter";
 
@@ -14,54 +14,32 @@ interface OwnerLocationFilterContextValue {
   setCity: (city: string) => void;
   provinces: string[];
   cities: string[];
-  hasContributorLocations: boolean;
 }
 
 const OwnerLocationFilterContext = createContext<OwnerLocationFilterContextValue | null>(null);
 
-function collectAllOwnerGroups(data: PublicCampaignData): DataOwnerGroup<Ownable>[] {
-  return [
-    ...data.billboardGroups,
-    ...data.posterGroups,
-    ...data.videoGroups,
-    ...data.submissionGroups,
-    ...data.sitePublicationGroups,
-    ...data.socialPostGroups,
-    ...data.activityGroups,
-    ...data.broadcastReportGroups,
-    ...data.meetingGroups,
-    ...data.fileGroups,
-  ];
-}
-
 interface OwnerLocationFilterProviderProps {
-  data: PublicCampaignData;
   children: React.ReactNode;
 }
 
-export function OwnerLocationFilterProvider({ data, children }: OwnerLocationFilterProviderProps) {
+export function OwnerLocationFilterProvider({ children }: OwnerLocationFilterProviderProps) {
   const [filter, setFilter] = useState<OwnerLocationFilter>(DEFAULT_OWNER_LOCATION_FILTER);
 
-  const { provinces, citiesByProvince } = useMemo(
-    () => collectOwnerLocations(collectAllOwnerGroups(data)),
-    [data]
-  );
+  const provinces = useMemo(() => [...IRAN_PROVINCES], []);
 
   const cities = useMemo(
-    () => (filter.province === "all" ? [] : (citiesByProvince[filter.province] ?? [])),
-    [filter.province, citiesByProvince]
+    () =>
+      filter.province === OWNER_LOCATION_ALL ? [] : getCitiesForProvince(filter.province),
+    [filter.province]
   );
 
   const value = useMemo<OwnerLocationFilterContextValue>(
     () => ({
       filter,
-      setProvince: (province) =>
-        setFilter({ province, city: "all" }),
-      setCity: (city) =>
-        setFilter((current) => ({ ...current, city })),
+      setProvince: (province) => setFilter({ province, city: OWNER_LOCATION_ALL }),
+      setCity: (city) => setFilter((current) => ({ ...current, city })),
       provinces,
       cities,
-      hasContributorLocations: provinces.length > 0,
     }),
     [filter, provinces, cities]
   );
@@ -82,7 +60,6 @@ export function useOwnerLocationFilter(): OwnerLocationFilterContextValue {
       setCity: () => undefined,
       provinces: [],
       cities: [],
-      hasContributorLocations: false,
     };
   }
   return context;

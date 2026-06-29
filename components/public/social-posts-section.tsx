@@ -5,16 +5,16 @@ import type { DataOwnerGroup, SocialMediaPost } from "@/lib/types";
 import { formatPersianDate, formatPersianNumber, getStatusLabel } from "@/lib/utils";
 import { OwnerGroupedSection } from "@/components/public/owner-grouped-section";
 import { CollapsibleSection } from "@/components/public/collapsible-section";
+import { SectionLocationFilter } from "@/components/public/section-location-filter";
 import { VideoThumbnail } from "@/components/media/video-thumbnail";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { ExternalLink } from "lucide-react";
-import {
-  PUBLIC_MEDIA_GRID_CLASS,
-} from "@/lib/public-media-section";
+import { PUBLIC_MEDIA_GRID_CLASS } from "@/lib/public-media-section";
 import { usePublicMediaPagination } from "@/lib/hooks/use-public-media-pagination";
 import { useFilteredOwnerGroups } from "@/lib/hooks/use-filtered-owner-groups";
 import { isDirectVideoUrl } from "@/lib/media-utils";
+import { ShowMoreButton } from "@/components/public/show-more-button";
 
 interface SocialPostsSectionProps {
   posts: SocialMediaPost[];
@@ -25,7 +25,11 @@ function SocialPostCover({ post }: { post: SocialMediaPost }) {
   if (post.coverImageUrl) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
-      <img src={post.coverImageUrl} alt={post.title} className="h-full w-full object-cover" />
+      <img
+        src={post.coverImageUrl}
+        alt={post.title}
+        className="h-full w-full object-cover transition-transform group-hover:scale-105"
+      />
     );
   }
 
@@ -34,7 +38,7 @@ function SocialPostCover({ post }: { post: SocialMediaPost }) {
       <VideoThumbnail
         videoUrl={post.mediaUrl}
         alt={post.title}
-        className="object-cover"
+        className="object-cover transition-transform group-hover:scale-105"
       />
     );
   }
@@ -42,7 +46,11 @@ function SocialPostCover({ post }: { post: SocialMediaPost }) {
   if (post.mediaUrl) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
-      <img src={post.mediaUrl} alt={post.title} className="h-full w-full object-cover" />
+      <img
+        src={post.mediaUrl}
+        alt={post.title}
+        className="h-full w-full object-cover transition-transform group-hover:scale-105"
+      />
     );
   }
 
@@ -54,56 +62,55 @@ function SocialPostCover({ post }: { post: SocialMediaPost }) {
 }
 
 function SocialPostCard({ post }: { post: SocialMediaPost }) {
+  const titleContent = post.link ? (
+    <a
+      href={post.link}
+      target="_blank"
+      rel="noreferrer"
+      className="hover:text-primary hover:underline"
+    >
+      {post.title}
+    </a>
+  ) : (
+    post.title
+  );
+
   return (
-    <article className="flex h-full flex-col overflow-hidden rounded-xl border bg-card">
-      <div className="relative aspect-video bg-muted">
+    <Card className="h-full w-full overflow-hidden py-0 gap-0">
+      <div className="group relative aspect-video overflow-hidden bg-muted">
         <SocialPostCover post={post} />
-      </div>
-
-      <div className="flex flex-1 flex-col gap-2 p-3">
-        <div className="flex flex-wrap items-center gap-1.5">
-          <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-            {getStatusLabel(post.platform)}
-          </Badge>
-          <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-            {getStatusLabel(post.contentType)}
-          </Badge>
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-2 pt-6">
+          <div className="flex flex-wrap items-center gap-1">
+            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 text-white bg-white/20 border-0">
+              {getStatusLabel(post.platform)}
+            </Badge>
+            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 text-white bg-white/20 border-0">
+              {getStatusLabel(post.contentType)}
+            </Badge>
+          </div>
         </div>
-
-        <h3 className="text-sm font-semibold line-clamp-2 leading-snug">
-          {post.link ? (
-            <a
-              href={post.link}
-              target="_blank"
-              rel="noreferrer"
-              className="hover:text-primary hover:underline"
-            >
-              {post.title}
-            </a>
-          ) : (
-            post.title
-          )}
-        </h3>
-
-        <p className="text-[11px] text-muted-foreground">{formatPersianDate(post.publishedDate)}</p>
-
-        <div className="mt-auto grid grid-cols-2 gap-1 text-[10px] text-muted-foreground">
-          <span>بازدید: {formatPersianNumber(post.views)}</span>
-          <span>لایک: {formatPersianNumber(post.likes)}</span>
-          <span>کامنت: {formatPersianNumber(post.comments)}</span>
-          <span>اشتراک: {formatPersianNumber(post.shares)}</span>
-        </div>
-
         {post.link && (
-          <Button variant="outline" size="sm" className="h-7 text-xs" asChild>
-            <a href={post.link} target="_blank" rel="noreferrer">
-              <ExternalLink className="h-3 w-3" />
-              مشاهده
-            </a>
-          </Button>
+          <a
+            href={post.link}
+            target="_blank"
+            rel="noreferrer"
+            className="absolute top-2 left-2 rounded-md bg-black/50 p-1.5 text-white opacity-0 transition-opacity group-hover:opacity-100"
+            aria-label="مشاهده پست"
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+          </a>
         )}
       </div>
-    </article>
+
+      <CardContent className="space-y-1 p-2.5">
+        <h3 className="line-clamp-2 text-xs font-semibold leading-snug">{titleContent}</h3>
+        <p className="text-[10px] text-muted-foreground">{formatPersianDate(post.publishedDate)}</p>
+        <div className="grid grid-cols-2 gap-x-2 gap-y-0.5 text-[10px] text-muted-foreground">
+          <span>بازدید: {formatPersianNumber(post.views)}</span>
+          <span>لایک: {formatPersianNumber(post.likes)}</span>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -136,6 +143,7 @@ export function SocialPostsSection({ posts, groups }: SocialPostsSectionProps) {
       id="social-posts"
       title="شبکه‌های اجتماعی"
       description={`${formatPersianNumber(posts.length)} پست — اینستاگرام، تلگرام و سایر شبکه‌ها`}
+      controls={<SectionLocationFilter />}
     >
       {filteredPosts.length === 0 ? (
         <div className="rounded-xl border bg-card py-12 text-center text-muted-foreground">
@@ -154,11 +162,10 @@ export function SocialPostsSection({ posts, groups }: SocialPostsSectionProps) {
           </OwnerGroupedSection>
 
           {hasMore && (
-            <div className="flex justify-center" data-export-hide>
-              <Button variant="outline" onClick={loadMore}>
-                مشاهده بیشتر ({formatPersianNumber(filteredPosts.length - visibleCount)} باقی‌مانده)
-              </Button>
-            </div>
+            <ShowMoreButton
+              remaining={filteredPosts.length - visibleCount}
+              onClick={loadMore}
+            />
           )}
         </div>
       )}

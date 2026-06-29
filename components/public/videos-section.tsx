@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { CollapsibleSection } from "@/components/public/collapsible-section";
+import { SectionLocationFilter } from "@/components/public/section-location-filter";
 import { OwnerGroupedSection } from "@/components/public/owner-grouped-section";
 import { VideoCard } from "@/components/public/video-card";
 import {
@@ -91,7 +92,9 @@ export function VideosSection({ categories, videos, groups }: VideosSectionProps
   if (videos.length === 0) return null;
 
   const controls = (
-    <Select value={sort} onValueChange={(value) => setSort(value as PublicMediaSort)}>
+    <>
+      <SectionLocationFilter />
+      <Select value={sort} onValueChange={(value) => setSort(value as PublicMediaSort)}>
       <SelectTrigger className="w-36">
         <SelectValue placeholder="مرتب‌سازی" />
       </SelectTrigger>
@@ -101,6 +104,7 @@ export function VideosSection({ categories, videos, groups }: VideosSectionProps
         <SelectItem value="newest">جدیدترین</SelectItem>
       </SelectContent>
     </Select>
+    </>
   );
 
   return (

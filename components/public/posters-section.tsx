@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { CollapsibleSection } from "@/components/public/collapsible-section";
+import { SectionLocationFilter } from "@/components/public/section-location-filter";
 import { OwnerGroupedSection } from "@/components/public/owner-grouped-section";
 import { PosterCard } from "@/components/public/poster-card";
 import {
@@ -91,6 +92,7 @@ export function PostersSection({ categories, posters, groups }: PostersSectionPr
 
   const controls = (
     <>
+      <SectionLocationFilter />
       <Select value={sort} onValueChange={(value) => setSort(value as PublicMediaSort)}>
         <SelectTrigger className="w-36">
           <SelectValue placeholder="مرتب‌سازی" />

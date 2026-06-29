@@ -89,7 +89,7 @@ export function CampaignDashboard({ initialData, slug, exportMode = false }: Cam
 
   return (
     <CampaignExportProvider exportMode={exportMode}>
-    <OwnerLocationFilterProvider data={data}>
+    <OwnerLocationFilterProvider>
     <div className="min-h-screen" data-campaign-export-root>
       {exportMode && <CampaignScreenshotExporter slug={slug} title={settings.title} />}
       <header className="border-b bg-card/80 backdrop-blur-sm sticky top-0 z-40">

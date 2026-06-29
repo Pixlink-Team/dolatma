@@ -12,10 +12,7 @@ import { OWNER_LOCATION_ALL } from "@/lib/owner-location-filter";
 import { MapPin } from "lucide-react";
 
 export function OwnerLocationFilterBar() {
-  const { filter, setProvince, setCity, provinces, cities, hasContributorLocations } =
-    useOwnerLocationFilter();
-
-  if (!hasContributorLocations) return null;
+  const { filter, setProvince, setCity, provinces, cities } = useOwnerLocationFilter();
 
   return (
     <div
