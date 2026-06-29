@@ -465,7 +465,13 @@ export interface CampaignKPIs {
   totalVideos: number;
   totalSiteVisitors: number;
   totalSocialFollowers: number;
+  totalSocialPosts: number;
+  totalSitePublications: number;
+  totalBroadcastReports: number;
+  totalMeetings: number;
+  totalActivities: number;
   totalParticipants: number;
+  totalFiles: number;
 }
 
 export interface AnalyticsSummary {

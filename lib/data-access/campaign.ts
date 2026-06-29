@@ -245,26 +245,57 @@ function buildSectionVisibility(
   };
 }
 
+function buildKpiVisibility(features: CampaignSettings["features"]): SectionVisibility {
+  return {
+    billboards: features.billboards,
+    posters: features.posters,
+    videos: features.videos,
+    analytics: features.analytics,
+    socialAnalytics: features.socialAnalytics,
+    socialPosts: features.socialPosts ?? true,
+    sitePublications: features.sitePublications ?? true,
+    broadcastReports: features.broadcastReports ?? true,
+    meetings: features.meetings ?? true,
+    activities: features.activities ?? true,
+    submissions: features.submissions,
+    files: features.files,
+  };
+}
+
 function buildKPIs(
-  sections: SectionVisibility,
+  features: CampaignSettings["features"],
   data: {
     billboards: unknown[];
     posters: unknown[];
     videos: unknown[];
     analytics: AnalyticsSummary;
     socialAnalytics: SocialAnalyticsSummary;
+    socialPosts: unknown[];
+    sitePublications: unknown[];
+    broadcastReports: unknown[];
+    meetings: unknown[];
+    activities: unknown[];
     submissions: { participantName: string }[];
+    files: unknown[];
   }
 ): CampaignKPIs {
+  const visibility = buildKpiVisibility(features);
+
   return {
-    totalBillboards: sections.billboards ? data.billboards.length : 0,
-    totalPosters: sections.posters ? data.posters.length : 0,
-    totalVideos: sections.videos ? data.videos.length : 0,
-    totalSiteVisitors: sections.analytics ? data.analytics.totalVisitors : 0,
-    totalSocialFollowers: sections.socialAnalytics ? data.socialAnalytics.totalFollowers : 0,
-    totalParticipants: sections.submissions
+    totalBillboards: visibility.billboards ? data.billboards.length : 0,
+    totalPosters: visibility.posters ? data.posters.length : 0,
+    totalVideos: visibility.videos ? data.videos.length : 0,
+    totalSiteVisitors: visibility.analytics ? data.analytics.totalVisitors : 0,
+    totalSocialFollowers: visibility.socialAnalytics ? data.socialAnalytics.totalFollowers : 0,
+    totalSocialPosts: visibility.socialPosts ? data.socialPosts.length : 0,
+    totalSitePublications: visibility.sitePublications ? data.sitePublications.length : 0,
+    totalBroadcastReports: visibility.broadcastReports ? data.broadcastReports.length : 0,
+    totalMeetings: visibility.meetings ? data.meetings.length : 0,
+    totalActivities: visibility.activities ? data.activities.length : 0,
+    totalParticipants: visibility.submissions
       ? new Set(data.submissions.map((s) => s.participantName)).size
       : 0,
+    totalFiles: visibility.files ? data.files.length : 0,
   };
 }
 
@@ -368,13 +399,19 @@ function assemblePublicData(
     files,
   });
 
-  const kpis = buildKPIs(sections, {
+  const kpis = buildKPIs(settings.features, {
     billboards,
     posters,
     videos,
     analytics,
     socialAnalytics,
+    socialPosts,
+    sitePublications,
+    broadcastReports,
+    meetings,
+    activities,
     submissions,
+    files,
   });
 
   return {

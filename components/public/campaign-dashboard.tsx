@@ -4,9 +4,14 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import {
   ArrowRight,
+  CalendarDays,
+  FileText,
+  Globe,
   ImageIcon,
   LayoutGrid,
+  Megaphone,
   MonitorPlay,
+  Radio,
   RefreshCw,
   Share2,
   Users,
@@ -71,20 +76,34 @@ export function CampaignDashboard({ initialData, slug, exportMode = false }: Cam
   }, [refreshData, exportMode]);
 
   const { settings, kpis, sections } = data;
-  const usesMetabaseSiteEmbed = Boolean(data.analytics.metabaseEmbedUrl);
+  const kpiVisibility = {
+    billboards: settings.features.billboards,
+    posters: settings.features.posters,
+    videos: settings.features.videos,
+    analytics: settings.features.analytics,
+    socialAnalytics: settings.features.socialAnalytics,
+    socialPosts: settings.features.socialPosts ?? true,
+    sitePublications: settings.features.sitePublications ?? true,
+    broadcastReports: settings.features.broadcastReports ?? true,
+    meetings: settings.features.meetings ?? true,
+    activities: settings.features.activities ?? true,
+    submissions: settings.features.submissions,
+    files: settings.features.files,
+  };
 
   const kpiItems = [
-    { show: sections.billboards, title: "کل بیلبوردها", value: kpis.totalBillboards, icon: LayoutGrid },
-    { show: sections.posters, title: "کل پوسترها", value: kpis.totalPosters, icon: ImageIcon },
-    { show: sections.videos, title: "کل ویدیوها", value: kpis.totalVideos, icon: Video },
-    {
-      show: sections.analytics && !usesMetabaseSiteEmbed,
-      title: "بازدید سایت",
-      value: kpis.totalSiteVisitors,
-      icon: MonitorPlay,
-    },
-    { show: sections.socialAnalytics, title: "فالوور اجتماعی", value: kpis.totalSocialFollowers, icon: Share2 },
-    { show: sections.submissions, title: "شرکت‌کنندگان", value: kpis.totalParticipants, icon: Users },
+    { show: kpiVisibility.billboards, title: "کل بیلبوردها", value: kpis.totalBillboards, icon: LayoutGrid },
+    { show: kpiVisibility.posters, title: "کل پوسترها", value: kpis.totalPosters, icon: ImageIcon },
+    { show: kpiVisibility.videos, title: "کل ویدیوها", value: kpis.totalVideos, icon: Video },
+    { show: kpiVisibility.analytics, title: "بازدید سایت", value: kpis.totalSiteVisitors, icon: MonitorPlay },
+    { show: kpiVisibility.socialAnalytics, title: "فالوور اجتماعی", value: kpis.totalSocialFollowers, icon: Share2 },
+    { show: kpiVisibility.socialPosts, title: "پست‌های شبکه اجتماعی", value: kpis.totalSocialPosts, icon: Share2 },
+    { show: kpiVisibility.sitePublications, title: "انتشار در سایت", value: kpis.totalSitePublications, icon: Globe },
+    { show: kpiVisibility.broadcastReports, title: "گزارش پخش", value: kpis.totalBroadcastReports, icon: Radio },
+    { show: kpiVisibility.meetings, title: "جلسات", value: kpis.totalMeetings, icon: CalendarDays },
+    { show: kpiVisibility.activities, title: "اقدامات", value: kpis.totalActivities, icon: Megaphone },
+    { show: kpiVisibility.submissions, title: "شرکت‌کنندگان", value: kpis.totalParticipants, icon: Users },
+    { show: kpiVisibility.files, title: "فایل‌ها", value: kpis.totalFiles, icon: FileText },
   ].filter((k) => k.show);
 
   return (
@@ -130,7 +149,7 @@ export function CampaignDashboard({ initialData, slug, exportMode = false }: Cam
           </p>
 
           {kpiItems.length > 0 && (
-            <div className={`grid grid-cols-1 sm:grid-cols-2 gap-4 ${kpiItems.length >= 4 ? "lg:grid-cols-4" : "lg:grid-cols-3"}`}>
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
               {kpiItems.map((kpi) => (
                 <KPICard key={kpi.title} title={kpi.title} value={kpi.value} icon={kpi.icon} />
               ))}
