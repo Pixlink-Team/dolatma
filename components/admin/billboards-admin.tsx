@@ -30,13 +30,13 @@ import { AdminDataTable } from "@/components/admin/admin-data-table";
 import { adminOwnerTableColumn } from "@/components/admin/admin-owner-badge";
 import { MapBilboardBackupImportPanel } from "@/components/admin/map-bilboard-backup-import-panel";
 import { BillboardIntegrationImportPanel } from "@/components/admin/billboard-integration-import-panel";
-import { BillboardAdminAssignmentDialog } from "@/components/admin/billboard-admin-assignment-dialog";
-import { BillboardClientAssignmentDialog } from "@/components/admin/billboard-client-assignment-dialog";
+import { BillboardCreateAssignmentDialog } from "@/components/admin/billboard-create-assignment-dialog";
+import { BillboardAddPeriodDialog } from "@/components/admin/billboard-add-period-dialog";
 import { MediaUpload } from "@/components/ui/media-upload";
 import { PersianDateField } from "@/components/ui/persian-date-input";
 import { Badge } from "@/components/ui/badge";
 import { saveBillboardAction, deleteBillboardAction } from "@/lib/actions/admin-actions";
-import { isApiBillboard } from "@/lib/billboards";
+import { canManageBillboardPeriods, isApiBillboard } from "@/lib/billboards";
 import { todayISO } from "@/lib/jalali";
 import type { Billboard } from "@/lib/types";
 import { getStatusLabel } from "@/lib/utils";
@@ -88,8 +88,9 @@ export function BillboardsAdmin({
   const router = useRouter();
   const [billboards, setBillboards] = useState(initialBillboards);
   const [open, setOpen] = useState(false);
-  const [adminAssignOpen, setAdminAssignOpen] = useState(false);
-  const [clientAssignOpen, setClientAssignOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [periodOpen, setPeriodOpen] = useState(false);
+  const [periodBillboard, setPeriodBillboard] = useState<Billboard | null>(null);
   const [editing, setEditing] = useState<Billboard | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -220,14 +221,10 @@ export function BillboardsAdmin({
           <h1 className="text-2xl font-bold">بیلبوردها</h1>
           <p className="text-sm text-muted-foreground">
             {canUseMapBilboardForms ? (
-              isFullAdmin ? (
-                <>
-                  بیلبوردها از map-bilboard مدیریت می‌شوند. برای افزودن، بیلبورد موجود را به کمپین وصل کنید.
-                  {apiBillboardCount > 0 ? ` ${apiBillboardCount} مورد از API زنده نمایش داده می‌شود.` : ""}
-                </>
-              ) : (
-                <>بیلبورد جدید را با فرم ثبت کنید تا در map-bilboard ساخته و به کمپین وصل شود.</>
-              )
+              <>
+                بیلبوردها در map-bilboard ثبت می‌شوند. هر بار بیلبورد جدید بسازید و در صورت نیاز بعداً دوره نمایش اضافه کنید.
+                {apiBillboardCount > 0 ? ` ${apiBillboardCount} مورد از API زنده نمایش داده می‌شود.` : ""}
+              </>
             ) : (
               <>
                 بیلبوردهای دستی قابل ویرایش هستند.
@@ -252,17 +249,10 @@ export function BillboardsAdmin({
           </p>
         </div>
         {canUseMapBilboardForms ? (
-          isFullAdmin ? (
-            <Button onClick={() => setAdminAssignOpen(true)}>
-              <Plus className="h-4 w-4" />
-              اتصال بیلبورد
-            </Button>
-          ) : contributorProfile ? (
-            <Button onClick={() => setClientAssignOpen(true)}>
-              <Plus className="h-4 w-4" />
-              ثبت بیلبورد جدید
-            </Button>
-          ) : null
+          <Button onClick={() => setCreateOpen(true)}>
+            <Plus className="h-4 w-4" />
+            ثبت بیلبورد جدید
+          </Button>
         ) : (
           <Button onClick={openCreate}>
             <Plus className="h-4 w-4" />
@@ -283,24 +273,26 @@ export function BillboardsAdmin({
         onImported={() => router.refresh()}
       />
 
-      {canUseMapBilboardForms && externalCampaignId && isFullAdmin && (
-        <BillboardAdminAssignmentDialog
-          open={adminAssignOpen}
-          onOpenChange={setAdminAssignOpen}
+      {canUseMapBilboardForms && externalCampaignId && (
+        <BillboardCreateAssignmentDialog
+          open={createOpen}
+          onOpenChange={setCreateOpen}
           campaignId={campaignId}
           externalCampaignId={externalCampaignId}
-          onAssigned={() => router.refresh()}
+          mode={isFullAdmin ? "admin" : "client"}
+          contributorProfile={contributorProfile}
+          onCreated={() => router.refresh()}
         />
       )}
 
-      {canUseMapBilboardForms && externalCampaignId && contributorProfile && !isFullAdmin && (
-        <BillboardClientAssignmentDialog
-          open={clientAssignOpen}
-          onOpenChange={setClientAssignOpen}
+      {canUseMapBilboardForms && externalCampaignId && (
+        <BillboardAddPeriodDialog
+          open={periodOpen}
+          onOpenChange={setPeriodOpen}
           campaignId={campaignId}
           externalCampaignId={externalCampaignId}
-          contributorProfile={contributorProfile}
-          onAssigned={() => router.refresh()}
+          billboard={periodBillboard}
+          onAdded={() => router.refresh()}
         />
       )}
 
@@ -336,6 +328,29 @@ export function BillboardsAdmin({
             ),
           },
           { key: "sortOrder", label: "ترتیب" },
+          ...(canUseMapBilboardForms
+            ? [
+                {
+                  key: "periods",
+                  label: "دوره‌ها",
+                  render: (item: Billboard) =>
+                    canManageBillboardPeriods(item) ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setPeriodBillboard(item);
+                          setPeriodOpen(true);
+                        }}
+                      >
+                        افزودن دوره
+                      </Button>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    ),
+                },
+              ]
+            : []),
         ]}
         onEdit={openEdit}
         onDelete={handleDelete}

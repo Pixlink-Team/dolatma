@@ -1,4 +1,5 @@
 import {
+  getBillboardAssignmentTag,
   getExternalBillboardTag,
   type CampaignIntegrationResponse,
   type ExternalBillboard,
@@ -138,6 +139,7 @@ export function mapIntegrationBillboardToBillboard(
     external.quality_tier_label,
     external.billboard_type_label,
     getExternalBillboardTag(external.billboard_id),
+    getBillboardAssignmentTag(external.assignment_id),
   ].filter((tag): tag is string => Boolean(tag));
   const now = new Date().toISOString();
 

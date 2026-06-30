@@ -165,3 +165,12 @@ export interface CampaignIntegrationResponse {
 export function getExternalBillboardTag(externalId: string): string {
   return `map:${externalId}`;
 }
+
+export function getBillboardAssignmentTag(assignmentId: string): string {
+  return `assignment:${assignmentId}`;
+}
+
+export function parseBillboardAssignmentId(tags: string[]): string | null {
+  const tag = tags.find((item) => item.startsWith("assignment:"));
+  return tag ? tag.slice("assignment:".length) : null;
+}

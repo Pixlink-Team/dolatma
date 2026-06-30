@@ -1,3 +1,4 @@
+import { parseBillboardAssignmentId } from "@/lib/models/billboard-api";
 import {
   fetchAllExternalBillboards,
   fetchCampaignIntegration,
@@ -19,6 +20,19 @@ export function getBillboardExternalMapId(billboard: Billboard): string | null {
   if (billboard.id.startsWith("api-")) return billboard.id.slice(4);
   const mapTag = billboard.tags.find((tag) => tag.startsWith("map:"));
   return mapTag ? mapTag.slice(4) : null;
+}
+
+export function getBillboardAssignmentId(billboard: Billboard): string | null {
+  const fromTag = parseBillboardAssignmentId(billboard.tags);
+  if (fromTag) return fromTag;
+  if (billboard.source === "manual" && billboard.externalId?.trim()) {
+    return billboard.externalId.trim();
+  }
+  return null;
+}
+
+export function canManageBillboardPeriods(billboard: Billboard): boolean {
+  return Boolean(getBillboardAssignmentId(billboard) || getBillboardExternalMapId(billboard));
 }
 
 export function collectPersistedExternalBillboardIds(dbBillboards: Billboard[]): Set<string> {

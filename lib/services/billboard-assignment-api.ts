@@ -1,6 +1,5 @@
-import type { ExternalBillboard } from "@/lib/models/billboard-api";
 import { billboardApiRoutes } from "@/lib/routes/billboard-api";
-import { fetchAllExternalBillboards } from "@/lib/services/billboard-api";
+import { fetchCampaignIntegration } from "@/lib/services/billboard-api";
 
 const BILLBOARD_ASSIGNMENT_TIMEOUT_MS = 120_000;
 
@@ -72,47 +71,6 @@ function extractId(body: unknown, keys: string[]): string {
   }
 
   throw new Error("شناسه مورد انتظار از سرویس بیلبورد دریافت نشد");
-}
-
-async function fetchJsonPaginatedBillboards(url: string): Promise<ExternalBillboard[]> {
-  const firstResponse = await fetch(url, {
-    cache: "no-store",
-    headers: buildAuthHeaders(),
-    signal: AbortSignal.timeout(BILLBOARD_ASSIGNMENT_TIMEOUT_MS),
-  });
-  const firstPage = await parseJsonResponse<{
-    data?: ExternalBillboard[];
-    meta?: { last_page?: number };
-  }>(firstResponse);
-
-  const items = [...(firstPage.data ?? [])];
-  const lastPage = firstPage.meta?.last_page ?? 1;
-  const baseUrl = new URL(url);
-
-  for (let page = 2; page <= lastPage; page += 1) {
-    baseUrl.searchParams.set("page", String(page));
-    const response = await fetch(baseUrl.toString(), {
-      cache: "no-store",
-      headers: buildAuthHeaders(),
-      signal: AbortSignal.timeout(BILLBOARD_ASSIGNMENT_TIMEOUT_MS),
-    });
-    const nextPage = await parseJsonResponse<{ data?: ExternalBillboard[] }>(response);
-    items.push(...(nextPage.data ?? []));
-  }
-
-  return items;
-}
-
-export async function fetchAvailableSystemBillboards(
-  externalCampaignId: string
-): Promise<ExternalBillboard[]> {
-  const [allBillboards, attachedBillboards] = await Promise.all([
-    fetchJsonPaginatedBillboards(billboardApiRoutes.billboards({ perPage: 100 })),
-    fetchAllExternalBillboards(externalCampaignId),
-  ]);
-
-  const attachedIds = new Set(attachedBillboards.map((item) => item.id));
-  return allBillboards.filter((item) => !attachedIds.has(item.id));
 }
 
 export async function createSystemBillboard(params: {
@@ -213,4 +171,24 @@ export function computeDisplayRangeFromPeriods(
     displayStart: starts[0],
     displayEnd: ends[ends.length - 1],
   };
+}
+
+export async function resolveAssignmentIdForBillboard(params: {
+  externalCampaignSlug: string;
+  assignmentId?: string | null;
+  billboardExternalId?: string | null;
+}): Promise<string> {
+  if (params.assignmentId?.trim()) return params.assignmentId.trim();
+
+  const billboardId = params.billboardExternalId?.trim();
+  if (!billboardId) {
+    throw new Error("شناسه assignment یا بیلبورد الزامی است");
+  }
+
+  const integration = await fetchCampaignIntegration(params.externalCampaignSlug);
+  const match = integration.billboards.find((item) => item.billboard_id === billboardId);
+  if (!match?.assignment_id) {
+    throw new Error("assignment این بیلبورد در API یافت نشد");
+  }
+  return match.assignment_id;
 }

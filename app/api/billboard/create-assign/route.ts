@@ -8,61 +8,39 @@ import {
   attachBillboardToCampaign,
   computeDisplayRangeFromPeriods,
   createSystemBillboard,
+  type BillboardActingUser,
   type BillboardDisplayPeriodInput,
 } from "@/lib/services/billboard-assignment-api";
 
-function parsePeriods(formData: FormData): BillboardDisplayPeriodInput[] {
+function parseOptionalPeriods(formData: FormData): BillboardDisplayPeriodInput[] {
   const raw = formData.get("periods");
-  if (typeof raw !== "string" || !raw.trim()) {
-    throw new Error("حداقل یک دوره نمایش الزامی است");
-  }
+  if (typeof raw !== "string" || !raw.trim()) return [];
 
   const parsed = JSON.parse(raw) as Array<{
     title?: string;
     startDate: string;
     endDate: string;
     sortOrder: number;
-    imageKey: string;
-    billboardImageKey: string;
+    imageKey?: string;
+    billboardImageKey?: string;
   }>;
 
-  if (parsed.length === 0) {
-    throw new Error("حداقل یک دوره نمایش الزامی است");
-  }
-
-  return parsed.map((period, index) => {
-    const image = formData.get(period.imageKey);
-    const billboardImage = formData.get(period.billboardImageKey);
-
-    if (!(image instanceof File) || image.size === 0) {
-      throw new Error(`تصویر تأییدیه دوره ${index + 1} الزامی است`);
-    }
-    if (!(billboardImage instanceof File) || billboardImage.size === 0) {
-      throw new Error(`عکس بیلبورد دوره ${index + 1} الزامی است`);
-    }
-
-    return {
-      title: period.title,
-      startDate: period.startDate,
-      endDate: period.endDate,
-      sortOrder: period.sortOrder ?? index,
-      image,
-      billboardImage,
-    };
-  });
+  return parsed.map((period, index) => ({
+    title: period.title,
+    startDate: period.startDate,
+    endDate: period.endDate,
+    sortOrder: period.sortOrder ?? index,
+    image: period.imageKey ? (formData.get(period.imageKey) as File | null) : null,
+    billboardImage: period.billboardImageKey
+      ? (formData.get(period.billboardImageKey) as File | null)
+      : null,
+  }));
 }
 
 export async function POST(request: Request) {
   const session = await getAuthSession();
-  if (!session?.userId) {
+  if (!session?.userId && session?.type !== "env_admin") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  if (isFullAdmin(session)) {
-    return NextResponse.json(
-      { error: "ادمین باید از فرم اتصال بیلبورد موجود استفاده کند" },
-      { status: 400 }
-    );
   }
 
   const formData = await request.formData();
@@ -87,18 +65,31 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "کمپین یافت نشد" }, { status: 404 });
   }
 
-  const user = await pgGetUserById(session.userId);
-  if (!user) {
-    return NextResponse.json({ error: "کاربر یافت نشد" }, { status: 404 });
+  const fullAdmin = session ? isFullAdmin(session) : true;
+  let actingUser: BillboardActingUser | null = null;
+  let province = String(formData.get("province") ?? "").trim() || null;
+  let city = String(formData.get("city") ?? "").trim() || null;
+
+  if (!fullAdmin && session?.userId) {
+    const user = await pgGetUserById(session.userId);
+    if (!user) {
+      return NextResponse.json({ error: "کاربر یافت نشد" }, { status: 404 });
+    }
+    actingUser = { id: user.id, email: user.email, name: user.name };
+    province = user.province ?? province;
+    city = user.city ?? city;
   }
 
-  const actingUser = { id: user.id, email: user.email, name: user.name };
   const address = String(formData.get("address") ?? "").trim() || undefined;
   const areaSqmRaw = String(formData.get("area_sqm") ?? "").trim();
   const areaSqm = areaSqmRaw ? Number(areaSqmRaw) : undefined;
+  const notes = String(formData.get("notes") ?? "").trim() || null;
+  const executionImage = formData.get("execution_image");
+  const executionBlob =
+    executionImage instanceof File && executionImage.size > 0 ? executionImage : null;
 
   try {
-    const periods = parsePeriods(formData);
+    const periods = parseOptionalPeriods(formData);
     const { displayStart, displayEnd } = computeDisplayRangeFromPeriods(periods);
 
     const billboardId = await createSystemBillboard({
@@ -107,8 +98,8 @@ export async function POST(request: Request) {
       latitude,
       longitude,
       areaSqm: Number.isFinite(areaSqm) ? areaSqm : null,
-      province: user.province,
-      city: user.city,
+      province,
+      city,
       actingUser,
     });
 
@@ -117,6 +108,8 @@ export async function POST(request: Request) {
       billboardId,
       displayStart,
       displayEnd,
+      notes,
+      executionImage: executionBlob,
       actingUser,
     });
 
