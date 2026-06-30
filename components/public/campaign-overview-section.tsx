@@ -25,7 +25,7 @@ import {
   getOwnerLocationFilterLabel,
 } from "@/lib/filtered-campaign-kpis";
 import { isOwnerLocationFilterActive } from "@/lib/owner-location-filter";
-import type { CampaignSettings, PublicCampaignData } from "@/lib/types";
+import type { PublicCampaignData } from "@/lib/types";
 import { formatPersianDate } from "@/lib/utils";
 
 interface CampaignOverviewSectionProps {
