@@ -1,5 +1,5 @@
+import { collectPersistedExternalBillboardIds } from "@/lib/billboards";
 import { pgSaveBillboard } from "@/lib/db/repository";
-import { getExternalBillboardTag } from "@/lib/models/billboard-api";
 import {
   fetchCampaignIntegration,
   mapIntegrationBillboardToBillboard,
@@ -16,21 +16,15 @@ export interface IntegrationBillboardImportResult {
   total: number;
 }
 
-function isAlreadyImported(existing: Billboard[], externalBillboardId: string): boolean {
-  const tag = getExternalBillboardTag(externalBillboardId);
-  return existing.some(
-    (billboard) =>
-      billboard.tags.includes(tag) ||
-      billboard.externalId === externalBillboardId ||
-      billboard.id === `int-${externalBillboardId}`
-  );
+function isAlreadyImported(dbBillboards: Billboard[], externalBillboardId: string): boolean {
+  return collectPersistedExternalBillboardIds(dbBillboards).has(externalBillboardId);
 }
 
 export async function importIntegrationBillboards(params: {
   campaignId: string;
   externalCampaignSlug: string;
   users: AdminUser[];
-  existingBillboards: Billboard[];
+  dbBillboards: Billboard[];
 }): Promise<IntegrationBillboardImportResult> {
   const integration = await fetchCampaignIntegration(params.externalCampaignSlug);
 
@@ -38,7 +32,7 @@ export async function importIntegrationBillboards(params: {
   let skipped = 0;
   let skippedAdmin = 0;
   let matchedUsers = 0;
-  let sortOrder = params.existingBillboards.length;
+  let sortOrder = params.dbBillboards.length;
   const unmatchedOwners = new Set<string>();
 
   for (const item of integration.billboards) {
@@ -47,7 +41,7 @@ export async function importIntegrationBillboards(params: {
       continue;
     }
 
-    if (isAlreadyImported(params.existingBillboards, item.billboard_id)) {
+    if (isAlreadyImported(params.dbBillboards, item.billboard_id)) {
       skipped += 1;
       continue;
     }

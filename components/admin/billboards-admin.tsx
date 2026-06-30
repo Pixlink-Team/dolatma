@@ -228,7 +228,6 @@ export function BillboardsAdmin({
       <BillboardIntegrationImportPanel
         campaignId={campaignId}
         externalCampaignSlug={externalCampaignSlug}
-        existingBillboards={billboards}
         onImported={() => router.refresh()}
       />
 

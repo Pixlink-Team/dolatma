@@ -5,19 +5,15 @@ import { CloudDownload, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { Billboard } from "@/lib/types";
-
 interface BillboardIntegrationImportPanelProps {
   campaignId: string;
   externalCampaignSlug?: string | null;
-  existingBillboards: Billboard[];
   onImported?: () => void;
 }
 
 export function BillboardIntegrationImportPanel({
   campaignId,
   externalCampaignSlug,
-  existingBillboards,
   onImported,
 }: BillboardIntegrationImportPanelProps) {
   const [isPending, startTransition] = useTransition();
@@ -33,7 +29,7 @@ export function BillboardIntegrationImportPanel({
       const response = await fetch("/api/billboard/import", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ campaignId, existingBillboards }),
+        body: JSON.stringify({ campaignId }),
       });
 
       const result = await response.json();

@@ -2,11 +2,10 @@ import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
 import { getExternalCampaignSlug } from "@/lib/billboards";
-import { pgGetCampaignById } from "@/lib/db/repository";
+import { pgGetAdminData, pgGetCampaignById } from "@/lib/db/repository";
 import { pgGetAllUsers } from "@/lib/db/repository-extended";
 import { importIntegrationBillboards } from "@/lib/services/billboard-integration-import";
 import { isPostgresConfigured } from "@/lib/utils";
-import type { Billboard } from "@/lib/types";
 
 export async function POST(request: Request) {
   const session = await getAuthSession();
@@ -18,9 +17,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Database required" }, { status: 503 });
   }
 
-  let body: { campaignId?: string; existingBillboards?: Billboard[] };
+  let body: { campaignId?: string };
   try {
-    body = (await request.json()) as { campaignId?: string; existingBillboards?: Billboard[] };
+    body = (await request.json()) as { campaignId?: string };
   } catch {
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
   }
@@ -44,12 +43,13 @@ export async function POST(request: Request) {
   }
 
   try {
-    const users = await pgGetAllUsers();
+    const [users, adminData] = await Promise.all([pgGetAllUsers(), pgGetAdminData(campaignId)]);
+    const dbBillboards = adminData.billboards ?? [];
     const result = await importIntegrationBillboards({
       campaignId,
       externalCampaignSlug,
       users,
-      existingBillboards: body.existingBillboards ?? [],
+      dbBillboards,
     });
 
     revalidatePath("/admin/billboards");

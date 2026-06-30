@@ -13,16 +13,47 @@ export {
   hasBillboardDisplayImage,
 } from "@/lib/billboard-media";
 
+export function getBillboardExternalMapId(billboard: Billboard): string | null {
+  if (billboard.externalId?.trim()) return billboard.externalId.trim();
+  if (billboard.id.startsWith("int-")) return billboard.id.slice(4);
+  if (billboard.id.startsWith("api-")) return billboard.id.slice(4);
+  const mapTag = billboard.tags.find((tag) => tag.startsWith("map:"));
+  return mapTag ? mapTag.slice(4) : null;
+}
+
+export function collectPersistedExternalBillboardIds(dbBillboards: Billboard[]): Set<string> {
+  const ids = new Set<string>();
+  for (const billboard of dbBillboards) {
+    const externalId = getBillboardExternalMapId(billboard);
+    if (externalId) ids.add(externalId);
+  }
+  return ids;
+}
+
+/** Ephemeral billboards fetched live from map-bilboard API (not saved locally). */
+export function isLiveApiBillboard(billboard: Billboard): boolean {
+  return billboard.source === "api" || billboard.id.startsWith("api-");
+}
+
 export function isApiBillboard(billboard: Billboard): boolean {
-  return (
-    billboard.source === "api" ||
-    billboard.id.startsWith("api-") ||
-    billboard.tags.some((tag) => tag.startsWith("map:"))
-  );
+  return isLiveApiBillboard(billboard);
 }
 
 function isManualBillboard(billboard: Billboard): boolean {
-  return !isApiBillboard(billboard);
+  return !isLiveApiBillboard(billboard);
+}
+
+function excludePersistedLiveBillboards(
+  liveBillboards: Billboard[],
+  dbBillboards: Billboard[]
+): Billboard[] {
+  const persistedIds = collectPersistedExternalBillboardIds(dbBillboards);
+  if (persistedIds.size === 0) return liveBillboards;
+
+  return liveBillboards.filter((billboard) => {
+    const externalId = getBillboardExternalMapId(billboard);
+    return !externalId || !persistedIds.has(externalId);
+  });
 }
 
 export function getExternalCampaignSlug(settings: CampaignSettings): string | null {
@@ -84,7 +115,10 @@ export async function resolveAdminBillboards(
   }
 
   try {
-    const liveBillboards = await fetchLiveBillboards(settings, users);
+    const liveBillboards = excludePersistedLiveBillboards(
+      await fetchLiveBillboards(settings, users),
+      dbBillboards
+    );
     return [
       ...manualBillboards,
       ...liveBillboards.map((billboard, index) => ({
@@ -112,7 +146,10 @@ export async function resolvePublicBillboards(
   }
 
   try {
-    const liveBillboards = await fetchLiveBillboards(settings, users);
+    const liveBillboards = excludePersistedLiveBillboards(
+      await fetchLiveBillboards(settings, users),
+      dbBillboards
+    );
     return [
       ...manualBillboards,
       ...liveBillboards.map((billboard, index) => ({
