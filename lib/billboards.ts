@@ -53,6 +53,20 @@ export function isApiBillboard(billboard: Billboard): boolean {
   return isLiveApiBillboard(billboard);
 }
 
+export function billboardBelongsToUser(
+  billboard: Billboard,
+  ownerUserId: string
+): boolean {
+  return billboard.ownerUserId === ownerUserId;
+}
+
+export function filterBillboardsByOwnerUser(
+  billboards: Billboard[],
+  ownerUserId: string
+): Billboard[] {
+  return billboards.filter((billboard) => billboardBelongsToUser(billboard, ownerUserId));
+}
+
 function isManualBillboard(billboard: Billboard): boolean {
   return !isLiveApiBillboard(billboard);
 }
@@ -118,32 +132,41 @@ async function fetchLiveBillboards(
 export async function resolveAdminBillboards(
   settings: CampaignSettings,
   dbBillboards: Billboard[],
-  users: AdminUser[] = []
+  users: AdminUser[] = [],
+  ownerUserId?: string | null
 ): Promise<Billboard[]> {
   const manualBillboards = dbBillboards
     .filter(isManualBillboard)
     .sort((a, b) => a.sortOrder - b.sortOrder);
 
+  let resolved: Billboard[];
+
   if (!hasExternalBillboardConnection(settings)) {
-    return manualBillboards;
+    resolved = manualBillboards;
+  } else {
+    try {
+      const liveBillboards = excludePersistedLiveBillboards(
+        await fetchLiveBillboards(settings, users),
+        dbBillboards
+      );
+      resolved = [
+        ...manualBillboards,
+        ...liveBillboards.map((billboard, index) => ({
+          ...billboard,
+          sortOrder: manualBillboards.length + index + 1,
+        })),
+      ];
+    } catch (error) {
+      console.error("Admin billboard API fetch failed:", error);
+      resolved = manualBillboards;
+    }
   }
 
-  try {
-    const liveBillboards = excludePersistedLiveBillboards(
-      await fetchLiveBillboards(settings, users),
-      dbBillboards
-    );
-    return [
-      ...manualBillboards,
-      ...liveBillboards.map((billboard, index) => ({
-        ...billboard,
-        sortOrder: manualBillboards.length + index + 1,
-      })),
-    ];
-  } catch (error) {
-    console.error("Admin billboard API fetch failed:", error);
-    return manualBillboards;
+  if (ownerUserId) {
+    return filterBillboardsByOwnerUser(resolved, ownerUserId);
   }
+
+  return resolved;
 }
 
 export async function resolvePublicBillboards(

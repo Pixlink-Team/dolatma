@@ -18,6 +18,7 @@ import {
   Share2,
   Sparkles,
   Users,
+  UserCircle,
   Video,
   X,
 } from "lucide-react";
@@ -49,6 +50,7 @@ const allNavItems: {
   permissionKey?: ContributorPermissionKey;
 }[] = [
   { href: "/admin", label: "داشبورد", icon: LayoutDashboard },
+  { href: "/admin/profile", label: "پروفایل من", icon: UserCircle },
   { href: "/admin/settings", label: "تنظیمات کمپین", icon: Settings, adminOnly: true },
   { href: "/admin/billboards", label: "بیلبوردها", icon: LayoutGrid, permissionKey: "billboards" },
   { href: "/admin/posters", label: "پوسترها", icon: ImageIcon, permissionKey: "posters" },

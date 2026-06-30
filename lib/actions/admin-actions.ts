@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
+import * as pg from "@/lib/db/repository";
 import {
   deleteAnalyticsMetric,
   deleteBillboard,
@@ -36,6 +37,7 @@ import type {
   Video,
   VideoVersion,
 } from "@/lib/types";
+import { isPostgresConfigured } from "@/lib/utils";
 
 async function revalidateAll(slug?: string) {
   revalidatePath("/");
@@ -58,6 +60,21 @@ async function withOwnerScope<T extends { ownerUserId?: string | null }>(data: T
   const session = await getAuthSession();
   if (!session || isFullAdmin(session)) return data;
   return { ...data, ownerUserId: session.userId };
+}
+
+async function assertContributorOwnsBillboard(
+  billboardId: string
+): Promise<{ success: false; error: string } | null> {
+  const session = await getAuthSession();
+  if (!session || isFullAdmin(session)) return null;
+  if (!isPostgresConfigured()) return null;
+
+  const billboard = await pg.pgGetBillboardById(billboardId);
+  if (!billboard) return { success: false, error: "بیلبورد یافت نشد" };
+  if (billboard.ownerUserId !== session.userId) {
+    return { success: false, error: "دسترسی ندارید" };
+  }
+  return null;
 }
 
 export async function saveCampaignAction(data: Partial<CampaignSettings> & { id?: string }) {
@@ -84,12 +101,18 @@ export async function updateSettingsAction(data: Partial<CampaignSettings>) {
 }
 
 export async function saveBillboardAction(data: Partial<Billboard> & { id?: string }) {
+  if (data.id) {
+    const denied = await assertContributorOwnsBillboard(data.id);
+    if (denied) return denied;
+  }
   const result = await saveBillboard(await withOwnerScope(data));
   await revalidateAll();
   return result;
 }
 
 export async function deleteBillboardAction(id: string) {
+  const denied = await assertContributorOwnsBillboard(id);
+  if (denied) return denied;
   const result = await deleteBillboard(id);
   await revalidateAll();
   return result;

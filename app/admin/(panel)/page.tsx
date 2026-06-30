@@ -1,24 +1,22 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import {
-  BarChart3,
-  FileStack,
-  FileText,
-  FolderKanban,
-  ImageIcon,
-  LayoutGrid,
-  Settings,
-  Video,
-} from "lucide-react";
+import { FolderKanban, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { getAdminData, getAllUsers } from "@/lib/data-access/admin";
 import { resolveAdminCampaignId } from "@/lib/admin-campaign";
+import { DASHBOARD_STAT_DEFINITIONS } from "@/lib/admin-dashboard-stats";
 import { resolveAdminBillboards } from "@/lib/billboards";
 import type { Billboard, CampaignSettings } from "@/lib/types";
 import { CampaignTools } from "@/components/admin/campaign-tools";
-import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
+import { getAuthSession, getOwnerFilter, isFullAdmin } from "@/lib/auth/get-session";
+import {
+  defaultContributorPermissions,
+  hasContributorPermission,
+  type ContributorPermissions,
+} from "@/lib/contributor-permissions";
+import { pgGetUserPermissionsForCampaign } from "@/lib/db/repository-extended";
 import { formatPersianNumber, adminHref, isPostgresConfigured, isSupabaseConfigured } from "@/lib/utils";
 
 function getDatabaseLabel() {
@@ -41,34 +39,50 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
   if (!data.settings) redirect("/admin/campaigns");
   const session = await getAuthSession();
   const canManageAll = session ? isFullAdmin(session) : true;
+  const ownerUserId = session ? getOwnerFilter(session) : undefined;
 
   const features = data.settings.features;
+  let contributorPermissions: ContributorPermissions | null = null;
+  if (!canManageAll && session?.userId) {
+    contributorPermissions =
+      (await pgGetUserPermissionsForCampaign(session.userId, campaignId)) ??
+      defaultContributorPermissions();
+  }
+
   const users = await getAllUsers();
   const billboards = data.settings
     ? await resolveAdminBillboards(
         data.settings as CampaignSettings,
         (data.billboards ?? []) as Billboard[],
-        users
+        users,
+        ownerUserId
       )
     : [];
 
-  const stats = [
-    { label: "بیلبوردها", value: billboards.length, href: adminHref("/admin/billboards", campaignId), icon: LayoutGrid, show: features.billboards },
-    { label: "پوسترها", value: data.posters.length, href: adminHref("/admin/posters", campaignId), icon: ImageIcon, show: features.posters },
-    { label: "ویدیوها", value: data.videos.length, href: adminHref("/admin/videos", campaignId), icon: Video, show: features.videos },
-    { label: "فایل‌ها", value: (data.files ?? []).length, href: adminHref("/admin/files", campaignId), icon: FileStack, show: features.files },
-    { label: "ارسال‌ها", value: data.submissions.length, href: adminHref("/admin/submissions", campaignId), icon: FileText, show: features.submissions },
-    { label: "رکورد آمار", value: data.analytics.length, href: adminHref("/admin/analytics", campaignId), icon: BarChart3, show: features.analytics },
-  ].filter((s) => s.show);
+  const stats = DASHBOARD_STAT_DEFINITIONS.filter((definition) =>
+    canManageAll
+      ? features[definition.featureKey]
+      : hasContributorPermission(contributorPermissions, definition.permissionKey)
+  ).map((definition) => ({
+    label: definition.label,
+    value: definition.getCount(data, billboards),
+    href: adminHref(definition.href, campaignId),
+    icon: definition.icon,
+  }));
 
   const pendingSubmissions = data.submissions.filter((s) => s.status === "pending").length;
+  const showSubmissionsAlert = canManageAll
+    ? features.submissions
+    : hasContributorPermission(contributorPermissions, "submissions");
 
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-2xl font-bold">داشبورد</h1>
-          <p className="text-muted-foreground text-sm">{data.settings.title}</p>
+          <p className="text-muted-foreground text-sm">
+            {canManageAll ? data.settings.title : `${data.settings.title} — آمار آپلودهای شما`}
+          </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <Link href="/admin/campaigns">
@@ -77,15 +91,15 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
               مدیریت کمپین‌ها
             </Button>
           </Link>
-          <Badge variant="success">
-            {getDatabaseLabel()}
-          </Badge>
-          <Link href={adminHref("/admin/settings", campaignId)}>
-            <Badge variant="outline" className="gap-1 cursor-pointer">
-              <Settings className="h-3 w-3" />
-              تنظیمات
-            </Badge>
-          </Link>
+          <Badge variant="success">{getDatabaseLabel()}</Badge>
+          {canManageAll && (
+            <Link href={adminHref("/admin/settings", campaignId)}>
+              <Badge variant="outline" className="gap-1 cursor-pointer">
+                <Settings className="h-3 w-3" />
+                تنظیمات
+              </Badge>
+            </Link>
+          )}
         </div>
       </div>
 
@@ -102,26 +116,31 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
               {data.settings.status === "live" ? "زنده" : "پایان‌یافته"}
             </Badge>
             <Link href={`/campaign/${data.settings.slug}`} target="_blank">
-              <Badge variant="outline" className="cursor-pointer">مشاهده صفحه عمومی</Badge>
+              <Badge variant="outline" className="cursor-pointer">
+                مشاهده صفحه عمومی
+              </Badge>
             </Link>
           </div>
         </CardContent>
       </Card>
 
       {stats.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
           {stats.map((stat) => {
             const Icon = stat.icon;
             return (
               <Link key={stat.href} href={stat.href}>
-                <Card className="hover:shadow-md transition-shadow cursor-pointer">
+                <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
                   <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-3">
                       <div>
                         <p className="text-sm text-muted-foreground">{stat.label}</p>
                         <p className="text-2xl font-bold">{formatPersianNumber(stat.value)}</p>
+                        {!canManageAll && (
+                          <p className="text-xs text-muted-foreground mt-1">مورد ثبت‌شده</p>
+                        )}
                       </div>
-                      <Icon className="h-5 w-5 text-primary" />
+                      <Icon className="h-5 w-5 text-primary shrink-0" />
                     </div>
                   </CardContent>
                 </Card>
@@ -132,19 +151,23 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
       ) : (
         <Card>
           <CardContent className="p-6 text-sm text-muted-foreground">
-            هیچ بخشی برای این کمپین فعال نیست. از تنظیمات کمپین بخش‌های مورد نظر را فعال کنید.
+            {canManageAll
+              ? "هیچ بخشی برای این کمپین فعال نیست. از تنظیمات کمپین بخش‌های مورد نظر را فعال کنید."
+              : "هیچ بخشی برای شما در این کمپین فعال نیست. با مدیر تماس بگیرید."}
           </CardContent>
         </Card>
       )}
 
-      {features.submissions && pendingSubmissions > 0 && (
+      {showSubmissionsAlert && pendingSubmissions > 0 && (
         <Card className="border-amber-200 bg-amber-50">
           <CardContent className="p-4 flex items-center justify-between">
             <p className="text-sm">
               {formatPersianNumber(pendingSubmissions)} ارسال در انتظار بررسی
             </p>
             <Link href={adminHref("/admin/submissions", campaignId)}>
-              <Badge variant="warning" className="cursor-pointer">مشاهده</Badge>
+              <Badge variant="warning" className="cursor-pointer">
+                مشاهده
+              </Badge>
             </Link>
           </CardContent>
         </Card>

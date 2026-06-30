@@ -261,17 +261,21 @@ export function BillboardsAdmin({
         )}
       </div>
 
-      <BillboardIntegrationImportPanel
-        campaignId={campaignId}
-        externalCampaignSlug={externalCampaignSlug}
-        onImported={() => router.refresh()}
-      />
+      {isFullAdmin && (
+        <>
+          <BillboardIntegrationImportPanel
+            campaignId={campaignId}
+            externalCampaignSlug={externalCampaignSlug}
+            onImported={() => router.refresh()}
+          />
 
-      <MapBilboardBackupImportPanel
-        campaignId={campaignId}
-        externalCampaignSlug={externalCampaignSlug}
-        onImported={() => router.refresh()}
-      />
+          <MapBilboardBackupImportPanel
+            campaignId={campaignId}
+            externalCampaignSlug={externalCampaignSlug}
+            onImported={() => router.refresh()}
+          />
+        </>
+      )}
 
       {canUseMapBilboardForms && externalCampaignId && (
         <BillboardCreateAssignmentDialog
@@ -311,7 +315,7 @@ export function BillboardsAdmin({
               ),
           },
           { key: "title", label: "عنوان" },
-          adminOwnerTableColumn<Billboard>(),
+          ...(isFullAdmin ? [adminOwnerTableColumn<Billboard>()] : []),
           { key: "city", label: "شهر" },
           {
             key: "status",

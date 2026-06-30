@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getAdminData, getAllUsers } from "@/lib/data-access/admin";
 import { resolveAdminCampaignId } from "@/lib/admin-campaign";
-import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
+import { getAuthSession, getOwnerFilter, isFullAdmin } from "@/lib/auth/get-session";
 import { requireContributorAccess } from "@/lib/auth/require-contributor-access";
 import { pgGetUserById } from "@/lib/db/repository-extended";
 import {
@@ -24,6 +24,7 @@ export default async function BillboardsPage({ searchParams }: PageProps) {
 
   const session = await getAuthSession();
   const fullAdmin = session ? isFullAdmin(session) : true;
+  const ownerUserId = session ? getOwnerFilter(session) : undefined;
   let contributorProfile = null;
 
   if (session?.userId) {
@@ -43,8 +44,10 @@ export default async function BillboardsPage({ searchParams }: PageProps) {
   const dbBillboards = (data.billboards ?? []) as Billboard[];
   const settings = data.settings as CampaignSettings | null;
   const billboards = settings
-    ? await resolveAdminBillboards(settings, dbBillboards, users)
-    : dbBillboards;
+    ? await resolveAdminBillboards(settings, dbBillboards, users, ownerUserId)
+    : ownerUserId
+      ? dbBillboards.filter((billboard) => billboard.ownerUserId === ownerUserId)
+      : dbBillboards;
 
   return (
     <BillboardsAdmin

@@ -320,6 +320,18 @@ export async function pgSaveBillboard(data: Partial<Billboard> & { id?: string }
   return { success: true };
 }
 
+export async function pgGetBillboardById(id: string): Promise<Billboard | null> {
+  const sql = getSql();
+  const rows = await sql`
+    SELECT b.*, u.name AS owner_name, u.province AS owner_province, u.city AS owner_city
+    FROM billboards b
+    LEFT JOIN users u ON u.id = b.owner_user_id
+    WHERE b.id = ${id}
+    LIMIT 1
+  `;
+  return rows[0] ? mapBillboardFromDb(rows[0]) : null;
+}
+
 export async function pgDeleteBillboard(id: string) {
   const sql = getSql();
   await sql`DELETE FROM billboards WHERE id = ${id}`;

@@ -20,6 +20,7 @@ async function revalidateExtended(slug?: string) {
   revalidatePath("/admin/broadcast");
   revalidatePath("/admin/meetings");
   revalidatePath("/admin/users");
+  revalidatePath("/admin/profile");
   revalidatePath("/admin/analytics");
   if (slug) revalidatePath(`/campaign/${slug}`);
 }
@@ -230,6 +231,38 @@ export async function toggleMeetingTaskAction(taskId: string, completed: boolean
   await pgExt.pgToggleMeetingTask(taskId, completed);
   await revalidateExtended();
   return { success: true };
+}
+
+export async function saveProfileAction(data: {
+  name: string;
+  province?: string | null;
+  city?: string | null;
+}) {
+  const session = await getAuthSession();
+  if (!session?.userId) {
+    return { success: false, error: "Unauthorized" };
+  }
+  if (!isPostgresConfigured()) {
+    return { success: false, error: "Database required" };
+  }
+
+  const user = await pgExt.pgGetUserById(session.userId);
+  if (!user) {
+    return { success: false, error: "کاربر یافت نشد" };
+  }
+
+  const result = await pgExt.pgSaveUser({
+    id: session.userId,
+    email: user.email,
+    name: data.name,
+    role: user.role,
+    province: data.province,
+    city: data.city,
+    campaignIds: user.campaignIds,
+    campaignPermissions: user.campaignPermissions,
+  });
+  await revalidateExtended();
+  return result;
 }
 
 export async function saveUserAction(data: {
