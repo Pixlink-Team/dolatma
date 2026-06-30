@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ImageFileDropzone } from "@/components/ui/image-file-dropzone";
 import {
   Dialog,
   DialogContent,
@@ -20,10 +19,10 @@ import {
   appendPeriodFilesToFormData,
   BillboardDisplayPeriodsEditor,
   buildPeriodsFormPayload,
+  createDisplayPeriod,
   type DisplayPeriodDraft,
 } from "@/components/admin/billboard-display-periods-editor";
 import { getLocationCenter, resolveLocationNames } from "@/lib/iran-location-center";
-import { todayISO } from "@/lib/jalali";
 
 interface ContributorProfile {
   province?: string | null;
@@ -42,21 +41,6 @@ interface BillboardCreateAssignmentDialogProps {
   onCreated?: () => void;
 }
 
-function buildDefaultPeriod(
-  billboardImage: File,
-  confirmationImage: File | null
-): DisplayPeriodDraft {
-  const today = todayISO();
-  return {
-    id: crypto.randomUUID(),
-    title: "",
-    startDate: today,
-    endDate: today,
-    imageFile: confirmationImage,
-    billboardImageFile: billboardImage,
-  };
-}
-
 export function BillboardCreateAssignmentDialog({
   open,
   onOpenChange,
@@ -73,11 +57,9 @@ export function BillboardCreateAssignmentDialog({
   const [areaSqm, setAreaSqm] = useState("");
   const [address, setAddress] = useState("");
   const [notes, setNotes] = useState("");
-  const [billboardImage, setBillboardImage] = useState<File | null>(null);
-  const [confirmationImage, setConfirmationImage] = useState<File | null>(null);
   const [coords, setCoords] = useState({ latitude: 35.6892, longitude: 51.389 });
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | null>(null);
-  const [periods, setPeriods] = useState<DisplayPeriodDraft[]>([]);
+  const [periods, setPeriods] = useState<DisplayPeriodDraft[]>([createDisplayPeriod()]);
 
   useEffect(() => {
     if (!open) return;
@@ -93,15 +75,13 @@ export function BillboardCreateAssignmentDialog({
     setAreaSqm("");
     setAddress("");
     setNotes("");
-    setBillboardImage(null);
-    setConfirmationImage(null);
     setCoords({ latitude: center.lat, longitude: center.lng });
-    setMapCenter(center);
-    setPeriods([]);
+    setMapCenter({ lat: center.lat, lng: center.lng });
+    setPeriods([createDisplayPeriod()]);
   }, [open, contributorProfile]);
 
   const handleLocationCenterChange = (center: { lat: number; lng: number }) => {
-    setMapCenter(center);
+    setMapCenter({ lat: center.lat, lng: center.lng });
     setCoords({ latitude: center.lat, longitude: center.lng });
   };
 
@@ -110,8 +90,14 @@ export function BillboardCreateAssignmentDialog({
       toast.error("محور باید حداقل ۲ کاراکتر باشد");
       return;
     }
-    if (!billboardImage) {
-      toast.error("عکس بیلبورد الزامی است");
+
+    const period = periods[0];
+    if (!period?.startDate || !period.endDate) {
+      toast.error("تاریخ شروع و پایان دوره نمایش الزامی است");
+      return;
+    }
+    if (!period.billboardImageFile) {
+      toast.error("عکس بیلبورد در دوره نمایش الزامی است");
       return;
     }
 
@@ -131,11 +117,9 @@ export function BillboardCreateAssignmentDialog({
       if (resolvedProvince) formData.append("province", resolvedProvince);
       if (resolvedCity) formData.append("city", resolvedCity);
       if (notes.trim()) formData.append("notes", notes.trim());
-      if (confirmationImage) formData.append("execution_image", confirmationImage);
+      if (period.imageFile) formData.append("execution_image", period.imageFile);
 
-      const periodsToSubmit =
-        periods.length > 0 ? periods : [buildDefaultPeriod(billboardImage, confirmationImage)];
-
+      const periodsToSubmit = [period];
       formData.append("periods", JSON.stringify(buildPeriodsFormPayload(periodsToSubmit)));
       appendPeriodFilesToFormData(formData, periodsToSubmit);
 
@@ -162,9 +146,9 @@ export function BillboardCreateAssignmentDialog({
           <DialogTitle>ثبت بیلبورد جدید</DialogTitle>
           <p className="text-sm text-muted-foreground">
             {contributorProfile?.province && contributorProfile?.city
-              ? `استان و شهر از پروفایل ${contributorProfile.name} پر شده‌اند. نقشه روی همان منطقه متمرکز می‌شود.`
+              ? `استان و شهر از پروفایل ${contributorProfile.name} پر شده‌اند.`
               : "استان و شهر را انتخاب کنید تا نقشه به همان موقعیت برود."}
-            {" "}دوره نمایش اختیاری است و بعداً هم قابل افزودن است.
+            {" "}یک دوره نمایش با عکس بیلبورد الزامی است.
           </p>
         </DialogHeader>
 
@@ -209,21 +193,6 @@ export function BillboardCreateAssignmentDialog({
             />
           </div>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <ImageFileDropzone
-              label="عکس بیلبورد"
-              required
-              value={billboardImage}
-              onChange={setBillboardImage}
-            />
-            <ImageFileDropzone
-              label="تصویر تأییدیه"
-              optionalHint="اختیاری"
-              value={confirmationImage}
-              onChange={setConfirmationImage}
-            />
-          </div>
-
           {mode === "admin" && (
             <div className="space-y-2">
               <Label>یادداشت داخلی</Label>
@@ -231,7 +200,12 @@ export function BillboardCreateAssignmentDialog({
             </div>
           )}
 
-          <BillboardDisplayPeriodsEditor periods={periods} onChange={setPeriods} />
+          <BillboardDisplayPeriodsEditor
+            periods={periods}
+            onChange={setPeriods}
+            singlePeriod
+            requireBillboardImage
+          />
 
           <Button type="button" className="w-full" disabled={isPending} onClick={handleSubmit}>
             {isPending ? (

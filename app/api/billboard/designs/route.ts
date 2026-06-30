@@ -22,8 +22,8 @@ function parseRequiredPeriods(formData: FormData): BillboardDisplayPeriodInput[]
     startDate: string;
     endDate: string;
     sortOrder: number;
-    imageKey: string;
-    billboardImageKey: string;
+    imageKey?: string;
+    billboardImageKey?: string;
   }>;
 
   if (parsed.length === 0) {
@@ -31,12 +31,11 @@ function parseRequiredPeriods(formData: FormData): BillboardDisplayPeriodInput[]
   }
 
   return parsed.map((period, index) => {
-    const image = formData.get(period.imageKey);
-    const billboardImage = formData.get(period.billboardImageKey);
+    const billboardImage = period.billboardImageKey
+      ? formData.get(period.billboardImageKey)
+      : null;
+    const image = period.imageKey ? formData.get(period.imageKey) : null;
 
-    if (!(image instanceof File) || image.size === 0) {
-      throw new Error(`تصویر تأییدیه دوره ${index + 1} الزامی است`);
-    }
     if (!(billboardImage instanceof File) || billboardImage.size === 0) {
       throw new Error(`عکس بیلبورد دوره ${index + 1} الزامی است`);
     }
@@ -46,7 +45,7 @@ function parseRequiredPeriods(formData: FormData): BillboardDisplayPeriodInput[]
       startDate: period.startDate,
       endDate: period.endDate,
       sortOrder: period.sortOrder ?? index,
-      image,
+      image: image instanceof File && image.size > 0 ? image : null,
       billboardImage,
     };
   });

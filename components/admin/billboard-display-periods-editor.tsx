@@ -1,7 +1,5 @@
 "use client";
 
-import { Plus, Trash2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ImageFileDropzone } from "@/components/ui/image-file-dropzone";
@@ -20,10 +18,12 @@ export interface DisplayPeriodDraft {
 interface BillboardDisplayPeriodsEditorProps {
   periods: DisplayPeriodDraft[];
   onChange: (periods: DisplayPeriodDraft[]) => void;
-  requireImages?: boolean;
+  singlePeriod?: boolean;
+  requireBillboardImage?: boolean;
+  requireConfirmationImage?: boolean;
 }
 
-function createPeriod(): DisplayPeriodDraft {
+export function createDisplayPeriod(): DisplayPeriodDraft {
   const today = todayISO();
   return {
     id: crypto.randomUUID(),
@@ -38,96 +38,74 @@ function createPeriod(): DisplayPeriodDraft {
 export function BillboardDisplayPeriodsEditor({
   periods,
   onChange,
-  requireImages = false,
+  singlePeriod = false,
+  requireBillboardImage = false,
+  requireConfirmationImage = false,
 }: BillboardDisplayPeriodsEditorProps) {
   const updatePeriod = (id: string, patch: Partial<DisplayPeriodDraft>) => {
     onChange(periods.map((period) => (period.id === id ? { ...period, ...patch } : period)));
   };
 
-  const removePeriod = (id: string) => {
-    onChange(periods.filter((period) => period.id !== id));
-  };
+  const visiblePeriods = singlePeriod ? periods.slice(0, 1) : periods;
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <Label className="text-sm font-semibold">دوره‌های نمایش</Label>
-          <p className="text-xs text-muted-foreground">
-            {requireImages
-              ? "حداقل یک دوره با عکس بیلبورد و تصویر تأییدیه الزامی است."
-              : "اختیاری — برای هر دوره می‌توانید تصویر جداگانه ثبت کنید."}
-          </p>
-        </div>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => onChange([...periods, createPeriod()])}
-        >
-          <Plus className="h-4 w-4" />
-          افزودن دوره
-        </Button>
+      <div>
+        <Label className="text-sm font-semibold">دوره نمایش *</Label>
+        <p className="text-xs text-muted-foreground">
+          عکس بیلبورد الزامی است. تصویر تأییدیه اختیاری است.
+        </p>
       </div>
 
-      {periods.length === 0 ? (
-        <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
-          هنوز دوره‌ای اضافه نشده است.
-        </div>
-      ) : (
-        periods.map((period, index) => (
-          <div key={period.id} className="space-y-3 rounded-lg border p-4">
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-sm font-medium">دوره {index + 1}</p>
-              <Button type="button" variant="ghost" size="icon" onClick={() => removePeriod(period.id)}>
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
+      {visiblePeriods.map((period, index) => (
+        <div key={period.id} className="space-y-3 rounded-lg border p-4">
+          {!singlePeriod && (
+            <p className="text-sm font-medium">دوره {index + 1}</p>
+          )}
 
+          <div className="space-y-2">
+            <Label>عنوان (اختیاری)</Label>
+            <Input
+              value={period.title}
+              onChange={(event) => updatePeriod(period.id, { title: event.target.value })}
+              placeholder="مثلاً فاز اول"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label>عنوان (اختیاری)</Label>
-              <Input
-                value={period.title}
-                onChange={(event) => updatePeriod(period.id, { title: event.target.value })}
-                placeholder="مثلاً فاز اول"
+              <Label>شروع نمایش *</Label>
+              <PersianDateInput
+                value={period.startDate}
+                onChange={(startDate) => updatePeriod(period.id, { startDate })}
               />
             </div>
-
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label>شروع نمایش</Label>
-                <PersianDateInput
-                  value={period.startDate}
-                  onChange={(startDate) => updatePeriod(period.id, { startDate })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>پایان نمایش</Label>
-                <PersianDateInput
-                  value={period.endDate}
-                  onChange={(endDate) => updatePeriod(period.id, { endDate })}
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <ImageFileDropzone
-                label="عکس بیلبورد"
-                required={requireImages}
-                value={period.billboardImageFile}
-                onChange={(file) => updatePeriod(period.id, { billboardImageFile: file })}
-              />
-              <ImageFileDropzone
-                label="تصویر تأییدیه"
-                required={requireImages}
-                optionalHint={requireImages ? undefined : "اختیاری"}
-                value={period.imageFile}
-                onChange={(file) => updatePeriod(period.id, { imageFile: file })}
+            <div className="space-y-2">
+              <Label>پایان نمایش *</Label>
+              <PersianDateInput
+                value={period.endDate}
+                onChange={(endDate) => updatePeriod(period.id, { endDate })}
               />
             </div>
           </div>
-        ))
-      )}
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <ImageFileDropzone
+              label="عکس بیلبورد"
+              required={requireBillboardImage}
+              value={period.billboardImageFile}
+              onChange={(file) => updatePeriod(period.id, { billboardImageFile: file })}
+            />
+            <ImageFileDropzone
+              label="تصویر تأییدیه"
+              required={requireConfirmationImage}
+              optionalHint={requireConfirmationImage ? undefined : "اختیاری"}
+              value={period.imageFile}
+              onChange={(file) => updatePeriod(period.id, { imageFile: file })}
+            />
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

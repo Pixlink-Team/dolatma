@@ -101,3 +101,11 @@ export function resolveLocationNames(
 export function isKnownProvince(value: string): boolean {
   return (IRAN_PROVINCES as readonly string[]).includes(value);
 }
+
+export function getProvinceCityOptions(province: string): string[] {
+  const provinceData = findProvinceByName(normalizeImportedProvince(province) ?? province);
+  if (provinceData) {
+    return provinceData.cities.map((item) => item.name);
+  }
+  return getCitiesForProvince(province);
+}

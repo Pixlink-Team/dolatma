@@ -14,11 +14,11 @@ import {
   appendPeriodFilesToFormData,
   BillboardDisplayPeriodsEditor,
   buildPeriodsFormPayload,
+  createDisplayPeriod,
   type DisplayPeriodDraft,
 } from "@/components/admin/billboard-display-periods-editor";
 import { getBillboardAssignmentId, getBillboardExternalMapId } from "@/lib/billboards";
 import type { Billboard } from "@/lib/types";
-import { todayISO } from "@/lib/jalali";
 
 interface BillboardAddPeriodDialogProps {
   open: boolean;
@@ -30,15 +30,7 @@ interface BillboardAddPeriodDialogProps {
 }
 
 function createInitialPeriod(): DisplayPeriodDraft {
-  const today = todayISO();
-  return {
-    id: crypto.randomUUID(),
-    title: "",
-    startDate: today,
-    endDate: today,
-    imageFile: null,
-    billboardImageFile: null,
-  };
+  return createDisplayPeriod();
 }
 
 export function BillboardAddPeriodDialog({
@@ -59,8 +51,10 @@ export function BillboardAddPeriodDialog({
 
   const handleSubmit = () => {
     if (!billboard) return;
-    if (periods.length === 0) {
-      toast.error("حداقل یک دوره نمایش الزامی است");
+
+    const period = periods[0];
+    if (!period?.billboardImageFile) {
+      toast.error("عکس بیلبورد الزامی است");
       return;
     }
 
@@ -70,8 +64,8 @@ export function BillboardAddPeriodDialog({
       formData.append("externalCampaignId", externalCampaignId);
       formData.append("assignmentId", getBillboardAssignmentId(billboard) ?? "");
       formData.append("billboardExternalId", getBillboardExternalMapId(billboard) ?? "");
-      formData.append("periods", JSON.stringify(buildPeriodsFormPayload(periods)));
-      appendPeriodFilesToFormData(formData, periods);
+      formData.append("periods", JSON.stringify(buildPeriodsFormPayload([period])));
+      appendPeriodFilesToFormData(formData, [period]);
 
       const response = await fetch("/api/billboard/designs", {
         method: "POST",
@@ -102,7 +96,12 @@ export function BillboardAddPeriodDialog({
           </p>
         </DialogHeader>
 
-        <BillboardDisplayPeriodsEditor periods={periods} onChange={setPeriods} requireImages />
+        <BillboardDisplayPeriodsEditor
+          periods={periods}
+          onChange={setPeriods}
+          singlePeriod
+          requireBillboardImage
+        />
 
         <Button type="button" className="w-full" disabled={isPending} onClick={handleSubmit}>
           {isPending ? (

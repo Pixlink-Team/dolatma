@@ -10,10 +10,9 @@ import {
 } from "@/components/ui/select";
 import {
   ensureSelectOptions,
-  getCitiesForProvince,
   IRAN_PROVINCES,
 } from "@/lib/iran-locations";
-import { getLocationCenter, resolveLocationNames } from "@/lib/iran-location-center";
+import { getLocationCenter, getProvinceCityOptions, resolveLocationNames } from "@/lib/iran-location-center";
 
 interface ProvinceCityFieldsProps {
   province: string;
@@ -33,7 +32,7 @@ export function ProvinceCityFields({
   onLocationCenterChange,
 }: ProvinceCityFieldsProps) {
   const provinceOptions = ensureSelectOptions([...IRAN_PROVINCES], province);
-  const cityOptions = ensureSelectOptions(getCitiesForProvince(province), city);
+  const cityOptions = ensureSelectOptions(getProvinceCityOptions(province), city);
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

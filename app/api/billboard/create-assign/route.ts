@@ -12,9 +12,11 @@ import {
   type BillboardDisplayPeriodInput,
 } from "@/lib/services/billboard-assignment-api";
 
-function parseOptionalPeriods(formData: FormData): BillboardDisplayPeriodInput[] {
+function parseRequiredPeriods(formData: FormData): BillboardDisplayPeriodInput[] {
   const raw = formData.get("periods");
-  if (typeof raw !== "string" || !raw.trim()) return [];
+  if (typeof raw !== "string" || !raw.trim()) {
+    throw new Error("دوره نمایش الزامی است");
+  }
 
   const parsed = JSON.parse(raw) as Array<{
     title?: string;
@@ -25,16 +27,30 @@ function parseOptionalPeriods(formData: FormData): BillboardDisplayPeriodInput[]
     billboardImageKey?: string;
   }>;
 
-  return parsed.map((period, index) => ({
-    title: period.title,
-    startDate: period.startDate,
-    endDate: period.endDate,
-    sortOrder: period.sortOrder ?? index,
-    image: period.imageKey ? (formData.get(period.imageKey) as File | null) : null,
-    billboardImage: period.billboardImageKey
-      ? (formData.get(period.billboardImageKey) as File | null)
-      : null,
-  }));
+  if (parsed.length === 0) {
+    throw new Error("دوره نمایش الزامی است");
+  }
+
+  return parsed.map((period, index) => {
+    const billboardImage = period.billboardImageKey
+      ? formData.get(period.billboardImageKey)
+      : null;
+
+    if (!(billboardImage instanceof File) || billboardImage.size === 0) {
+      throw new Error("عکس بیلبورد در دوره نمایش الزامی است");
+    }
+
+    const image = period.imageKey ? formData.get(period.imageKey) : null;
+
+    return {
+      title: period.title,
+      startDate: period.startDate,
+      endDate: period.endDate,
+      sortOrder: period.sortOrder ?? index,
+      image: image instanceof File && image.size > 0 ? image : null,
+      billboardImage,
+    };
+  });
 }
 
 export async function POST(request: Request) {
@@ -89,7 +105,7 @@ export async function POST(request: Request) {
     executionImage instanceof File && executionImage.size > 0 ? executionImage : null;
 
   try {
-    const periods = parseOptionalPeriods(formData);
+    const periods = parseRequiredPeriods(formData);
     const { displayStart, displayEnd } = computeDisplayRangeFromPeriods(periods);
 
     const billboardId = await createSystemBillboard({
