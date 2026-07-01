@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import type { Map as LeafletMap } from "leaflet";
 import { getBillboardDateLabel, hasBillboardCoordinates } from "@/lib/billboards";
+import { addLeafletTileLayer } from "@/lib/leaflet-tiles";
 import type { Billboard } from "@/lib/types";
 
 interface BillboardMapProps {
@@ -38,10 +39,7 @@ export function BillboardMap({ billboards, onSelect }: BillboardMapProps) {
         scrollWheelZoom: false,
       }).setView([first.latitude!, first.longitude!], 12);
 
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-        maxZoom: 19,
-      }).addTo(map);
+      addLeafletTileLayer(L, map);
 
       mappableBillboards.forEach((billboard) => {
         const marker = L.circleMarker([billboard.latitude!, billboard.longitude!], {

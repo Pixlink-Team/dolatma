@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import type { Map as LeafletMap, Marker } from "leaflet";
 import { configureLeafletDefaultIcon } from "@/lib/leaflet-default-icon";
+import { addLeafletTileLayer } from "@/lib/leaflet-tiles";
 
 interface BillboardLocationMapPickerProps {
   latitude: number;
@@ -71,10 +72,7 @@ export function BillboardLocationMapPicker({
         14
       );
 
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-        maxZoom: 19,
-      }).addTo(map);
+      addLeafletTileLayer(L, map);
 
       const marker = L.marker([initialCenter.lat, initialCenter.lng], { draggable: true }).addTo(map);
       marker.on("dragend", () => {
