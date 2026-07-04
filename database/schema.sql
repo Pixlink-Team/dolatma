@@ -360,3 +360,9 @@ CREATE TABLE IF NOT EXISTS campaign_activities (
 CREATE INDEX IF NOT EXISTS idx_campaign_activities_campaign ON campaign_activities(campaign_id, published, sort_order);
 
 ALTER TABLE campaign_activities ADD COLUMN IF NOT EXISTS video_url TEXT;
+
+CREATE TABLE IF NOT EXISTS system_settings (
+  key TEXT PRIMARY KEY,
+  value JSONB NOT NULL DEFAULT '{}'::jsonb,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);

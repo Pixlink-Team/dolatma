@@ -17,6 +17,7 @@ import {
   Settings,
   Share2,
   Sparkles,
+  Unplug,
   Users,
   UserCircle,
   Video,
@@ -51,6 +52,7 @@ const allNavItems: {
 }[] = [
   { href: "/admin", label: "داشبورد", icon: LayoutDashboard },
   { href: "/admin/profile", label: "پروفایل من", icon: UserCircle },
+  { href: "/admin/integrations", label: "اتصال Map-Bilboard", icon: Unplug, adminOnly: true },
   { href: "/admin/settings", label: "تنظیمات کمپین", icon: Settings, adminOnly: true },
   { href: "/admin/billboards", label: "بیلبوردها", icon: LayoutGrid, permissionKey: "billboards" },
   { href: "/admin/posters", label: "پوسترها", icon: ImageIcon, permissionKey: "posters" },

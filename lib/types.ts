@@ -64,6 +64,21 @@ export interface BillboardConfig {
   externalCampaignSlug?: string | null;
 }
 
+export interface MapBilboardApiSettings {
+  baseUrl?: string | null;
+  email?: string | null;
+  password?: string | null;
+  token?: string | null;
+}
+
+export interface MapBilboardApiSettingsPublic {
+  baseUrl: string;
+  email: string;
+  hasPassword: boolean;
+  hasToken: boolean;
+  configured: boolean;
+}
+
 export interface CampaignSettings {
   id: string;
   slug: string;
