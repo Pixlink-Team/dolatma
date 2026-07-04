@@ -352,6 +352,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_social_platform_stats_per_owner
 CREATE UNIQUE INDEX IF NOT EXISTS idx_social_platform_stats_global
   ON social_platform_stats (campaign_id, platform)
   WHERE owner_user_id IS NULL;
+ALTER TABLE social_platform_stats DROP CONSTRAINT IF EXISTS social_platform_stats_platform_check;
 ALTER TABLE social_platform_stats ADD CONSTRAINT social_platform_stats_platform_check
   CHECK (platform IN ('instagram', 'x', 'telegram', 'linkedin', 'youtube', 'aparat', 'rubika', 'eitaa', 'bale', 'other'));
 
