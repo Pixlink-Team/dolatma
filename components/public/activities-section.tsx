@@ -21,9 +21,13 @@ import { cn } from "@/lib/utils";
 interface ActivitiesSectionProps {
   activities: CampaignActivity[];
   groups: DataOwnerGroup<CampaignActivity>[];
+  sectionId?: string;
+  title?: string;
+  description?: string;
 }
 
 function hasActivityMedia(activity: CampaignActivity): boolean {
+  if (activity.mediaItems?.some((item) => item.url.trim())) return true;
   return Boolean(activity.imageUrl?.trim() || activity.videoUrl?.trim());
 }
 
@@ -127,7 +131,13 @@ function ActivityCards({ activities }: { activities: CampaignActivity[] }) {
   );
 }
 
-export function ActivitiesSection({ activities, groups }: ActivitiesSectionProps) {
+export function ActivitiesSection({
+  activities,
+  groups,
+  sectionId = "activities",
+  title = "اقدامات",
+  description = "فعالیت‌های میدانی و تبلیغاتی: تراکت، غرفه، برنامه فرهنگی و ...",
+}: ActivitiesSectionProps) {
   const filteredGroups = useFilteredOwnerGroups(groups);
   const filteredActivities = useMemo(
     () => filteredGroups.flatMap((group) => group.items),
@@ -155,9 +165,9 @@ export function ActivitiesSection({ activities, groups }: ActivitiesSectionProps
 
   return (
     <CollapsibleSection
-      id="activities"
-      title="اقدامات"
-      description="فعالیت‌های میدانی و تبلیغاتی: مجله، روزنامه، تراکت، غرفه، برنامه فرهنگی و ..."
+      id={sectionId}
+      title={title}
+      description={description}
     >
       {filteredActivities.length === 0 ? (
         <div className="rounded-xl border bg-card py-12 text-center text-muted-foreground">

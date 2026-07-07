@@ -45,7 +45,9 @@ interface AdminPosterEditorProps {
   poster: Poster;
   versions: PosterVersion[];
   categories: MediaCategory[];
+  isNew?: boolean;
   onClose: () => void;
+  onSaved?: (poster: Poster) => void;
 }
 
 function createPosterVersionDraft(): PosterVersionDraft {
@@ -76,7 +78,9 @@ export function AdminPosterEditor({
   poster,
   versions,
   categories,
+  isNew = false,
   onClose,
+  onSaved,
 }: AdminPosterEditorProps) {
   const router = useRouter();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
@@ -89,13 +93,15 @@ export function AdminPosterEditor({
   const [editTitle, setEditTitle] = useState(poster.title);
   const [editDescription, setEditDescription] = useState(poster.description ?? "");
   const [editCategoryId, setEditCategoryId] = useState(poster.categoryId);
+  const [editPublished, setEditPublished] = useState(poster.published);
 
   useEffect(() => {
     setEditTitle(poster.title);
     setEditDescription(poster.description ?? "");
     setEditCategoryId(poster.categoryId);
+    setEditPublished(poster.published);
     setVersionDrafts(buildPosterVersionDrafts(versions));
-  }, [poster.id, poster.title, poster.description, poster.categoryId, versions.length]);
+  }, [poster.id, poster.title, poster.description, poster.categoryId, poster.published, versions.length]);
 
   useLayoutEffect(() => {
     if (!shouldScrollToBottomRef.current) return;
@@ -163,12 +169,16 @@ export function AdminPosterEditor({
       : draftsToSave;
 
     startTransition(async () => {
-      await savePosterAction({
+      const savedPoster = {
         ...poster,
         title: editTitle,
         description: editDescription,
         categoryId: editCategoryId,
-      });
+        published: editPublished,
+        updatedAt: new Date().toISOString(),
+      };
+
+      await savePosterAction(savedPoster);
 
       let savedCount = 0;
       for (const draft of orderedDrafts) {
@@ -188,19 +198,30 @@ export function AdminPosterEditor({
       }
 
       toast.success(`ذخیره شد — ${formatPersianNumber(savedCount)} نسخه`);
+      onSaved?.(savedPoster);
       refresh();
     });
   };
 
   const handleTogglePublish = (published: boolean) => {
+    if (isNew) {
+      setEditPublished(published);
+      return;
+    }
+
     startTransition(async () => {
       await savePosterAction({ ...poster, published });
+      setEditPublished(published);
       toast.success(published ? "منتشر شد" : "از انتشار خارج شد");
       refresh();
     });
   };
 
   const handleDeletePoster = () => {
+    if (isNew) {
+      onClose();
+      return;
+    }
     startTransition(async () => {
       await deletePosterAction(poster.id);
       toast.success("پوستر حذف شد");
@@ -265,7 +286,7 @@ export function AdminPosterEditor({
           </div>
         </div>
         <div className="flex flex-col items-center gap-2 pt-6">
-          <Switch checked={poster.published} onCheckedChange={handleTogglePublish} />
+          <Switch checked={editPublished} onCheckedChange={handleTogglePublish} />
           <Button variant="ghost" size="icon" onClick={handleDeletePoster} disabled={isPending}>
             <Trash2 className="h-4 w-4 text-destructive" />
           </Button>

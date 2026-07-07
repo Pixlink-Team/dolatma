@@ -1,3 +1,5 @@
+import { IRAN_PROVINCES_DATA } from "@/lib/iran-provinces-data";
+
 export const IRAN_PROVINCES = [
   "آذربایجان شرقی",
   "آذربایجان غربی",
@@ -70,6 +72,11 @@ export const IRAN_CITIES_BY_PROVINCE: Record<IranProvince, string[]> = {
 
 export function getCitiesForProvince(province: string): string[] {
   if (!province) return [];
+  const normalized = normalizeImportedProvince(province) ?? province;
+  const provinceData = IRAN_PROVINCES_DATA.find((item) => item.name === normalized);
+  if (provinceData) {
+    return provinceData.cities.map((city) => city.name);
+  }
   return IRAN_CITIES_BY_PROVINCE[province as IranProvince] ?? [];
 }
 

@@ -5,7 +5,7 @@ export type VersionStatus = "draft" | "revised" | "final";
 export type SubmissionStatus = "pending" | "approved" | "rejected";
 export type TrafficSource = "instagram" | "telegram" | "direct" | "google" | "referral" | "other";
 export type DeviceType = "mobile" | "desktop" | "tablet";
-export type AdminRole = "admin" | "contributor";
+export type AdminRole = "admin" | "contributor" | "client";
 export type SocialPlatform = "instagram" | "x" | "telegram" | "linkedin" | "youtube" | "aparat" | "rubika" | "eitaa" | "bale" | "other";
 export type SocialPostPlatform = SocialPlatform | "site";
 export type ActivityType =
@@ -19,7 +19,7 @@ export type ActivityType =
   | "exhibition"
   | "other";
 export type SocialContentType = "image" | "text" | "video" | "carousel" | "story" | "reel";
-export type SessionRole = "admin" | "contributor";
+export type SessionRole = "admin" | "contributor" | "client";
 
 export interface CampaignFeatures {
   billboards: boolean;
@@ -32,6 +32,7 @@ export interface CampaignFeatures {
   broadcastReports: boolean;
   meetings: boolean;
   activities: boolean;
+  pressPublications: boolean;
   submissions: boolean;
   files: boolean;
 }
@@ -117,11 +118,24 @@ export interface Ownable {
   ownerCity?: string | null;
 }
 
+export interface BillboardDisplayPeriod {
+  id: string;
+  billboardId: string;
+  title?: string | null;
+  startDate: string;
+  endDate: string;
+  billboardImageUrl: string;
+  confirmationImageUrl?: string | null;
+  sortOrder: number;
+  createdAt: string;
+}
+
 export interface Billboard extends Ownable {
   id: string;
   campaignId: string;
   title: string;
   description?: string | null;
+  province?: string | null;
   city: string;
   location: string;
   date: string;
@@ -132,11 +146,14 @@ export interface Billboard extends Ownable {
   longitude?: number | null;
   source?: BillboardSource;
   externalId?: string | null;
+  category?: string | null;
+  areaSqm?: number | null;
   status: ItemStatus;
   tags: string[];
   notes?: string | null;
   published: boolean;
   sortOrder: number;
+  displayPeriods?: BillboardDisplayPeriod[];
   code?: string | null;
   displayDateRange?: string | null;
   providerName?: string | null;
@@ -369,6 +386,12 @@ export interface BroadcastReport {
   updatedAt: string;
 }
 
+export interface ActivityMediaItem {
+  id: string;
+  type: "image" | "video";
+  url: string;
+}
+
 export interface CampaignActivity {
   id: string;
   campaignId: string;
@@ -380,6 +403,7 @@ export interface CampaignActivity {
   location: string;
   imageUrl?: string | null;
   videoUrl?: string | null;
+  mediaItems: ActivityMediaItem[];
   description?: string | null;
   published: boolean;
   sortOrder: number;
@@ -486,6 +510,7 @@ export interface CampaignKPIs {
   totalBroadcastReports: number;
   totalMeetings: number;
   totalActivities: number;
+  totalPressPublications: number;
   totalParticipants: number;
   totalFiles: number;
 }
@@ -525,6 +550,7 @@ export interface SectionVisibility {
   broadcastReports: boolean;
   meetings: boolean;
   activities: boolean;
+  pressPublications: boolean;
   submissions: boolean;
   files: boolean;
 }
@@ -554,6 +580,8 @@ export interface PublicCampaignData {
   meetingsHasPassword: boolean;
   activities: CampaignActivity[];
   activityGroups: DataOwnerGroup<CampaignActivity>[];
+  pressPublications: CampaignActivity[];
+  pressPublicationGroups: DataOwnerGroup<CampaignActivity>[];
   submissions: CampaignSubmission[];
   submissionGroups: DataOwnerGroup<CampaignSubmission>[];
   submissionSummary: SubmissionSummary;

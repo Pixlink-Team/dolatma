@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -17,54 +17,39 @@ import { AdminDataTable } from "@/components/admin/admin-data-table";
 import { adminOwnerTableColumn } from "@/components/admin/admin-owner-badge";
 import { MediaUpload } from "@/components/ui/media-upload";
 import { PersianDateField } from "@/components/ui/persian-date-input";
-import { fieldActivityTypeOptions, getActivityTypeLabel } from "@/lib/activity-types";
+import { getActivityTypeLabel, pressActivityTypeOptions } from "@/lib/activity-types";
 import { deleteCampaignActivityAction, saveCampaignActivityAction } from "@/lib/actions/extended-actions";
 import { todayISO } from "@/lib/jalali";
 import { isPressPublication } from "@/lib/press-publications";
-import type { ActivityMediaItem, ActivityType, CampaignActivity } from "@/lib/types";
+import type { ActivityMediaItem, CampaignActivity } from "@/lib/types";
 import { formatPersianDate } from "@/lib/utils";
 
 const ACTIVITY_VIDEO_MAX_BYTES = 50 * 1024 * 1024;
-
 const MAX_MEDIA_ITEMS = 10;
 
 const schema = z.object({
   title: z.string().min(1, "عنوان الزامی است"),
-  activityType: z.enum([
-    "tract",
-    "booth",
-    "field",
-    "poetry",
-    "painting",
-    "exhibition",
-    "other",
-  ]),
+  activityType: z.enum(["magazine", "newspaper"]),
   activityDate: z.string(),
   location: z.string().optional(),
-  imageUrl: z.string().optional(),
-  videoUrl: z.string().optional(),
   description: z.string().optional(),
   published: z.boolean(),
 });
 
-type FormData = z.infer<typeof schema>;
-type FieldActivityType = FormData["activityType"];
-
-interface ActivitiesAdminProps {
+interface PressPublicationsAdminProps {
   campaignId: string;
   initialActivities: CampaignActivity[];
 }
 
-function resolveFieldActivityType(type: ActivityType): FieldActivityType {
-  return fieldActivityTypeOptions.includes(type) ? (type as FieldActivityType) : "field";
-}
-
-export function ActivitiesAdmin({ campaignId, initialActivities }: ActivitiesAdminProps) {
+export function PressPublicationsAdmin({
+  campaignId,
+  initialActivities,
+}: PressPublicationsAdminProps) {
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [mediaItems, setMediaItems] = useState<ActivityMediaItem[]>([]);
   const [rows, setRows] = useState(
-    initialActivities.filter((activity) => !isPressPublication(activity))
+    initialActivities.filter((activity) => isPressPublication(activity))
   );
   const [isPending, startTransition] = useTransition();
 
@@ -72,26 +57,31 @@ export function ActivitiesAdmin({ campaignId, initialActivities }: ActivitiesAdm
     resolver: zodResolver(schema),
     defaultValues: {
       title: "",
-      activityType: "field",
+      activityType: "magazine",
       activityDate: todayISO(),
       location: "",
-      imageUrl: "",
-      videoUrl: "",
       description: "",
       published: false,
     },
   });
+
+  const primaryImage = useMemo(
+    () => mediaItems.find((item) => item.type === "image")?.url ?? null,
+    [mediaItems]
+  );
+  const primaryVideo = useMemo(
+    () => mediaItems.find((item) => item.type === "video")?.url ?? null,
+    [mediaItems]
+  );
 
   const openCreate = () => {
     setEditingId(null);
     setMediaItems([]);
     form.reset({
       title: "",
-      activityType: "field",
+      activityType: "magazine",
       activityDate: todayISO(),
       location: "",
-      imageUrl: "",
-      videoUrl: "",
       description: "",
       published: false,
     });
@@ -103,11 +93,9 @@ export function ActivitiesAdmin({ campaignId, initialActivities }: ActivitiesAdm
     setMediaItems(activity.mediaItems ?? []);
     form.reset({
       title: activity.title,
-      activityType: resolveFieldActivityType(activity.activityType),
+      activityType: activity.activityType === "newspaper" ? "newspaper" : "magazine",
       activityDate: activity.activityDate,
       location: activity.location,
-      imageUrl: activity.imageUrl ?? "",
-      videoUrl: activity.videoUrl ?? "",
       description: activity.description ?? "",
       published: activity.published,
     });
@@ -132,8 +120,8 @@ export function ActivitiesAdmin({ campaignId, initialActivities }: ActivitiesAdm
         activityType: data.activityType,
         activityDate: data.activityDate,
         location: data.location?.trim() ?? "",
-        imageUrl: filledMedia.find((item) => item.type === "image")?.url ?? (data.imageUrl || null),
-        videoUrl: filledMedia.find((item) => item.type === "video")?.url ?? (data.videoUrl || null),
+        imageUrl: filledMedia.find((item) => item.type === "image")?.url ?? null,
+        videoUrl: filledMedia.find((item) => item.type === "video")?.url ?? null,
         mediaItems: filledMedia,
         description: data.description || null,
         published: data.published,
@@ -152,8 +140,8 @@ export function ActivitiesAdmin({ campaignId, initialActivities }: ActivitiesAdm
         activityType: data.activityType,
         activityDate: data.activityDate,
         location: data.location?.trim() ?? "",
-        imageUrl: filledMedia.find((item) => item.type === "image")?.url ?? (data.imageUrl || null),
-        videoUrl: filledMedia.find((item) => item.type === "video")?.url ?? (data.videoUrl || null),
+        imageUrl: primaryImage,
+        videoUrl: primaryVideo,
         mediaItems: filledMedia,
         description: data.description || null,
         published: data.published,
@@ -176,14 +164,12 @@ export function ActivitiesAdmin({ campaignId, initialActivities }: ActivitiesAdm
     <div className="space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">اقدامات</h1>
-          <p className="text-sm text-muted-foreground">
-            ثبت فعالیت‌های میدانی: تراکت، غرفه، شعرخوانی، نقاشی و ... (تا {MAX_MEDIA_ITEMS} رسانه)
-          </p>
+          <h1 className="text-2xl font-bold">مجله و روزنامه</h1>
+          <p className="text-sm text-muted-foreground">ثبت آگهی‌های مجله و روزنامه با چند رسانه</p>
         </div>
         <Button onClick={openCreate}>
           <Plus className="h-4 w-4" />
-          اقدام جدید
+          ثبت جدید
         </Button>
       </div>
 
@@ -219,24 +205,22 @@ export function ActivitiesAdmin({ campaignId, initialActivities }: ActivitiesAdm
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editingId ? "ویرایش اقدام" : "اقدام جدید"}</DialogTitle>
+            <DialogTitle>{editingId ? "ویرایش" : "ثبت جدید"}</DialogTitle>
           </DialogHeader>
           <form onSubmit={onSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label>عنوان</Label>
-              <Input {...form.register("title")} placeholder="مثلاً غرفه‌گذاری در نمایشگاه کتاب" />
+              <Input {...form.register("title")} />
             </div>
             <div className="space-y-2">
-              <Label>نوع اقدام</Label>
+              <Label>نوع</Label>
               <Select
                 value={form.watch("activityType")}
-                onValueChange={(value) => form.setValue("activityType", value as FieldActivityType)}
+                onValueChange={(value) => form.setValue("activityType", value as "magazine" | "newspaper")}
               >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
+                <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {fieldActivityTypeOptions.map((type) => (
+                  {pressActivityTypeOptions.map((type) => (
                     <SelectItem key={type} value={type}>
                       {getActivityTypeLabel(type)}
                     </SelectItem>
@@ -247,7 +231,7 @@ export function ActivitiesAdmin({ campaignId, initialActivities }: ActivitiesAdm
             <PersianDateField control={form.control} name="activityDate" label="تاریخ" />
             <div className="space-y-2">
               <Label>مکان (اختیاری)</Label>
-              <Input {...form.register("location")} placeholder="شهر یا محل برگزاری" />
+              <Input {...form.register("location")} />
             </div>
             <div className="space-y-3">
               <div className="flex items-center justify-between">
@@ -295,7 +279,7 @@ export function ActivitiesAdmin({ campaignId, initialActivities }: ActivitiesAdm
             </div>
             <div className="space-y-2">
               <Label>توضیحات (اختیاری)</Label>
-              <Textarea {...form.register("description")} rows={4} placeholder="جزئیات اقدام، تعداد مخاطب، نتایج و ..." />
+              <Textarea {...form.register("description")} rows={4} />
             </div>
             <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
               <span>منتشر در صفحه عمومی</span>

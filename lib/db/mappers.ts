@@ -72,6 +72,7 @@ export function mapSettingsFromDb(row: any): CampaignSettings {
             broadcastReports: true,
             meetings: true,
             activities: true,
+            pressPublications: true,
             submissions: true,
             files: true,
             ...JSON.parse(row.features),
@@ -87,6 +88,7 @@ export function mapSettingsFromDb(row: any): CampaignSettings {
             broadcastReports: true,
             meetings: true,
             activities: true,
+            pressPublications: true,
             submissions: true,
             files: true,
             ...(row.features ?? {}),
@@ -106,6 +108,38 @@ export function mapSettingsFromDb(row: any): CampaignSettings {
   };
 }
 
+import type { ActivityMediaItem, BillboardDisplayPeriod } from "@/lib/types";
+
+function parseActivityMediaItems(value: unknown): ActivityMediaItem[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => {
+      if (!item || typeof item !== "object") return null;
+      const record = item as Record<string, unknown>;
+      const url = typeof record.url === "string" ? record.url.trim() : "";
+      const type = record.type === "video" ? "video" : record.type === "image" ? "image" : null;
+      const id = typeof record.id === "string" ? record.id : crypto.randomUUID();
+      if (!url || !type) return null;
+      return { id, type, url };
+    })
+    .filter((item): item is ActivityMediaItem => Boolean(item));
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function mapBillboardDisplayPeriodFromDb(row: any): BillboardDisplayPeriod {
+  return {
+    id: row.id,
+    billboardId: row.billboard_id,
+    title: row.title ?? null,
+    startDate: toDateString(row.start_date),
+    endDate: toDateString(row.end_date),
+    billboardImageUrl: row.billboard_image_url,
+    confirmationImageUrl: row.confirmation_image_url ?? null,
+    sortOrder: row.sort_order ?? 0,
+    createdAt: toIsoString(row.created_at),
+  };
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function mapBillboardFromDb(row: any): Billboard {
   return {
@@ -113,6 +147,7 @@ export function mapBillboardFromDb(row: any): Billboard {
     campaignId: row.campaign_id,
     title: row.title,
     description: row.description,
+    province: row.province ?? null,
     city: row.city,
     location: row.location,
     date: toDateString(row.date),
@@ -123,6 +158,8 @@ export function mapBillboardFromDb(row: any): Billboard {
     longitude: row.longitude != null ? Number(row.longitude) : null,
     source: row.source ?? "manual",
     externalId: row.external_id ?? null,
+    category: row.category ?? null,
+    areaSqm: row.area_sqm != null ? Number(row.area_sqm) : null,
     status: row.status,
     tags: row.tags ?? [],
     notes: row.notes,
@@ -320,6 +357,7 @@ export function mapBroadcastReportFromDb(row: any): BroadcastReport {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function mapCampaignActivityFromDb(row: any): CampaignActivity {
+  const mediaItems = parseActivityMediaItems(row.media_items);
   return {
     id: row.id,
     campaignId: row.campaign_id,
@@ -330,6 +368,17 @@ export function mapCampaignActivityFromDb(row: any): CampaignActivity {
     location: row.location ?? "",
     imageUrl: row.image_url ?? null,
     videoUrl: row.video_url ?? null,
+    mediaItems:
+      mediaItems.length > 0
+        ? mediaItems
+        : [
+            ...(row.image_url
+              ? [{ id: `${row.id}-image`, type: "image" as const, url: row.image_url }]
+              : []),
+            ...(row.video_url
+              ? [{ id: `${row.id}-video`, type: "video" as const, url: row.video_url }]
+              : []),
+          ],
     description: row.description ?? null,
     published: row.published ?? false,
     sortOrder: row.sort_order ?? 0,

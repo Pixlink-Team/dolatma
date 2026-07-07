@@ -22,6 +22,7 @@ import { truncateMeetingSummary } from "@/lib/meeting-preview";
 import { compareMeetingsByDateDesc } from "@/lib/meeting-tasks";
 import { groupByOwner, resolveAdminOwnerLabel } from "@/lib/owner-groups";
 import { splitSocialPosts } from "@/lib/social-posts";
+import { splitPressActivities } from "@/lib/press-publications";
 import { buildSocialAnalyticsSummary } from "@/lib/social-analytics";
 import { isPostgresConfigured, isSupabaseConfigured } from "@/lib/utils";
 import * as pg from "@/lib/db/repository";
@@ -223,6 +224,7 @@ function buildSectionVisibility(
     broadcastReports: unknown[];
     meetings: unknown[];
     activities: unknown[];
+    pressPublications: unknown[];
     submissions: unknown[];
     files: unknown[];
   }
@@ -241,6 +243,7 @@ function buildSectionVisibility(
     broadcastReports: (features.broadcastReports ?? true) && data.broadcastReports.length > 0,
     meetings: (features.meetings ?? true) && data.meetings.length > 0,
     activities: (features.activities ?? true) && data.activities.length > 0,
+    pressPublications: (features.pressPublications ?? true) && data.pressPublications.length > 0,
     submissions: features.submissions && data.submissions.length > 0,
     files: features.files && data.files.length > 0,
   };
@@ -258,6 +261,7 @@ function buildKpiVisibility(features: CampaignSettings["features"]): SectionVisi
     broadcastReports: features.broadcastReports ?? true,
     meetings: features.meetings ?? true,
     activities: features.activities ?? true,
+    pressPublications: features.pressPublications ?? true,
     submissions: features.submissions,
     files: features.files,
   };
@@ -276,6 +280,7 @@ function buildKPIs(
     broadcastReports: unknown[];
     meetings: unknown[];
     activities: unknown[];
+    pressPublications: unknown[];
     submissions: { participantName: string }[];
     files: unknown[];
   }
@@ -293,6 +298,7 @@ function buildKPIs(
     totalBroadcastReports: visibility.broadcastReports ? data.broadcastReports.length : 0,
     totalMeetings: visibility.meetings ? data.meetings.length : 0,
     totalActivities: visibility.activities ? data.activities.length : 0,
+    totalPressPublications: visibility.pressPublications ? data.pressPublications.length : 0,
     totalParticipants: visibility.submissions
       ? new Set(data.submissions.map((s) => s.participantName)).size
       : 0,
@@ -369,12 +375,14 @@ function assemblePublicData(
 
   const meetingsHasPassword = Boolean(settings.meetingsViewPasswordHash);
 
-  const activities = (store.activities ?? [])
+  const allActivities = (store.activities ?? [])
     .filter((activity) => activity.published)
     .sort(
       (a, b) =>
         b.activityDate.localeCompare(a.activityDate) || a.sortOrder - b.sortOrder
     );
+
+  const { pressPublications, fieldActivities: activities } = splitPressActivities(allActivities);
 
   const meetings = normalizeMeetingPreviews(
     (store.meetings ?? [])
@@ -396,6 +404,7 @@ function assemblePublicData(
     broadcastReports,
     meetings,
     activities,
+    pressPublications,
     submissions,
     files,
   });
@@ -411,6 +420,7 @@ function assemblePublicData(
     broadcastReports,
     meetings,
     activities,
+    pressPublications,
     submissions,
     files,
   });
@@ -442,6 +452,8 @@ function assemblePublicData(
     meetingsHasPassword,
     activities,
     activityGroups: groupByOwner(activities, adminOwnerLabel),
+    pressPublications,
+    pressPublicationGroups: groupByOwner(pressPublications, adminOwnerLabel),
     submissions,
     submissionGroups: groupByOwner(submissions, adminOwnerLabel),
     submissionSummary,

@@ -13,6 +13,7 @@ import { CollapsibleSection } from "@/components/public/collapsible-section";
 import { OwnerGroupedSection } from "@/components/public/owner-grouped-section";
 import { VideoCard } from "@/components/public/video-card";
 import {
+  videoHasDisplayContent,
   PUBLIC_MEDIA_GRID_CLASS,
   sortByPublicMediaOrder,
   type PublicMediaSort,
@@ -42,9 +43,15 @@ function filterVideoGroups(
       ...group,
       items:
         categoryFilter === "all"
-          ? sortByPublicMediaOrder(group.items, sort, getVideoLatestDate)
+          ? sortByPublicMediaOrder(
+              group.items.filter((video) => sort === "default" || videoHasDisplayContent(video)),
+              sort,
+              getVideoLatestDate
+            )
           : sortByPublicMediaOrder(
-              group.items.filter((video) => video.categoryId === categoryFilter),
+              group.items
+                .filter((video) => video.categoryId === categoryFilter)
+                .filter((video) => sort === "default" || videoHasDisplayContent(video)),
               sort,
               getVideoLatestDate
             ),

@@ -17,6 +17,7 @@ import { SubmissionsSection } from "@/components/public/submissions-section";
 import { CampaignFilesSection } from "@/components/public/campaign-files-section";
 import { SitePublicationsSection } from "@/components/public/site-publications-section";
 import { ActivitiesSection } from "@/components/public/activities-section";
+import { PressPublicationsSection } from "@/components/public/press-publications-section";
 import { SocialPostsSection } from "@/components/public/social-posts-section";
 import { BroadcastSection } from "@/components/public/broadcast-section";
 import { MeetingsSection } from "@/components/public/meetings-section";
@@ -117,7 +118,7 @@ export function CampaignDashboard({ initialData, slug, exportMode = false }: Cam
         )}
         {sections.billboards && (
           <DeferredSection minHeight={360} forceRender={exportMode}>
-            <section data-export-section data-export-label="بیلبوردها">
+            <section data-export-section data-export-label="تبلیغات محیطی">
               <BillboardSection
                 billboards={data.billboards}
                 adminOwnerLabel={settings.adminOwnerLabel}
@@ -172,6 +173,16 @@ export function CampaignDashboard({ initialData, slug, exportMode = false }: Cam
           <DeferredSection minHeight={280} forceRender={exportMode}>
             <section data-export-section data-export-label="پست‌های شبکه اجتماعی">
               <SocialPostsSection posts={data.socialPosts} groups={data.socialPostGroups} />
+            </section>
+          </DeferredSection>
+        )}
+        {sections.pressPublications && (
+          <DeferredSection minHeight={320} forceRender={exportMode}>
+            <section data-export-section data-export-label="مجله و روزنامه">
+              <PressPublicationsSection
+                publications={data.pressPublications}
+                groups={data.pressPublicationGroups}
+              />
             </section>
           </DeferredSection>
         )}

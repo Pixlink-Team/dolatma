@@ -54,7 +54,9 @@ interface AdminVideoEditorProps {
   video: Video;
   versions: VideoVersion[];
   categories: MediaCategory[];
+  isNew?: boolean;
   onClose: () => void;
+  onSaved?: (video: Video) => void;
 }
 
 function createVideoVersionDraft(): VideoVersionDraft {
@@ -98,7 +100,9 @@ export function AdminVideoEditor({
   video,
   versions,
   categories,
+  isNew = false,
   onClose,
+  onSaved,
 }: AdminVideoEditorProps) {
   const router = useRouter();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
@@ -111,13 +115,15 @@ export function AdminVideoEditor({
   const [editTitle, setEditTitle] = useState(video.title);
   const [editDescription, setEditDescription] = useState(video.description ?? "");
   const [editCategoryId, setEditCategoryId] = useState(video.categoryId);
+  const [editPublished, setEditPublished] = useState(video.published);
 
   useEffect(() => {
     setEditTitle(video.title);
     setEditDescription(video.description ?? "");
     setEditCategoryId(video.categoryId);
+    setEditPublished(video.published);
     setVersionDrafts(buildVideoVersionDrafts(versions));
-  }, [video.id, video.title, video.description, video.categoryId, versions.length]);
+  }, [video.id, video.title, video.description, video.categoryId, video.published, versions.length]);
 
   useLayoutEffect(() => {
     if (!shouldScrollToBottomRef.current) return;
@@ -188,12 +194,16 @@ export function AdminVideoEditor({
       : draftsToSave;
 
     startTransition(async () => {
-      await saveVideoAction({
+      const savedVideo = {
         ...video,
         title: editTitle,
         description: editDescription,
         categoryId: editCategoryId,
-      });
+        published: editPublished,
+        updatedAt: new Date().toISOString(),
+      };
+
+      await saveVideoAction(savedVideo);
 
       let savedCount = 0;
       for (const draft of orderedDrafts) {
@@ -215,19 +225,30 @@ export function AdminVideoEditor({
       }
 
       toast.success(`ذخیره شد — ${formatPersianNumber(savedCount)} نسخه`);
+      onSaved?.(savedVideo);
       refresh();
     });
   };
 
   const handleTogglePublish = (published: boolean) => {
+    if (isNew) {
+      setEditPublished(published);
+      return;
+    }
+
     startTransition(async () => {
       await saveVideoAction({ ...video, published });
+      setEditPublished(published);
       toast.success(published ? "منتشر شد" : "از انتشار خارج شد");
       refresh();
     });
   };
 
   const handleDeleteVideo = () => {
+    if (isNew) {
+      onClose();
+      return;
+    }
     startTransition(async () => {
       await deleteVideoAction(video.id);
       toast.success("ویدیو حذف شد");
@@ -300,7 +321,7 @@ export function AdminVideoEditor({
           </div>
         </div>
         <div className="flex flex-col items-center gap-2 pt-6">
-          <Switch checked={video.published} onCheckedChange={handleTogglePublish} />
+          <Switch checked={editPublished} onCheckedChange={handleTogglePublish} />
           <Button variant="ghost" size="icon" onClick={handleDeleteVideo} disabled={isPending}>
             <Trash2 className="h-4 w-4 text-destructive" />
           </Button>

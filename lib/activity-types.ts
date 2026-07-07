@@ -1,4 +1,5 @@
 import type { ActivityType } from "@/lib/types";
+import { PRESS_ACTIVITY_TYPES } from "@/lib/press-publications";
 
 export const activityTypeOptions: ActivityType[] = [
   "magazine",
@@ -11,6 +12,14 @@ export const activityTypeOptions: ActivityType[] = [
   "exhibition",
   "other",
 ];
+
+export const fieldActivityTypeOptions = activityTypeOptions.filter(
+  (type) => !PRESS_ACTIVITY_TYPES.includes(type)
+);
+
+export const pressActivityTypeOptions = activityTypeOptions.filter((type) =>
+  PRESS_ACTIVITY_TYPES.includes(type)
+);
 
 export const activityTypeLabels: Record<ActivityType, string> = {
   magazine: "آگهی مجله",

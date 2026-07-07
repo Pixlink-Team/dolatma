@@ -124,7 +124,7 @@ export async function pgSaveUser(data: {
   id?: string;
   email: string;
   name: string;
-  role: "admin" | "contributor";
+  role: "admin" | "contributor" | "client";
   password?: string;
   province?: string | null;
   city?: string | null;
@@ -644,7 +644,7 @@ export async function pgSaveCampaignActivity(data: Partial<CampaignActivity> & {
   await sql`
     INSERT INTO campaign_activities (
       id, campaign_id, owner_user_id, title, activity_type, activity_date,
-      location, image_url, video_url, description, published, sort_order, created_at, updated_at
+      location, image_url, video_url, media_items, description, published, sort_order, created_at, updated_at
     ) VALUES (
       ${id},
       ${data.campaignId ?? ""},
@@ -655,6 +655,7 @@ export async function pgSaveCampaignActivity(data: Partial<CampaignActivity> & {
       ${data.location ?? ""},
       ${data.imageUrl ?? null},
       ${data.videoUrl ?? null},
+      ${sql.json(JSON.parse(JSON.stringify(data.mediaItems ?? [])))},
       ${data.description ?? null},
       ${data.published ?? false},
       ${sortOrder},
@@ -668,6 +669,7 @@ export async function pgSaveCampaignActivity(data: Partial<CampaignActivity> & {
       location = EXCLUDED.location,
       image_url = EXCLUDED.image_url,
       video_url = EXCLUDED.video_url,
+      media_items = EXCLUDED.media_items,
       description = EXCLUDED.description,
       published = EXCLUDED.published,
       sort_order = EXCLUDED.sort_order,
@@ -680,6 +682,28 @@ export async function pgSaveCampaignActivity(data: Partial<CampaignActivity> & {
 export async function pgDeleteCampaignActivity(id: string) {
   const sql = getSql();
   await sql`DELETE FROM campaign_activities WHERE id = ${id}`;
+  return { success: true };
+}
+
+export async function pgMarkNotificationReads(
+  userId: string,
+  contentKeys: string[],
+  confirmed = false
+) {
+  if (contentKeys.length === 0) return { success: true };
+  const sql = getSql();
+  const now = new Date().toISOString();
+
+  for (const contentKey of contentKeys) {
+    await sql`
+      INSERT INTO user_notification_reads (user_id, content_key, seen_at, confirmed)
+      VALUES (${userId}, ${contentKey}, ${now}, ${confirmed})
+      ON CONFLICT (user_id, content_key) DO UPDATE SET
+        seen_at = EXCLUDED.seen_at,
+        confirmed = CASE WHEN EXCLUDED.confirmed THEN true ELSE user_notification_reads.confirmed END
+    `;
+  }
+
   return { success: true };
 }
 

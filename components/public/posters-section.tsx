@@ -13,6 +13,7 @@ import { CollapsibleSection } from "@/components/public/collapsible-section";
 import { OwnerGroupedSection } from "@/components/public/owner-grouped-section";
 import { PosterCard } from "@/components/public/poster-card";
 import {
+  posterHasDisplayContent,
   PUBLIC_MEDIA_GRID_CLASS,
   sortByPublicMediaOrder,
   type PublicMediaSort,
@@ -42,9 +43,15 @@ function filterPosterGroups(
       ...group,
       items:
         categoryFilter === "all"
-          ? sortByPublicMediaOrder(group.items, sort, getPosterLatestDate)
+          ? sortByPublicMediaOrder(
+              group.items.filter((poster) => sort === "default" || posterHasDisplayContent(poster)),
+              sort,
+              getPosterLatestDate
+            )
           : sortByPublicMediaOrder(
-              group.items.filter((poster) => poster.categoryId === categoryFilter),
+              group.items
+                .filter((poster) => poster.categoryId === categoryFilter)
+                .filter((poster) => sort === "default" || posterHasDisplayContent(poster)),
               sort,
               getPosterLatestDate
             ),

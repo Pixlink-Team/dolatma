@@ -15,12 +15,15 @@ export interface BillboardActingUser {
 }
 
 export interface BillboardDisplayPeriodInput {
+  id?: string;
   title?: string;
   startDate: string;
   endDate: string;
   sortOrder: number;
   image?: Blob | null;
   billboardImage?: Blob | null;
+  billboardImageUrl?: string | null;
+  confirmationImageUrl?: string | null;
 }
 
 async function buildAuthHeaders(

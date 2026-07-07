@@ -5,6 +5,7 @@ import { pgGetCampaignById } from "@/lib/db/repository";
 import { pgGetUserById } from "@/lib/db/repository-extended";
 import type { BillboardDisplayPeriodInput } from "@/lib/services/billboard-assignment-api";
 import { createLocalBillboard } from "@/lib/services/local-billboard-create";
+import type { BillboardCategory } from "@/lib/billboard-categories";
 
 function parseRequiredPeriods(formData: FormData): BillboardDisplayPeriodInput[] {
   const raw = formData.get("periods");
@@ -13,12 +14,15 @@ function parseRequiredPeriods(formData: FormData): BillboardDisplayPeriodInput[]
   }
 
   const parsed = JSON.parse(raw) as Array<{
+    id?: string;
     title?: string;
     startDate: string;
     endDate: string;
     sortOrder: number;
     imageKey?: string;
     billboardImageKey?: string;
+    billboardImageUrl?: string;
+    confirmationImageUrl?: string;
   }>;
 
   if (parsed.length === 0) {
@@ -30,19 +34,25 @@ function parseRequiredPeriods(formData: FormData): BillboardDisplayPeriodInput[]
       ? formData.get(period.billboardImageKey)
       : null;
 
-    if (!(billboardImage instanceof File) || billboardImage.size === 0) {
+    const hasNewBillboardImage = billboardImage instanceof File && billboardImage.size > 0;
+    const hasExistingBillboardImage = Boolean(period.billboardImageUrl?.trim());
+
+    if (!hasNewBillboardImage && !hasExistingBillboardImage) {
       throw new Error("عکس بیلبورد در دوره نمایش الزامی است");
     }
 
     const image = period.imageKey ? formData.get(period.imageKey) : null;
 
     return {
+      id: period.id,
       title: period.title,
       startDate: period.startDate,
       endDate: period.endDate,
       sortOrder: period.sortOrder ?? index,
       image: image instanceof File && image.size > 0 ? image : null,
-      billboardImage,
+      billboardImage: hasNewBillboardImage ? billboardImage : null,
+      billboardImageUrl: period.billboardImageUrl ?? null,
+      confirmationImageUrl: period.confirmationImageUrl ?? null,
     };
   });
 }
@@ -55,6 +65,8 @@ export async function POST(request: Request) {
 
   const formData = await request.formData();
   const campaignId = String(formData.get("campaignId") ?? "").trim();
+  const billboardId = String(formData.get("billboardId") ?? "").trim() || undefined;
+  const category = String(formData.get("category") ?? "").trim() || null;
   const axis = String(formData.get("axis") ?? "").trim();
   const latitude = Number(formData.get("latitude"));
   const longitude = Number(formData.get("longitude"));
@@ -99,6 +111,7 @@ export async function POST(request: Request) {
 
     await createLocalBillboard({
       campaignId,
+      billboardId,
       axis,
       address,
       latitude,
@@ -106,6 +119,7 @@ export async function POST(request: Request) {
       areaSqm: Number.isFinite(areaSqm) ? areaSqm : null,
       province,
       city,
+      category: category as BillboardCategory | null,
       notes,
       periods,
       ownerUserId,

@@ -290,7 +290,7 @@ export async function saveUserAction(data: {
   id?: string;
   email: string;
   name: string;
-  role: "admin" | "contributor";
+  role: "admin" | "contributor" | "client";
   password?: string;
   province?: string | null;
   city?: string | null;

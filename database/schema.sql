@@ -376,6 +376,36 @@ CREATE TABLE IF NOT EXISTS campaign_activities (
 CREATE INDEX IF NOT EXISTS idx_campaign_activities_campaign ON campaign_activities(campaign_id, published, sort_order);
 
 ALTER TABLE campaign_activities ADD COLUMN IF NOT EXISTS video_url TEXT;
+ALTER TABLE campaign_activities ADD COLUMN IF NOT EXISTS media_items JSONB NOT NULL DEFAULT '[]'::jsonb;
+
+ALTER TABLE billboards ADD COLUMN IF NOT EXISTS province TEXT;
+ALTER TABLE billboards ADD COLUMN IF NOT EXISTS category TEXT;
+ALTER TABLE billboards ADD COLUMN IF NOT EXISTS area_sqm DOUBLE PRECISION;
+
+CREATE TABLE IF NOT EXISTS billboard_display_periods (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  billboard_id UUID NOT NULL REFERENCES billboards(id) ON DELETE CASCADE,
+  title TEXT,
+  start_date DATE NOT NULL,
+  end_date DATE NOT NULL,
+  billboard_image_url TEXT NOT NULL,
+  confirmation_image_url TEXT,
+  sort_order INT NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_billboard_periods_billboard ON billboard_display_periods(billboard_id, sort_order);
+
+ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
+ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('admin', 'contributor', 'client'));
+
+CREATE TABLE IF NOT EXISTS user_notification_reads (
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  content_key TEXT NOT NULL,
+  seen_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  confirmed BOOLEAN NOT NULL DEFAULT false,
+  PRIMARY KEY (user_id, content_key)
+);
 
 CREATE TABLE IF NOT EXISTS system_settings (
   key TEXT PRIMARY KEY,

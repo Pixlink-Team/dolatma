@@ -6,7 +6,6 @@ import { toast } from "sonner";
 import { AdminPosterAddCard, AdminPosterCompactCard } from "@/components/admin/admin-poster-compact-card";
 import { AdminMediaCategories } from "@/components/admin/admin-media-categories";
 import { AdminPosterEditor } from "@/components/admin/admin-poster-editor";
-import { savePosterAction } from "@/lib/actions/admin-actions";
 import {
   Dialog,
   DialogContent,
@@ -37,7 +36,8 @@ export function PostersAdmin({
   const [versions, setVersions] = useState(initialVersions);
   const [editorOpen, setEditorOpen] = useState(false);
   const [activePosterId, setActivePosterId] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
+  const [draftPoster, setDraftPoster] = useState<Poster | null>(null);
+  const [isPending] = useTransition();
 
   useEffect(() => {
     setPosters(initialPosters);
@@ -54,9 +54,13 @@ export function PostersAdmin({
     return map;
   }, [versions]);
 
-  const activePoster = activePosterId
-    ? posters.find((poster) => poster.id === activePosterId) ?? null
-    : null;
+  const activePoster = useMemo(() => {
+    if (!activePosterId) return null;
+    if (draftPoster?.id === activePosterId) return draftPoster;
+    return posters.find((poster) => poster.id === activePosterId) ?? null;
+  }, [activePosterId, draftPoster, posters]);
+
+  const isDraftPoster = Boolean(draftPoster && activePosterId === draftPoster.id);
 
   const activeVersions = activePosterId ? versionsByPosterId.get(activePosterId) ?? [] : [];
 
@@ -70,6 +74,7 @@ export function PostersAdmin({
   const closeEditor = () => {
     setEditorOpen(false);
     setActivePosterId(null);
+    setDraftPoster(null);
   };
 
   const handleCreatePoster = () => {
@@ -93,18 +98,8 @@ export function PostersAdmin({
       updatedAt: now,
     };
 
-    startTransition(async () => {
-      const result = await savePosterAction(newPoster);
-      if (!result.success) {
-        toast.error("ایجاد پوستر ناموفق بود");
-        return;
-      }
-
-      setPosters((prev) => [...prev, newPoster]);
-      openEditor(posterId);
-      toast.success("پوستر جدید — تصویر را آپلود کنید");
-      refresh();
-    });
+    setDraftPoster(newPoster);
+    openEditor(posterId);
   };
 
   return (
@@ -155,7 +150,19 @@ export function PostersAdmin({
                 poster={activePoster}
                 versions={activeVersions}
                 categories={initialCategories}
+                isNew={isDraftPoster}
                 onClose={closeEditor}
+                onSaved={(savedPoster) => {
+                  setPosters((prev) => {
+                    const exists = prev.some((item) => item.id === savedPoster.id);
+                    return exists
+                      ? prev.map((item) => (item.id === savedPoster.id ? savedPoster : item))
+                      : [...prev, savedPoster];
+                  });
+                  setDraftPoster(null);
+                  closeEditor();
+                  refresh();
+                }}
               />
             ) : (
               <div className="flex min-h-48 items-center justify-center text-sm text-muted-foreground">

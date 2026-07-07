@@ -33,7 +33,7 @@ function parsePayload(payload: string): AuthSession | null {
   if (parts[0] === "user" && parts.length === 4) {
     const [, userId, role, expiresAtRaw] = parts;
     const expiresAt = Number(expiresAtRaw);
-    if (!userId || (role !== "admin" && role !== "contributor")) return null;
+    if (!userId || (role !== "admin" && role !== "contributor" && role !== "client")) return null;
     if (!Number.isFinite(expiresAt) || expiresAt <= Date.now()) return null;
     return { type: "db_user", userId, role: role as SessionRole };
   }

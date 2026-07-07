@@ -35,6 +35,7 @@ const featuresSchema = z.object({
   broadcastReports: z.boolean(),
   meetings: z.boolean(),
   activities: z.boolean(),
+  pressPublications: z.boolean(),
   submissions: z.boolean(),
   files: z.boolean(),
 });
@@ -64,6 +65,7 @@ const defaultFeatures: CampaignFeatures = {
   broadcastReports: false,
   meetings: false,
   activities: false,
+  pressPublications: false,
   submissions: false,
   files: false,
 };
@@ -151,11 +153,13 @@ export function CampaignsAdmin({ initialCampaigns }: CampaignsAdminProps) {
   });
 
   const featureLabels: { key: keyof CampaignFeatures; label: string }[] = [
-    { key: "billboards", label: "بیلبورد" },
+    { key: "billboards", label: "تبلیغات محیطی" },
     { key: "posters", label: "پوستر" },
     { key: "videos", label: "ویدیو" },
     { key: "analytics", label: "آمار سایت" },
     { key: "socialAnalytics", label: "آمار شبکه‌های اجتماعی" },
+    { key: "activities", label: "اقدامات" },
+    { key: "pressPublications", label: "مجله و روزنامه" },
     { key: "meetings", label: "جلسات و مصوبات" },
     { key: "submissions", label: "مشارکت کاربران" },
     { key: "files", label: "فایل‌های کمپین" },

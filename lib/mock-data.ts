@@ -25,6 +25,7 @@ const fullFeatures = {
   broadcastReports: true,
   meetings: true,
   activities: true,
+  pressPublications: true,
   submissions: true,
   files: true,
 };
@@ -72,6 +73,7 @@ export const mockCampaigns: CampaignSettings[] = [
       broadcastReports: false,
       meetings: false,
       activities: false,
+      pressPublications: false,
       submissions: false,
       files: false,
     },
@@ -100,6 +102,7 @@ export const mockCampaigns: CampaignSettings[] = [
       broadcastReports: false,
       meetings: false,
       activities: false,
+      pressPublications: false,
       submissions: false,
       files: false,
     },

@@ -1,7 +1,8 @@
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowLeft, Calendar } from "lucide-react";
+import { ArrowLeft, Calendar, LogIn } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { getCampaignList } from "@/lib/data-access/campaign";
 import { formatPersianDate } from "@/lib/utils";
@@ -14,11 +15,21 @@ export default async function HomePage() {
   return (
     <div className="min-h-screen">
       <header className="border-b bg-card/80 backdrop-blur-sm">
-        <div className="container mx-auto px-4 py-8 text-center">
-          <h1 className="text-3xl font-bold mb-2">گزارش زنده کمپین</h1>
-          <p className="text-muted-foreground max-w-xl mx-auto">
-            گزارش پیشرفت کمپین‌های تبلیغاتی — یک کمپین را انتخاب کنید
-          </p>
+        <div className="container mx-auto px-4 py-8">
+          <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-between">
+            <div className="text-center sm:text-right">
+              <h1 className="text-3xl font-bold mb-2">گزارش زنده کمپین</h1>
+              <p className="text-muted-foreground max-w-xl">
+                گزارش پیشرفت کمپین‌های تبلیغاتی — یک کمپین را انتخاب کنید
+              </p>
+            </div>
+            <Button asChild variant="outline" className="shrink-0">
+              <Link href="/admin/login">
+                <LogIn className="h-4 w-4" />
+                ورود به پنل
+              </Link>
+            </Button>
+          </div>
         </div>
       </header>
 

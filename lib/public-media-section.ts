@@ -23,6 +23,29 @@ export const PUBLIC_MEDIA_MOBILE_PAGE_SIZE = 6;
 export const SOCIAL_ANALYTICS_PAGE_SIZE = 6;
 export const PUBLIC_MEDIA_MOBILE_QUERY = "(max-width: 639px)";
 
+export function posterHasDisplayContent(poster: { versions: { imageUrl?: string | null }[] }): boolean {
+  return poster.versions.some((version) => Boolean(version.imageUrl?.trim()));
+}
+
+export function videoHasDisplayContent(video: { versions: { videoUrl?: string | null }[] }): boolean {
+  return video.versions.some((version) => Boolean(version.videoUrl?.trim()));
+}
+
+export function billboardHasDisplayContent(billboard: { thumbnailUrl?: string | null }): boolean {
+  const url = billboard.thumbnailUrl?.trim() ?? "";
+  if (!url) return false;
+  return !url.includes("placeholder");
+}
+
+export function activityHasDisplayContent(activity: {
+  imageUrl?: string | null;
+  videoUrl?: string | null;
+  mediaItems?: { url: string }[];
+}): boolean {
+  if (activity.mediaItems?.some((item) => item.url.trim())) return true;
+  return Boolean(activity.imageUrl?.trim() || activity.videoUrl?.trim());
+}
+
 export type PublicMediaSort = "default" | "title" | "newest";
 
 export function sortByPublicMediaOrder<T extends { title: string; sortOrder: number }>(

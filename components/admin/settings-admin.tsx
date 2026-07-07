@@ -33,6 +33,7 @@ const featuresSchema = z.object({
   broadcastReports: z.boolean(),
   meetings: z.boolean(),
   activities: z.boolean(),
+  pressPublications: z.boolean(),
   submissions: z.boolean(),
   files: z.boolean(),
 });
@@ -73,7 +74,7 @@ interface SettingsAdminProps {
 }
 
 const featureLabels: { key: keyof CampaignFeatures; label: string }[] = [
-  { key: "billboards", label: "بیلبورد" },
+  { key: "billboards", label: "تبلیغات محیطی" },
   { key: "posters", label: "پوستر" },
   { key: "videos", label: "ویدیو" },
   { key: "analytics", label: "آمار سایت" },
@@ -83,6 +84,7 @@ const featureLabels: { key: keyof CampaignFeatures; label: string }[] = [
   { key: "broadcastReports", label: "گزارش پخش صدا و سیما" },
   { key: "meetings", label: "جلسات و مصوبات" },
   { key: "activities", label: "اقدامات" },
+  { key: "pressPublications", label: "مجله و روزنامه" },
   { key: "submissions", label: "مشارکت کاربران" },
   { key: "files", label: "فایل‌های کمپین" },
 ];

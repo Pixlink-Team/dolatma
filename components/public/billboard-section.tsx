@@ -17,6 +17,7 @@ import { BillboardCard } from "@/components/public/billboard-card";
 import { BillboardMap } from "@/components/public/billboard-map";
 import { BillboardModal } from "@/components/public/billboard-modal";
 import {
+  billboardHasDisplayContent,
   PUBLIC_MEDIA_GRID_CLASS,
   sortByPublicMediaOrder,
   type PublicMediaSort,
@@ -51,6 +52,7 @@ export function BillboardSection({ billboards, adminOwnerLabel }: BillboardSecti
       if (cityFilter !== "all" && billboard.city !== cityFilter) return false;
       if (statusFilter !== "all" && billboard.status !== statusFilter) return false;
       if (search && !billboard.title.includes(search) && !billboard.city.includes(search)) return false;
+      if (sort !== "default" && !billboardHasDisplayContent(billboard)) return false;
       return true;
     });
     return sortByPublicMediaOrder(items, sort, (item) => item.date);
@@ -126,7 +128,7 @@ export function BillboardSection({ billboards, adminOwnerLabel }: BillboardSecti
     <>
       <CollapsibleSection
         id="billboards"
-        title="بیلبوردها"
+        title="تبلیغات محیطی"
         description="نمایش بیلبوردهای کمپین روی نقشه و کارت‌ها"
         controls={controls}
       >

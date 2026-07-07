@@ -52,6 +52,7 @@ export function computeFilteredCampaignKpis(
   const broadcastReports = filterItemsByOwnerLocation(data.broadcastReports, filter);
   const meetings = filterItemsByOwnerLocation(data.meetings, filter);
   const activities = filterItemsByOwnerLocation(data.activities, filter);
+  const pressPublications = filterItemsByOwnerLocation(data.pressPublications, filter);
   const submissions = filterItemsByOwnerLocation(data.submissions, filter);
   const files = filterItemsByOwnerLocation(data.files, filter);
   const socialPlatforms = filterItemsByOwnerLocation(data.socialAnalytics.platforms, filter);
@@ -69,6 +70,7 @@ export function computeFilteredCampaignKpis(
     totalBroadcastReports: sections.broadcastReports ? broadcastReports.length : 0,
     totalMeetings: sections.meetings ? meetings.length : 0,
     totalActivities: sections.activities ? activities.length : 0,
+    totalPressPublications: sections.pressPublications ? pressPublications.length : 0,
     totalParticipants: sections.submissions
       ? new Set(submissions.map((submission) => submission.participantName)).size
       : 0,

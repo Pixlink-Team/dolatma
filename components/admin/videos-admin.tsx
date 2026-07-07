@@ -6,7 +6,6 @@ import { toast } from "sonner";
 import { AdminVideoAddCard, AdminVideoCompactCard } from "@/components/admin/admin-video-compact-card";
 import { AdminMediaCategories } from "@/components/admin/admin-media-categories";
 import { AdminVideoEditor } from "@/components/admin/admin-video-editor";
-import { saveVideoAction } from "@/lib/actions/admin-actions";
 import {
   Dialog,
   DialogContent,
@@ -37,7 +36,8 @@ export function VideosAdmin({
   const [versions, setVersions] = useState(initialVersions);
   const [editorOpen, setEditorOpen] = useState(false);
   const [activeVideoId, setActiveVideoId] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
+  const [draftVideo, setDraftVideo] = useState<Video | null>(null);
+  const [isPending] = useTransition();
 
   useEffect(() => {
     setVideos(initialVideos);
@@ -54,9 +54,13 @@ export function VideosAdmin({
     return map;
   }, [versions]);
 
-  const activeVideo = activeVideoId
-    ? videos.find((video) => video.id === activeVideoId) ?? null
-    : null;
+  const activeVideo = useMemo(() => {
+    if (!activeVideoId) return null;
+    if (draftVideo?.id === activeVideoId) return draftVideo;
+    return videos.find((video) => video.id === activeVideoId) ?? null;
+  }, [activeVideoId, draftVideo, videos]);
+
+  const isDraftVideo = Boolean(draftVideo && activeVideoId === draftVideo.id);
 
   const activeVersions = activeVideoId ? versionsByVideoId.get(activeVideoId) ?? [] : [];
 
@@ -70,6 +74,7 @@ export function VideosAdmin({
   const closeEditor = () => {
     setEditorOpen(false);
     setActiveVideoId(null);
+    setDraftVideo(null);
   };
 
   const handleCreateVideo = () => {
@@ -93,18 +98,8 @@ export function VideosAdmin({
       updatedAt: now,
     };
 
-    startTransition(async () => {
-      const result = await saveVideoAction(newVideo);
-      if (!result.success) {
-        toast.error("ایجاد ویدیو ناموفق بود");
-        return;
-      }
-
-      setVideos((prev) => [...prev, newVideo]);
-      openEditor(videoId);
-      toast.success("ویدیو جدید — فایل را آپلود کنید");
-      refresh();
-    });
+    setDraftVideo(newVideo);
+    openEditor(videoId);
   };
 
   return (
@@ -155,7 +150,19 @@ export function VideosAdmin({
                 video={activeVideo}
                 versions={activeVersions}
                 categories={initialCategories}
+                isNew={isDraftVideo}
                 onClose={closeEditor}
+                onSaved={(savedVideo) => {
+                  setVideos((prev) => {
+                    const exists = prev.some((item) => item.id === savedVideo.id);
+                    return exists
+                      ? prev.map((item) => (item.id === savedVideo.id ? savedVideo : item))
+                      : [...prev, savedVideo];
+                  });
+                  setDraftVideo(null);
+                  closeEditor();
+                  refresh();
+                }}
               />
             ) : (
               <div className="flex min-h-48 items-center justify-center text-sm text-muted-foreground">

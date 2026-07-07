@@ -1,5 +1,7 @@
 "use client";
 
+import { Plus, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ImageFileDropzone } from "@/components/ui/image-file-dropzone";
@@ -13,6 +15,8 @@ export interface DisplayPeriodDraft {
   endDate: string;
   imageFile: File | null;
   billboardImageFile: File | null;
+  existingBillboardImageUrl?: string | null;
+  existingConfirmationImageUrl?: string | null;
 }
 
 interface BillboardDisplayPeriodsEditorProps {
@@ -46,6 +50,15 @@ export function BillboardDisplayPeriodsEditor({
     onChange(periods.map((period) => (period.id === id ? { ...period, ...patch } : period)));
   };
 
+  const addPeriod = () => {
+    onChange([...periods, createDisplayPeriod()]);
+  };
+
+  const removePeriod = (id: string) => {
+    if (periods.length <= 1) return;
+    onChange(periods.filter((period) => period.id !== id));
+  };
+
   const visiblePeriods = singlePeriod ? periods.slice(0, 1) : periods;
 
   return (
@@ -59,9 +72,18 @@ export function BillboardDisplayPeriodsEditor({
 
       {visiblePeriods.map((period, index) => (
         <div key={period.id} className="space-y-3 rounded-lg border p-4">
-          {!singlePeriod && (
-            <p className="text-sm font-medium">دوره {index + 1}</p>
-          )}
+          <div className="flex items-center justify-between gap-2">
+            {!singlePeriod ? (
+              <p className="text-sm font-medium">دوره {index + 1}</p>
+            ) : (
+              <p className="text-sm font-medium">دوره نمایش</p>
+            )}
+            {!singlePeriod && periods.length > 1 && (
+              <Button type="button" variant="ghost" size="icon" onClick={() => removePeriod(period.id)}>
+                <Trash2 className="h-4 w-4 text-destructive" />
+              </Button>
+            )}
+          </div>
 
           <div className="space-y-2">
             <Label>عنوان (اختیاری)</Label>
@@ -90,34 +112,64 @@ export function BillboardDisplayPeriodsEditor({
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <ImageFileDropzone
-              label="عکس بیلبورد"
-              required={requireBillboardImage}
-              value={period.billboardImageFile}
-              onChange={(file) => updatePeriod(period.id, { billboardImageFile: file })}
-            />
-            <ImageFileDropzone
-              label="تصویر تأییدیه"
-              required={requireConfirmationImage}
-              optionalHint={requireConfirmationImage ? undefined : "اختیاری"}
-              value={period.imageFile}
-              onChange={(file) => updatePeriod(period.id, { imageFile: file })}
-            />
+            <div className="space-y-2">
+              <ImageFileDropzone
+                label="عکس بیلبورد"
+                required={requireBillboardImage && !period.existingBillboardImageUrl}
+                value={period.billboardImageFile}
+                onChange={(file) => updatePeriod(period.id, { billboardImageFile: file })}
+              />
+              {!period.billboardImageFile && period.existingBillboardImageUrl && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={period.existingBillboardImageUrl}
+                  alt="عکس فعلی"
+                  className="h-24 w-full rounded-md border object-cover"
+                />
+              )}
+            </div>
+            <div className="space-y-2">
+              <ImageFileDropzone
+                label="تصویر تأییدیه"
+                required={requireConfirmationImage}
+                optionalHint={requireConfirmationImage ? undefined : "اختیاری"}
+                value={period.imageFile}
+                onChange={(file) => updatePeriod(period.id, { imageFile: file })}
+              />
+              {!period.imageFile && period.existingConfirmationImageUrl && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={period.existingConfirmationImageUrl}
+                  alt="تأییدیه فعلی"
+                  className="h-24 w-full rounded-md border object-cover"
+                />
+              )}
+            </div>
           </div>
         </div>
       ))}
+
+      {!singlePeriod && (
+        <Button type="button" variant="outline" className="w-full" onClick={addPeriod}>
+          <Plus className="h-4 w-4" />
+          افزودن دوره
+        </Button>
+      )}
     </div>
   );
 }
 
 export function buildPeriodsFormPayload(periods: DisplayPeriodDraft[]) {
   return periods.map((period, index) => ({
+    id: period.id,
     title: period.title || undefined,
     startDate: period.startDate,
     endDate: period.endDate,
     sortOrder: index,
     imageKey: `period_image_${period.id}`,
     billboardImageKey: `period_billboard_image_${period.id}`,
+    billboardImageUrl: period.billboardImageFile ? undefined : period.existingBillboardImageUrl ?? undefined,
+    confirmationImageUrl: period.imageFile ? undefined : period.existingConfirmationImageUrl ?? undefined,
   }));
 }
 

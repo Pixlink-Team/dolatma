@@ -181,6 +181,7 @@ export async function saveCampaign(data: Partial<CampaignSettings> & { id?: stri
           broadcastReports: false,
           meetings: false,
           activities: false,
+          pressPublications: false,
           submissions: false,
           files: false,
         },

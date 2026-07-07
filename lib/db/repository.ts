@@ -3,6 +3,7 @@ import { pgGetCampaignActivities, pgGetMeetingsWithTasks, pgGetPublicMeetingPrev
 import {
   mapAnalyticsFromDb,
   mapBillboardFromDb,
+  mapBillboardDisplayPeriodFromDb,
   mapBroadcastReportFromDb,
   mapCampaignFileFromDb,
   mapCategoryFromDb,
@@ -41,6 +42,7 @@ const defaultFeatures = {
   broadcastReports: true,
   meetings: true,
   activities: true,
+  pressPublications: true,
   submissions: true,
   files: true,
 };
@@ -268,15 +270,16 @@ export async function pgSaveBillboard(data: Partial<Billboard> & { id?: string }
 
   await sql`
     INSERT INTO billboards (
-      id, campaign_id, title, description, city, location, date,
+      id, campaign_id, title, description, province, city, location, date,
       thumbnail_url, image_url, external_url, latitude, longitude, source, external_id,
-      status, tags, notes, published, sort_order, owner_user_id,
+      category, area_sqm, status, tags, notes, published, sort_order, owner_user_id,
       created_at, updated_at
     ) VALUES (
       ${id},
       ${data.campaignId ?? ""},
       ${data.title ?? ""},
       ${data.description ?? null},
+      ${data.province ?? null},
       ${data.city ?? ""},
       ${data.location ?? ""},
       ${data.date ?? now.split("T")[0]},
@@ -287,6 +290,8 @@ export async function pgSaveBillboard(data: Partial<Billboard> & { id?: string }
       ${data.longitude ?? null},
       ${data.source ?? "manual"},
       ${data.externalId ?? null},
+      ${data.category ?? null},
+      ${data.areaSqm ?? null},
       ${data.status ?? "draft"},
       ${sql.array(data.tags ?? [])},
       ${data.notes ?? null},
@@ -299,6 +304,7 @@ export async function pgSaveBillboard(data: Partial<Billboard> & { id?: string }
     ON CONFLICT (id) DO UPDATE SET
       title = EXCLUDED.title,
       description = EXCLUDED.description,
+      province = EXCLUDED.province,
       city = EXCLUDED.city,
       location = EXCLUDED.location,
       date = EXCLUDED.date,
@@ -309,6 +315,8 @@ export async function pgSaveBillboard(data: Partial<Billboard> & { id?: string }
       longitude = EXCLUDED.longitude,
       source = EXCLUDED.source,
       external_id = EXCLUDED.external_id,
+      category = EXCLUDED.category,
+      area_sqm = EXCLUDED.area_sqm,
       status = EXCLUDED.status,
       tags = EXCLUDED.tags,
       notes = EXCLUDED.notes,
@@ -334,7 +342,55 @@ export async function pgGetBillboardById(id: string): Promise<Billboard | null> 
 
 export async function pgDeleteBillboard(id: string) {
   const sql = getSql();
+  await sql`DELETE FROM billboard_display_periods WHERE billboard_id = ${id}`;
   await sql`DELETE FROM billboards WHERE id = ${id}`;
+  return { success: true };
+}
+
+export async function pgGetBillboardPeriods(billboardId: string) {
+  const sql = getSql();
+  const rows = await sql`
+    SELECT * FROM billboard_display_periods
+    WHERE billboard_id = ${billboardId}
+    ORDER BY sort_order ASC, start_date ASC
+  `;
+  return rows.map(mapBillboardDisplayPeriodFromDb);
+}
+
+export async function pgReplaceBillboardPeriods(
+  billboardId: string,
+  periods: Array<{
+    id?: string;
+    title?: string | null;
+    startDate: string;
+    endDate: string;
+    billboardImageUrl: string;
+    confirmationImageUrl?: string | null;
+    sortOrder: number;
+  }>
+) {
+  const sql = getSql();
+  await sql`DELETE FROM billboard_display_periods WHERE billboard_id = ${billboardId}`;
+
+  for (const period of periods) {
+    const id = period.id ?? generateId();
+    await sql`
+      INSERT INTO billboard_display_periods (
+        id, billboard_id, title, start_date, end_date,
+        billboard_image_url, confirmation_image_url, sort_order
+      ) VALUES (
+        ${id},
+        ${billboardId},
+        ${period.title ?? null},
+        ${period.startDate},
+        ${period.endDate},
+        ${period.billboardImageUrl},
+        ${period.confirmationImageUrl ?? null},
+        ${period.sortOrder}
+      )
+    `;
+  }
+
   return { success: true };
 }
 

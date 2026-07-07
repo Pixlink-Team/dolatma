@@ -30,7 +30,7 @@ import type { AdminUser, CampaignSettings } from "@/lib/types";
 const schema = z.object({
   email: z.string().min(1, "نام کاربری یا ایمیل الزامی است"),
   name: z.string().min(1),
-  role: z.enum(["admin", "contributor"]),
+  role: z.enum(["admin", "contributor", "client"]),
   password: z.string().optional(),
   province: z.string().optional(),
   city: z.string().optional(),
@@ -109,7 +109,7 @@ export function UsersAdmin({ initialUsers, campaigns }: UsersAdminProps) {
         id: editingId ?? undefined,
         province: data.province?.trim() || null,
         city: data.city?.trim() || null,
-        campaignPermissions: data.role === "contributor" ? campaignPermissions : undefined,
+        campaignPermissions: data.role === "contributor" || data.role === "client" ? campaignPermissions : undefined,
       });
       if (!result.success) {
         toast.error(result.error ?? "ذخیره نشد");
@@ -126,7 +126,7 @@ export function UsersAdmin({ initialUsers, campaigns }: UsersAdminProps) {
         province: data.province?.trim() || null,
         city: data.city?.trim() || null,
         campaignIds: data.campaignIds,
-        campaignPermissions: data.role === "contributor" ? campaignPermissions : {},
+        campaignPermissions: data.role === "contributor" || data.role === "client" ? campaignPermissions : {},
         createdAt: new Date().toISOString(),
       };
 
@@ -159,7 +159,7 @@ export function UsersAdmin({ initialUsers, campaigns }: UsersAdminProps) {
     form.reset({
       email: getLoginUsernameFromEmail(user.email ?? ""),
       name: user.name ?? "",
-      role: user.role === "admin" ? "admin" : "contributor",
+      role: user.role,
       password: "",
       province: user.province ?? "",
       city: user.city ?? "",
@@ -204,7 +204,9 @@ export function UsersAdmin({ initialUsers, campaigns }: UsersAdminProps) {
           },
           { key: "province", label: "استان", render: (item) => item.province || "—" },
           { key: "city", label: "شهر", render: (item) => item.city || "—" },
-          { key: "role", label: "نقش", render: (item) => (item.role === "admin" ? "مدیر" : "کاربر") },
+          { key: "role", label: "نقش", render: (item) => (
+            item.role === "admin" ? "مدیر" : item.role === "client" ? "کارفرما" : "کاربر"
+          ) },
           {
             key: "campaignIds",
             label: "کمپین‌ها",
@@ -278,10 +280,11 @@ export function UsersAdmin({ initialUsers, campaigns }: UsersAdminProps) {
             </div>
             <div className="space-y-2">
               <Label>نقش</Label>
-              <Select value={selectedRole} onValueChange={(value) => form.setValue("role", value as "admin" | "contributor")}>
+              <Select value={selectedRole} onValueChange={(value) => form.setValue("role", value as "admin" | "contributor" | "client")}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="contributor">کاربر (فقط داده خودش)</SelectItem>
+                  <SelectItem value="client">کارفرما</SelectItem>
                   <SelectItem value="admin">مدیر</SelectItem>
                 </SelectContent>
               </Select>
@@ -303,7 +306,7 @@ export function UsersAdmin({ initialUsers, campaigns }: UsersAdminProps) {
               </div>
             </div>
 
-            {selectedRole === "contributor" && selectedCampaignIds.length > 0 && (
+            {(selectedRole === "contributor" || selectedRole === "client") && selectedCampaignIds.length > 0 && (
               <div className="space-y-3">
                 <Label>دسترسی به بخش‌های پنل (برای هر کمپین)</Label>
                 {selectedCampaignIds.map((campaignId) => {
