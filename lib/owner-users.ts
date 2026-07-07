@@ -47,6 +47,7 @@ export function collectOwnerFilterOptions(data: PublicCampaignData): OwnerFilter
   for (const billboard of data.billboards) addOwnerOption(map, billboard);
   for (const poster of data.posters) addOwnerOption(map, poster);
   for (const video of data.videos) addOwnerOption(map, video);
+  for (const platform of data.socialAnalytics.platforms) addOwnerOption(map, platform);
 
   return [...map.entries()]
     .map(([key, label]) => ({ key, label }))

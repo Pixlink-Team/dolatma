@@ -20,6 +20,7 @@ export const PUBLIC_MEDIA_PAGE_SIZE = 18;
 
 export const PUBLIC_MEDIA_MOBILE_INITIAL = 6;
 export const PUBLIC_MEDIA_MOBILE_PAGE_SIZE = 6;
+export const SOCIAL_ANALYTICS_PAGE_SIZE = 6;
 export const PUBLIC_MEDIA_MOBILE_QUERY = "(max-width: 639px)";
 
 export type PublicMediaSort = "default" | "title" | "newest";

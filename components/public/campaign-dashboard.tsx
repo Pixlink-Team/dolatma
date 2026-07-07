@@ -108,7 +108,10 @@ export function CampaignDashboard({ initialData, slug, exportMode = false }: Cam
         {sections.socialAnalytics && (
           <DeferredSection minHeight={280} forceRender={exportMode}>
             <section data-export-section data-export-label="آمار شبکه‌های اجتماعی">
-              <SocialAnalyticsSection analytics={data.socialAnalytics} />
+              <SocialAnalyticsSection
+                analytics={data.socialAnalytics}
+                adminOwnerLabel={settings.adminOwnerLabel}
+              />
             </section>
           </DeferredSection>
         )}
