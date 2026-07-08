@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import type { Map as LeafletMap } from "leaflet";
 import { formatBillboardLocationLine } from "@/lib/billboard-location";
 import { getBillboardDateLabel, hasBillboardCoordinates } from "@/lib/billboards";
@@ -19,7 +19,18 @@ export function BillboardMap({ billboards, onSelect }: BillboardMapProps) {
   const onSelectRef = useRef(onSelect);
   onSelectRef.current = onSelect;
 
-  const mappableBillboards = billboards.filter(hasBillboardCoordinates);
+  const mappableBillboards = useMemo(
+    () => billboards.filter(hasBillboardCoordinates),
+    [billboards]
+  );
+
+  const mapPointsKey = useMemo(
+    () =>
+      mappableBillboards
+        .map((billboard) => `${billboard.id}:${billboard.latitude}:${billboard.longitude}`)
+        .join("|"),
+    [mappableBillboards]
+  );
 
   useEffect(() => {
     if (!containerRef.current || mappableBillboards.length === 0) return;
@@ -70,6 +81,10 @@ export function BillboardMap({ billboards, onSelect }: BillboardMapProps) {
       }
 
       mapRef.current = map;
+
+      requestAnimationFrame(() => {
+        map.invalidateSize();
+      });
     });
 
     return () => {
@@ -77,7 +92,7 @@ export function BillboardMap({ billboards, onSelect }: BillboardMapProps) {
       mapRef.current?.remove();
       mapRef.current = null;
     };
-  }, [mappableBillboards]);
+  }, [mapPointsKey, mappableBillboards]);
 
   if (mappableBillboards.length === 0) {
     return (

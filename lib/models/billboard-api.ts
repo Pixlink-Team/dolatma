@@ -95,6 +95,7 @@ export interface IntegrationBillboard {
   axis: string;
   code: string;
   address: string | null;
+  full_address?: string | null;
   province?: string | null;
   city?: string | null;
   owner?: IntegrationBillboardOwner | null;

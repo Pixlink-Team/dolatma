@@ -11,11 +11,10 @@ export interface LocationCenter {
 function normalizeLocationName(value: string): string {
   return value
     .trim()
-    .replace(/\u200c/g, "")
-    .replace(/ي/g, "ی")
-    .replace(/ك/g, "ک")
-    .replace(/\s+/g, " ")
-    .replace(/‌/g, "");
+    .replace(/\u064A/g, "\u06CC")
+    .replace(/\u0643/g, "\u06A9")
+    .replace(/\u200C/g, " ")
+    .replace(/\s+/g, " ");
 }
 
 const CENTER_INDEX = new Map<string, LocationCenter>();

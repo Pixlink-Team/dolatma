@@ -133,7 +133,7 @@ export function BillboardSection({ billboards, adminOwnerLabel }: BillboardSecti
         controls={controls}
       >
         <div className="mb-6">
-          <BillboardMap billboards={filtered} onSelect={openBillboard} />
+          <BillboardMap billboards={locationFilteredBillboards} onSelect={openBillboard} />
         </div>
 
         {filtered.length === 0 ? (
