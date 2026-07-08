@@ -40,8 +40,8 @@ export function BillboardIntegrationImportPanel({
 
       const summary = [
         `${result.imported} بیلبورد وارد شد`,
+        result.updated ? `${result.updated} مورد موجود به‌روزرسانی شد` : null,
         result.matchedUsers ? `${result.matchedUsers} مورد به کاربران متصل شد` : null,
-        result.skipped ? `${result.skipped} مورد تکراری رد شد` : null,
         result.skippedAdmin ? `${result.skippedAdmin} مورد ثبت‌شده توسط ادمین نادیده گرفته شد` : null,
         result.unmatchedOwners?.length
           ? `${result.unmatchedOwners.length} مالک بدون کاربر متناظر`
@@ -66,7 +66,8 @@ export function BillboardIntegrationImportPanel({
           بیلبوردها از endpoint integration دریافت می‌شوند. تطابق کاربر با{" "}
           <code className="text-xs">owner.username</code> /{" "}
           <code className="text-xs">owner.email</code> انجام می‌شود. بیلبوردهای ثبت‌شده توسط
-          ادمین (<code className="text-xs">owner: null</code>) وارد نمی‌شوند.
+          ادمین (<code className="text-xs">owner: null</code>) وارد نمی‌شوند. بیلبوردهایی که قبلاً
+          وارد شده‌اند دوباره دریافت و به‌روزرسانی می‌شوند (استان/شهر و اطلاعات از API تازه می‌شود).
           {externalCampaignSlug ? (
             <>
               {" "}

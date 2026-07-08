@@ -1,4 +1,4 @@
-import { collectPersistedExternalBillboardIds } from "@/lib/billboards";
+import { getBillboardExternalMapId } from "@/lib/billboards";
 import { pgSaveBillboard } from "@/lib/db/repository";
 import {
   fetchCampaignIntegration,
@@ -10,15 +10,22 @@ import { generateId } from "@/lib/utils";
 
 export interface IntegrationBillboardImportResult {
   imported: number;
-  skipped: number;
+  updated: number;
   skippedAdmin: number;
   unmatchedOwners: string[];
   matchedUsers: number;
   total: number;
 }
 
-function isAlreadyImported(dbBillboards: Billboard[], externalBillboardId: string): boolean {
-  return collectPersistedExternalBillboardIds(dbBillboards).has(externalBillboardId);
+function indexByExternalId(dbBillboards: Billboard[]): Map<string, Billboard> {
+  const map = new Map<string, Billboard>();
+  for (const billboard of dbBillboards) {
+    const externalId = getBillboardExternalMapId(billboard);
+    if (externalId && !map.has(externalId)) {
+      map.set(externalId, billboard);
+    }
+  }
+  return map;
 }
 
 export async function importIntegrationBillboards(params: {
@@ -28,9 +35,10 @@ export async function importIntegrationBillboards(params: {
   dbBillboards: Billboard[];
 }): Promise<IntegrationBillboardImportResult> {
   const integration = await fetchCampaignIntegration(params.externalCampaignSlug);
+  const existingByExternalId = indexByExternalId(params.dbBillboards);
 
   let imported = 0;
-  let skipped = 0;
+  let updated = 0;
   let skippedAdmin = 0;
   let matchedUsers = 0;
   let sortOrder = params.dbBillboards.length;
@@ -42,16 +50,32 @@ export async function importIntegrationBillboards(params: {
       continue;
     }
 
-    if (isAlreadyImported(params.dbBillboards, item.billboard_id)) {
-      skipped += 1;
-      continue;
-    }
-
     const matchedUser = matchOwnerToUser(item.owner, params.users);
     if (matchedUser) {
       matchedUsers += 1;
     } else {
       unmatchedOwners.add(item.owner.name || item.owner.email || item.owner.username);
+    }
+
+    const existing = existingByExternalId.get(item.billboard_id);
+
+    // Re-import existing billboards to refresh resolved province/city and API data.
+    if (existing) {
+      const mapped = mapIntegrationBillboardToBillboard(item, params.campaignId, {
+        sortOrder: existing.sortOrder,
+        published: existing.published,
+        matchedUser,
+        source: existing.source ?? "manual",
+      });
+
+      await pgSaveBillboard({
+        ...mapped,
+        id: existing.id,
+        ownerUserId: mapped.ownerUserId ?? existing.ownerUserId ?? null,
+      });
+
+      updated += 1;
+      continue;
     }
 
     sortOrder += 1;
@@ -72,7 +96,7 @@ export async function importIntegrationBillboards(params: {
 
   return {
     imported,
-    skipped,
+    updated,
     skippedAdmin,
     unmatchedOwners: [...unmatchedOwners].sort((a, b) => a.localeCompare(b, "fa")),
     matchedUsers,
