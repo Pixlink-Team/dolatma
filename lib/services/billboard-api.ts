@@ -10,8 +10,24 @@ import {
 } from "@/lib/models/billboard-api";
 import { billboardApiRoutes } from "@/lib/routes/billboard-api";
 import { IRAN_PROVINCES_DATA } from "@/lib/iran-provinces-data";
-import { normalizeImportedProvince } from "@/lib/iran-locations";
+import { isIranProvince, normalizeImportedProvince } from "@/lib/iran-locations";
 import type { AdminUser, Billboard } from "@/lib/types";
+
+// Maps every known city name to its province for reliable reverse lookup.
+// First occurrence wins for the rare cities that share a name across provinces.
+const CITY_TO_PROVINCE: Map<string, string> = (() => {
+  const map = new Map<string, string>();
+  for (const province of IRAN_PROVINCES_DATA) {
+    for (const city of province.cities) {
+      if (!map.has(city.name)) map.set(city.name, province.name);
+    }
+  }
+  return map;
+})();
+
+function isKnownCity(value: string): boolean {
+  return CITY_TO_PROVINCE.has(value);
+}
 
 const BILLBOARD_API_TIMEOUT_MS = 8_000;
 
@@ -100,38 +116,57 @@ function parseLocationFromAddress(address: string): {
   return { province: matchedProvince, city: matchedCity };
 }
 
-function firstNonEmpty(...values: (string | null | undefined)[]): string | null {
-  for (const value of values) {
-    const trimmed = value?.trim();
-    if (trimmed) return trimmed;
+// Resolves the physical province/city of a billboard while defending against
+// bad API data: a city field that holds a province name, city equal to province,
+// or a non-standard province label. When the provided city is unreliable, the
+// concrete city is recovered from the address, and the province is derived from
+// the resolved city whenever possible.
+function resolveBillboardLocation(input: {
+  province?: string | null;
+  city?: string | null;
+  address?: string | null;
+}): ResolvedBillboardLocation {
+  const rawProvince = input.province?.trim() ?? "";
+  const rawCity = input.city?.trim() ?? "";
+  const parsed = parseLocationFromAddress(input.address?.trim() ?? "");
+
+  const rawCityIsReliable =
+    Boolean(rawCity) &&
+    isKnownCity(rawCity) &&
+    !(rawCity === rawProvince && parsed.city && parsed.city !== rawCity);
+
+  const city = rawCityIsReliable ? rawCity : parsed.city ?? "";
+
+  const cityProvince = city ? CITY_TO_PROVINCE.get(city) ?? null : null;
+  const normalizedRawProvince = rawProvince ? normalizeImportedProvince(rawProvince) : null;
+
+  let province: string | null;
+  if (cityProvince) {
+    province = cityProvince;
+  } else if (normalizedRawProvince && isIranProvince(normalizedRawProvince)) {
+    province = normalizedRawProvince;
+  } else {
+    province = parsed.province ? normalizeImportedProvince(parsed.province) : null;
   }
-  return null;
+
+  return {
+    province,
+    city: city || "نامشخص",
+  };
 }
 
 function resolveIntegrationBillboardLocation(
   external: IntegrationBillboard
 ): ResolvedBillboardLocation {
-  const parsed = parseLocationFromAddress(external.address?.trim() ?? "");
-
-  const province = firstNonEmpty(
-    external.province,
-    external.owner?.province,
-    parsed.province
-  );
-  const city = firstNonEmpty(external.city, external.owner?.city, parsed.city);
-
-  return {
-    province: normalizeImportedProvince(province),
-    city: city ?? "نامشخص",
-  };
+  return resolveBillboardLocation({
+    province: external.province ?? external.owner?.province,
+    city: external.city ?? external.owner?.city,
+    address: external.address,
+  });
 }
 
 function resolveExternalBillboardLocation(address: string): ResolvedBillboardLocation {
-  const parsed = parseLocationFromAddress(address);
-  return {
-    province: normalizeImportedProvince(parsed.province),
-    city: parsed.city ?? "نامشخص",
-  };
+  return resolveBillboardLocation({ address });
 }
 
 function buildMapUrl(latitude: number, longitude: number): string {
