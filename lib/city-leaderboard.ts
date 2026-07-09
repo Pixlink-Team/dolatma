@@ -1,8 +1,9 @@
 import { isoFromGregorian } from "@/lib/jalali";
+import { normalizeImportedProvince } from "@/lib/iran-locations";
 import { getSafeUploadTimestamp, isSameDay } from "@/lib/safe-dates";
 import type { Ownable, PublicCampaignData } from "@/lib/types";
 
-export interface CityLeaderboardMetrics {
+export interface ProvinceLeaderboardMetrics {
   billboards: number;
   posters: number;
   videos: number;
@@ -15,19 +16,17 @@ export interface CityLeaderboardMetrics {
   score: number;
 }
 
-export interface CityLeaderboardEntry extends CityLeaderboardMetrics {
+export interface ProvinceLeaderboardEntry extends ProvinceLeaderboardMetrics {
   rank: number;
   province: string;
-  city: string;
-  cityKey: string;
+  provinceKey: string;
 }
 
-export interface CityContributorEntry {
+export interface ProvinceContributorEntry {
   rank: number;
   userName: string;
   province: string;
-  city: string;
-  cityKey: string;
+  provinceKey: string;
   totalUploads: number;
   score: number;
 }
@@ -49,21 +48,12 @@ function todayIso(): string {
   return isoFromGregorian(date.getFullYear(), date.getMonth() + 1, date.getDate());
 }
 
-function resolveLocation(item: Ownable & { city?: string | null; province?: string | null }): {
-  province: string;
-  city: string;
-  cityKey: string;
-} {
-  const province = item.ownerProvince?.trim() || item.province?.trim() || "نامشخص";
-  const city = item.ownerCity?.trim() || item.city?.trim() || "نامشخص";
-  return {
-    province,
-    city,
-    cityKey: `${province}::${city}`,
-  };
+function resolveProvince(item: Ownable & { province?: string | null }): string {
+  const raw = item.ownerProvince?.trim() || item.province?.trim() || "";
+  return (normalizeImportedProvince(raw) ?? raw) || "نامشخص";
 }
 
-function emptyMetrics(): CityLeaderboardMetrics {
+function emptyMetrics(): ProvinceLeaderboardMetrics {
   return {
     billboards: 0,
     posters: 0,
@@ -78,16 +68,15 @@ function emptyMetrics(): CityLeaderboardMetrics {
   };
 }
 
-function addItem<T extends Ownable & { createdAt?: string | null; city?: string | null; province?: string | null }>(
-  map: Map<string, CityLeaderboardMetrics & { province: string; city: string }>,
+function addItem<T extends Ownable & { createdAt?: string | null; province?: string | null }>(
+  map: Map<string, ProvinceLeaderboardMetrics & { province: string }>,
   item: T,
   field: MetricField
 ) {
-  const location = resolveLocation(item);
-  const current = map.get(location.cityKey) ?? {
+  const province = resolveProvince(item);
+  const current = map.get(province) ?? {
     ...emptyMetrics(),
-    province: location.province,
-    city: location.city,
+    province,
   };
 
   current[field]++;
@@ -98,24 +87,23 @@ function addItem<T extends Ownable & { createdAt?: string | null; city?: string 
     current.todayUploads++;
   }
 
-  map.set(location.cityKey, current);
+  map.set(province, current);
 }
 
-function addContributor<T extends Ownable & { createdAt?: string | null; city?: string | null; province?: string | null }>(
-  map: Map<string, CityContributorEntry>,
+function addContributor<T extends Ownable & { createdAt?: string | null; province?: string | null }>(
+  map: Map<string, ProvinceContributorEntry>,
   item: T,
   field: MetricField
 ) {
-  const location = resolveLocation(item);
+  const province = resolveProvince(item);
   const userName = item.ownerName?.trim() || "کاربر";
-  const contributorKey = `${location.cityKey}::${item.ownerUserId ?? item.ownerEmail ?? userName}`;
+  const contributorKey = `${province}::${item.ownerUserId ?? item.ownerEmail ?? userName}`;
 
   const current = map.get(contributorKey) ?? {
     rank: 0,
     userName,
-    province: location.province,
-    city: location.city,
-    cityKey: location.cityKey,
+    province,
+    provinceKey: province,
     totalUploads: 0,
     score: 0,
   };
@@ -125,8 +113,8 @@ function addContributor<T extends Ownable & { createdAt?: string | null; city?: 
   map.set(contributorKey, current);
 }
 
-export function buildCityLeaderboard(data: PublicCampaignData): CityLeaderboardEntry[] {
-  const map = new Map<string, CityLeaderboardMetrics & { province: string; city: string }>();
+export function buildProvinceLeaderboard(data: PublicCampaignData): ProvinceLeaderboardEntry[] {
+  const map = new Map<string, ProvinceLeaderboardMetrics & { province: string }>();
 
   if (data.sections.billboards) {
     for (const item of data.billboards) addItem(map, item, "billboards");
@@ -152,10 +140,9 @@ export function buildCityLeaderboard(data: PublicCampaignData): CityLeaderboardE
   }
 
   return [...map.entries()]
-    .map(([cityKey, metrics]) => ({
-      cityKey,
+    .map(([provinceKey, metrics]) => ({
+      provinceKey,
       province: metrics.province,
-      city: metrics.city,
       billboards: metrics.billboards,
       posters: metrics.posters,
       videos: metrics.videos,
@@ -172,10 +159,12 @@ export function buildCityLeaderboard(data: PublicCampaignData): CityLeaderboardE
     .map((entry, index) => ({ ...entry, rank: index + 1 }));
 }
 
-export function buildCityContributorLeaderboard(data: PublicCampaignData): CityContributorEntry[] {
-  const map = new Map<string, CityContributorEntry>();
+export function buildProvinceContributorLeaderboard(
+  data: PublicCampaignData
+): ProvinceContributorEntry[] {
+  const map = new Map<string, ProvinceContributorEntry>();
 
-  const addAll = <T extends Ownable & { createdAt?: string | null; city?: string | null; province?: string | null }>(
+  const addAll = <T extends Ownable & { createdAt?: string | null; province?: string | null }>(
     items: T[],
     field: MetricField
   ) => {
@@ -198,9 +187,16 @@ export function buildCityContributorLeaderboard(data: PublicCampaignData): CityC
     .map((entry, index) => ({ ...entry, rank: index + 1 }));
 }
 
-export function getCityRankBadge(rank: number): string {
+export function getProvinceRankBadge(rank: number): string {
   if (rank === 1) return "🥇";
   if (rank === 2) return "🥈";
   if (rank === 3) return "🥉";
   return `#${rank}`;
 }
+
+// Backward-compatible aliases
+export const buildCityLeaderboard = buildProvinceLeaderboard;
+export const buildCityContributorLeaderboard = buildProvinceContributorLeaderboard;
+export const getCityRankBadge = getProvinceRankBadge;
+export type CityLeaderboardEntry = ProvinceLeaderboardEntry;
+export type CityContributorEntry = ProvinceContributorEntry;
