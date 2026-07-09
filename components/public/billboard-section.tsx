@@ -15,6 +15,10 @@ import { CollapsibleSection } from "@/components/public/collapsible-section";
 import { OwnerGroupedSection } from "@/components/public/owner-grouped-section";
 import { BillboardCard } from "@/components/public/billboard-card";
 import { BillboardMap } from "@/components/public/billboard-map";
+import {
+  BillboardMapDialog,
+  BillboardMapExpandButton,
+} from "@/components/public/billboard-map-dialog";
 import { BillboardModal } from "@/components/public/billboard-modal";
 import {
   billboardHasDisplayContent,
@@ -28,6 +32,7 @@ import { useFilteredOwnableItems } from "@/lib/hooks/use-filtered-owner-groups";
 import { useCampaignSectionVisibility } from "@/lib/hooks/use-campaign-section-visibility";
 import { useOwnerLocationFilter } from "@/lib/context/owner-location-filter-context";
 import { groupByOwner, groupByOwnerPreservingOrder } from "@/lib/owner-groups";
+import { hasBillboardCoordinates } from "@/lib/billboards";
 import type { Billboard } from "@/lib/types";
 import { formatPersianNumber, getStatusLabel } from "@/lib/utils";
 
@@ -56,6 +61,7 @@ export function BillboardSection({ billboards, adminOwnerLabel }: BillboardSecti
   const [search, setSearch] = useState("");
   const [selectedBillboard, setSelectedBillboard] = useState<Billboard | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [mapExpanded, setMapExpanded] = useState(false);
 
   const cities = useMemo(
     () => [...new Set(locationFilteredBillboards.map((billboard) => billboard.city))],
@@ -159,7 +165,13 @@ export function BillboardSection({ billboards, adminOwnerLabel }: BillboardSecti
         description="نمایش بیلبوردهای کمپین روی نقشه و کارت‌ها"
         controls={controls}
       >
-        <div className="mb-6">
+        <div className="mb-6 space-y-3">
+          <div className="flex justify-end">
+            <BillboardMapExpandButton
+              onClick={() => setMapExpanded(true)}
+              disabled={locationFilteredBillboards.filter(hasBillboardCoordinates).length === 0}
+            />
+          </div>
           <BillboardMap billboards={locationFilteredBillboards} onSelect={openBillboard} />
         </div>
 
@@ -194,6 +206,13 @@ export function BillboardSection({ billboards, adminOwnerLabel }: BillboardSecti
         open={modalOpen}
         onOpenChange={setModalOpen}
         billboard={selectedBillboard}
+      />
+
+      <BillboardMapDialog
+        open={mapExpanded}
+        onOpenChange={setMapExpanded}
+        billboards={locationFilteredBillboards}
+        onSelect={openBillboard}
       />
     </>
   );

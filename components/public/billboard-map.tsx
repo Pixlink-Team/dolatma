@@ -2,17 +2,27 @@
 
 import { useEffect, useMemo, useRef } from "react";
 import type { Map as LeafletMap } from "leaflet";
-import { formatBillboardLocationLine } from "@/lib/billboard-location";
-import { getBillboardDateLabel, hasBillboardCoordinates } from "@/lib/billboards";
+import { buildBillboardMapTooltipHtml } from "@/lib/billboard-map-popup";
+import { hasBillboardCoordinates } from "@/lib/billboards";
 import { addLeafletTileLayer } from "@/lib/leaflet-tiles";
 import type { Billboard } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 interface BillboardMapProps {
   billboards: Billboard[];
   onSelect: (billboard: Billboard) => void;
+  containerClassName?: string;
+  scrollWheelZoom?: boolean;
+  active?: boolean;
 }
 
-export function BillboardMap({ billboards, onSelect }: BillboardMapProps) {
+export function BillboardMap({
+  billboards,
+  onSelect,
+  containerClassName = "h-[420px]",
+  scrollWheelZoom = false,
+  active = true,
+}: BillboardMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<LeafletMap | null>(null);
 
@@ -33,7 +43,7 @@ export function BillboardMap({ billboards, onSelect }: BillboardMapProps) {
   );
 
   useEffect(() => {
-    if (!containerRef.current || mappableBillboards.length === 0) return;
+    if (!active || !containerRef.current || mappableBillboards.length === 0) return;
 
     let disposed = false;
 
@@ -48,7 +58,7 @@ export function BillboardMap({ billboards, onSelect }: BillboardMapProps) {
 
       const first = mappableBillboards[0];
       const map = L.map(containerRef.current, {
-        scrollWheelZoom: false,
+        scrollWheelZoom,
       }).setView([first.latitude!, first.longitude!], 12);
 
       addLeafletTileLayer(L, map);
@@ -62,12 +72,21 @@ export function BillboardMap({ billboards, onSelect }: BillboardMapProps) {
           fillOpacity: 0.85,
         });
 
-        marker.bindTooltip(
-          `<strong>${billboard.title}</strong><br/>${formatBillboardLocationLine(billboard)}${
-            getBillboardDateLabel(billboard) ? `<br/>${getBillboardDateLabel(billboard)}` : ""
-          }`,
-          { direction: "top", opacity: 0.95 }
-        );
+        marker.bindTooltip(buildBillboardMapTooltipHtml(billboard), {
+          direction: "top",
+          offset: [0, -10],
+          opacity: 1,
+          className: "billboard-map-tooltip",
+          interactive: true,
+          sticky: false,
+        });
+
+        marker.on("mouseover", () => {
+          marker.openTooltip();
+        });
+        marker.on("mouseout", () => {
+          marker.closeTooltip();
+        });
 
         marker.on("click", () => onSelectRef.current(billboard));
         marker.addTo(map);
@@ -92,7 +111,15 @@ export function BillboardMap({ billboards, onSelect }: BillboardMapProps) {
       mapRef.current?.remove();
       mapRef.current = null;
     };
-  }, [mapPointsKey, mappableBillboards]);
+  }, [active, mapPointsKey, mappableBillboards, scrollWheelZoom]);
+
+  useEffect(() => {
+    if (!active || !mapRef.current) return;
+
+    requestAnimationFrame(() => {
+      mapRef.current?.invalidateSize();
+    });
+  }, [active, containerClassName]);
 
   if (mappableBillboards.length === 0) {
     return (
@@ -104,7 +131,7 @@ export function BillboardMap({ billboards, onSelect }: BillboardMapProps) {
 
   return (
     <div className="overflow-hidden rounded-xl border bg-card">
-      <div ref={containerRef} className="h-[420px] w-full" />
+      <div ref={containerRef} className={cn("w-full", containerClassName)} />
     </div>
   );
 }
