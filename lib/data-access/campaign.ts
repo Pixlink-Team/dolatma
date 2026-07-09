@@ -5,18 +5,19 @@ import type {
   AnalyticsChannel,
   AnalyticsMetric,
   AnalyticsSummary,
+  CampaignActivity,
   CampaignKPIs,
   CampaignListItem,
   CampaignSettings,
-  CampaignActivity,
   ChannelAnalyticsConfig,
+  MeetingPublicPreview,
+  MeetingWithTasks,
   PublicCampaignData,
   SectionVisibility,
   SocialAnalyticsSummary,
+  SocialMediaPost,
   SocialPlatformStat,
   SubmissionSummary,
-  MeetingPublicPreview,
-  MeetingWithTasks,
 } from "@/lib/types";
 import { truncateMeetingSummary } from "@/lib/meeting-preview";
 import { compareMeetingsByDateDesc } from "@/lib/meeting-tasks";
@@ -291,9 +292,12 @@ function buildKPIs(
     totalBillboards: visibility.billboards ? data.billboards.length : 0,
     totalPosters: visibility.posters ? data.posters.length : 0,
     totalVideos: visibility.videos ? data.videos.length : 0,
-    totalSiteVisitors: visibility.analytics ? data.analytics.totalVisitors : 0,
+    totalSiteVisitors: visibility.analytics ? data.analytics.uniqueVisitors : 0,
     totalSocialFollowers: visibility.socialAnalytics ? data.socialAnalytics.totalFollowers : 0,
     totalSocialPosts: visibility.socialPosts ? data.socialPosts.length : 0,
+    totalSocialPostViews: visibility.socialPosts
+      ? (data.socialPosts as SocialMediaPost[]).reduce((sum, post) => sum + (post.views ?? 0), 0)
+      : 0,
     totalSitePublications: visibility.sitePublications ? data.sitePublications.length : 0,
     totalBroadcastReports: visibility.broadcastReports ? data.broadcastReports.length : 0,
     totalMeetings: visibility.meetings ? data.meetings.length : 0,

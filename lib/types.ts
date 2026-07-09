@@ -524,6 +524,7 @@ export interface CampaignKPIs {
   totalSiteVisitors: number;
   totalSocialFollowers: number;
   totalSocialPosts: number;
+  totalSocialPostViews: number;
   totalSitePublications: number;
   totalBroadcastReports: number;
   totalMeetings: number;

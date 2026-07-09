@@ -93,6 +93,9 @@ export function computeFilteredCampaignKpis(
       ? socialPlatforms.reduce((sum, platform) => sum + platform.followers, 0)
       : 0,
     totalSocialPosts: sections.socialPosts ? socialPosts.length : 0,
+    totalSocialPostViews: sections.socialPosts
+      ? socialPosts.reduce((sum, post) => sum + post.views, 0)
+      : 0,
     totalSitePublications: sections.sitePublications ? sitePublications.length : 0,
     totalBroadcastReports: sections.broadcastReports ? broadcastReports.length : 0,
     totalMeetings: sections.meetings ? meetings.length : 0,
