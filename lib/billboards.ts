@@ -6,6 +6,7 @@ import {
   mapIntegrationBillboardToBillboard,
 } from "@/lib/services/billboard-api";
 import { matchOwnerToUser } from "@/lib/services/owner-user-match";
+import { getSafeUploadTimestamp, isSameDay } from "@/lib/safe-dates";
 import type { AdminUser, Billboard, CampaignSettings } from "@/lib/types";
 
 export {
@@ -51,6 +52,17 @@ export function isLiveApiBillboard(billboard: Billboard): boolean {
 
 export function isApiBillboard(billboard: Billboard): boolean {
   return isLiveApiBillboard(billboard);
+}
+
+/** Live API billboards are re-mapped with createdAt=now on every fetch. */
+export function countsAsTodayBillboardUpload(billboard: Billboard): boolean {
+  if (isLiveApiBillboard(billboard)) return false;
+  return isSameDay(getSafeUploadTimestamp(billboard));
+}
+
+export function getBillboardUploadActivityDate(billboard: Billboard): string {
+  if (isLiveApiBillboard(billboard)) return "";
+  return getSafeUploadTimestamp(billboard);
 }
 
 export function billboardBelongsToUser(

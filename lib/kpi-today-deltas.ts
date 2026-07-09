@@ -1,8 +1,9 @@
 import { isoFromGregorian } from "@/lib/jalali";
 import { isCampaignContentFilterActive } from "@/lib/campaign-content-filter";
+import { countsAsTodayBillboardUpload } from "@/lib/billboards";
 import { filterItemsByOwnerLocation, type OwnerLocationFilter } from "@/lib/owner-location-filter";
 import { getSafeUploadTimestamp, safeDatePrefix } from "@/lib/safe-dates";
-import type { Ownable, PublicCampaignData, SocialMediaPost } from "@/lib/types";
+import type { Billboard, Ownable, PublicCampaignData, SocialMediaPost } from "@/lib/types";
 
 export interface KpiTodayDeltas {
   billboards: number;
@@ -59,6 +60,14 @@ function sumSocialPostViewsToday(
     .reduce((sum, post) => sum + post.views, 0);
 }
 
+function countBillboardsToday(billboards: Billboard[], filter: OwnerLocationFilter): number {
+  const scoped = isCampaignContentFilterActive(filter)
+    ? filterItemsByOwnerLocation(billboards, filter, (billboard) => getSafeUploadTimestamp(billboard))
+    : billboards;
+
+  return scoped.filter((billboard) => countsAsTodayBillboardUpload(billboard)).length;
+}
+
 export function computeKpiTodayDeltas(
   data: PublicCampaignData,
   filter: OwnerLocationFilter
@@ -73,7 +82,7 @@ export function computeKpiTodayDeltas(
     : 0;
 
   return {
-    billboards: sections.billboards ? countCreatedToday(data.billboards, filter) : 0,
+    billboards: sections.billboards ? countBillboardsToday(data.billboards, filter) : 0,
     posters: sections.posters ? countCreatedToday(data.posters, filter) : 0,
     videos: sections.videos ? countCreatedToday(data.videos, filter) : 0,
     socialFollowers: sections.socialAnalytics

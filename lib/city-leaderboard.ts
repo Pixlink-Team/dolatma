@@ -1,7 +1,8 @@
 import { isoFromGregorian } from "@/lib/jalali";
 import { normalizeImportedProvince } from "@/lib/iran-locations";
+import { countsAsTodayBillboardUpload } from "@/lib/billboards";
 import { getSafeUploadTimestamp, isSameDay } from "@/lib/safe-dates";
-import type { Ownable, PublicCampaignData } from "@/lib/types";
+import type { Billboard, Ownable, PublicCampaignData } from "@/lib/types";
 
 export interface ProvinceLeaderboardMetrics {
   billboards: number;
@@ -95,6 +96,16 @@ function emptyMetrics(): ProvinceLeaderboardMetrics {
   };
 }
 
+function countsAsTodayUpload<T extends Ownable & { createdAt?: string | null }>(
+  item: T,
+  field: MetricField
+): boolean {
+  if (field === "billboards" && "id" in item) {
+    return countsAsTodayBillboardUpload(item as unknown as Billboard);
+  }
+  return isSameDay(getSafeUploadTimestamp(item), todayIso());
+}
+
 function addItem<T extends Ownable & { createdAt?: string | null; province?: string | null }>(
   map: Map<string, ProvinceLeaderboardMetrics & { province: string }>,
   item: T,
@@ -110,7 +121,7 @@ function addItem<T extends Ownable & { createdAt?: string | null; province?: str
   current.totalUploads++;
   current.score += SCORE_WEIGHTS[field];
 
-  if (isSameDay(getSafeUploadTimestamp(item), todayIso())) {
+  if (countsAsTodayUpload(item, field)) {
     current.todayUploads++;
   }
 
@@ -162,7 +173,7 @@ function addUserItem<T extends Ownable & { createdAt?: string | null; province?:
   current.totalUploads++;
   current.score += SCORE_WEIGHTS[field];
 
-  if (isSameDay(getSafeUploadTimestamp(item), todayIso())) {
+  if (countsAsTodayUpload(item, field)) {
     current.todayUploads++;
   }
 

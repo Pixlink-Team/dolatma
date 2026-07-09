@@ -1,4 +1,5 @@
 import { isoFromGregorian } from "@/lib/jalali";
+import { getBillboardUploadActivityDate } from "@/lib/billboards";
 import { safeDatePrefix } from "@/lib/safe-dates";
 import type { PublicCampaignData } from "@/lib/types";
 
@@ -65,7 +66,10 @@ export function buildUploadActivityStats(data: PublicCampaignData, days = 14): U
 
   for (const poster of data.posters) add(poster.createdAt, "posters");
   for (const video of data.videos) add(video.createdAt, "videos");
-  for (const billboard of data.billboards) add(billboard.createdAt, "billboards");
+  for (const billboard of data.billboards) {
+    const activityDate = getBillboardUploadActivityDate(billboard);
+    if (activityDate) add(activityDate, "billboards");
+  }
   for (const post of data.socialPosts) add(post.createdAt, "socialPosts");
   for (const post of data.sitePublications) add(post.createdAt, "sitePublications");
   for (const activity of data.activities) add(activity.createdAt, "activities");

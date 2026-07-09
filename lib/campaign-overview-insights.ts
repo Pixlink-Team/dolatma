@@ -1,7 +1,8 @@
 import { parseISODateLocal } from "@/lib/jalali";
+import { getBillboardUploadActivityDate, isLiveApiBillboard } from "@/lib/billboards";
 import { filterItemsByOwnerLocation, type OwnerLocationFilter } from "@/lib/owner-location-filter";
 import { getSafeUploadTimestamp } from "@/lib/safe-dates";
-import type { CampaignKPIs, Ownable, PublicCampaignData } from "@/lib/types";
+import type { Billboard, CampaignKPIs, Ownable, PublicCampaignData } from "@/lib/types";
 
 export interface ContentMixItem {
   label: string;
@@ -142,7 +143,12 @@ export function buildRecentActivityFeed(
   const entries: RecentActivityItem[] = [];
 
   if (sections.billboards) {
-    pushActivity(entries, filtered.billboards, "بیلبورد", getSafeUploadTimestamp);
+    pushActivity(
+      entries,
+      filtered.billboards.filter((billboard) => !isLiveApiBillboard(billboard)),
+      "بیلبورد",
+      (billboard) => getBillboardUploadActivityDate(billboard as Billboard)
+    );
   }
   if (sections.posters) {
     pushActivity(entries, filtered.posters, "پوستر", getSafeUploadTimestamp);
