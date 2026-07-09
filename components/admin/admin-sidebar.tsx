@@ -71,6 +71,13 @@ const allNavItems: {
   { href: "/admin/users", label: "کاربران", icon: Users, adminOnly: true },
 ];
 
+const managementNavHrefs = new Set([
+  "/admin/integrations",
+  "/admin/users",
+  "/admin/settings",
+  "/admin/elanha",
+]);
+
 export function AdminSidebar() {
   const pathname = usePathname();
   const router = useRouter();
@@ -93,6 +100,9 @@ export function AdminSidebar() {
     if (!item.permissionKey) return true;
     return hasContributorPermission(permissions, item.permissionKey);
   });
+
+  const contentNavItems = navItems.filter((item) => !managementNavHrefs.has(item.href));
+  const managementNavItems = navItems.filter((item) => managementNavHrefs.has(item.href));
 
   const handleLogout = async () => {
     if (isSupabaseConfigured()) {
@@ -125,28 +135,61 @@ export function AdminSidebar() {
           </div>
         )}
       </div>
-      <nav className="flex-1 p-3 space-y-1">
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          const href = adminHref(item.href, campaignId);
-          const isActive = pathname === item.href || (item.href === "/admin/elanha" && pathname === "/admin/notifications");
-          return (
-            <Link
-              key={item.href}
-              href={href}
-              onClick={() => setMobileOpen(false)}
-              className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
-                isActive
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-              )}
-            >
-              <Icon className="h-4 w-4" />
-              {item.label}
-            </Link>
-          );
-        })}
+      <nav className="flex-1 overflow-y-auto p-3">
+        <div className="space-y-1">
+          {contentNavItems.map((item) => {
+            const Icon = item.icon;
+            const href = adminHref(item.href, campaignId);
+            const isActive =
+              pathname === item.href || (item.href === "/admin/elanha" && pathname === "/admin/notifications");
+            return (
+              <Link
+                key={item.href}
+                href={href}
+                onClick={() => setMobileOpen(false)}
+                className={cn(
+                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
+                  isActive
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                )}
+              >
+                <Icon className="h-4 w-4" />
+                {item.label}
+              </Link>
+            );
+          })}
+        </div>
+
+        {managementNavItems.length > 0 && (
+          <div className="mt-4 border-t pt-3">
+            <p className="px-3 pb-2 text-xs font-medium text-muted-foreground">تنظیمات و مدیریت</p>
+            <div className="space-y-1">
+              {managementNavItems.map((item) => {
+                const Icon = item.icon;
+                const href = adminHref(item.href, campaignId);
+                const isActive =
+                  pathname === item.href || (item.href === "/admin/elanha" && pathname === "/admin/notifications");
+                return (
+                  <Link
+                    key={item.href}
+                    href={href}
+                    onClick={() => setMobileOpen(false)}
+                    className={cn(
+                      "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
+                      isActive
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                    )}
+                  >
+                    <Icon className="h-4 w-4" />
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </nav>
       <div className="p-3 border-t space-y-2">
         {currentCampaign && (
