@@ -1,20 +1,36 @@
 import type { DataOwnerGroup, Ownable } from "@/lib/types";
 import { filterOwnerGroups } from "@/lib/owner-groups";
 import { normalizeStoredUserEmail } from "@/lib/auth/user-login";
+import { matchesDateFilter } from "@/lib/campaign-content-filter";
 
 export const OWNER_LOCATION_ALL = "all";
 export const OWNER_USER_ALL = "all";
+export const OWNER_DATE_ALL = "all";
 
-export interface OwnerLocationFilter {
+export type CampaignDatePreset = "all" | "this_week" | "this_month" | "custom";
+export type CampaignContentSort = "default" | "newest" | "oldest";
+
+export interface CampaignDateFilter {
+  datePreset: CampaignDatePreset;
+  dateFrom: string;
+  dateTo: string;
+}
+
+export interface OwnerLocationFilter extends CampaignDateFilter {
   province: string;
   city: string;
   userKey: string;
+  sortOrder: CampaignContentSort;
 }
 
 export const DEFAULT_OWNER_LOCATION_FILTER: OwnerLocationFilter = {
   province: OWNER_LOCATION_ALL,
   city: OWNER_LOCATION_ALL,
   userKey: OWNER_USER_ALL,
+  datePreset: OWNER_DATE_ALL,
+  dateFrom: "",
+  dateTo: "",
+  sortOrder: "default",
 };
 
 export function isOwnerLocationFilterActive(filter: OwnerLocationFilter): boolean {
@@ -45,29 +61,43 @@ function matchesOwnerUser(item: Ownable, filter: OwnerLocationFilter): boolean {
 
 export function matchesOwnerLocation(
   item: Ownable,
-  filter: OwnerLocationFilter
+  filter: OwnerLocationFilter,
+  getItemDate?: (item: Ownable) => string | undefined
 ): boolean {
   if (!matchesOwnerUser(item, filter)) return false;
 
-  if (filter.province === OWNER_LOCATION_ALL) return true;
+  if (filter.province === OWNER_LOCATION_ALL) {
+    return matchesDateFilter(item, filter, getItemDate);
+  }
+
   if (!item.ownerUserId && !item.ownerEmail) return false;
   if (item.ownerProvince !== filter.province) return false;
-  if (filter.city === OWNER_LOCATION_ALL) return true;
-  return item.ownerCity === filter.city;
+  if (filter.city === OWNER_LOCATION_ALL) {
+    return matchesDateFilter(item, filter, getItemDate);
+  }
+  if (item.ownerCity !== filter.city) return false;
+
+  return matchesDateFilter(item, filter, getItemDate);
 }
 
 export function filterOwnerGroupsByLocation<T extends Ownable>(
   groups: DataOwnerGroup<T>[],
-  filter: OwnerLocationFilter
+  filter: OwnerLocationFilter,
+  getItemDate?: (item: T) => string | undefined
 ): DataOwnerGroup<T>[] {
-  return filterOwnerGroups(groups, (item) => matchesOwnerLocation(item, filter));
+  return filterOwnerGroups(groups, (item) =>
+    matchesOwnerLocation(item, filter, getItemDate as (item: Ownable) => string | undefined)
+  );
 }
 
 export function filterItemsByOwnerLocation<T extends Ownable>(
   items: T[],
-  filter: OwnerLocationFilter
+  filter: OwnerLocationFilter,
+  getItemDate?: (item: T) => string | undefined
 ): T[] {
-  return items.filter((item) => matchesOwnerLocation(item, filter));
+  return items.filter((item) =>
+    matchesOwnerLocation(item, filter, getItemDate as (item: Ownable) => string | undefined)
+  );
 }
 
 export function collectOwnerLocations(groups: DataOwnerGroup<Ownable>[]): {

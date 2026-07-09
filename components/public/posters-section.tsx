@@ -20,6 +20,8 @@ import {
 } from "@/lib/public-media-section";
 import { usePublicMediaPagination } from "@/lib/hooks/use-public-media-pagination";
 import { useFilteredOwnerGroups } from "@/lib/hooks/use-filtered-owner-groups";
+import { useCampaignSectionVisibility } from "@/lib/hooks/use-campaign-section-visibility";
+import { useOwnerLocationFilter } from "@/lib/context/owner-location-filter-context";
 import type { DataOwnerGroup, MediaCategory, PosterWithVersions } from "@/lib/types";
 import { formatPersianNumber } from "@/lib/utils";
 
@@ -62,23 +64,26 @@ function filterPosterGroups(
 export function PostersSection({ categories, posters, groups }: PostersSectionProps) {
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [sort, setSort] = useState<PublicMediaSort>("default");
+  const { filter } = useOwnerLocationFilter();
 
   const activeCategories = useMemo(
     () => categories.filter((cat) => posters.some((poster) => poster.categoryId === cat.id)),
     [categories, posters]
   );
 
-  const locationFilteredGroups = useFilteredOwnerGroups(groups);
+  const locationFilteredGroups = useFilteredOwnerGroups(groups, getPosterLatestDate);
+  const effectiveSort = filter.sortOrder !== "default" ? "default" : sort;
 
   const filteredGroups = useMemo(
-    () => filterPosterGroups(locationFilteredGroups, categoryFilter, sort),
-    [locationFilteredGroups, categoryFilter, sort]
+    () => filterPosterGroups(locationFilteredGroups, categoryFilter, effectiveSort),
+    [locationFilteredGroups, categoryFilter, effectiveSort]
   );
 
   const filteredPosters = useMemo(
     () => filteredGroups.flatMap((group) => group.items),
     [filteredGroups]
   );
+  const sectionVisible = useCampaignSectionVisibility(posters.length, filteredPosters.length);
 
   const { visibleCount, hasMore, loadMore } = usePublicMediaPagination(
     filteredPosters.length,
@@ -94,9 +99,9 @@ export function PostersSection({ categories, posters, groups }: PostersSectionPr
       }))
       .filter((group) => group.items.length > 0);
   }, [filteredGroups, filteredPosters, visibleCount]);
-  if (posters.length === 0) return null;
+  if (!sectionVisible) return null;
 
-  const controls = (
+  const controls = filter.sortOrder === "default" ? (
     <>
       <Select value={sort} onValueChange={(value) => setSort(value as PublicMediaSort)}>
         <SelectTrigger className="w-36">
@@ -106,6 +111,7 @@ export function PostersSection({ categories, posters, groups }: PostersSectionPr
           <SelectItem value="default">ترتیب پیش‌فرض</SelectItem>
           <SelectItem value="title">عنوان</SelectItem>
           <SelectItem value="newest">جدیدترین</SelectItem>
+          <SelectItem value="oldest">قدیمی‌ترین</SelectItem>
         </SelectContent>
       </Select>
       {activeCategories.length > 0 && (
@@ -124,6 +130,22 @@ export function PostersSection({ categories, posters, groups }: PostersSectionPr
         </Select>
       )}
     </>
+  ) : (
+    activeCategories.length > 0 ? (
+      <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+        <SelectTrigger className="w-40">
+          <SelectValue placeholder="دسته" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">همه دسته‌ها</SelectItem>
+          {activeCategories.map((cat) => (
+            <SelectItem key={cat.id} value={cat.id}>
+              {cat.title}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    ) : null
   );
 
   return (
@@ -133,12 +155,7 @@ export function PostersSection({ categories, posters, groups }: PostersSectionPr
       description="در مودال مشاهده، بین نسخه‌ها جابه‌جا شوید"
       controls={controls}
     >
-      {filteredPosters.length === 0 ? (
-        <div className="rounded-xl border bg-card py-12 text-center text-muted-foreground">
-          پوستری در این دسته یافت نشد.
-        </div>
-      ) : (
-        <div className="space-y-4">
+      <div className="space-y-4">
           <OwnerGroupedSection groups={visibleGroups}>
             {(groupPosters) => (
               <div className={PUBLIC_MEDIA_GRID_CLASS}>
@@ -154,14 +171,14 @@ export function PostersSection({ categories, posters, groups }: PostersSectionPr
             )}
           </OwnerGroupedSection>
 
-          {hasMore && (              <div className="flex justify-center" data-export-hide>
-                <Button variant="outline" onClick={loadMore}>
+          {hasMore && (
+            <div className="flex justify-center" data-export-hide>
+              <Button variant="outline" onClick={loadMore}>
                 مشاهده بیشتر ({formatPersianNumber(filteredPosters.length - visibleCount)} باقی‌مانده)
               </Button>
             </div>
           )}
         </div>
-      )}
     </CollapsibleSection>
   );
 }

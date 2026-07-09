@@ -1,12 +1,19 @@
 import type { CampaignKPIs, PublicCampaignData } from "@/lib/types";
+import { resolveDateFilterRange, isCampaignContentFilterActive } from "@/lib/campaign-content-filter";
 import {
   filterItemsByOwnerLocation,
-  isOwnerFilterActive,
+  OWNER_DATE_ALL,
   OWNER_LOCATION_ALL,
   OWNER_USER_ALL,
   type OwnerLocationFilter,
 } from "@/lib/owner-location-filter";
 import type { OwnerFilterOption } from "@/lib/owner-users";
+
+const DATE_PRESET_LABELS: Record<string, string> = {
+  this_week: "این هفته",
+  this_month: "این ماه",
+  custom: "بازه دستی",
+};
 
 export function getOwnerFilterLabel(
   filter: OwnerLocationFilter,
@@ -24,6 +31,22 @@ export function getOwnerFilterLabel(
     );
   }
 
+  if (filter.datePreset !== OWNER_DATE_ALL) {
+    if (filter.datePreset === "custom") {
+      const range = resolveDateFilterRange(filter);
+      if (range) {
+        parts.push(`${range.from} تا ${range.to}`);
+      } else {
+        parts.push(DATE_PRESET_LABELS.custom);
+      }
+    } else {
+      parts.push(DATE_PRESET_LABELS[filter.datePreset] ?? filter.datePreset);
+    }
+  }
+
+  if (filter.sortOrder === "newest") parts.push("جدیدترین");
+  if (filter.sortOrder === "oldest") parts.push("قدیمی‌ترین");
+
   return parts.length > 0 ? parts.join(" · ") : null;
 }
 
@@ -39,7 +62,7 @@ export function computeFilteredCampaignKpis(
   data: PublicCampaignData,
   filter: OwnerLocationFilter
 ): CampaignKPIs {
-  if (!isOwnerFilterActive(filter)) {
+  if (!isCampaignContentFilterActive(filter)) {
     return data.kpis;
   }
 
@@ -53,7 +76,6 @@ export function computeFilteredCampaignKpis(
   const meetings = filterItemsByOwnerLocation(data.meetings, filter);
   const activities = filterItemsByOwnerLocation(data.activities, filter);
   const pressPublications = filterItemsByOwnerLocation(data.pressPublications, filter);
-  const submissions = filterItemsByOwnerLocation(data.submissions, filter);
   const files = filterItemsByOwnerLocation(data.files, filter);
   const socialPlatforms = filterItemsByOwnerLocation(data.socialAnalytics.platforms, filter);
 
@@ -71,9 +93,7 @@ export function computeFilteredCampaignKpis(
     totalMeetings: sections.meetings ? meetings.length : 0,
     totalActivities: sections.activities ? activities.length : 0,
     totalPressPublications: sections.pressPublications ? pressPublications.length : 0,
-    totalParticipants: sections.submissions
-      ? new Set(submissions.map((submission) => submission.participantName)).size
-      : 0,
+    totalParticipants: 0,
     totalFiles: sections.files ? files.length : 0,
   };
 }

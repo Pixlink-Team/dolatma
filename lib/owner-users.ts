@@ -4,26 +4,52 @@ import { normalizeStoredUserEmail } from "@/lib/auth/user-login";
 export interface OwnerFilterOption {
   key: string;
   label: string;
+  province?: string | null;
+  city?: string | null;
 }
 
 function addOwnerOption(
-  map: Map<string, string>,
+  map: Map<string, OwnerFilterOption>,
   item: Ownable & { ownerEmail?: string | null }
 ): void {
   const label = item.ownerName?.trim() || "کاربر";
+  const location = {
+    province: item.ownerProvince?.trim() || null,
+    city: item.ownerCity?.trim() || null,
+  };
+
   if (item.ownerUserId) {
-    map.set(item.ownerUserId, label);
+    const existing = map.get(item.ownerUserId);
+    map.set(item.ownerUserId, {
+      key: item.ownerUserId,
+      label,
+      province: location.province ?? existing?.province ?? null,
+      city: location.city ?? existing?.city ?? null,
+    });
     return;
   }
+
   if (item.ownerEmail?.trim()) {
-    map.set(normalizeStoredUserEmail(item.ownerEmail), label);
+    const key = normalizeStoredUserEmail(item.ownerEmail);
+    const existing = map.get(key);
+    map.set(key, {
+      key,
+      label,
+      province: location.province ?? existing?.province ?? null,
+      city: location.city ?? existing?.city ?? null,
+    });
   }
 }
 
-function collectFromGroups<T extends Ownable>(groups: DataOwnerGroup<T>[], map: Map<string, string>) {
+function collectFromGroups<T extends Ownable>(groups: DataOwnerGroup<T>[], map: Map<string, OwnerFilterOption>) {
   for (const group of groups) {
     if (!group.ownerUserId) continue;
-    map.set(group.ownerUserId, group.ownerLabel);
+    map.set(group.ownerUserId, {
+      key: group.ownerUserId,
+      label: group.ownerLabel,
+      province: group.ownerProvince?.trim() || null,
+      city: group.ownerCity?.trim() || null,
+    });
     for (const item of group.items) {
       addOwnerOption(map, item);
     }
@@ -31,7 +57,7 @@ function collectFromGroups<T extends Ownable>(groups: DataOwnerGroup<T>[], map: 
 }
 
 export function collectOwnerFilterOptions(data: PublicCampaignData): OwnerFilterOption[] {
-  const map = new Map<string, string>();
+  const map = new Map<string, OwnerFilterOption>();
 
   collectFromGroups(data.posterGroups, map);
   collectFromGroups(data.videoGroups, map);
@@ -49,7 +75,5 @@ export function collectOwnerFilterOptions(data: PublicCampaignData): OwnerFilter
   for (const video of data.videos) addOwnerOption(map, video);
   for (const platform of data.socialAnalytics.platforms) addOwnerOption(map, platform);
 
-  return [...map.entries()]
-    .map(([key, label]) => ({ key, label }))
-    .sort((a, b) => a.label.localeCompare(b.label, "fa"));
+  return [...map.values()].sort((a, b) => a.label.localeCompare(b.label, "fa"));
 }

@@ -24,7 +24,7 @@ import {
   computeFilteredCampaignKpis,
   getOwnerFilterLabel,
 } from "@/lib/filtered-campaign-kpis";
-import { isOwnerFilterActive } from "@/lib/owner-location-filter";
+import { isCampaignContentFilterActive } from "@/lib/campaign-content-filter";
 import type { PublicCampaignData } from "@/lib/types";
 import { formatPersianDate } from "@/lib/utils";
 
@@ -35,7 +35,7 @@ interface CampaignOverviewSectionProps {
 export function CampaignOverviewSection({ data }: CampaignOverviewSectionProps) {
   const { settings } = data;
   const { filter, users: ownerUsers } = useOwnerLocationFilter();
-  const filterActive = isOwnerFilterActive(filter);
+  const filterActive = isCampaignContentFilterActive(filter);
   const filterLabel = getOwnerFilterLabel(filter, ownerUsers);
 
   const kpis = useMemo(
@@ -54,7 +54,7 @@ export function CampaignOverviewSection({ data }: CampaignOverviewSectionProps) 
     broadcastReports: settings.features.broadcastReports ?? true,
     meetings: settings.features.meetings ?? true,
     activities: settings.features.activities ?? true,
-    submissions: settings.features.submissions,
+    submissions: settings.features.submissions && !filterActive,
     files: settings.features.files,
   };
 
@@ -62,7 +62,7 @@ export function CampaignOverviewSection({ data }: CampaignOverviewSectionProps) 
     { show: kpiVisibility.billboards, title: "بیلبوردها", value: kpis.totalBillboards, icon: LayoutGrid },
     { show: kpiVisibility.posters, title: "پوسترها", value: kpis.totalPosters, icon: ImageIcon },
     { show: kpiVisibility.videos, title: "ویدیوها", value: kpis.totalVideos, icon: Video },
-    { show: kpiVisibility.analytics, title: "بازدید سایت", value: kpis.totalSiteVisitors, icon: MonitorPlay },
+    { show: kpiVisibility.analytics, title: "آمار سایت کمپین", value: kpis.totalSiteVisitors, icon: MonitorPlay },
     { show: kpiVisibility.socialAnalytics, title: "فالوور اجتماعی", value: kpis.totalSocialFollowers, icon: Share2 },
     { show: kpiVisibility.socialPosts, title: "پست‌های اجتماعی", value: kpis.totalSocialPosts, icon: Share2 },
     { show: kpiVisibility.sitePublications, title: "انتشار در سایت", value: kpis.totalSitePublications, icon: Globe },

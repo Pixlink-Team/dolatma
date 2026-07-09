@@ -8,6 +8,7 @@ import { formatPersianDate } from "@/lib/utils";
 import { CollapsibleSection } from "@/components/public/collapsible-section";
 import { OwnerGroupedSection } from "@/components/public/owner-grouped-section";
 import { useFilteredOwnerGroups } from "@/lib/hooks/use-filtered-owner-groups";
+import { useCampaignSectionVisibility } from "@/lib/hooks/use-campaign-section-visibility";
 import { ShowMoreButton } from "@/components/public/show-more-button";
 import { useSectionPagination } from "@/lib/hooks/use-section-pagination";
 import { Badge } from "@/components/ui/badge";
@@ -73,11 +74,12 @@ function PublicationList({ items }: { items: SocialMediaPost[] }) {
 }
 
 export function SitePublicationsSection({ publications, groups }: SitePublicationsSectionProps) {
-  const filteredGroups = useFilteredOwnerGroups(groups);
+  const filteredGroups = useFilteredOwnerGroups(groups, (item) => item.publishedDate);
   const filteredPublications = useMemo(
     () => filteredGroups.flatMap((group) => group.items),
     [filteredGroups]
   );
+  const sectionVisible = useCampaignSectionVisibility(publications.length, filteredPublications.length);
 
   const { effectiveCount, hasMore, loadMore } = useSectionPagination(
     filteredPublications.length,
@@ -96,7 +98,7 @@ export function SitePublicationsSection({ publications, groups }: SitePublicatio
       .filter((group) => group.items.length > 0);
   }, [filteredGroups, filteredPublications, effectiveCount]);
 
-  if (publications.length === 0) return null;
+  if (!sectionVisible) return null;
 
   return (
     <CollapsibleSection

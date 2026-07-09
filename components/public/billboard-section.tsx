@@ -24,6 +24,8 @@ import {
 } from "@/lib/public-media-section";
 import { usePublicMediaPagination } from "@/lib/hooks/use-public-media-pagination";
 import { useFilteredOwnableItems } from "@/lib/hooks/use-filtered-owner-groups";
+import { useCampaignSectionVisibility } from "@/lib/hooks/use-campaign-section-visibility";
+import { useOwnerLocationFilter } from "@/lib/context/owner-location-filter-context";
 import { groupByOwner } from "@/lib/owner-groups";
 import type { Billboard } from "@/lib/types";
 import { formatPersianNumber, getStatusLabel } from "@/lib/utils";
@@ -34,7 +36,8 @@ interface BillboardSectionProps {
 }
 
 export function BillboardSection({ billboards, adminOwnerLabel }: BillboardSectionProps) {
-  const locationFilteredBillboards = useFilteredOwnableItems(billboards);
+  const { filter } = useOwnerLocationFilter();
+  const locationFilteredBillboards = useFilteredOwnableItems(billboards, (billboard) => billboard.date);
   const [cityFilter, setCityFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [sort, setSort] = useState<PublicMediaSort>("default");
@@ -47,16 +50,20 @@ export function BillboardSection({ billboards, adminOwnerLabel }: BillboardSecti
     [locationFilteredBillboards]
   );
 
+  const effectiveSort = filter.sortOrder !== "default" ? "default" : sort;
+
   const filtered = useMemo(() => {
     const items = locationFilteredBillboards.filter((billboard) => {
       if (cityFilter !== "all" && billboard.city !== cityFilter) return false;
       if (statusFilter !== "all" && billboard.status !== statusFilter) return false;
       if (search && !billboard.title.includes(search) && !billboard.city.includes(search)) return false;
-      if (sort !== "default" && !billboardHasDisplayContent(billboard)) return false;
+      if (effectiveSort !== "default" && !billboardHasDisplayContent(billboard)) return false;
       return true;
     });
-    return sortByPublicMediaOrder(items, sort, (item) => item.date);
-  }, [locationFilteredBillboards, cityFilter, statusFilter, search, sort]);
+    return sortByPublicMediaOrder(items, effectiveSort, (item) => item.date);
+  }, [locationFilteredBillboards, cityFilter, statusFilter, search, effectiveSort]);
+
+  const sectionVisible = useCampaignSectionVisibility(billboards.length, filtered.length);
 
   const { visibleCount, hasMore, loadMore } = usePublicMediaPagination(
     filtered.length,
@@ -74,8 +81,11 @@ export function BillboardSection({ billboards, adminOwnerLabel }: BillboardSecti
     setModalOpen(true);
   };
 
+  if (!sectionVisible) return null;
+
   const controls = (
     <>
+      {filter.sortOrder === "default" && (
       <Select value={sort} onValueChange={(value) => setSort(value as PublicMediaSort)}>
         <SelectTrigger className="w-36">
           <SelectValue placeholder="مرتب‌سازی" />
@@ -84,8 +94,10 @@ export function BillboardSection({ billboards, adminOwnerLabel }: BillboardSecti
           <SelectItem value="default">ترتیب پیش‌فرض</SelectItem>
           <SelectItem value="title">عنوان</SelectItem>
           <SelectItem value="newest">جدیدترین</SelectItem>
+          <SelectItem value="oldest">قدیمی‌ترین</SelectItem>
         </SelectContent>
       </Select>
+      )}
       <div className="relative">
         <Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input

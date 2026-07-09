@@ -20,6 +20,8 @@ import {
 } from "@/lib/public-media-section";
 import { usePublicMediaPagination } from "@/lib/hooks/use-public-media-pagination";
 import { useFilteredOwnerGroups } from "@/lib/hooks/use-filtered-owner-groups";
+import { useCampaignSectionVisibility } from "@/lib/hooks/use-campaign-section-visibility";
+import { useOwnerLocationFilter } from "@/lib/context/owner-location-filter-context";
 import type { DataOwnerGroup, MediaCategory, VideoWithVersions } from "@/lib/types";
 import { cn, formatPersianNumber } from "@/lib/utils";
 
@@ -62,23 +64,26 @@ function filterVideoGroups(
 export function VideosSection({ categories, videos, groups }: VideosSectionProps) {
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [sort, setSort] = useState<PublicMediaSort>("default");
+  const { filter } = useOwnerLocationFilter();
 
   const sortedCategories = useMemo(
     () => [...categories].sort((a, b) => a.sortOrder - b.sortOrder),
     [categories]
   );
 
-  const locationFilteredGroups = useFilteredOwnerGroups(groups);
+  const locationFilteredGroups = useFilteredOwnerGroups(groups, getVideoLatestDate);
+  const effectiveSort = filter.sortOrder !== "default" ? "default" : sort;
 
   const filteredGroups = useMemo(
-    () => filterVideoGroups(locationFilteredGroups, categoryFilter, sort),
-    [locationFilteredGroups, categoryFilter, sort]
+    () => filterVideoGroups(locationFilteredGroups, categoryFilter, effectiveSort),
+    [locationFilteredGroups, categoryFilter, effectiveSort]
   );
 
   const filteredVideos = useMemo(
     () => filteredGroups.flatMap((group) => group.items),
     [filteredGroups]
   );
+  const sectionVisible = useCampaignSectionVisibility(videos.length, filteredVideos.length);
 
   const { visibleCount, hasMore, loadMore } = usePublicMediaPagination(
     filteredVideos.length,
@@ -95,9 +100,9 @@ export function VideosSection({ categories, videos, groups }: VideosSectionProps
       .filter((group) => group.items.length > 0);
   }, [filteredGroups, filteredVideos, visibleCount]);
 
-  if (videos.length === 0) return null;
+  if (!sectionVisible) return null;
 
-  const controls = (
+  const controls = filter.sortOrder === "default" ? (
     <>
       <Select value={sort} onValueChange={(value) => setSort(value as PublicMediaSort)}>
       <SelectTrigger className="w-36">
@@ -107,10 +112,11 @@ export function VideosSection({ categories, videos, groups }: VideosSectionProps
         <SelectItem value="default">ترتیب پیش‌فرض</SelectItem>
         <SelectItem value="title">عنوان</SelectItem>
         <SelectItem value="newest">جدیدترین</SelectItem>
+        <SelectItem value="oldest">قدیمی‌ترین</SelectItem>
       </SelectContent>
     </Select>
     </>
-  );
+  ) : null;
 
   return (
     <CollapsibleSection

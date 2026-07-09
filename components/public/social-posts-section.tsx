@@ -11,6 +11,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ExternalLink } from "lucide-react";
 import { PUBLIC_MEDIA_GRID_CLASS } from "@/lib/public-media-section";
 import { usePublicMediaPagination } from "@/lib/hooks/use-public-media-pagination";
+import { useCampaignSectionVisibility } from "@/lib/hooks/use-campaign-section-visibility";
 import { useFilteredOwnerGroups } from "@/lib/hooks/use-filtered-owner-groups";
 import { isDirectVideoUrl } from "@/lib/media-utils";
 import { ShowMoreButton } from "@/components/public/show-more-button";
@@ -114,11 +115,12 @@ function SocialPostCard({ post }: { post: SocialMediaPost }) {
 }
 
 export function SocialPostsSection({ posts, groups }: SocialPostsSectionProps) {
-  const filteredGroups = useFilteredOwnerGroups(groups);
+  const filteredGroups = useFilteredOwnerGroups(groups, (post) => post.publishedDate);
   const filteredPosts = useMemo(
     () => filteredGroups.flatMap((group) => group.items),
     [filteredGroups]
   );
+  const sectionVisible = useCampaignSectionVisibility(posts.length, filteredPosts.length);
 
   const { visibleCount, hasMore, loadMore } = usePublicMediaPagination(
     filteredPosts.length,
@@ -135,38 +137,32 @@ export function SocialPostsSection({ posts, groups }: SocialPostsSectionProps) {
       .filter((group) => group.items.length > 0);
   }, [filteredGroups, filteredPosts, visibleCount]);
 
-  if (posts.length === 0) return null;
+  if (!sectionVisible) return null;
 
   return (
     <CollapsibleSection
       id="social-posts"
       title="شبکه‌های اجتماعی"
-      description={`${formatPersianNumber(posts.length)} پست — اینستاگرام، تلگرام و سایر شبکه‌ها`}
+      description={`${formatPersianNumber(filteredPosts.length)} پست — اینستاگرام، تلگرام و سایر شبکه‌ها`}
     >
-      {filteredPosts.length === 0 ? (
-        <div className="rounded-xl border bg-card py-12 text-center text-muted-foreground">
-          پستی با فیلتر انتخاب‌شده یافت نشد.
-        </div>
-      ) : (
-        <div className="space-y-4">
-          <OwnerGroupedSection groups={visibleGroups}>
-            {(groupPosts) => (
-              <div className={PUBLIC_MEDIA_GRID_CLASS}>
-                {groupPosts.map((post) => (
-                  <SocialPostCard key={post.id} post={post} />
-                ))}
-              </div>
-            )}
-          </OwnerGroupedSection>
-
-          {hasMore && (
-            <ShowMoreButton
-              remaining={filteredPosts.length - visibleCount}
-              onClick={loadMore}
-            />
+      <div className="space-y-4">
+        <OwnerGroupedSection groups={visibleGroups}>
+          {(groupPosts) => (
+            <div className={PUBLIC_MEDIA_GRID_CLASS}>
+              {groupPosts.map((post) => (
+                <SocialPostCard key={post.id} post={post} />
+              ))}
+            </div>
           )}
-        </div>
-      )}
+        </OwnerGroupedSection>
+
+        {hasMore && (
+          <ShowMoreButton
+            remaining={filteredPosts.length - visibleCount}
+            onClick={loadMore}
+          />
+        )}
+      </div>
     </CollapsibleSection>
   );
 }

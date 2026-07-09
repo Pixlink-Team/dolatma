@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { CollapsibleSection } from "@/components/public/collapsible-section";
 import { OwnerGroupedSection } from "@/components/public/owner-grouped-section";
 import { useFilteredOwnerGroups } from "@/lib/hooks/use-filtered-owner-groups";
+import { useCampaignSectionVisibility } from "@/lib/hooks/use-campaign-section-visibility";
 import { ShowMoreButton } from "@/components/public/show-more-button";
 import { useSectionPagination } from "@/lib/hooks/use-section-pagination";
 import type { CampaignFile, DataOwnerGroup } from "@/lib/types";
@@ -74,6 +75,7 @@ export function CampaignFilesSection({ files, groups }: CampaignFilesSectionProp
     () => filteredGroups.flatMap((group) => group.items),
     [filteredGroups]
   );
+  const sectionVisible = useCampaignSectionVisibility(files.length, filteredFiles.length);
 
   const { effectiveCount, hasMore, loadMore } = useSectionPagination(
     filteredFiles.length,
@@ -92,7 +94,7 @@ export function CampaignFilesSection({ files, groups }: CampaignFilesSectionProp
       .filter((group) => group.items.length > 0);
   }, [filteredGroups, filteredFiles, effectiveCount]);
 
-  if (files.length === 0) return null;
+  if (!sectionVisible) return null;
 
   return (
     <CollapsibleSection

@@ -46,7 +46,7 @@ export function activityHasDisplayContent(activity: {
   return Boolean(activity.imageUrl?.trim() || activity.videoUrl?.trim());
 }
 
-export type PublicMediaSort = "default" | "title" | "newest";
+export type PublicMediaSort = "default" | "title" | "newest" | "oldest";
 
 export function sortByPublicMediaOrder<T extends { title: string; sortOrder: number }>(
   items: T[],
@@ -64,6 +64,14 @@ export function sortByPublicMediaOrder<T extends { title: string; sortOrder: num
       const dateA = getLatestDate?.(a) ?? "";
       const dateB = getLatestDate?.(b) ?? "";
       return dateB.localeCompare(dateA);
+    });
+  }
+
+  if (sort === "oldest") {
+    return copy.sort((a, b) => {
+      const dateA = getLatestDate?.(a) ?? "";
+      const dateB = getLatestDate?.(b) ?? "";
+      return dateA.localeCompare(dateB);
     });
   }
 

@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useCampaignExportMode } from "@/lib/context/campaign-export-context";
 import { useOwnerLocationFilter } from "@/lib/context/owner-location-filter-context";
+import { useCampaignSectionVisibility } from "@/lib/hooks/use-campaign-section-visibility";
 import { filterItemsByOwnerLocation } from "@/lib/owner-location-filter";
 import { groupByOwner } from "@/lib/owner-groups";
 import { SOCIAL_ANALYTICS_PAGE_SIZE } from "@/lib/public-media-section";
@@ -105,22 +106,9 @@ export function SocialAnalyticsSection({
   );
 
   const hasMore = !exportMode && visibleCount < platforms.length;
+  const sectionVisible = useCampaignSectionVisibility(analytics.platforms.length, platforms.length);
 
-  if (!analytics.hasData) return null;
-
-  if (platforms.length === 0) {
-    return (
-      <CollapsibleSection
-        id="social-analytics"
-        title="آمار صفحات شبکه‌های اجتماعی"
-        description="فالوور و تعداد پست هر پلتفرم"
-      >
-        <div className="rounded-xl border bg-card py-12 text-center text-muted-foreground">
-          موردی با فیلتر انتخاب‌شده وجود ندارد.
-        </div>
-      </CollapsibleSection>
-    );
-  }
+  if (!analytics.hasData || !sectionVisible) return null;
 
   return (
     <CollapsibleSection

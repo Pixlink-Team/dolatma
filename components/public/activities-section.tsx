@@ -5,6 +5,7 @@ import Image from "next/image";
 import { MapPin, Play } from "lucide-react";
 import { getActivityTypeLabel } from "@/lib/activity-types";
 import { useFilteredOwnerGroups } from "@/lib/hooks/use-filtered-owner-groups";
+import { useCampaignSectionVisibility } from "@/lib/hooks/use-campaign-section-visibility";
 import { ShowMoreButton } from "@/components/public/show-more-button";
 import { usePublicMediaPagination } from "@/lib/hooks/use-public-media-pagination";
 import type { CampaignActivity, DataOwnerGroup } from "@/lib/types";
@@ -138,11 +139,12 @@ export function ActivitiesSection({
   title = "اقدامات",
   description = "فعالیت‌های میدانی و تبلیغاتی: تراکت، غرفه، برنامه فرهنگی و ...",
 }: ActivitiesSectionProps) {
-  const filteredGroups = useFilteredOwnerGroups(groups);
+  const filteredGroups = useFilteredOwnerGroups(groups, (activity) => activity.activityDate);
   const filteredActivities = useMemo(
     () => filteredGroups.flatMap((group) => group.items),
     [filteredGroups]
   );
+  const sectionVisible = useCampaignSectionVisibility(activities.length, filteredActivities.length);
 
   const { visibleCount, hasMore, loadMore } = usePublicMediaPagination(
     filteredActivities.length,
@@ -161,7 +163,7 @@ export function ActivitiesSection({
       .filter((group) => group.items.length > 0);
   }, [filteredGroups, filteredActivities, visibleCount]);
 
-  if (activities.length === 0) return null;
+  if (!sectionVisible) return null;
 
   return (
     <CollapsibleSection
@@ -169,12 +171,7 @@ export function ActivitiesSection({
       title={title}
       description={description}
     >
-      {filteredActivities.length === 0 ? (
-        <div className="rounded-xl border bg-card py-12 text-center text-muted-foreground">
-          فعالیتی با فیلتر انتخاب‌شده یافت نشد.
-        </div>
-      ) : (
-        <>
+      <>
           <OwnerGroupedSection groups={visibleGroups}>
             {(groupActivities) => <ActivityCards activities={groupActivities} />}
           </OwnerGroupedSection>
@@ -188,7 +185,6 @@ export function ActivitiesSection({
             </div>
           )}
         </>
-      )}
     </CollapsibleSection>
   );
 }

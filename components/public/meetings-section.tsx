@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import Image from "next/image";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { MeetingDetailDialog } from "@/components/public/meeting-detail-dialog";
 import { CollapsibleSection } from "@/components/public/collapsible-section";
 import { OwnerGroupedSection } from "@/components/public/owner-grouped-section";
 import { useFilteredOwnerGroups } from "@/lib/hooks/use-filtered-owner-groups";
+import { useCampaignSectionVisibility } from "@/lib/hooks/use-campaign-section-visibility";
 import { ShowMoreButton } from "@/components/public/show-more-button";
 import { useSectionPagination } from "@/lib/hooks/use-section-pagination";
 import { useCampaignExportMode } from "@/lib/context/campaign-export-context";
@@ -199,7 +200,12 @@ export function MeetingsSection({
   groups,
 }: MeetingsSectionProps) {
   const exportMode = useCampaignExportMode();
-  const filteredGroups = useFilteredOwnerGroups(groups);
+  const filteredGroups = useFilteredOwnerGroups(groups, (meeting) => meeting.meetingDate);
+  const filteredMeetingsCount = useMemo(
+    () => filteredGroups.reduce((sum, group) => sum + group.items.length, 0),
+    [filteredGroups]
+  );
+  const sectionVisible = useCampaignSectionVisibility(meetings.length, filteredMeetingsCount);
   const [detailCache, setDetailCache] = useState<Record<string, MeetingPublicDetail>>({});
   const [isUnlocked, setIsUnlocked] = useState(!meetingsHasPassword);
 
@@ -220,7 +226,7 @@ export function MeetingsSection({
     }
   }, [campaignSlug, meetingsHasPassword, exportMode, applyUnlock]);
 
-  if (meetings.length === 0) return null;
+  if (!sectionVisible) return null;
 
   const sectionLocked = meetingsHasPassword && !isUnlocked;
 
