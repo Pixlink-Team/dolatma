@@ -1,4 +1,5 @@
 import { isoFromGregorian } from "@/lib/jalali";
+import { safeDatePrefix } from "@/lib/safe-dates";
 import { isCampaignContentFilterActive } from "@/lib/campaign-content-filter";
 import { filterItemsByOwnerLocation, type OwnerLocationFilter } from "@/lib/owner-location-filter";
 import type { Ownable, PublicCampaignData } from "@/lib/types";
@@ -18,7 +19,7 @@ function todayIso(): string {
   return isoFromGregorian(date.getFullYear(), date.getMonth() + 1, date.getDate());
 }
 
-function countCreatedToday<T extends Ownable & { createdAt: string }>(
+function countCreatedToday<T extends Ownable & { createdAt?: string | null }>(
   items: T[],
   filter: OwnerLocationFilter,
   getItemDate?: (item: T) => string | undefined
@@ -29,7 +30,7 @@ function countCreatedToday<T extends Ownable & { createdAt: string }>(
     : items;
 
   return scoped.filter((item) => {
-    const date = (getItemDate?.(item) ?? item.createdAt).slice(0, 10);
+    const date = safeDatePrefix(getItemDate?.(item) ?? item.createdAt);
     return date === today;
   }).length;
 }

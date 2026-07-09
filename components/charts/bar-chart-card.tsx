@@ -30,8 +30,13 @@ export function BarChartCard({ data, title, color = "#2563eb" }: BarChartCardPro
         <CardTitle className="text-base">{title}</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="h-[260px] w-full" dir="ltr">
-          <ResponsiveContainer width="100%" height="100%">
+        {chartData.length === 0 ? (
+          <div className="flex h-[260px] items-center justify-center text-sm text-muted-foreground">
+            داده‌ای برای نمایش وجود ندارد.
+          </div>
+        ) : (
+          <div className="h-[260px] w-full min-w-0" dir="ltr">
+            <ResponsiveContainer width="100%" height="100%" minWidth={0}>
             <BarChart data={chartData} layout="vertical" margin={{ left: 20 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
               <XAxis type="number" tick={{ fontSize: 12 }} tickFormatter={(v) => formatPersianNumber(v)} />
@@ -41,6 +46,7 @@ export function BarChartCard({ data, title, color = "#2563eb" }: BarChartCardPro
             </BarChart>
           </ResponsiveContainer>
         </div>
+        )}
       </CardContent>
     </Card>
   );

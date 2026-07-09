@@ -1,4 +1,5 @@
 import { isoFromGregorian } from "@/lib/jalali";
+import { safeDatePrefix } from "@/lib/safe-dates";
 import type { PublicCampaignData } from "@/lib/types";
 
 export interface UploadActivityPoint {
@@ -44,8 +45,8 @@ function offsetDate(days: number): string {
   return isoFromGregorian(date.getFullYear(), date.getMonth() + 1, date.getDate());
 }
 
-function dateKey(value: string): string {
-  return value.slice(0, 10);
+function dateKey(value?: string | null): string {
+  return safeDatePrefix(value);
 }
 
 type UploadField = Exclude<keyof UploadActivityPoint, "date" | "total">;
@@ -53,8 +54,9 @@ type UploadField = Exclude<keyof UploadActivityPoint, "date" | "total">;
 export function buildUploadActivityStats(data: PublicCampaignData, days = 14): UploadActivitySummary {
   const buckets = new Map<string, UploadActivityPoint>();
 
-  const add = (createdAt: string, field: UploadField) => {
+  const add = (createdAt: string | null | undefined, field: UploadField) => {
     const date = dateKey(createdAt);
+    if (!date) return;
     const point = buckets.get(date) ?? emptyPoint(date);
     point[field]++;
     point.total++;

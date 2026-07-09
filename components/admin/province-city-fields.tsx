@@ -24,6 +24,12 @@ interface ProvinceCityFieldsProps {
 
 const EMPTY_VALUE = "__none__";
 
+function resolveSelectValue(value: string | undefined | null, options: string[]): string {
+  const trimmed = value?.trim() ?? "";
+  if (!trimmed) return EMPTY_VALUE;
+  return options.includes(trimmed) ? trimmed : trimmed;
+}
+
 export function ProvinceCityFields({
   province,
   city,
@@ -33,13 +39,15 @@ export function ProvinceCityFields({
 }: ProvinceCityFieldsProps) {
   const provinceOptions = ensureSelectOptions([...IRAN_PROVINCES], province);
   const cityOptions = ensureSelectOptions(getProvinceCityOptions(province), city);
+  const provinceValue = resolveSelectValue(province, provinceOptions);
+  const cityValue = resolveSelectValue(city, cityOptions);
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <div className="space-y-2">
         <Label>استان</Label>
         <Select
-          value={province || EMPTY_VALUE}
+          value={provinceValue}
           onValueChange={(value) => {
             const nextProvince = value === EMPTY_VALUE ? "" : value;
             const resolved = resolveLocationNames(nextProvince, "");
@@ -67,7 +75,7 @@ export function ProvinceCityFields({
       <div className="space-y-2">
         <Label>شهر</Label>
         <Select
-          value={city || EMPTY_VALUE}
+          value={cityValue}
           onValueChange={(value) => {
             const nextCity = value === EMPTY_VALUE ? "" : value;
             onCityChange(nextCity);

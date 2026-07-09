@@ -17,6 +17,7 @@ import { AdminDataTable } from "@/components/admin/admin-data-table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UsersImportPanel } from "@/components/admin/users-import-panel";
 import { getLoginUsernameFromEmail, normalizeStoredUserEmail } from "@/lib/auth/user-login";
+import { normalizeImportedCity, normalizeImportedProvince } from "@/lib/iran-locations";
 import { deleteUserAction, deleteUsersAction, saveUserAction } from "@/lib/actions/extended-actions";
 import {
   contributorPermissionLabels,
@@ -148,6 +149,11 @@ export function UsersAdmin({ initialUsers, campaigns }: UsersAdminProps) {
   const openEdit = (user: AdminUser) => {
     setEditingId(user.id);
     const permissions = user.campaignPermissions ?? {};
+    const normalizedProvince =
+      normalizeImportedProvince(user.province ?? "") ?? user.province?.trim() ?? "";
+    const normalizedCity =
+      normalizeImportedCity(normalizedProvince, user.city ?? "") ?? user.city?.trim() ?? "";
+
     setCampaignPermissions(
       Object.fromEntries(
         Object.entries(permissions).map(([campaignId, value]) => [
@@ -159,10 +165,10 @@ export function UsersAdmin({ initialUsers, campaigns }: UsersAdminProps) {
     form.reset({
       email: getLoginUsernameFromEmail(user.email ?? ""),
       name: user.name ?? "",
-      role: user.role,
+      role: user.role ?? "contributor",
       password: "",
-      province: user.province ?? "",
-      city: user.city ?? "",
+      province: normalizedProvince,
+      city: normalizedCity,
       campaignIds: user.campaignIds ?? [],
     });
     setOpen(true);
@@ -211,7 +217,7 @@ export function UsersAdmin({ initialUsers, campaigns }: UsersAdminProps) {
             key: "campaignIds",
             label: "کمپین‌ها",
             render: (item) =>
-              item.campaignIds
+              (item.campaignIds ?? [])
                 .map((id) => campaigns.find((campaign) => campaign.id === id)?.title ?? id)
                 .join("، ") || "—",
           },

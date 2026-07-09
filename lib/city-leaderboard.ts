@@ -1,4 +1,5 @@
 import { isoFromGregorian } from "@/lib/jalali";
+import { getSafeUploadTimestamp, isSameDay } from "@/lib/safe-dates";
 import type { Ownable, PublicCampaignData } from "@/lib/types";
 
 export interface CityLeaderboardMetrics {
@@ -77,7 +78,7 @@ function emptyMetrics(): CityLeaderboardMetrics {
   };
 }
 
-function addItem<T extends Ownable & { createdAt: string; city?: string | null; province?: string | null }>(
+function addItem<T extends Ownable & { createdAt?: string | null; city?: string | null; province?: string | null }>(
   map: Map<string, CityLeaderboardMetrics & { province: string; city: string }>,
   item: T,
   field: MetricField
@@ -93,14 +94,14 @@ function addItem<T extends Ownable & { createdAt: string; city?: string | null; 
   current.totalUploads++;
   current.score += SCORE_WEIGHTS[field];
 
-  if (item.createdAt.slice(0, 10) === todayIso()) {
+  if (isSameDay(getSafeUploadTimestamp(item), todayIso())) {
     current.todayUploads++;
   }
 
   map.set(location.cityKey, current);
 }
 
-function addContributor<T extends Ownable & { createdAt: string; city?: string | null; province?: string | null }>(
+function addContributor<T extends Ownable & { createdAt?: string | null; city?: string | null; province?: string | null }>(
   map: Map<string, CityContributorEntry>,
   item: T,
   field: MetricField
@@ -174,7 +175,7 @@ export function buildCityLeaderboard(data: PublicCampaignData): CityLeaderboardE
 export function buildCityContributorLeaderboard(data: PublicCampaignData): CityContributorEntry[] {
   const map = new Map<string, CityContributorEntry>();
 
-  const addAll = <T extends Ownable & { createdAt: string; city?: string | null; province?: string | null }>(
+  const addAll = <T extends Ownable & { createdAt?: string | null; city?: string | null; province?: string | null }>(
     items: T[],
     field: MetricField
   ) => {
