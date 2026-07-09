@@ -19,8 +19,7 @@ import { UploadActivityChart } from "@/components/charts/upload-activity-chart";
 import { OwnerLocationFilterBar } from "@/components/public/owner-location-filter-bar";
 import {
   CampaignProgressWidget,
-  ContentMixOverviewChart,
-  RecentActivityFeed,
+  ContentMixAndActivitySection,
 } from "@/components/public/campaign-overview-widgets";
 import { SectionHeader } from "@/components/public/section-header";
 import { useOwnerLocationFilter } from "@/lib/context/owner-location-filter-context";
@@ -150,8 +149,7 @@ export function CampaignOverviewSection({ data }: CampaignOverviewSectionProps) 
 
       <div className="mt-6 space-y-4">
         <CampaignProgressWidget progress={campaignProgress} />
-        <ContentMixOverviewChart data={contentMix} />
-        <RecentActivityFeed items={recentActivity} limit={10} />
+        <ContentMixAndActivitySection contentMix={contentMix} items={recentActivity} />
       </div>
 
       <div className="mt-6">

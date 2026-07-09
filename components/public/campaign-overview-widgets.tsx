@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { Clock, TrendingUp } from "lucide-react";
 import { ContentMixChart } from "@/components/charts/content-mix-chart";
+import { ShowMoreButton } from "@/components/public/show-more-button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type {
   CampaignProgressSummary,
@@ -9,6 +11,9 @@ import type {
   RecentActivityItem,
 } from "@/lib/campaign-overview-insights";
 import { formatPersianDateTime, formatPersianNumber } from "@/lib/utils";
+
+const RECENT_ACTIVITY_INITIAL_LIMIT = 5;
+const RECENT_ACTIVITY_EXPANDED_LIMIT = 10;
 
 interface CampaignProgressWidgetProps {
   progress: CampaignProgressSummary;
@@ -50,19 +55,48 @@ export function CampaignProgressWidget({ progress }: CampaignProgressWidgetProps
 }
 
 export function ContentMixOverviewChart({ data }: { data: ContentMixItem[] }) {
-  return <ContentMixChart data={data} />;
+  return (
+    <div className="h-full">
+      <ContentMixChart data={data} />
+    </div>
+  );
+}
+
+interface ContentMixAndActivitySectionProps {
+  contentMix: ContentMixItem[];
+  items: RecentActivityItem[];
+}
+
+export function ContentMixAndActivitySection({
+  contentMix,
+  items,
+}: ContentMixAndActivitySectionProps) {
+  return (
+    <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+      <ContentMixOverviewChart data={contentMix} />
+      <RecentActivityFeed items={items} />
+    </div>
+  );
 }
 
 interface RecentActivityFeedProps {
   items: RecentActivityItem[];
-  limit?: number;
+  initialLimit?: number;
+  expandedLimit?: number;
 }
 
-export function RecentActivityFeed({ items, limit = 10 }: RecentActivityFeedProps) {
-  const visibleItems = items.slice(0, limit);
+export function RecentActivityFeed({
+  items,
+  initialLimit = RECENT_ACTIVITY_INITIAL_LIMIT,
+  expandedLimit = RECENT_ACTIVITY_EXPANDED_LIMIT,
+}: RecentActivityFeedProps) {
+  const [expanded, setExpanded] = useState(false);
+  const visibleLimit = expanded ? expandedLimit : initialLimit;
+  const visibleItems = items.slice(0, visibleLimit);
+  const remaining = Math.max(0, Math.min(items.length, expandedLimit) - visibleItems.length);
 
   return (
-    <Card>
+    <Card className="flex h-full flex-col">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center justify-between gap-2 text-base">
           <span className="flex items-center gap-2">
@@ -76,25 +110,35 @@ export function RecentActivityFeed({ items, limit = 10 }: RecentActivityFeedProp
           )}
         </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="flex flex-1 flex-col">
         {visibleItems.length === 0 ? (
           <p className="py-8 text-center text-sm text-muted-foreground">
             هنوز فعالیتی ثبت نشده است.
           </p>
         ) : (
-          <ul className="divide-y">
-            {visibleItems.map((item) => (
-              <li key={item.id} className="flex items-start justify-between gap-3 py-3 first:pt-0 last:pb-0">
-                <div className="min-w-0 space-y-1">
-                  <p className="text-sm font-semibold">{item.ownerName}</p>
-                  <p className="text-sm text-muted-foreground">{item.typeLabel}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatPersianDateTime(item.timestamp)}
-                  </p>
-                </div>
-              </li>
-            ))}
-          </ul>
+          <>
+            <ul className="divide-y">
+              {visibleItems.map((item) => (
+                <li
+                  key={item.id}
+                  className="flex items-start justify-between gap-3 py-3 first:pt-0 last:pb-0"
+                >
+                  <div className="min-w-0 space-y-1">
+                    <p className="text-sm font-semibold">{item.ownerName}</p>
+                    <p className="text-sm text-muted-foreground">{item.typeLabel}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatPersianDateTime(item.timestamp)}
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+            {!expanded && remaining > 0 && (
+              <div className="mt-4">
+                <ShowMoreButton remaining={remaining} onClick={() => setExpanded(true)} />
+              </div>
+            )}
+          </>
         )}
       </CardContent>
     </Card>
