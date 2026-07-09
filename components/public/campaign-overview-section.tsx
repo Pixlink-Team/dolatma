@@ -96,12 +96,12 @@ export function CampaignOverviewSection({ data }: CampaignOverviewSectionProps) 
     { show: kpiVisibility.billboards, title: "بیلبوردها", value: kpis.totalBillboards, icon: LayoutGrid, sectionId: "billboards", todayDelta: todayDeltas.billboards },
     { show: kpiVisibility.posters, title: "پوسترها", value: kpis.totalPosters, icon: ImageIcon, sectionId: "posters", todayDelta: todayDeltas.posters },
     { show: kpiVisibility.videos, title: "ویدیوها", value: kpis.totalVideos, icon: Video, sectionId: "videos", todayDelta: todayDeltas.videos },
-    { show: kpiVisibility.socialAnalytics, title: "فالوور اجتماعی", value: kpis.totalSocialFollowers, icon: Share2, sectionId: "social-analytics" },
-    { show: kpiVisibility.socialPosts, title: "بازدید پست‌های اجتماعی", value: kpis.totalSocialPostViews, icon: Eye, sectionId: "social-posts", compactValue: true },
+    { show: kpiVisibility.socialAnalytics, title: "فالوور اجتماعی", value: kpis.totalSocialFollowers, icon: Share2, sectionId: "social-analytics", todayDelta: todayDeltas.socialFollowers },
+    { show: kpiVisibility.socialPosts, title: "بازدید پست‌های اجتماعی", value: kpis.totalSocialPostViews, icon: Eye, sectionId: "social-posts", compactValue: true, todayDelta: todayDeltas.socialPostViews },
     { show: kpiVisibility.socialPosts, title: "پست‌های اجتماعی", value: kpis.totalSocialPosts, icon: Share2, sectionId: "social-posts", todayDelta: todayDeltas.socialPosts },
     { show: kpiVisibility.sitePublications, title: "انتشار در سایت", value: kpis.totalSitePublications, icon: Globe, sectionId: "site-publications", todayDelta: todayDeltas.sitePublications },
     { show: kpiVisibility.activities, title: "اقدامات", value: kpis.totalActivities, icon: Megaphone, sectionId: "activities", todayDelta: todayDeltas.activities },
-    { show: kpiVisibility.submissions, title: "شرکت‌کنندگان", value: kpis.totalParticipants, icon: Users, sectionId: "submissions" },
+    { show: kpiVisibility.submissions, title: "شرکت‌کنندگان", value: kpis.totalParticipants, icon: Users, sectionId: "submissions", todayDelta: todayDeltas.submissions },
     { show: kpiVisibility.files, title: "فایل‌ها", value: kpis.totalFiles, icon: FileText, sectionId: "files", todayDelta: todayDeltas.files },
   ].filter((item) => item.show);
 
