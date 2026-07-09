@@ -104,7 +104,12 @@ export function OwnerLocationFilterProvider({
         }),
       setUserKey: (userKey) => {
         if (userKey === OWNER_USER_ALL) {
-          setFilter((current) => ({ ...current, userKey }));
+          setFilter((current) => ({
+            ...current,
+            userKey: OWNER_USER_ALL,
+            province: OWNER_LOCATION_ALL,
+            city: OWNER_LOCATION_ALL,
+          }));
           return;
         }
 

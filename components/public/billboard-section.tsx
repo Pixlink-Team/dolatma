@@ -19,6 +19,7 @@ import { BillboardModal } from "@/components/public/billboard-modal";
 import {
   billboardHasDisplayContent,
   PUBLIC_MEDIA_GRID_CLASS,
+  resolvePublicMediaSort,
   sortByPublicMediaOrder,
   type PublicMediaSort,
 } from "@/lib/public-media-section";
@@ -29,6 +30,17 @@ import { useOwnerLocationFilter } from "@/lib/context/owner-location-filter-cont
 import { groupByOwner } from "@/lib/owner-groups";
 import type { Billboard } from "@/lib/types";
 import { formatPersianNumber, getStatusLabel } from "@/lib/utils";
+
+function getBillboardUploadDate(billboard: Billboard): string {
+  return billboard.updatedAt || billboard.createdAt;
+}
+
+function matchesBillboardStatusFilter(billboard: Billboard, statusFilter: string): boolean {
+  if (statusFilter === "all") return true;
+  if (statusFilter === "published") return billboard.published || billboard.status === "published";
+  if (statusFilter === "draft") return !billboard.published && billboard.status !== "published";
+  return billboard.status === statusFilter;
+}
 
 interface BillboardSectionProps {
   billboards: Billboard[];
@@ -50,17 +62,17 @@ export function BillboardSection({ billboards, adminOwnerLabel }: BillboardSecti
     [locationFilteredBillboards]
   );
 
-  const effectiveSort = filter.sortOrder !== "default" ? "default" : sort;
+  const effectiveSort = resolvePublicMediaSort(filter.sortOrder, sort);
 
   const filtered = useMemo(() => {
     const items = locationFilteredBillboards.filter((billboard) => {
       if (cityFilter !== "all" && billboard.city !== cityFilter) return false;
-      if (statusFilter !== "all" && billboard.status !== statusFilter) return false;
+      if (!matchesBillboardStatusFilter(billboard, statusFilter)) return false;
       if (search && !billboard.title.includes(search) && !billboard.city.includes(search)) return false;
       if (effectiveSort !== "default" && !billboardHasDisplayContent(billboard)) return false;
       return true;
     });
-    return sortByPublicMediaOrder(items, effectiveSort, (item) => item.date);
+    return sortByPublicMediaOrder(items, effectiveSort, getBillboardUploadDate);
   }, [locationFilteredBillboards, cityFilter, statusFilter, search, effectiveSort]);
 
   const sectionVisible = useCampaignSectionVisibility(billboards.length, filtered.length);

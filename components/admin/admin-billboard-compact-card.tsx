@@ -1,6 +1,8 @@
 "use client";
 
+import { Globe, GlobeLock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { AdminOwnerBadge } from "@/components/admin/admin-owner-badge";
 import { MediaThumbnail } from "@/components/ui/media-thumbnail";
 import { getBillboardCategoryLabel } from "@/lib/billboard-categories";
@@ -11,47 +13,80 @@ import { cn } from "@/lib/utils";
 interface AdminBillboardCompactCardProps {
   billboard: Billboard;
   onClick: () => void;
+  onTogglePublish?: (billboard: Billboard) => void;
+  canPublish?: boolean;
 }
 
-export function AdminBillboardCompactCard({ billboard, onClick }: AdminBillboardCompactCardProps) {
+export function AdminBillboardCompactCard({
+  billboard,
+  onClick,
+  onTogglePublish,
+  canPublish = false,
+}: AdminBillboardCompactCardProps) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "group w-full overflow-hidden rounded-xl border bg-card text-right transition-all",
-        "hover:border-primary hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      )}
-    >
-      <div className="relative aspect-[4/3] w-full overflow-hidden bg-muted">
-        <MediaThumbnail
-          src={billboard.thumbnailUrl}
-          alt={billboard.title}
-          kind="poster"
-          sizes="200px"
-          objectFit="cover"
-        />
-        <div className="absolute top-1.5 right-1.5 flex flex-wrap gap-1 justify-end">
-          <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-            {getBillboardCategoryLabel(billboard.category)}
-          </Badge>
-        </div>
-        {!billboard.published && (
-          <div className="absolute top-1.5 left-1.5">
-            <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-              پیش‌نویس
+    <div className="group relative w-full overflow-hidden rounded-xl border bg-card text-right transition-all hover:border-primary hover:shadow-md">
+      <button
+        type="button"
+        onClick={onClick}
+        className={cn(
+          "w-full text-right focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        )}
+      >
+        <div className="relative aspect-[4/3] w-full overflow-hidden bg-muted">
+          <MediaThumbnail
+            src={billboard.thumbnailUrl}
+            alt={billboard.title}
+            kind="poster"
+            sizes="200px"
+            objectFit="cover"
+          />
+          <div className="absolute top-1.5 right-1.5 flex flex-wrap gap-1 justify-end">
+            <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+              {getBillboardCategoryLabel(billboard.category)}
             </Badge>
           </div>
-        )}
-      </div>
-      <div className="space-y-1 p-2">
-        <p className="truncate text-xs font-medium">{billboard.title}</p>
-        <p className="truncate text-[10px] text-muted-foreground">
-          {formatBillboardCityLine(billboard)}
-        </p>
-        <AdminOwnerBadge ownerUserId={billboard.ownerUserId} ownerName={billboard.ownerName} />
-      </div>
-    </button>
+          {!billboard.published && (
+            <div className="absolute top-1.5 left-1.5">
+              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                پیش‌نویس
+              </Badge>
+            </div>
+          )}
+        </div>
+        <div className="space-y-1 p-2">
+          <p className="truncate text-xs font-medium">{billboard.title}</p>
+          <p className="truncate text-[10px] text-muted-foreground">
+            {formatBillboardCityLine(billboard)}
+          </p>
+          <AdminOwnerBadge ownerUserId={billboard.ownerUserId} ownerName={billboard.ownerName} />
+        </div>
+      </button>
+
+      {canPublish && onTogglePublish && (
+        <Button
+          type="button"
+          variant={billboard.published ? "secondary" : "default"}
+          size="sm"
+          className="absolute bottom-2 left-2 z-10 h-7 gap-1 px-2 text-[10px]"
+          onClick={(event) => {
+            event.stopPropagation();
+            onTogglePublish(billboard);
+          }}
+        >
+          {billboard.published ? (
+            <>
+              <GlobeLock className="h-3 w-3" />
+              لغو انتشار
+            </>
+          ) : (
+            <>
+              <Globe className="h-3 w-3" />
+              انتشار
+            </>
+          )}
+        </Button>
+      )}
+    </div>
   );
 }
 

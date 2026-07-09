@@ -15,6 +15,7 @@ import { PosterCard } from "@/components/public/poster-card";
 import {
   posterHasDisplayContent,
   PUBLIC_MEDIA_GRID_CLASS,
+  resolvePublicMediaSort,
   sortByPublicMediaOrder,
   type PublicMediaSort,
 } from "@/lib/public-media-section";
@@ -27,6 +28,13 @@ import { formatPersianNumber } from "@/lib/utils";
 
 function getPosterLatestDate(poster: PosterWithVersions): string | undefined {
   return [...poster.versions].sort((a, b) => b.versionNumber - a.versionNumber)[0]?.date;
+}
+
+function getPosterSortDate(poster: PosterWithVersions, sort: PublicMediaSort): string | undefined {
+  if (sort === "newest" || sort === "oldest") {
+    return poster.updatedAt || poster.createdAt;
+  }
+  return getPosterLatestDate(poster);
 }
 
 interface PostersSectionProps {
@@ -48,14 +56,14 @@ function filterPosterGroups(
           ? sortByPublicMediaOrder(
               group.items.filter((poster) => sort === "default" || posterHasDisplayContent(poster)),
               sort,
-              getPosterLatestDate
+              (poster) => getPosterSortDate(poster, sort)
             )
           : sortByPublicMediaOrder(
               group.items
                 .filter((poster) => poster.categoryId === categoryFilter)
                 .filter((poster) => sort === "default" || posterHasDisplayContent(poster)),
               sort,
-              getPosterLatestDate
+              (poster) => getPosterSortDate(poster, sort)
             ),
     }))
     .filter((group) => group.items.length > 0);
@@ -72,7 +80,7 @@ export function PostersSection({ categories, posters, groups }: PostersSectionPr
   );
 
   const locationFilteredGroups = useFilteredOwnerGroups(groups, getPosterLatestDate);
-  const effectiveSort = filter.sortOrder !== "default" ? "default" : sort;
+  const effectiveSort = resolvePublicMediaSort(filter.sortOrder, sort);
 
   const filteredGroups = useMemo(
     () => filterPosterGroups(locationFilteredGroups, categoryFilter, effectiveSort),

@@ -1,6 +1,8 @@
 "use client";
 
-import { CalendarRange, MapPin, UserRound } from "lucide-react";
+import { isCampaignContentFilterActive } from "@/lib/campaign-content-filter";
+import { CalendarRange, MapPin, RotateCcw, UserRound } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -30,6 +32,7 @@ export function OwnerLocationFilterBar() {
     setDateTo,
     setSortOrder,
     setPlanLabel,
+    resetFilters,
     provinces,
     cities,
     plans,
@@ -40,14 +43,24 @@ export function OwnerLocationFilterBar() {
   const provinceLocked = userLocked && filter.province !== OWNER_LOCATION_ALL;
   const cityLocked = userLocked && filter.city !== OWNER_LOCATION_ALL;
 
+  const filterActive = isCampaignContentFilterActive(filter);
+
   return (
     <div
       className="flex flex-col gap-4 rounded-xl border bg-card/60 p-4"
       data-export-hide
     >
-      <div className="flex items-center gap-2 text-sm font-medium">
-        <MapPin className="h-4 w-4 text-primary shrink-0" />
-        <span>فیلتر و مرتب‌سازی محتوای کمپین</span>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 text-sm font-medium">
+          <MapPin className="h-4 w-4 text-primary shrink-0" />
+          <span>فیلتر و مرتب‌سازی محتوای کمپین</span>
+        </div>
+        {filterActive && (
+          <Button type="button" variant="outline" size="sm" onClick={resetFilters} className="gap-2">
+            <RotateCcw className="h-4 w-4" />
+            بازگشت به پیش‌فرض
+          </Button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 xl:grid-cols-3">

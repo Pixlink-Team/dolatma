@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import type { DataOwnerGroup, Ownable } from "@/lib/types";
 import { useOwnerLocationFilter } from "@/lib/context/owner-location-filter-context";
-import { getOwnableContentDate, sortCampaignContent } from "@/lib/campaign-content-filter";
+import { getOwnableUploadDate, sortCampaignContent } from "@/lib/campaign-content-filter";
 import {
   filterItemsByOwnerLocation,
   filterOwnerGroupsByLocation,
@@ -16,11 +16,6 @@ export function useFilteredOwnerGroups<T extends Ownable>(
   const { filter } = useOwnerLocationFilter();
 
   return useMemo(() => {
-    const dateOf = (item: T) =>
-      getItemDate?.(item) ??
-      getOwnableContentDate(item as T & Record<string, unknown>) ??
-      "";
-
     const filtered = filterOwnerGroupsByLocation(groups, filter, getItemDate);
     if (filter.sortOrder === "default") return filtered;
 
@@ -30,7 +25,7 @@ export function useFilteredOwnerGroups<T extends Ownable>(
         items: sortCampaignContent(
           group.items,
           filter.sortOrder,
-          dateOf,
+          (item) => getOwnableUploadDate(item as T & Record<string, unknown>),
           (item) => ("sortOrder" in item ? Number(item.sortOrder) : 0) || 0
         ),
       }))
@@ -51,10 +46,7 @@ export function useFilteredOwnableItems<T extends Ownable>(
     return sortCampaignContent(
       filtered,
       filter.sortOrder,
-      (item) =>
-        getItemDate?.(item) ??
-        getOwnableContentDate(item as T & Record<string, unknown>) ??
-        "",
+      (item) => getOwnableUploadDate(item as T & Record<string, unknown>),
       (item) => ("sortOrder" in item ? Number(item.sortOrder) : 0) || 0
     );
   }, [items, filter, getItemDate]);

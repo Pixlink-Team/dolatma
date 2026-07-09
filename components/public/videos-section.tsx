@@ -15,6 +15,7 @@ import { VideoCard } from "@/components/public/video-card";
 import {
   videoHasDisplayContent,
   PUBLIC_MEDIA_GRID_CLASS,
+  resolvePublicMediaSort,
   sortByPublicMediaOrder,
   type PublicMediaSort,
 } from "@/lib/public-media-section";
@@ -27,6 +28,13 @@ import { cn, formatPersianNumber } from "@/lib/utils";
 
 function getVideoLatestDate(video: VideoWithVersions): string | undefined {
   return [...video.versions].sort((a, b) => b.versionNumber - a.versionNumber)[0]?.date;
+}
+
+function getVideoSortDate(video: VideoWithVersions, sort: PublicMediaSort): string | undefined {
+  if (sort === "newest" || sort === "oldest") {
+    return video.updatedAt || video.createdAt;
+  }
+  return getVideoLatestDate(video);
 }
 
 interface VideosSectionProps {
@@ -48,14 +56,14 @@ function filterVideoGroups(
           ? sortByPublicMediaOrder(
               group.items.filter((video) => sort === "default" || videoHasDisplayContent(video)),
               sort,
-              getVideoLatestDate
+              (video) => getVideoSortDate(video, sort)
             )
           : sortByPublicMediaOrder(
               group.items
                 .filter((video) => video.categoryId === categoryFilter)
                 .filter((video) => sort === "default" || videoHasDisplayContent(video)),
               sort,
-              getVideoLatestDate
+              (video) => getVideoSortDate(video, sort)
             ),
     }))
     .filter((group) => group.items.length > 0);
@@ -72,7 +80,7 @@ export function VideosSection({ categories, videos, groups }: VideosSectionProps
   );
 
   const locationFilteredGroups = useFilteredOwnerGroups(groups, getVideoLatestDate);
-  const effectiveSort = filter.sortOrder !== "default" ? "default" : sort;
+  const effectiveSort = resolvePublicMediaSort(filter.sortOrder, sort);
 
   const filteredGroups = useMemo(
     () => filterVideoGroups(locationFilteredGroups, categoryFilter, effectiveSort),

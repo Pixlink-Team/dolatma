@@ -18,7 +18,7 @@ import { BillboardCreateAssignmentDialog } from "@/components/admin/billboard-cr
 import { BillboardAddPeriodDialog } from "@/components/admin/billboard-add-period-dialog";
 import { saveBillboardAction, deleteBillboardAction } from "@/lib/actions/admin-actions";
 import { canManageBillboardPeriods, isApiBillboard } from "@/lib/billboards";
-import type { Billboard } from "@/lib/types";
+import type { Billboard, ItemStatus } from "@/lib/types";
 import { getStatusLabel } from "@/lib/utils";
 
 interface ContributorProfile {
@@ -115,10 +115,15 @@ export function BillboardsAdmin({
   const handleTogglePublish = (item: Billboard) => {
     if (isApiBillboard(item)) return;
     startTransition(async () => {
-      const updated = { ...item, published: !item.published };
+      const published = !item.published;
+      const updated: Billboard = {
+        ...item,
+        published,
+        status: (published ? "published" : "draft") as ItemStatus,
+      };
       await saveBillboardAction(updated);
       setBillboards((prev) => prev.map((billboard) => (billboard.id === item.id ? updated : billboard)));
-      toast.success(updated.published ? "منتشر شد" : "از انتشار خارج شد");
+      toast.success(published ? "منتشر شد" : "به پیش‌نویس برگشت");
       router.refresh();
     });
   };
@@ -213,6 +218,8 @@ export function BillboardsAdmin({
               key={billboard.id}
               billboard={billboard}
               onClick={() => openEdit(billboard)}
+              onTogglePublish={handleTogglePublish}
+              canPublish={isFullAdmin}
             />
           ))}
           <AdminBillboardAddCard onClick={openCreate} />

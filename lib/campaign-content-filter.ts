@@ -55,6 +55,17 @@ export function resolveDateFilterRange(filter: CampaignDateFilter): { from: stri
   return null;
 }
 
+export function getOwnableUploadDate(item: Ownable & Record<string, unknown>): string {
+  const createdAt = typeof item.createdAt === "string" ? item.createdAt.trim() : "";
+  const updatedAt = typeof item.updatedAt === "string" ? item.updatedAt.trim() : "";
+
+  if (createdAt && updatedAt) {
+    return (updatedAt > createdAt ? updatedAt : createdAt).slice(0, 10);
+  }
+
+  return (createdAt || updatedAt).slice(0, 10);
+}
+
 export function getOwnableContentDate(item: Ownable & Record<string, unknown>): string {
   const candidates = [
     item.publishedDate,

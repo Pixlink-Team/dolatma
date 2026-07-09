@@ -48,6 +48,16 @@ export function activityHasDisplayContent(activity: {
 
 export type PublicMediaSort = "default" | "title" | "newest" | "oldest";
 
+export function resolvePublicMediaSort(
+  globalSort: string,
+  localSort: PublicMediaSort
+): PublicMediaSort {
+  if (globalSort === "newest" || globalSort === "oldest") {
+    return globalSort;
+  }
+  return localSort;
+}
+
 export function sortByPublicMediaOrder<T extends { title: string; sortOrder: number }>(
   items: T[],
   sort: PublicMediaSort,
