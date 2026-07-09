@@ -58,18 +58,33 @@ export function CampaignOverviewSection({ data }: CampaignOverviewSectionProps) 
     files: settings.features.files,
   };
 
-  const kpiItems: { show: boolean; title: string; value: number; icon: LucideIcon }[] = [
-    { show: kpiVisibility.billboards, title: "بیلبوردها", value: kpis.totalBillboards, icon: LayoutGrid },
-    { show: kpiVisibility.posters, title: "پوسترها", value: kpis.totalPosters, icon: ImageIcon },
-    { show: kpiVisibility.videos, title: "ویدیوها", value: kpis.totalVideos, icon: Video },
-    { show: kpiVisibility.socialAnalytics, title: "فالوور اجتماعی", value: kpis.totalSocialFollowers, icon: Share2 },
-    { show: kpiVisibility.socialPosts, title: "بازدید پست‌های اجتماعی", value: kpis.totalSocialPostViews, icon: Eye },
-    { show: kpiVisibility.socialPosts, title: "پست‌های اجتماعی", value: kpis.totalSocialPosts, icon: Share2 },
-    { show: kpiVisibility.sitePublications, title: "انتشار در سایت", value: kpis.totalSitePublications, icon: Globe },
-    { show: kpiVisibility.activities, title: "اقدامات", value: kpis.totalActivities, icon: Megaphone },
-    { show: kpiVisibility.submissions, title: "شرکت‌کنندگان", value: kpis.totalParticipants, icon: Users },
-    { show: kpiVisibility.files, title: "فایل‌ها", value: kpis.totalFiles, icon: FileText },
+  const kpiItems: {
+    show: boolean;
+    title: string;
+    value: number;
+    icon: LucideIcon;
+    sectionId?: string;
+  }[] = [
+    { show: kpiVisibility.billboards, title: "بیلبوردها", value: kpis.totalBillboards, icon: LayoutGrid, sectionId: "billboards" },
+    { show: kpiVisibility.posters, title: "پوسترها", value: kpis.totalPosters, icon: ImageIcon, sectionId: "posters" },
+    { show: kpiVisibility.videos, title: "ویدیوها", value: kpis.totalVideos, icon: Video, sectionId: "videos" },
+    { show: kpiVisibility.socialAnalytics, title: "فالوور اجتماعی", value: kpis.totalSocialFollowers, icon: Share2, sectionId: "social-analytics" },
+    { show: kpiVisibility.socialPosts, title: "بازدید پست‌های اجتماعی", value: kpis.totalSocialPostViews, icon: Eye, sectionId: "social-posts" },
+    { show: kpiVisibility.socialPosts, title: "پست‌های اجتماعی", value: kpis.totalSocialPosts, icon: Share2, sectionId: "social-posts" },
+    { show: kpiVisibility.sitePublications, title: "انتشار در سایت", value: kpis.totalSitePublications, icon: Globe, sectionId: "site-publications" },
+    { show: kpiVisibility.activities, title: "اقدامات", value: kpis.totalActivities, icon: Megaphone, sectionId: "activities" },
+    { show: kpiVisibility.submissions, title: "شرکت‌کنندگان", value: kpis.totalParticipants, icon: Users, sectionId: "submissions" },
+    { show: kpiVisibility.files, title: "فایل‌ها", value: kpis.totalFiles, icon: FileText, sectionId: "files" },
   ].filter((item) => item.show);
+
+  const scrollToSection = (sectionId: string) => {
+    const target = document.getElementById(sectionId);
+    if (!target) return;
+
+    const collapsedToggle = target.querySelector<HTMLButtonElement>('button[aria-expanded="false"]');
+    collapsedToggle?.click();
+    target.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   return (
     <section id="overview" data-export-section data-export-label="خلاصه کمپین">
@@ -97,7 +112,13 @@ export function CampaignOverviewSection({ data }: CampaignOverviewSectionProps) 
       {kpiItems.length > 0 && (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
           {kpiItems.map((kpi) => (
-            <KPICard key={kpi.title} title={kpi.title} value={kpi.value} icon={kpi.icon} />
+            <KPICard
+              key={kpi.title}
+              title={kpi.title}
+              value={kpi.value}
+              icon={kpi.icon}
+              onClick={kpi.sectionId ? () => scrollToSection(kpi.sectionId!) : undefined}
+            />
           ))}
         </div>
       )}

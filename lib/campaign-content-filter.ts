@@ -60,10 +60,10 @@ export function getOwnableUploadDate(item: Ownable & Record<string, unknown>): s
   const updatedAt = typeof item.updatedAt === "string" ? item.updatedAt.trim() : "";
 
   if (createdAt && updatedAt) {
-    return (updatedAt > createdAt ? updatedAt : createdAt).slice(0, 10);
+    return updatedAt > createdAt ? updatedAt : createdAt;
   }
 
-  return (createdAt || updatedAt).slice(0, 10);
+  return createdAt || updatedAt;
 }
 
 export function getOwnableContentDate(item: Ownable & Record<string, unknown>): string {

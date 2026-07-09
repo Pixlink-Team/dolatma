@@ -23,6 +23,7 @@ import { usePublicMediaPagination } from "@/lib/hooks/use-public-media-paginatio
 import { useFilteredOwnerGroups } from "@/lib/hooks/use-filtered-owner-groups";
 import { useCampaignSectionVisibility } from "@/lib/hooks/use-campaign-section-visibility";
 import { useOwnerLocationFilter } from "@/lib/context/owner-location-filter-context";
+import { flattenOwnerGroupsInSortOrder } from "@/lib/owner-groups";
 import type { DataOwnerGroup, MediaCategory, VideoWithVersions } from "@/lib/types";
 import { cn, formatPersianNumber } from "@/lib/utils";
 
@@ -88,8 +89,11 @@ export function VideosSection({ categories, videos, groups }: VideosSectionProps
   );
 
   const filteredVideos = useMemo(
-    () => filteredGroups.flatMap((group) => group.items),
-    [filteredGroups]
+    () =>
+      effectiveSort === "newest" || effectiveSort === "oldest"
+        ? flattenOwnerGroupsInSortOrder(filteredGroups, effectiveSort)
+        : filteredGroups.flatMap((group) => group.items),
+    [filteredGroups, effectiveSort]
   );
   const sectionVisible = useCampaignSectionVisibility(videos.length, filteredVideos.length);
 

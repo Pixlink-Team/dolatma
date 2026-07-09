@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import type { DataOwnerGroup, Ownable } from "@/lib/types";
 import { useOwnerLocationFilter } from "@/lib/context/owner-location-filter-context";
 import { getOwnableUploadDate, sortCampaignContent } from "@/lib/campaign-content-filter";
+import { sortOwnerGroupsByItemDate } from "@/lib/owner-groups";
 import {
   filterItemsByOwnerLocation,
   filterOwnerGroupsByLocation,
@@ -19,7 +20,7 @@ export function useFilteredOwnerGroups<T extends Ownable>(
     const filtered = filterOwnerGroupsByLocation(groups, filter, getItemDate);
     if (filter.sortOrder === "default") return filtered;
 
-    return filtered
+    const sortedGroups = filtered
       .map((group) => ({
         ...group,
         items: sortCampaignContent(
@@ -30,6 +31,8 @@ export function useFilteredOwnerGroups<T extends Ownable>(
         ),
       }))
       .filter((group) => group.items.length > 0);
+
+    return sortOwnerGroupsByItemDate(sortedGroups, filter.sortOrder);
   }, [groups, filter, getItemDate]);
 }
 

@@ -23,6 +23,7 @@ import { usePublicMediaPagination } from "@/lib/hooks/use-public-media-paginatio
 import { useFilteredOwnerGroups } from "@/lib/hooks/use-filtered-owner-groups";
 import { useCampaignSectionVisibility } from "@/lib/hooks/use-campaign-section-visibility";
 import { useOwnerLocationFilter } from "@/lib/context/owner-location-filter-context";
+import { flattenOwnerGroupsInSortOrder } from "@/lib/owner-groups";
 import type { DataOwnerGroup, MediaCategory, PosterWithVersions } from "@/lib/types";
 import { formatPersianNumber } from "@/lib/utils";
 
@@ -88,8 +89,11 @@ export function PostersSection({ categories, posters, groups }: PostersSectionPr
   );
 
   const filteredPosters = useMemo(
-    () => filteredGroups.flatMap((group) => group.items),
-    [filteredGroups]
+    () =>
+      effectiveSort === "newest" || effectiveSort === "oldest"
+        ? flattenOwnerGroupsInSortOrder(filteredGroups, effectiveSort)
+        : filteredGroups.flatMap((group) => group.items),
+    [filteredGroups, effectiveSort]
   );
   const sectionVisible = useCampaignSectionVisibility(posters.length, filteredPosters.length);
 

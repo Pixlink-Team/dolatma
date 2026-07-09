@@ -27,7 +27,7 @@ import { usePublicMediaPagination } from "@/lib/hooks/use-public-media-paginatio
 import { useFilteredOwnableItems } from "@/lib/hooks/use-filtered-owner-groups";
 import { useCampaignSectionVisibility } from "@/lib/hooks/use-campaign-section-visibility";
 import { useOwnerLocationFilter } from "@/lib/context/owner-location-filter-context";
-import { groupByOwner } from "@/lib/owner-groups";
+import { groupByOwner, groupByOwnerPreservingOrder } from "@/lib/owner-groups";
 import type { Billboard } from "@/lib/types";
 import { formatPersianNumber, getStatusLabel } from "@/lib/utils";
 
@@ -83,10 +83,13 @@ export function BillboardSection({ billboards, adminOwnerLabel }: BillboardSecti
   );
 
   const visibleBillboards = filtered.slice(0, visibleCount);
-  const visibleGroups = useMemo(
-    () => groupByOwner(visibleBillboards, adminOwnerLabel ?? undefined),
-    [visibleBillboards, adminOwnerLabel]
-  );
+  const visibleGroups = useMemo(() => {
+    const groupItems =
+      effectiveSort !== "default"
+        ? groupByOwnerPreservingOrder(visibleBillboards, adminOwnerLabel ?? undefined)
+        : groupByOwner(visibleBillboards, adminOwnerLabel ?? undefined);
+    return groupItems;
+  }, [visibleBillboards, adminOwnerLabel, effectiveSort]);
 
   const openBillboard = (billboard: Billboard) => {
     setSelectedBillboard(billboard);

@@ -102,29 +102,10 @@ function CampaignDashboardBody({
       <main className="container mx-auto space-y-8 px-4 py-8 max-w-[1280px]">
         <CampaignOverviewSection data={data} />
 
-        {sections.socialPosts && (
-          <DeferredSection minHeight={280} forceRender={exportMode}>
-            <section data-export-section data-export-label="پست‌های شبکه اجتماعی">
-              <SocialPostsSection posts={data.socialPosts} groups={data.socialPostGroups} />
-            </section>
-          </DeferredSection>
-        )}
-
         {sections.analytics && !contentFilterActive && (
           <DeferredSection minHeight={320} forceRender={exportMode}>
             <section data-export-section data-export-label="آمار سایت کمپین">
               <AnalyticsSection analytics={data.analytics} />
-            </section>
-          </DeferredSection>
-        )}
-
-        {sections.socialAnalytics && (
-          <DeferredSection minHeight={280} forceRender={exportMode}>
-            <section data-export-section data-export-label="آمار شبکه‌های اجتماعی">
-              <SocialAnalyticsSection
-                analytics={data.socialAnalytics}
-                adminOwnerLabel={settings.adminOwnerLabel}
-              />
             </section>
           </DeferredSection>
         )}
@@ -171,6 +152,25 @@ function CampaignDashboardBody({
                 publications={data.sitePublications}
                 groups={data.sitePublicationGroups}
               />
+            </section>
+          </DeferredSection>
+        )}
+
+        {sections.socialAnalytics && (
+          <DeferredSection minHeight={280} forceRender={exportMode}>
+            <section data-export-section data-export-label="آمار شبکه‌های اجتماعی">
+              <SocialAnalyticsSection
+                analytics={data.socialAnalytics}
+                adminOwnerLabel={settings.adminOwnerLabel}
+              />
+            </section>
+          </DeferredSection>
+        )}
+
+        {sections.socialPosts && (
+          <DeferredSection minHeight={280} forceRender={exportMode}>
+            <section data-export-section data-export-label="پست‌های شبکه اجتماعی">
+              <SocialPostsSection posts={data.socialPosts} groups={data.socialPostGroups} />
             </section>
           </DeferredSection>
         )}

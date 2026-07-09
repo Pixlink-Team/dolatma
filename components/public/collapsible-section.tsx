@@ -45,7 +45,7 @@ export function CollapsibleSection({
   const isOpen = exportMode || open;
 
   return (
-    <section id={id} className="rounded-xl border bg-card/40">
+    <section id={id} className={cn("rounded-xl border bg-card/40", id && "scroll-mt-24")}>
       <div className="flex flex-col gap-3 border-b p-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-1 items-start gap-3 text-right">
           {!exportMode ? (

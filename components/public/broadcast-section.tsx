@@ -7,6 +7,8 @@ import { CollapsibleSection } from "@/components/public/collapsible-section";
 import { OwnerGroupedSection } from "@/components/public/owner-grouped-section";
 import { useFilteredOwnerGroups } from "@/lib/hooks/use-filtered-owner-groups";
 import { useCampaignSectionVisibility } from "@/lib/hooks/use-campaign-section-visibility";
+import { flattenOwnerGroupsInSortOrder } from "@/lib/owner-groups";
+import { useOwnerLocationFilter } from "@/lib/context/owner-location-filter-context";
 import { ShowMoreButton } from "@/components/public/show-more-button";
 import { useSectionPagination } from "@/lib/hooks/use-section-pagination";
 import { Button } from "@/components/ui/button";
@@ -45,10 +47,14 @@ function BroadcastReportCard({ report }: { report: BroadcastReport }) {
 }
 
 export function BroadcastSection({ reports, groups }: BroadcastSectionProps) {
+  const { filter } = useOwnerLocationFilter();
   const filteredGroups = useFilteredOwnerGroups(groups, (report) => report.reportDate);
   const filteredReports = useMemo(
-    () => filteredGroups.flatMap((group) => group.items),
-    [filteredGroups]
+    () =>
+      filter.sortOrder === "newest" || filter.sortOrder === "oldest"
+        ? flattenOwnerGroupsInSortOrder(filteredGroups, filter.sortOrder)
+        : filteredGroups.flatMap((group) => group.items),
+    [filteredGroups, filter.sortOrder]
   );
   const sectionVisible = useCampaignSectionVisibility(reports.length, filteredReports.length);
 

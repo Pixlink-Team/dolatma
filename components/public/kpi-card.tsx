@@ -8,13 +8,33 @@ interface KPICardProps {
   icon: LucideIcon;
   description?: string;
   className?: string;
+  onClick?: () => void;
 }
 
-export function KPICard({ title, value, icon: Icon, description, className }: KPICardProps) {
+export function KPICard({ title, value, icon: Icon, description, className, onClick }: KPICardProps) {
   const displayValue = typeof value === "number" ? formatPersianNumber(value) : value;
 
   return (
-    <Card className={cn("hover:shadow-md transition-shadow", className)}>
+    <Card
+      className={cn(
+        "hover:shadow-md transition-shadow",
+        onClick && "cursor-pointer hover:border-primary/40",
+        className
+      )}
+      onClick={onClick}
+      onKeyDown={
+        onClick
+          ? (event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                onClick();
+              }
+            }
+          : undefined
+      }
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+    >
       <CardContent className="p-6">
         <div className="flex items-start justify-between">
           <div className="space-y-2">

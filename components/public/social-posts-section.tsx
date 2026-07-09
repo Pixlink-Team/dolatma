@@ -13,6 +13,8 @@ import { PUBLIC_MEDIA_GRID_CLASS } from "@/lib/public-media-section";
 import { usePublicMediaPagination } from "@/lib/hooks/use-public-media-pagination";
 import { useCampaignSectionVisibility } from "@/lib/hooks/use-campaign-section-visibility";
 import { useFilteredOwnerGroups } from "@/lib/hooks/use-filtered-owner-groups";
+import { flattenOwnerGroupsInSortOrder } from "@/lib/owner-groups";
+import { useOwnerLocationFilter } from "@/lib/context/owner-location-filter-context";
 import { isDirectVideoUrl } from "@/lib/media-utils";
 import { ShowMoreButton } from "@/components/public/show-more-button";
 
@@ -115,10 +117,14 @@ function SocialPostCard({ post }: { post: SocialMediaPost }) {
 }
 
 export function SocialPostsSection({ posts, groups }: SocialPostsSectionProps) {
+  const { filter } = useOwnerLocationFilter();
   const filteredGroups = useFilteredOwnerGroups(groups, (post) => post.publishedDate);
   const filteredPosts = useMemo(
-    () => filteredGroups.flatMap((group) => group.items),
-    [filteredGroups]
+    () =>
+      filter.sortOrder === "newest" || filter.sortOrder === "oldest"
+        ? flattenOwnerGroupsInSortOrder(filteredGroups, filter.sortOrder)
+        : filteredGroups.flatMap((group) => group.items),
+    [filteredGroups, filter.sortOrder]
   );
   const sectionVisible = useCampaignSectionVisibility(posts.length, filteredPosts.length);
 
