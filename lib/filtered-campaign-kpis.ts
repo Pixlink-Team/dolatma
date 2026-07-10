@@ -46,7 +46,7 @@ export function getOwnerFilterLabel(
   }
 
   if (filter.planLabel !== OWNER_PLAN_ALL) {
-    parts.push(`طرح: ${filter.planLabel}`);
+    parts.push(`موضوع: ${filter.planLabel}`);
   }
 
   if (filter.sortOrder === "newest") parts.push("جدیدترین");

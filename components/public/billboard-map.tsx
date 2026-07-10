@@ -74,17 +74,20 @@ export function BillboardMap({
 
         marker.bindTooltip(buildBillboardMapTooltipHtml(billboard), {
           direction: "top",
-          offset: [0, -10],
+          offset: [0, -18],
           opacity: 1,
           className: "billboard-map-tooltip",
-          interactive: true,
-          sticky: false,
+          interactive: false,
+          sticky: true,
         });
 
         marker.on("mouseover", () => {
+          marker.setStyle({ radius: 10, weight: 3 });
           marker.openTooltip();
+          marker.bringToFront();
         });
         marker.on("mouseout", () => {
+          marker.setStyle({ radius: 8, weight: 2 });
           marker.closeTooltip();
         });
 

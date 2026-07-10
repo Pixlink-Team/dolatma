@@ -11,6 +11,7 @@ import {
   deleteMediaCategory,
   deletePoster,
   deletePosterVersion,
+  deleteRawMediaUpload,
   deleteSubmission,
   deleteVideo,
   deleteVideoVersion,
@@ -21,6 +22,7 @@ import {
   saveMediaCategory,
   savePoster,
   savePosterVersion,
+  saveRawMediaUpload,
   saveVideo,
   saveVideoVersion,
   updateCampaignSettings,
@@ -34,6 +36,7 @@ import type {
   MediaCategory,
   Poster,
   PosterVersion,
+  RawMediaUpload,
   Video,
   VideoVersion,
 } from "@/lib/types";
@@ -217,6 +220,18 @@ export async function saveCampaignFileAction(data: Partial<CampaignFile> & { id?
 
 export async function deleteCampaignFileAction(id: string) {
   const result = await deleteCampaignFile(id);
+  await revalidateAll();
+  return result;
+}
+
+export async function saveRawMediaUploadAction(data: Partial<RawMediaUpload> & { id?: string }) {
+  const result = await saveRawMediaUpload(await withOwnerScope(data));
+  await revalidateAll();
+  return result;
+}
+
+export async function deleteRawMediaUploadAction(id: string) {
+  const result = await deleteRawMediaUpload(id);
   await revalidateAll();
   return result;
 }

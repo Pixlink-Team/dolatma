@@ -8,12 +8,16 @@ import {
 } from "@/lib/auth/admin-session";
 import { getUploadPublicUrl, getUploadsDir } from "@/lib/uploads";
 
+export const runtime = "nodejs";
+export const maxDuration = 300;
+
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 const MAX_VIDEO_BYTES = 100 * 1024 * 1024;
 const MAX_ACTIVITY_VIDEO_BYTES = 50 * 1024 * 1024;
 const MAX_DOCUMENT_BYTES = 25 * 1024 * 1024;
-
 const MAX_AUDIO_BYTES = 50 * 1024 * 1024;
+const MAX_RAW_IMAGE_BYTES = 100 * 1024 * 1024;
+const MAX_RAW_VIDEO_BYTES = 2 * 1024 * 1024 * 1024;
 
 const IMAGE_TYPES = new Set([
   "image/jpeg",
@@ -113,7 +117,7 @@ export async function POST(request: Request) {
   }
 
   const allowedTypes =
-    kind === "video" || kind === "activity-video"
+    kind === "video" || kind === "activity-video" || kind === "raw-video"
       ? VIDEO_TYPES
       : kind === "audio"
         ? AUDIO_TYPES
@@ -121,15 +125,19 @@ export async function POST(request: Request) {
           ? DOCUMENT_TYPES
           : IMAGE_TYPES;
   const maxBytes =
-    kind === "activity-video"
-      ? MAX_ACTIVITY_VIDEO_BYTES
-      : kind === "video"
-      ? MAX_VIDEO_BYTES
-      : kind === "audio"
-        ? MAX_AUDIO_BYTES
-        : kind === "document"
-          ? MAX_DOCUMENT_BYTES
-          : MAX_IMAGE_BYTES;
+    kind === "raw-video"
+      ? MAX_RAW_VIDEO_BYTES
+      : kind === "raw-image"
+        ? MAX_RAW_IMAGE_BYTES
+        : kind === "activity-video"
+          ? MAX_ACTIVITY_VIDEO_BYTES
+          : kind === "video"
+            ? MAX_VIDEO_BYTES
+            : kind === "audio"
+              ? MAX_AUDIO_BYTES
+              : kind === "document"
+                ? MAX_DOCUMENT_BYTES
+                : MAX_IMAGE_BYTES;
 
   if (!allowedTypes.has(file.type)) {
     return NextResponse.json({ error: "نوع فایل مجاز نیست" }, { status: 400 });

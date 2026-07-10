@@ -22,6 +22,7 @@ export default async function SocialPostsPage({ searchParams }: PageProps) {
       campaignId={campaignId}
       initialPosts={data.socialPosts ?? []}
       initialPlatformStats={data.socialPlatformStats ?? []}
+      contentPlans={data.settings?.contentPlans ?? []}
       isFullAdmin={fullAdmin}
     />
   );

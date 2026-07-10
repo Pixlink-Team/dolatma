@@ -15,9 +15,15 @@ interface MediaUploadProps {
   value: string;
   onChange: (url: string) => void;
   onUploaded?: (url: string) => void;
+  onUploadedMeta?: (meta: {
+    url: string;
+    fileName: string;
+    fileSize: number;
+    mimeType: string;
+  }) => void;
   label?: string;
   kind?: "image" | "video" | "audio";
-  uploadKind?: "image" | "video" | "audio" | "activity-video";
+  uploadKind?: "image" | "video" | "audio" | "activity-video" | "raw-image" | "raw-video";
   accept?: string;
   dropzone?: boolean;
   fileOnly?: boolean;
@@ -28,6 +34,7 @@ export function MediaUpload({
   value,
   onChange,
   onUploaded,
+  onUploadedMeta,
   label,
   kind = "image",
   uploadKind,
@@ -43,7 +50,12 @@ export function MediaUpload({
   const handleUpload = async (file: File) => {
     if (maxFileSizeBytes && file.size > maxFileSizeBytes) {
       const maxMb = Math.round(maxFileSizeBytes / (1024 * 1024));
-      toast.error(`حجم فایل نباید بیشتر از ${maxMb} مگابایت باشد`);
+      const maxGb = Math.round((maxFileSizeBytes / (1024 * 1024 * 1024)) * 10) / 10;
+      toast.error(
+        maxFileSizeBytes >= 1024 * 1024 * 1024
+          ? `حجم فایل نباید بیشتر از ${maxGb} گیگابایت باشد`
+          : `حجم فایل نباید بیشتر از ${maxMb} مگابایت باشد`
+      );
       return;
     }
 
@@ -63,9 +75,20 @@ export function MediaUpload({
         throw new Error(body?.error ?? "آپلود ناموفق بود");
       }
 
-      const data = (await response.json()) as { url: string };
+      const data = (await response.json()) as {
+        url: string;
+        fileName?: string;
+        fileSize?: number;
+        mimeType?: string;
+      };
       onChange(data.url);
       onUploaded?.(data.url);
+      onUploadedMeta?.({
+        url: data.url,
+        fileName: data.fileName ?? file.name,
+        fileSize: data.fileSize ?? file.size,
+        mimeType: data.mimeType ?? file.type,
+      });
       toast.success("فایل با موفقیت آپلود شد");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "آپلود ناموفق بود");

@@ -21,6 +21,7 @@ export default async function FilesPage({ searchParams }: FilesPageProps) {
     <FilesAdmin
       campaignId={campaignId}
       initialFiles={(data.files ?? []) as CampaignFile[]}
+      contentPlans={data.settings?.contentPlans ?? []}
     />
   );
 }

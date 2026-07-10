@@ -35,6 +35,7 @@ export interface CampaignFeatures {
   pressPublications: boolean;
   submissions: boolean;
   files: boolean;
+  rawMedia: boolean;
 }
 
 export type AnalyticsSource = "manual" | "metabase" | "hybrid";
@@ -277,6 +278,33 @@ export interface CampaignFile extends Ownable {
   planLabel?: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export type RawMediaKind = "image" | "video";
+
+export interface RawMediaUpload extends Ownable {
+  id: string;
+  campaignId: string;
+  title: string;
+  description?: string | null;
+  mediaKind: RawMediaKind;
+  fileUrl: string;
+  fileName: string;
+  mimeType: string;
+  fileSize: number;
+  published: boolean;
+  sortOrder: number;
+  planLabel?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RawMediaStorageSummary {
+  usedBytes: number;
+  limitBytes: number;
+  remainingBytes: number;
+  fileCount: number;
+  percentUsed: number;
 }
 
 import type { ContributorPermissions } from "@/lib/contributor-permissions";
@@ -572,6 +600,7 @@ export interface SectionVisibility {
   pressPublications: boolean;
   submissions: boolean;
   files: boolean;
+  rawMedia: boolean;
 }
 
 export interface PublicCampaignData {
@@ -606,5 +635,8 @@ export interface PublicCampaignData {
   submissionSummary: SubmissionSummary;
   files: CampaignFile[];
   fileGroups: DataOwnerGroup<CampaignFile>[];
+  rawMedia: RawMediaUpload[];
+  rawMediaGroups: DataOwnerGroup<RawMediaUpload>[];
+  rawMediaStorage: RawMediaStorageSummary;
   lastUpdated: string;
 }

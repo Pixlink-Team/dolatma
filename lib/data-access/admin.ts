@@ -12,6 +12,7 @@ import type {
   MediaCategory,
   Poster,
   PosterVersion,
+  RawMediaUpload,
   Video,
   VideoVersion,
 } from "@/lib/types";
@@ -75,6 +76,9 @@ export async function getAdminData(campaignId: string) {
       activities: filterByOwner([...(store.activities ?? [])]).sort(
         (a, b) => b.activityDate.localeCompare(a.activityDate) || a.sortOrder - b.sortOrder
       ),
+      rawMedia: filterByOwner([...((store as { rawMedia?: RawMediaUpload[] }).rawMedia ?? [])]).sort(
+        (a, b) => a.sortOrder - b.sortOrder || b.createdAt.localeCompare(a.createdAt)
+      ),
     };
   }
 
@@ -115,6 +119,7 @@ export async function getAdminData(campaignId: string) {
       socialPlatformStats: [],
       meetings: [],
       activities: [],
+      rawMedia: [],
     };
   } catch {
     return getAdminDataMock(campaignId);
@@ -142,6 +147,9 @@ function getAdminDataMock(campaignId: string) {
     meetings: [...(store.meetings ?? [])].sort(compareMeetingsByDateDesc),
     activities: [...(store.activities ?? [])].sort(
       (a, b) => b.activityDate.localeCompare(a.activityDate) || a.sortOrder - b.sortOrder
+    ),
+    rawMedia: [...((store as { rawMedia?: RawMediaUpload[] }).rawMedia ?? [])].sort(
+      (a, b) => a.sortOrder - b.sortOrder || b.createdAt.localeCompare(a.createdAt)
     ),
   };
 }
@@ -184,6 +192,7 @@ export async function saveCampaign(data: Partial<CampaignSettings> & { id?: stri
           pressPublications: false,
           submissions: false,
           files: false,
+          rawMedia: false,
         },
         analyticsConfig: data.analyticsConfig ?? {
           site: { source: "manual", metabase: null },
@@ -716,6 +725,65 @@ export async function deleteCampaignFile(id: string) {
     updateMockStore((store) => ({
       ...store,
       files: (store.files ?? []).filter((file) => file.id !== id),
+    }));
+    return { success: true };
+  }
+  return { success: true };
+}
+
+export async function saveRawMediaUpload(data: Partial<RawMediaUpload> & { id?: string }) {
+  if (isPostgresConfigured()) return pg.pgSaveRawMediaUpload(data);
+  const now = new Date().toISOString();
+  if (!isSupabaseConfigured()) {
+    const newId = data.id ?? generateId();
+    updateMockStore((store) => {
+      const campaignItems = ((store as { rawMedia?: RawMediaUpload[] }).rawMedia ?? []).filter(
+        (item) => item.campaignId === data.campaignId
+      );
+      if (data.id) {
+        return {
+          ...store,
+          rawMedia: ((store as { rawMedia?: RawMediaUpload[] }).rawMedia ?? []).map((item) =>
+            item.id === data.id ? ({ ...item, ...data, updatedAt: now } as RawMediaUpload) : item
+          ),
+        };
+      }
+      const newItem: RawMediaUpload = {
+        id: newId,
+        campaignId: data.campaignId ?? "",
+        title: data.title ?? "",
+        description: data.description,
+        mediaKind: data.mediaKind ?? "image",
+        fileUrl: data.fileUrl ?? "",
+        fileName: data.fileName ?? "",
+        mimeType: data.mimeType ?? "application/octet-stream",
+        fileSize: data.fileSize ?? 0,
+        published: data.published ?? true,
+        sortOrder: data.sortOrder ?? campaignItems.length + 1,
+        planLabel: data.planLabel ?? null,
+        ownerUserId: data.ownerUserId ?? null,
+        ownerName: data.ownerName ?? null,
+        createdAt: now,
+        updatedAt: now,
+      };
+      return {
+        ...store,
+        rawMedia: [...((store as { rawMedia?: RawMediaUpload[] }).rawMedia ?? []), newItem],
+      };
+    });
+    return { success: true, id: newId };
+  }
+  return { success: true };
+}
+
+export async function deleteRawMediaUpload(id: string) {
+  if (isPostgresConfigured()) return pg.pgDeleteRawMediaUpload(id);
+  if (!isSupabaseConfigured()) {
+    updateMockStore((store) => ({
+      ...store,
+      rawMedia: ((store as { rawMedia?: RawMediaUpload[] }).rawMedia ?? []).filter(
+        (item) => item.id !== id
+      ),
     }));
     return { success: true };
   }

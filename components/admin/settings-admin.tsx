@@ -36,6 +36,7 @@ const featuresSchema = z.object({
   pressPublications: z.boolean(),
   submissions: z.boolean(),
   files: z.boolean(),
+  rawMedia: z.boolean(),
 });
 
 const metabaseSchema = z.object({
@@ -87,6 +88,7 @@ const featureLabels: { key: keyof CampaignFeatures; label: string }[] = [
   { key: "pressPublications", label: "مجله و روزنامه" },
   { key: "submissions", label: "مشارکت کاربران" },
   { key: "files", label: "فایل‌های کمپین" },
+  { key: "rawMedia", label: "رسانه خام" },
 ];
 
 function buildChannelAnalyticsConfig(
@@ -225,7 +227,10 @@ export function SettingsAdmin({ initialSettings }: SettingsAdminProps) {
       endDate: initialSettings.endDate,
       coverImageUrl: initialSettings.coverImageUrl ?? "",
       published: initialSettings.published,
-      features: initialSettings.features,
+      features: {
+        ...initialSettings.features,
+        rawMedia: initialSettings.features.rawMedia ?? true,
+      },
       externalCampaignId: initialSettings.billboardConfig?.externalCampaignId ?? "",
       externalCampaignSlug: initialSettings.billboardConfig?.externalCampaignSlug ?? "",
       adminOwnerLabel: initialSettings.adminOwnerLabel ?? DEFAULT_ADMIN_OWNER_LABEL,
@@ -330,16 +335,16 @@ export function SettingsAdmin({ initialSettings }: SettingsAdminProps) {
 
             <div className="space-y-3 rounded-lg border p-4">
               <div>
-                <Label>طرح‌های کمپین</Label>
+                <Label>موضوع‌های کمپین</Label>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  نام طرح‌ها را اینجا تعریف کنید (مثلاً مهتاب، سامان) تا هنگام آپلود محتوا و فیلتر صفحه اصلی استفاده شوند.
+                  نام موضوع‌ها را اینجا تعریف کنید (مثلاً مهتاب، سامان) تا هنگام آپلود محتوا و فیلتر صفحه اصلی استفاده شوند.
                 </p>
               </div>
               <div className="flex gap-2">
                 <Input
                   value={newPlanName}
                   onChange={(event) => setNewPlanName(event.target.value)}
-                  placeholder="نام طرح جدید"
+                  placeholder="نام موضوع جدید"
                 />
                 <Button
                   type="button"

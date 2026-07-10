@@ -12,6 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { MediaUpload } from "@/components/ui/media-upload";
 import { VideoThumbnail } from "@/components/media/video-thumbnail";
+import { PlanLabelSelect } from "@/components/admin/plan-label-select";
 import {
   Select,
   SelectContent,
@@ -54,6 +55,7 @@ interface AdminVideoEditorProps {
   video: Video;
   versions: VideoVersion[];
   categories: MediaCategory[];
+  contentPlans?: string[];
   isNew?: boolean;
   onClose: () => void;
   onSaved?: (video: Video) => void;
@@ -100,6 +102,7 @@ export function AdminVideoEditor({
   video,
   versions,
   categories,
+  contentPlans = [],
   isNew = false,
   onClose,
   onSaved,
@@ -116,14 +119,16 @@ export function AdminVideoEditor({
   const [editDescription, setEditDescription] = useState(video.description ?? "");
   const [editCategoryId, setEditCategoryId] = useState(video.categoryId);
   const [editPublished, setEditPublished] = useState(video.published);
+  const [editPlanLabel, setEditPlanLabel] = useState<string | null>(video.planLabel ?? null);
 
   useEffect(() => {
     setEditTitle(video.title);
     setEditDescription(video.description ?? "");
     setEditCategoryId(video.categoryId);
     setEditPublished(video.published);
+    setEditPlanLabel(video.planLabel ?? null);
     setVersionDrafts(buildVideoVersionDrafts(versions));
-  }, [video.id, video.title, video.description, video.categoryId, video.published, versions.length]);
+  }, [video.id, video.title, video.description, video.categoryId, video.published, video.planLabel, versions.length]);
 
   useLayoutEffect(() => {
     if (!shouldScrollToBottomRef.current) return;
@@ -200,6 +205,7 @@ export function AdminVideoEditor({
         description: editDescription,
         categoryId: editCategoryId,
         published: editPublished,
+        planLabel: editPlanLabel,
         updatedAt: new Date().toISOString(),
       };
 
@@ -319,6 +325,11 @@ export function AdminVideoEditor({
               </SelectContent>
             </Select>
           </div>
+          <PlanLabelSelect
+            plans={contentPlans}
+            value={editPlanLabel}
+            onChange={setEditPlanLabel}
+          />
         </div>
         <div className="flex flex-col items-center gap-2 pt-6">
           <Switch checked={editPublished} onCheckedChange={handleTogglePublish} />

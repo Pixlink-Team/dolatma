@@ -279,6 +279,7 @@ export function UsersAdmin({ initialUsers, campaigns }: UsersAdminProps) {
               city={selectedCity ?? ""}
               onProvinceChange={(value) => form.setValue("province", value)}
               onCityChange={(value) => form.setValue("city", value)}
+              hideCity
             />
             <div className="space-y-2">
               <Label>{editingId ? "رمز عبور جدید (اختیاری)" : "رمز عبور"}</Label>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -12,8 +12,16 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  AdminContentFilterBar,
+  collectAdminFilterUsers,
+  DEFAULT_ADMIN_CONTENT_FILTER,
+  matchesAdminContentFilter,
+  type AdminContentFilterState,
+} from "@/components/admin/admin-content-filter-bar";
 import { AdminCompactAddCard } from "@/components/admin/admin-compact-add-card";
 import { AdminSitePublicationCompactCard } from "@/components/admin/admin-site-publication-compact-card";
+import { PlanLabelSelect } from "@/components/admin/plan-label-select";
 import { MediaUpload } from "@/components/ui/media-upload";
 import { PersianDateField } from "@/components/ui/persian-date-input";
 import { deleteSocialPostAction, saveSocialPostAction } from "@/lib/actions/extended-actions";
@@ -33,13 +41,26 @@ const schema = z.object({
 interface SitePublicationsAdminProps {
   campaignId: string;
   initialPosts: SocialMediaPost[];
+  contentPlans?: string[];
 }
 
-export function SitePublicationsAdmin({ campaignId, initialPosts }: SitePublicationsAdminProps) {
+export function SitePublicationsAdmin({
+  campaignId,
+  initialPosts,
+  contentPlans = [],
+}: SitePublicationsAdminProps) {
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [planLabel, setPlanLabel] = useState<string | null>(null);
+  const [contentFilter, setContentFilter] = useState<AdminContentFilterState>(DEFAULT_ADMIN_CONTENT_FILTER);
   const [rows, setRows] = useState(initialPosts.filter(isSitePublication));
   const [isPending, startTransition] = useTransition();
+
+  const filterUsers = useMemo(() => collectAdminFilterUsers(rows), [rows]);
+  const filteredRows = useMemo(
+    () => rows.filter((item) => matchesAdminContentFilter(item, contentFilter)),
+    [rows, contentFilter]
+  );
 
   const form = useForm({
     resolver: zodResolver(schema),
@@ -55,6 +76,7 @@ export function SitePublicationsAdmin({ campaignId, initialPosts }: SitePublicat
 
   const openCreate = () => {
     setEditingId(null);
+    setPlanLabel(null);
     form.reset({
       title: "",
       link: "",
@@ -68,6 +90,7 @@ export function SitePublicationsAdmin({ campaignId, initialPosts }: SitePublicat
 
   const openEdit = (post: SocialMediaPost) => {
     setEditingId(post.id);
+    setPlanLabel(post.planLabel ?? null);
     form.reset({
       title: post.title,
       link: post.link,
@@ -96,6 +119,7 @@ export function SitePublicationsAdmin({ campaignId, initialPosts }: SitePublicat
         likes: 0,
         comments: 0,
         shares: 0,
+        planLabel,
       });
 
       if (!result.success) {
@@ -119,6 +143,7 @@ export function SitePublicationsAdmin({ campaignId, initialPosts }: SitePublicat
         likes: 0,
         comments: 0,
         shares: 0,
+        planLabel,
         sortOrder: rows.length + 1,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -147,8 +172,15 @@ export function SitePublicationsAdmin({ campaignId, initialPosts }: SitePublicat
         </Button>
       </div>
 
+      <AdminContentFilterBar
+        filter={contentFilter}
+        onChange={setContentFilter}
+        users={filterUsers}
+        plans={contentPlans}
+      />
+
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-        {rows.map((post) => (
+        {filteredRows.map((post) => (
           <AdminSitePublicationCompactCard key={post.id} post={post} onClick={() => openEdit(post)} />
         ))}
         <AdminCompactAddCard onClick={openCreate} label="انتشار جدید" />
@@ -169,6 +201,11 @@ export function SitePublicationsAdmin({ campaignId, initialPosts }: SitePublicat
               <Input {...form.register("link")} dir="ltr" placeholder="https://example.com/article" />
             </div>
             <PersianDateField control={form.control} name="publishedDate" label="تاریخ انتشار" />
+            <PlanLabelSelect
+              plans={contentPlans}
+              value={planLabel}
+              onChange={setPlanLabel}
+            />
             <div className="space-y-2">
               <Label>تصویر شاخص (اختیاری)</Label>
               <MediaUpload

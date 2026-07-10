@@ -7,6 +7,13 @@ import { AdminPosterAddCard, AdminPosterCompactCard } from "@/components/admin/a
 import { AdminMediaCategories } from "@/components/admin/admin-media-categories";
 import { AdminPosterEditor } from "@/components/admin/admin-poster-editor";
 import {
+  AdminContentFilterBar,
+  collectAdminFilterUsers,
+  DEFAULT_ADMIN_CONTENT_FILTER,
+  matchesAdminContentFilter,
+  type AdminContentFilterState,
+} from "@/components/admin/admin-content-filter-bar";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -20,6 +27,7 @@ interface PostersAdminProps {
   initialCategories: MediaCategory[];
   initialPosters: Poster[];
   initialVersions: PosterVersion[];
+  contentPlans?: string[];
 }
 
 const editorDialogClass =
@@ -30,6 +38,7 @@ export function PostersAdmin({
   initialCategories,
   initialPosters,
   initialVersions,
+  contentPlans = [],
 }: PostersAdminProps) {
   const router = useRouter();
   const [posters, setPosters] = useState(initialPosters);
@@ -37,6 +46,7 @@ export function PostersAdmin({
   const [editorOpen, setEditorOpen] = useState(false);
   const [activePosterId, setActivePosterId] = useState<string | null>(null);
   const [draftPoster, setDraftPoster] = useState<Poster | null>(null);
+  const [contentFilter, setContentFilter] = useState<AdminContentFilterState>(DEFAULT_ADMIN_CONTENT_FILTER);
   const [isPending] = useTransition();
 
   useEffect(() => {
@@ -54,6 +64,12 @@ export function PostersAdmin({
     return map;
   }, [versions]);
 
+  const filterUsers = useMemo(() => collectAdminFilterUsers(posters), [posters]);
+  const filteredPosters = useMemo(
+    () => posters.filter((item) => matchesAdminContentFilter(item, contentFilter)),
+    [posters, contentFilter]
+  );
+
   const activePoster = useMemo(() => {
     if (!activePosterId) return null;
     if (draftPoster?.id === activePosterId) return draftPoster;
@@ -61,9 +77,7 @@ export function PostersAdmin({
   }, [activePosterId, draftPoster, posters]);
 
   const isDraftPoster = Boolean(draftPoster && activePosterId === draftPoster.id);
-
   const activeVersions = activePosterId ? versionsByPosterId.get(activePosterId) ?? [] : [];
-
   const refresh = () => router.refresh();
 
   const openEditor = (posterId: string) => {
@@ -94,6 +108,7 @@ export function PostersAdmin({
       description: "",
       published: false,
       sortOrder: posters.length + 1,
+      planLabel: null,
       createdAt: now,
       updatedAt: now,
     };
@@ -111,6 +126,13 @@ export function PostersAdmin({
         </p>
       </div>
 
+      <AdminContentFilterBar
+        filter={contentFilter}
+        onChange={setContentFilter}
+        users={filterUsers}
+        plans={contentPlans}
+      />
+
       <AdminMediaCategories
         campaignId={campaignId}
         type="poster"
@@ -124,7 +146,7 @@ export function PostersAdmin({
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-          {posters.map((poster) => (
+          {filteredPosters.map((poster) => (
             <AdminPosterCompactCard
               key={poster.id}
               poster={poster}
@@ -150,6 +172,7 @@ export function PostersAdmin({
                 poster={activePoster}
                 versions={activeVersions}
                 categories={initialCategories}
+                contentPlans={contentPlans}
                 isNew={isDraftPoster}
                 onClose={closeEditor}
                 onSaved={(savedPoster) => {

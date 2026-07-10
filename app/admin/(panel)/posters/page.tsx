@@ -18,6 +18,7 @@ export default async function PostersPage({ searchParams }: PageProps) {
       initialCategories={data.posterCategories}
       initialPosters={data.posters}
       initialVersions={data.posterVersions}
+      contentPlans={data.settings?.contentPlans ?? []}
     />
   );
 }

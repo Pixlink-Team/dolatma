@@ -9,6 +9,7 @@ import {
   mapCategoryFromDb,
   mapPosterFromDb,
   mapPosterVersionFromDb,
+  mapRawMediaUploadFromDb,
   mapSettingsFromDb,
   mapSocialPostFromDb,
   mapSocialPlatformStatFromDb,
@@ -25,12 +26,28 @@ import type {
   MediaCategory,
   Poster,
   PosterVersion,
+  RawMediaUpload,
   Video,
   VideoVersion,
 } from "@/lib/types";
 import { generateId, slugify } from "@/lib/utils";
 import { serializeAnalyticsConfig } from "@/lib/analytics-config";
+import { resolveUploadFilePath } from "@/lib/uploads";
+import { unlink } from "fs/promises";
 
+async function tryDeleteUploadedFile(fileUrl?: string | null) {
+  if (!fileUrl) return;
+  try {
+    const marker = "/api/files/";
+    const index = fileUrl.indexOf(marker);
+    if (index < 0) return;
+    const filename = fileUrl.slice(index + marker.length).split("?")[0];
+    if (!filename) return;
+    await unlink(resolveUploadFilePath(filename));
+  } catch {
+    // File may already be missing; DB row removal is the source of truth.
+  }
+}
 const defaultFeatures = {
   billboards: true,
   posters: true,
@@ -45,6 +62,7 @@ const defaultFeatures = {
   pressPublications: true,
   submissions: true,
   files: true,
+  rawMedia: true,
 };
 
 export async function pgGetAllCampaigns(): Promise<CampaignSettings[]> {
@@ -83,6 +101,7 @@ export async function pgGetAdminData(campaignId: string, ownerUserId?: string | 
     socialPlatformStats,
     meetings,
     activities,
+    rawMedia,
   ] = await Promise.all([
     sql`SELECT * FROM campaign_settings ORDER BY updated_at DESC`,
     sql`SELECT * FROM campaign_settings WHERE id = ${campaignId} LIMIT 1`,
@@ -174,6 +193,14 @@ export async function pgGetAdminData(campaignId: string, ownerUserId?: string | 
     `,
     pgGetMeetingsWithTasks(campaignId, { ownerUserId }),
     pgGetCampaignActivities(campaignId, ownerUserId),
+    sql`
+      SELECT r.*, u.name AS owner_name, u.province AS owner_province, u.city AS owner_city
+      FROM raw_media_uploads r
+      LEFT JOIN users u ON u.id = r.owner_user_id
+      WHERE r.campaign_id = ${campaignId}
+      ${ownerFilter}
+      ORDER BY r.sort_order, r.created_at DESC
+    `,
   ]);
 
   return {
@@ -194,6 +221,7 @@ export async function pgGetAdminData(campaignId: string, ownerUserId?: string | 
     socialPlatformStats: socialPlatformStats.map(mapSocialPlatformStatFromDb),
     meetings,
     activities,
+    rawMedia: rawMedia.map(mapRawMediaUploadFromDb),
   };
 }
 
@@ -821,6 +849,7 @@ export async function pgGetPublicCampaignData(campaignId: string) {
     socialPlatformStats,
     meetings,
     activities,
+    rawMedia,
   ] = await Promise.all([
     sql`
       SELECT b.*, u.name AS owner_name, u.province AS owner_province, u.city AS owner_city
@@ -901,6 +930,13 @@ export async function pgGetPublicCampaignData(campaignId: string) {
     `,
     pgGetPublicMeetingPreviews(campaignId),
     pgGetCampaignActivities(campaignId),
+    sql`
+      SELECT r.*, u.name AS owner_name, u.province AS owner_province, u.city AS owner_city
+      FROM raw_media_uploads r
+      LEFT JOIN users u ON u.id = r.owner_user_id
+      WHERE r.campaign_id = ${campaignId} AND r.published = true
+      ORDER BY r.sort_order, r.created_at DESC
+    `,
   ]);
 
   return {
@@ -919,6 +955,7 @@ export async function pgGetPublicCampaignData(campaignId: string) {
     socialPlatformStats: socialPlatformStats.map(mapSocialPlatformStatFromDb),
     meetings,
     activities,
+    rawMedia: rawMedia.map(mapRawMediaUploadFromDb),
   };
 }
 
@@ -966,6 +1003,60 @@ export async function pgSaveCampaignFile(data: Partial<CampaignFile> & { id?: st
 export async function pgDeleteCampaignFile(id: string) {
   const sql = getSql();
   await sql`DELETE FROM campaign_files WHERE id = ${id}`;
+  return { success: true };
+}
+
+export async function pgSaveRawMediaUpload(data: Partial<RawMediaUpload> & { id?: string }) {
+  const sql = getSql();
+  const now = new Date().toISOString();
+  const id = data.id ?? generateId();
+
+  await sql`
+    INSERT INTO raw_media_uploads (
+      id, campaign_id, title, description, media_kind, file_url, file_name, mime_type, file_size,
+      published, sort_order, owner_user_id, plan_label, created_at, updated_at
+    ) VALUES (
+      ${id},
+      ${data.campaignId ?? ""},
+      ${data.title ?? ""},
+      ${data.description ?? null},
+      ${data.mediaKind ?? "image"},
+      ${data.fileUrl ?? ""},
+      ${data.fileName ?? ""},
+      ${data.mimeType ?? "application/octet-stream"},
+      ${data.fileSize ?? 0},
+      ${data.published ?? true},
+      ${data.sortOrder ?? 0},
+      ${data.ownerUserId ?? null},
+      ${data.planLabel ?? null},
+      ${now},
+      ${now}
+    )
+    ON CONFLICT (id) DO UPDATE SET
+      title = EXCLUDED.title,
+      description = EXCLUDED.description,
+      media_kind = EXCLUDED.media_kind,
+      file_url = EXCLUDED.file_url,
+      file_name = EXCLUDED.file_name,
+      mime_type = EXCLUDED.mime_type,
+      file_size = EXCLUDED.file_size,
+      published = EXCLUDED.published,
+      sort_order = EXCLUDED.sort_order,
+      owner_user_id = EXCLUDED.owner_user_id,
+      plan_label = EXCLUDED.plan_label,
+      updated_at = EXCLUDED.updated_at
+  `;
+
+  return { success: true, id };
+}
+
+export async function pgDeleteRawMediaUpload(id: string) {
+  const sql = getSql();
+  const rows = await sql`
+    SELECT file_url FROM raw_media_uploads WHERE id = ${id} LIMIT 1
+  `;
+  await sql`DELETE FROM raw_media_uploads WHERE id = ${id}`;
+  await tryDeleteUploadedFile(rows[0]?.file_url as string | undefined);
   return { success: true };
 }
 

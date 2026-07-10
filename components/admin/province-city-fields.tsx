@@ -20,6 +20,8 @@ interface ProvinceCityFieldsProps {
   onProvinceChange: (province: string) => void;
   onCityChange: (city: string) => void;
   onLocationCenterChange?: (center: { lat: number; lng: number }) => void;
+  /** When true, only province is shown (city kept empty). */
+  hideCity?: boolean;
 }
 
 const EMPTY_VALUE = "__none__";
@@ -36,6 +38,7 @@ export function ProvinceCityFields({
   onProvinceChange,
   onCityChange,
   onLocationCenterChange,
+  hideCity = false,
 }: ProvinceCityFieldsProps) {
   const provinceOptions = ensureSelectOptions([...IRAN_PROVINCES], province);
   const cityOptions = ensureSelectOptions(getProvinceCityOptions(province), city);
@@ -43,18 +46,20 @@ export function ProvinceCityFields({
   const cityValue = resolveSelectValue(city, cityOptions);
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    <div className={hideCity ? "grid grid-cols-1 gap-4" : "grid grid-cols-1 sm:grid-cols-2 gap-4"}>
       <div className="space-y-2">
         <Label>استان</Label>
         <Select
           value={provinceValue}
           onValueChange={(value) => {
             const nextProvince = value === EMPTY_VALUE ? "" : value;
-            const resolved = resolveLocationNames(nextProvince, "");
+            const resolved = resolveLocationNames(nextProvince, hideCity ? "" : "");
             onProvinceChange(resolved.province);
-            onCityChange(resolved.city);
+            onCityChange(hideCity ? "" : resolved.city);
             if (resolved.province) {
-              onLocationCenterChange?.(getLocationCenter(resolved.province, resolved.city));
+              onLocationCenterChange?.(
+                getLocationCenter(resolved.province, hideCity ? "" : resolved.city)
+              );
             }
           }}
         >
@@ -72,32 +77,34 @@ export function ProvinceCityFields({
         </Select>
       </div>
 
-      <div className="space-y-2">
-        <Label>شهر</Label>
-        <Select
-          value={cityValue}
-          onValueChange={(value) => {
-            const nextCity = value === EMPTY_VALUE ? "" : value;
-            onCityChange(nextCity);
-            if (province && nextCity) {
-              onLocationCenterChange?.(getLocationCenter(province, nextCity));
-            }
-          }}
-          disabled={!province}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder={province ? "انتخاب شهر" : "ابتدا استان را انتخاب کنید"} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={EMPTY_VALUE}>انتخاب نشده</SelectItem>
-            {cityOptions.map((item) => (
-              <SelectItem key={item} value={item}>
-                {item}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      {!hideCity && (
+        <div className="space-y-2">
+          <Label>شهر</Label>
+          <Select
+            value={cityValue}
+            onValueChange={(value) => {
+              const nextCity = value === EMPTY_VALUE ? "" : value;
+              onCityChange(nextCity);
+              if (province && nextCity) {
+                onLocationCenterChange?.(getLocationCenter(province, nextCity));
+              }
+            }}
+            disabled={!province}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder={province ? "انتخاب شهر" : "ابتدا استان را انتخاب کنید"} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={EMPTY_VALUE}>انتخاب نشده</SelectItem>
+              {cityOptions.map((item) => (
+                <SelectItem key={item} value={item}>
+                  {item}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
     </div>
   );
 }

@@ -159,10 +159,10 @@ export function OwnerLocationFilterBar() {
         {plans.length > 0 && (
           <Select value={filter.planLabel} onValueChange={setPlanLabel}>
             <SelectTrigger className="w-full">
-              <SelectValue placeholder="طرح" />
+              <SelectValue placeholder="موضوع" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={OWNER_PLAN_ALL}>همه طرح‌ها</SelectItem>
+              <SelectItem value={OWNER_PLAN_ALL}>همه موضوع‌ها</SelectItem>
               {plans.map((plan) => (
                 <SelectItem key={plan} value={plan}>
                   {plan}

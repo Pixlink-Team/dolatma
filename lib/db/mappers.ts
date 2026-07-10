@@ -16,6 +16,8 @@ import type {
   Ownable,
   Poster,
   PosterVersion,
+  RawMediaKind,
+  RawMediaUpload,
   SocialMediaPost,
   SocialPlatformStat,
   Video,
@@ -76,6 +78,7 @@ export function mapSettingsFromDb(row: any): CampaignSettings {
             pressPublications: true,
             submissions: true,
             files: true,
+            rawMedia: true,
             ...JSON.parse(row.features),
           }
         : {
@@ -92,6 +95,7 @@ export function mapSettingsFromDb(row: any): CampaignSettings {
             pressPublications: true,
             submissions: true,
             files: true,
+            rawMedia: true,
             ...(row.features ?? {}),
           },
     analyticsConfig: normalizeAnalyticsConfig(
@@ -540,6 +544,28 @@ export function mapCampaignFileFromDb(row: any): CampaignFile {
     fileSize: Number(row.file_size ?? 0),
     published: row.published ?? false,
     sortOrder: row.sort_order ?? 0,
+    ...mapOwnerFromDb(row),
+    createdAt: toIsoString(row.created_at),
+    updatedAt: toIsoString(row.updated_at),
+  };
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function mapRawMediaUploadFromDb(row: any): RawMediaUpload {
+  const mediaKind: RawMediaKind = row.media_kind === "video" ? "video" : "image";
+  return {
+    id: row.id,
+    campaignId: row.campaign_id,
+    title: row.title,
+    description: row.description,
+    mediaKind,
+    fileUrl: row.file_url,
+    fileName: row.file_name,
+    mimeType: row.mime_type,
+    fileSize: Number(row.file_size ?? 0),
+    published: row.published ?? false,
+    sortOrder: row.sort_order ?? 0,
+    planLabel: row.plan_label ?? null,
     ...mapOwnerFromDb(row),
     createdAt: toIsoString(row.created_at),
     updatedAt: toIsoString(row.updated_at),

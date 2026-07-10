@@ -3,6 +3,7 @@ export interface ContributorPermissions {
   posters: boolean;
   videos: boolean;
   files: boolean;
+  rawMedia: boolean;
   analytics: boolean;
   socialPosts: boolean;
   sitePublications: boolean;
@@ -19,6 +20,7 @@ export const defaultContributorPermissions = (): ContributorPermissions => ({
   posters: true,
   videos: true,
   files: true,
+  rawMedia: true,
   analytics: true,
   socialPosts: true,
   sitePublications: true,
@@ -33,6 +35,7 @@ export const contributorPermissionLabels: Record<ContributorPermissionKey, strin
   posters: "پوسترها",
   videos: "ویدیوها",
   files: "فایل‌ها",
+  rawMedia: "رسانه خام",
   analytics: "آمار سایت",
   socialPosts: "شبکه‌های اجتماعی",
   sitePublications: "انتشار در سایت",
@@ -54,6 +57,7 @@ export function normalizeContributorPermissions(
     posters: record.posters ?? defaults.posters,
     videos: record.videos ?? defaults.videos,
     files: record.files ?? defaults.files,
+    rawMedia: record.rawMedia ?? defaults.rawMedia,
     analytics: record.analytics ?? defaults.analytics,
     socialPosts: record.socialPosts ?? defaults.socialPosts,
     sitePublications: record.sitePublications ?? defaults.sitePublications,

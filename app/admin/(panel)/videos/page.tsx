@@ -18,6 +18,7 @@ export default async function VideosPage({ searchParams }: PageProps) {
       initialCategories={data.videoCategories}
       initialVideos={data.videos}
       initialVersions={data.videoVersions}
+      contentPlans={data.settings?.contentPlans ?? []}
     />
   );
 }

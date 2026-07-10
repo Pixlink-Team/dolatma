@@ -28,6 +28,7 @@ const fullFeatures = {
   pressPublications: true,
   submissions: true,
   files: true,
+  rawMedia: true,
 };
 
 const defaultAnalyticsConfig = {
@@ -76,6 +77,7 @@ export const mockCampaigns: CampaignSettings[] = [
       pressPublications: false,
       submissions: false,
       files: false,
+      rawMedia: false,
     },
     analyticsConfig: defaultAnalyticsConfig,
     billboardConfig: {},
@@ -105,6 +107,7 @@ export const mockCampaigns: CampaignSettings[] = [
       pressPublications: false,
       submissions: false,
       files: false,
+      rawMedia: false,
     },
     analyticsConfig: defaultAnalyticsConfig,
     billboardConfig: {},

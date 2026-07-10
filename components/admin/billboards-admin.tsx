@@ -1,11 +1,18 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Plus, Wrench } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  AdminContentFilterBar,
+  collectAdminFilterUsers,
+  DEFAULT_ADMIN_CONTENT_FILTER,
+  matchesAdminContentFilter,
+  type AdminContentFilterState,
+} from "@/components/admin/admin-content-filter-bar";
 import { AdminDataTable } from "@/components/admin/admin-data-table";
 import { adminOwnerTableColumn } from "@/components/admin/admin-owner-badge";
 import {
@@ -56,11 +63,18 @@ export function BillboardsAdmin({
   const [periodOpen, setPeriodOpen] = useState(false);
   const [periodBillboard, setPeriodBillboard] = useState<Billboard | null>(null);
   const [isNormalizing, setIsNormalizing] = useState(false);
+  const [contentFilter, setContentFilter] = useState<AdminContentFilterState>(DEFAULT_ADMIN_CONTENT_FILTER);
   const [, startTransition] = useTransition();
 
   useEffect(() => {
     setBillboards(initialBillboards);
   }, [initialBillboards]);
+
+  const filterUsers = useMemo(() => collectAdminFilterUsers(billboards), [billboards]);
+  const filteredBillboards = useMemo(
+    () => billboards.filter((item) => matchesAdminContentFilter(item, contentFilter)),
+    [billboards, contentFilter]
+  );
 
   const handleNormalizeApiBillboards = () => {
     void (async () => {
@@ -86,8 +100,9 @@ export function BillboardsAdmin({
     })();
   };
 
-  const manualBillboards = billboards.filter((billboard) => !isApiBillboard(billboard));
-  const apiBillboards = billboards.filter((billboard) => isApiBillboard(billboard));
+  const manualBillboards = filteredBillboards.filter((billboard) => !isApiBillboard(billboard));
+  const apiBillboards = filteredBillboards.filter((billboard) => isApiBillboard(billboard));
+  const allApiBillboards = billboards.filter((billboard) => isApiBillboard(billboard));
   const showExternalMigrationTools = isFullAdmin && liveApiEnabled && Boolean(externalCampaignSlug);
   const showExternalPeriodTools = showExternalMigrationTools && Boolean(externalCampaignId);
 
@@ -135,8 +150,8 @@ export function BillboardsAdmin({
           <h1 className="text-2xl font-bold">تبلیغات محیطی</h1>
           <p className="text-sm text-muted-foreground">
             استرابورد، بنر، بیلبورد، لایت‌باکس، مانیتور و سایر رسانه‌های محیطی
-            {apiBillboards.length > 0
-              ? ` — ${apiBillboards.length} مورد قدیمی از Map-Bilboard فقط برای مشاهده است.`
+            {allApiBillboards.length > 0
+              ? ` — ${allApiBillboards.length} مورد قدیمی از Map-Bilboard فقط برای مشاهده است.`
               : ""}
           </p>
         </div>
@@ -145,6 +160,13 @@ export function BillboardsAdmin({
           ثبت جدید
         </Button>
       </div>
+
+      <AdminContentFilterBar
+        filter={contentFilter}
+        onChange={setContentFilter}
+        users={filterUsers}
+        plans={contentPlans}
+      />
 
       {showExternalMigrationTools && (
         <>

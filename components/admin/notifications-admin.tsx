@@ -107,7 +107,7 @@ function NotificationCard({
                 {[item.ownerProvince, item.ownerCity].filter(Boolean).join(" / ")}
               </p>
             )}
-            {item.planLabel && <p>طرح: {item.planLabel}</p>}
+            {item.planLabel && <p>موضوع: {item.planLabel}</p>}
           </div>
           <p className="mt-auto text-[11px] text-muted-foreground">
             {formatPersianDateTime(item.eventAt)}
@@ -327,10 +327,10 @@ export function NotificationsAdmin({
         {plans.length > 0 && (
           <Select value={planLabel} onValueChange={setPlanLabel}>
             <SelectTrigger className="w-36">
-              <SelectValue placeholder="طرح" />
+              <SelectValue placeholder="موضوع" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">همه طرح‌ها</SelectItem>
+              <SelectItem value="all">همه موضوع‌ها</SelectItem>
               {plans.map((item) => (
                 <SelectItem key={item} value={item}>
                   {item}

@@ -7,6 +7,13 @@ import { AdminVideoAddCard, AdminVideoCompactCard } from "@/components/admin/adm
 import { AdminMediaCategories } from "@/components/admin/admin-media-categories";
 import { AdminVideoEditor } from "@/components/admin/admin-video-editor";
 import {
+  AdminContentFilterBar,
+  collectAdminFilterUsers,
+  DEFAULT_ADMIN_CONTENT_FILTER,
+  matchesAdminContentFilter,
+  type AdminContentFilterState,
+} from "@/components/admin/admin-content-filter-bar";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -20,6 +27,7 @@ interface VideosAdminProps {
   initialCategories: MediaCategory[];
   initialVideos: Video[];
   initialVersions: VideoVersion[];
+  contentPlans?: string[];
 }
 
 const editorDialogClass =
@@ -30,6 +38,7 @@ export function VideosAdmin({
   initialCategories,
   initialVideos,
   initialVersions,
+  contentPlans = [],
 }: VideosAdminProps) {
   const router = useRouter();
   const [videos, setVideos] = useState(initialVideos);
@@ -37,6 +46,7 @@ export function VideosAdmin({
   const [editorOpen, setEditorOpen] = useState(false);
   const [activeVideoId, setActiveVideoId] = useState<string | null>(null);
   const [draftVideo, setDraftVideo] = useState<Video | null>(null);
+  const [contentFilter, setContentFilter] = useState<AdminContentFilterState>(DEFAULT_ADMIN_CONTENT_FILTER);
   const [isPending] = useTransition();
 
   useEffect(() => {
@@ -53,6 +63,12 @@ export function VideosAdmin({
     }
     return map;
   }, [versions]);
+
+  const filterUsers = useMemo(() => collectAdminFilterUsers(videos), [videos]);
+  const filteredVideos = useMemo(
+    () => videos.filter((item) => matchesAdminContentFilter(item, contentFilter)),
+    [videos, contentFilter]
+  );
 
   const activeVideo = useMemo(() => {
     if (!activeVideoId) return null;
@@ -94,6 +110,7 @@ export function VideosAdmin({
       description: "",
       published: false,
       sortOrder: videos.length + 1,
+      planLabel: null,
       createdAt: now,
       updatedAt: now,
     };
@@ -111,6 +128,13 @@ export function VideosAdmin({
         </p>
       </div>
 
+      <AdminContentFilterBar
+        filter={contentFilter}
+        onChange={setContentFilter}
+        users={filterUsers}
+        plans={contentPlans}
+      />
+
       <AdminMediaCategories
         campaignId={campaignId}
         type="video"
@@ -124,7 +148,7 @@ export function VideosAdmin({
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-          {videos.map((video) => (
+          {filteredVideos.map((video) => (
             <AdminVideoCompactCard
               key={video.id}
               video={video}
@@ -150,6 +174,7 @@ export function VideosAdmin({
                 video={activeVideo}
                 versions={activeVersions}
                 categories={initialCategories}
+                contentPlans={contentPlans}
                 isNew={isDraftVideo}
                 onClose={closeEditor}
                 onSaved={(savedVideo) => {

@@ -58,14 +58,20 @@ html {
   z-index: 0;
 }
 
+.leaflet-tooltip-pane {
+  z-index: 650;
+}
+
 .leaflet-tooltip.billboard-map-tooltip {
   background: hsl(var(--card));
   border: 1px solid hsl(var(--border));
-  border-radius: 10px;
+  border-radius: 12px;
   padding: 0;
-  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.16);
-  pointer-events: auto;
+  box-shadow: 0 14px 32px rgba(15, 23, 42, 0.2);
+  pointer-events: none;
   color: hsl(var(--foreground));
+  z-index: 1000 !important;
+  overflow: hidden;
 }
 
 .leaflet-tooltip.billboard-map-tooltip::before {
@@ -73,31 +79,36 @@ html {
 }
 
 .billboard-map-tooltip-content {
-  width: 180px;
+  width: 200px;
   overflow: hidden;
+  border-radius: 12px;
+  background: hsl(var(--card));
 }
 
 .billboard-map-tooltip-content img {
   display: block;
   width: 100%;
-  height: 100px;
+  height: 110px;
   object-fit: cover;
+  background: hsl(var(--muted));
 }
 
 .billboard-map-tooltip-content .meta {
-  padding: 8px 10px;
+  padding: 10px 12px;
   font-size: 12px;
-  line-height: 1.45;
+  line-height: 1.5;
 }
 
 .billboard-map-tooltip-content .meta strong {
   display: block;
   margin-bottom: 4px;
   font-size: 13px;
+  line-height: 1.35;
 }
 
 .billboard-map-tooltip-content .meta .muted {
   color: hsl(var(--muted-foreground));
+  word-break: break-word;
 }
 
 html[data-campaign-export="true"] [data-export-hide] {

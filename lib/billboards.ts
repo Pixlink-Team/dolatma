@@ -227,7 +227,30 @@ export function shouldShowBillboardStatus(billboard: Billboard): boolean {
 }
 
 export function filterPublicBillboardTags(tags: string[]): string[] {
-  return tags.filter((tag) => !tag.startsWith("map:") && !tag.startsWith("province:"));
+  return tags.filter(
+    (tag) =>
+      !tag.startsWith("map:") &&
+      !tag.startsWith("province:") &&
+      !tag.startsWith("assignment:") &&
+      !tag.startsWith("display-range:")
+  );
+}
+
+const DAY_MS = 86_400_000;
+
+export function getBillboardDisplayDays(billboard: Billboard): number | null {
+  const periods = billboard.displayPeriods;
+  if (!periods?.length) return null;
+
+  let total = 0;
+  for (const period of periods) {
+    const start = Date.parse(period.startDate);
+    const end = Date.parse(period.endDate);
+    if (Number.isNaN(start) || Number.isNaN(end) || end < start) continue;
+    total += Math.round((end - start) / DAY_MS) + 1;
+  }
+
+  return total > 0 ? total : null;
 }
 
 export function shouldShowBillboardNotes(billboard: Billboard): boolean {

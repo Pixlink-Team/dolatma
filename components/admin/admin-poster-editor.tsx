@@ -12,6 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { MediaUpload } from "@/components/ui/media-upload";
 import { MediaThumbnail } from "@/components/ui/media-thumbnail";
+import { PlanLabelSelect } from "@/components/admin/plan-label-select";
 import {
   Select,
   SelectContent,
@@ -45,6 +46,7 @@ interface AdminPosterEditorProps {
   poster: Poster;
   versions: PosterVersion[];
   categories: MediaCategory[];
+  contentPlans?: string[];
   isNew?: boolean;
   onClose: () => void;
   onSaved?: (poster: Poster) => void;
@@ -78,6 +80,7 @@ export function AdminPosterEditor({
   poster,
   versions,
   categories,
+  contentPlans = [],
   isNew = false,
   onClose,
   onSaved,
@@ -94,14 +97,16 @@ export function AdminPosterEditor({
   const [editDescription, setEditDescription] = useState(poster.description ?? "");
   const [editCategoryId, setEditCategoryId] = useState(poster.categoryId);
   const [editPublished, setEditPublished] = useState(poster.published);
+  const [editPlanLabel, setEditPlanLabel] = useState<string | null>(poster.planLabel ?? null);
 
   useEffect(() => {
     setEditTitle(poster.title);
     setEditDescription(poster.description ?? "");
     setEditCategoryId(poster.categoryId);
     setEditPublished(poster.published);
+    setEditPlanLabel(poster.planLabel ?? null);
     setVersionDrafts(buildPosterVersionDrafts(versions));
-  }, [poster.id, poster.title, poster.description, poster.categoryId, poster.published, versions.length]);
+  }, [poster.id, poster.title, poster.description, poster.categoryId, poster.published, poster.planLabel, versions.length]);
 
   useLayoutEffect(() => {
     if (!shouldScrollToBottomRef.current) return;
@@ -175,6 +180,7 @@ export function AdminPosterEditor({
         description: editDescription,
         categoryId: editCategoryId,
         published: editPublished,
+        planLabel: editPlanLabel,
         updatedAt: new Date().toISOString(),
       };
 
@@ -284,6 +290,11 @@ export function AdminPosterEditor({
               </SelectContent>
             </Select>
           </div>
+          <PlanLabelSelect
+            plans={contentPlans}
+            value={editPlanLabel}
+            onChange={setEditPlanLabel}
+          />
         </div>
         <div className="flex flex-col items-center gap-2 pt-6">
           <Switch checked={editPublished} onCheckedChange={handleTogglePublish} />

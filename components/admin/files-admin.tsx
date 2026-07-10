@@ -1,10 +1,18 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { Download, FileSpreadsheet, FileText, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { AdminOwnerBadge } from "@/components/admin/admin-owner-badge";
+import {
+  AdminContentFilterBar,
+  collectAdminFilterUsers,
+  DEFAULT_ADMIN_CONTENT_FILTER,
+  matchesAdminContentFilter,
+  type AdminContentFilterState,
+} from "@/components/admin/admin-content-filter-bar";
+import { PlanLabelSelect } from "@/components/admin/plan-label-select";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -25,6 +33,7 @@ import { formatPersianNumber } from "@/lib/utils";
 interface FilesAdminProps {
   campaignId: string;
   initialFiles: CampaignFile[];
+  contentPlans?: string[];
 }
 
 function formatFileSize(bytes: number): string {
@@ -40,11 +49,13 @@ function fileIcon(mimeType: string) {
   return FileText;
 }
 
-export function FilesAdmin({ campaignId, initialFiles }: FilesAdminProps) {
+export function FilesAdmin({ campaignId, initialFiles, contentPlans = [] }: FilesAdminProps) {
   const [files, setFiles] = useState(initialFiles);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [planLabel, setPlanLabel] = useState<string | null>(null);
+  const [contentFilter, setContentFilter] = useState<AdminContentFilterState>(DEFAULT_ADMIN_CONTENT_FILTER);
   const [upload, setUpload] = useState({
     url: "",
     fileName: "",
@@ -53,9 +64,16 @@ export function FilesAdmin({ campaignId, initialFiles }: FilesAdminProps) {
   });
   const [isPending, startTransition] = useTransition();
 
+  const filterUsers = useMemo(() => collectAdminFilterUsers(files), [files]);
+  const filteredFiles = useMemo(
+    () => files.filter((item) => matchesAdminContentFilter(item, contentFilter)),
+    [files, contentFilter]
+  );
+
   const resetForm = () => {
     setTitle("");
     setDescription("");
+    setPlanLabel(null);
     setUpload({ url: "", fileName: "", fileSize: 0, mimeType: "" });
   };
 
@@ -80,6 +98,7 @@ export function FilesAdmin({ campaignId, initialFiles }: FilesAdminProps) {
         mimeType: upload.mimeType,
         published: true,
         sortOrder: files.length + 1,
+        planLabel,
       });
 
       if (!result.success || !("id" in result) || !result.id) {
@@ -101,6 +120,7 @@ export function FilesAdmin({ campaignId, initialFiles }: FilesAdminProps) {
           mimeType: upload.mimeType,
           published: true,
           sortOrder: prev.length + 1,
+          planLabel,
           createdAt: now,
           updatedAt: now,
         },
@@ -144,13 +164,20 @@ export function FilesAdmin({ campaignId, initialFiles }: FilesAdminProps) {
         </Button>
       </div>
 
-      {files.length === 0 ? (
+      <AdminContentFilterBar
+        filter={contentFilter}
+        onChange={setContentFilter}
+        users={filterUsers}
+        plans={contentPlans}
+      />
+
+      {filteredFiles.length === 0 ? (
         <div className="rounded-xl border py-12 text-center text-muted-foreground">
-          هنوز فایلی آپلود نشده است.
+          {files.length === 0 ? "هنوز فایلی آپلود نشده است." : "موردی با این فیلتر پیدا نشد."}
         </div>
       ) : (
         <div className="space-y-3">
-          {files.map((file) => {
+          {filteredFiles.map((file) => {
             const Icon = fileIcon(file.mimeType);
             return (
               <div
@@ -228,6 +255,11 @@ export function FilesAdmin({ campaignId, initialFiles }: FilesAdminProps) {
                 rows={2}
               />
             </div>
+            <PlanLabelSelect
+              plans={contentPlans}
+              value={planLabel}
+              onChange={setPlanLabel}
+            />
             <DocumentUpload
               label="فایل"
               value={upload.url}

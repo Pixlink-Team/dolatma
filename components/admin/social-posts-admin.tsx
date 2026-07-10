@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -13,8 +13,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  AdminContentFilterBar,
+  collectAdminFilterUsers,
+  DEFAULT_ADMIN_CONTENT_FILTER,
+  matchesAdminContentFilter,
+  type AdminContentFilterState,
+} from "@/components/admin/admin-content-filter-bar";
 import { AdminCompactAddCard } from "@/components/admin/admin-compact-add-card";
 import { AdminSocialPostCompactCard } from "@/components/admin/admin-social-post-compact-card";
+import { PlanLabelSelect } from "@/components/admin/plan-label-select";
 import { MediaUpload } from "@/components/ui/media-upload";
 import { PersianDateField } from "@/components/ui/persian-date-input";
 import { deleteSocialPostAction, saveSocialPostAction } from "@/lib/actions/extended-actions";
@@ -57,14 +65,28 @@ const contentTypeOptions: SocialContentType[] = ["image", "text", "video", "caro
 interface SocialPostsAdminProps {
   campaignId: string;
   initialPosts: SocialMediaPost[];
+  contentPlans?: string[];
   embedded?: boolean;
 }
 
-export function SocialPostsAdmin({ campaignId, initialPosts, embedded = false }: SocialPostsAdminProps) {
+export function SocialPostsAdmin({
+  campaignId,
+  initialPosts,
+  contentPlans = [],
+  embedded = false,
+}: SocialPostsAdminProps) {
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [planLabel, setPlanLabel] = useState<string | null>(null);
+  const [contentFilter, setContentFilter] = useState<AdminContentFilterState>(DEFAULT_ADMIN_CONTENT_FILTER);
   const [rows, setRows] = useState(initialPosts.filter((post) => !isSitePublication(post)));
   const [isPending, startTransition] = useTransition();
+
+  const filterUsers = useMemo(() => collectAdminFilterUsers(rows), [rows]);
+  const filteredRows = useMemo(
+    () => rows.filter((item) => matchesAdminContentFilter(item, contentFilter)),
+    [rows, contentFilter]
+  );
 
   const form = useForm({
     resolver: zodResolver(schema),
@@ -87,6 +109,7 @@ export function SocialPostsAdmin({ campaignId, initialPosts, embedded = false }:
 
   const openCreate = () => {
     setEditingId(null);
+    setPlanLabel(null);
     form.reset({
       platform: "instagram",
       title: "",
@@ -108,6 +131,7 @@ export function SocialPostsAdmin({ campaignId, initialPosts, embedded = false }:
   const openEdit = (post: SocialMediaPost) => {
     if (isSitePublication(post)) return;
     setEditingId(post.id);
+    setPlanLabel(post.planLabel ?? null);
     form.reset({
       platform: post.platform as SocialPlatform,
       title: post.title,
@@ -128,7 +152,12 @@ export function SocialPostsAdmin({ campaignId, initialPosts, embedded = false }:
 
   const onSubmit = form.handleSubmit((data) => {
     startTransition(async () => {
-      const result = await saveSocialPostAction({ ...data, campaignId, id: editingId ?? undefined });
+      const result = await saveSocialPostAction({
+        ...data,
+        campaignId,
+        id: editingId ?? undefined,
+        planLabel,
+      });
       if (!result.success) {
         toast.error("ذخیره نشد");
         return;
@@ -140,7 +169,7 @@ export function SocialPostsAdmin({ campaignId, initialPosts, embedded = false }:
         setRows((prev) =>
           prev.map((row) =>
             row.id === editingId
-              ? { ...row, ...data, campaignId, link: data.link ?? "" } as SocialMediaPost
+              ? { ...row, ...data, campaignId, link: data.link ?? "", planLabel } as SocialMediaPost
               : row
           )
         );
@@ -155,6 +184,7 @@ export function SocialPostsAdmin({ campaignId, initialPosts, embedded = false }:
             sortOrder: prev.length,
             ...data,
             link: data.link ?? "",
+            planLabel,
           } as SocialMediaPost,
         ]);
       }
@@ -188,8 +218,15 @@ export function SocialPostsAdmin({ campaignId, initialPosts, embedded = false }:
         </div>
       )}
 
+      <AdminContentFilterBar
+        filter={contentFilter}
+        onChange={setContentFilter}
+        users={filterUsers}
+        plans={contentPlans}
+      />
+
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-        {rows.map((post) => (
+        {filteredRows.map((post) => (
           <AdminSocialPostCompactCard key={post.id} post={post} onClick={() => openEdit(post)} />
         ))}
         <AdminCompactAddCard onClick={openCreate} label="پست جدید" />
@@ -230,6 +267,12 @@ export function SocialPostsAdmin({ campaignId, initialPosts, embedded = false }:
               <Label>عنوان / نام کاور</Label>
               <Input {...form.register("title")} />
             </div>
+
+            <PlanLabelSelect
+              plans={contentPlans}
+              value={planLabel}
+              onChange={setPlanLabel}
+            />
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <div className="space-y-2"><Label>بازدید</Label><Input type="number" {...form.register("views")} /></div>

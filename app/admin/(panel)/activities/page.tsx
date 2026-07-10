@@ -18,6 +18,7 @@ export default async function ActivitiesPage({ searchParams }: PageProps) {
     <ActivitiesAdmin
       campaignId={campaignId}
       initialActivities={data.activities ?? []}
+      contentPlans={data.settings?.contentPlans ?? []}
     />
   );
 }

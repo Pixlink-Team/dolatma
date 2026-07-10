@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -13,8 +13,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  AdminContentFilterBar,
+  collectAdminFilterUsers,
+  DEFAULT_ADMIN_CONTENT_FILTER,
+  matchesAdminContentFilter,
+  type AdminContentFilterState,
+} from "@/components/admin/admin-content-filter-bar";
 import { AdminActivityCompactCard } from "@/components/admin/admin-activity-compact-card";
 import { AdminCompactAddCard } from "@/components/admin/admin-compact-add-card";
+import { PlanLabelSelect } from "@/components/admin/plan-label-select";
 import { MediaUpload } from "@/components/ui/media-upload";
 import { PersianDateField } from "@/components/ui/persian-date-input";
 import { fieldActivityTypeOptions, getActivityTypeLabel } from "@/lib/activity-types";
@@ -52,20 +60,33 @@ type FieldActivityType = FormData["activityType"];
 interface ActivitiesAdminProps {
   campaignId: string;
   initialActivities: CampaignActivity[];
+  contentPlans?: string[];
 }
 
 function resolveFieldActivityType(type: ActivityType): FieldActivityType {
   return fieldActivityTypeOptions.includes(type) ? (type as FieldActivityType) : "field";
 }
 
-export function ActivitiesAdmin({ campaignId, initialActivities }: ActivitiesAdminProps) {
+export function ActivitiesAdmin({
+  campaignId,
+  initialActivities,
+  contentPlans = [],
+}: ActivitiesAdminProps) {
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [mediaItems, setMediaItems] = useState<ActivityMediaItem[]>([]);
+  const [planLabel, setPlanLabel] = useState<string | null>(null);
+  const [contentFilter, setContentFilter] = useState<AdminContentFilterState>(DEFAULT_ADMIN_CONTENT_FILTER);
   const [rows, setRows] = useState(
     initialActivities.filter((activity) => !isPressPublication(activity))
   );
   const [isPending, startTransition] = useTransition();
+
+  const filterUsers = useMemo(() => collectAdminFilterUsers(rows), [rows]);
+  const filteredRows = useMemo(
+    () => rows.filter((item) => matchesAdminContentFilter(item, contentFilter)),
+    [rows, contentFilter]
+  );
 
   const form = useForm({
     resolver: zodResolver(schema),
@@ -84,6 +105,7 @@ export function ActivitiesAdmin({ campaignId, initialActivities }: ActivitiesAdm
   const openCreate = () => {
     setEditingId(null);
     setMediaItems([]);
+    setPlanLabel(null);
     form.reset({
       title: "",
       activityType: "field",
@@ -100,6 +122,7 @@ export function ActivitiesAdmin({ campaignId, initialActivities }: ActivitiesAdm
   const openEdit = (activity: CampaignActivity) => {
     setEditingId(activity.id);
     setMediaItems(activity.mediaItems ?? []);
+    setPlanLabel(activity.planLabel ?? null);
     form.reset({
       title: activity.title,
       activityType: resolveFieldActivityType(activity.activityType),
@@ -136,6 +159,7 @@ export function ActivitiesAdmin({ campaignId, initialActivities }: ActivitiesAdm
         mediaItems: filledMedia,
         description: data.description || null,
         published: data.published,
+        planLabel,
       });
 
       if (!result.success) {
@@ -156,6 +180,7 @@ export function ActivitiesAdmin({ campaignId, initialActivities }: ActivitiesAdm
         mediaItems: filledMedia,
         description: data.description || null,
         published: data.published,
+        planLabel,
         sortOrder: rows.length + 1,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -186,8 +211,15 @@ export function ActivitiesAdmin({ campaignId, initialActivities }: ActivitiesAdm
         </Button>
       </div>
 
+      <AdminContentFilterBar
+        filter={contentFilter}
+        onChange={setContentFilter}
+        users={filterUsers}
+        plans={contentPlans}
+      />
+
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-        {rows.map((activity) => (
+        {filteredRows.map((activity) => (
           <AdminActivityCompactCard key={activity.id} activity={activity} onClick={() => openEdit(activity)} />
         ))}
         <AdminCompactAddCard onClick={openCreate} label="اقدام جدید" />
@@ -226,6 +258,11 @@ export function ActivitiesAdmin({ campaignId, initialActivities }: ActivitiesAdm
               <Label>مکان (اختیاری)</Label>
               <Input {...form.register("location")} placeholder="شهر یا محل برگزاری" />
             </div>
+            <PlanLabelSelect
+              plans={contentPlans}
+              value={planLabel}
+              onChange={setPlanLabel}
+            />
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <Label>رسانه‌ها (حداکثر {MAX_MEDIA_ITEMS})</Label>

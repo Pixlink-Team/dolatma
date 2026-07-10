@@ -436,3 +436,25 @@ ALTER TABLE campaign_activities ADD COLUMN IF NOT EXISTS plan_label TEXT;
 ALTER TABLE broadcast_reports ADD COLUMN IF NOT EXISTS plan_label TEXT;
 ALTER TABLE campaign_meetings ADD COLUMN IF NOT EXISTS plan_label TEXT;
 ALTER TABLE campaign_files ADD COLUMN IF NOT EXISTS plan_label TEXT;
+
+CREATE TABLE IF NOT EXISTS raw_media_uploads (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  campaign_id UUID NOT NULL REFERENCES campaign_settings(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  description TEXT,
+  media_kind TEXT NOT NULL DEFAULT 'image' CHECK (media_kind IN ('image', 'video')),
+  file_url TEXT NOT NULL,
+  file_name TEXT NOT NULL,
+  mime_type TEXT NOT NULL,
+  file_size BIGINT NOT NULL DEFAULT 0,
+  published BOOLEAN NOT NULL DEFAULT true,
+  sort_order INT NOT NULL DEFAULT 0,
+  owner_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  plan_label TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_raw_media_uploads_campaign
+  ON raw_media_uploads(campaign_id, published, sort_order);
+

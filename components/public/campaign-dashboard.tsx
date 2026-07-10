@@ -12,6 +12,7 @@ import { AnalyticsSection } from "@/components/public/analytics-section";
 import { SocialAnalyticsSection } from "@/components/public/social-analytics-section";
 import { SubmissionsSection } from "@/components/public/submissions-section";
 import { CampaignFilesSection } from "@/components/public/campaign-files-section";
+import { RawMediaSection } from "@/components/public/raw-media-section";
 import { SitePublicationsSection } from "@/components/public/site-publications-section";
 import { ActivitiesSection } from "@/components/public/activities-section";
 import { PressPublicationsSection } from "@/components/public/press-publications-section";
@@ -48,6 +49,7 @@ function collectAllOwnerGroups(data: PublicCampaignData): DataOwnerGroup<Ownable
     ...data.broadcastReportGroups,
     ...data.meetingGroups,
     ...data.fileGroups,
+    ...data.rawMediaGroups,
     ...data.submissionGroups,
   ];
 }
@@ -225,6 +227,18 @@ function CampaignDashboardBody({
           <DeferredSection minHeight={200} forceRender={exportMode}>
             <section data-export-section data-export-label="فایل‌ها">
               <CampaignFilesSection files={data.files} groups={data.fileGroups} />
+            </section>
+          </DeferredSection>
+        )}
+
+        {sections.rawMedia && (
+          <DeferredSection minHeight={240} forceRender={exportMode}>
+            <section data-export-section data-export-label="رسانه خام">
+              <RawMediaSection
+                items={data.rawMedia}
+                groups={data.rawMediaGroups}
+                storage={data.rawMediaStorage}
+              />
             </section>
           </DeferredSection>
         )}

@@ -1,23 +1,26 @@
-import { redirect } from "next/navigation";
+import { RawMediaAdmin } from "@/components/admin/raw-media-admin";
 import { getAdminData } from "@/lib/data-access/admin";
 import { resolveAdminCampaignId } from "@/lib/admin-campaign";
-import { requireContributorAccess } from "@/lib/auth/require-contributor-access";
-import { SitePublicationsAdmin } from "@/components/admin/site-publications-admin";
+import type { RawMediaUpload } from "@/lib/types";
+import { redirect } from "next/navigation";
 
-interface PageProps {
+interface RawMediaPageProps {
   searchParams: Promise<{ campaign?: string }>;
 }
 
-export default async function SitePublicationsPage({ searchParams }: PageProps) {
+export default async function RawMediaPage({ searchParams }: RawMediaPageProps) {
   const params = await searchParams;
   const { campaignId } = await resolveAdminCampaignId(params.campaign);
+
   if (!campaignId) redirect("/admin/campaigns");
-  await requireContributorAccess(campaignId, "sitePublications");
+
   const data = await getAdminData(campaignId);
+  if (!data.settings) redirect("/admin/campaigns");
+
   return (
-    <SitePublicationsAdmin
+    <RawMediaAdmin
       campaignId={campaignId}
-      initialPosts={data.socialPosts ?? []}
+      initialItems={(data.rawMedia ?? []) as RawMediaUpload[]}
       contentPlans={data.settings?.contentPlans ?? []}
     />
   );

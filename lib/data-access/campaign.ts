@@ -25,6 +25,7 @@ import { groupByOwner, resolveAdminOwnerLabel } from "@/lib/owner-groups";
 import { splitSocialPosts } from "@/lib/social-posts";
 import { splitPressActivities } from "@/lib/press-publications";
 import { buildSocialAnalyticsSummary } from "@/lib/social-analytics";
+import { buildRawMediaStorageSummary } from "@/lib/raw-media-storage";
 import { isPostgresConfigured, isSupabaseConfigured } from "@/lib/utils";
 import * as pg from "@/lib/db/repository";
 import { fetchMetabaseMetrics, resolveChannelMetabaseEmbedUrl } from "@/lib/services/metabase";
@@ -39,6 +40,7 @@ import {
   mapVideoFromDb,
   mapVideoVersionFromDb,
 } from "@/lib/db/mappers";
+import type { RawMediaUpload } from "@/lib/types";
 import { createClient } from "@/lib/supabase/server";
 
 async function resolveChannelAnalyticsMetrics(
@@ -228,6 +230,7 @@ function buildSectionVisibility(
     pressPublications: unknown[];
     submissions: unknown[];
     files: unknown[];
+    rawMedia: unknown[];
   }
 ): SectionVisibility {
   return {
@@ -247,6 +250,7 @@ function buildSectionVisibility(
     pressPublications: (features.pressPublications ?? true) && data.pressPublications.length > 0,
     submissions: features.submissions && data.submissions.length > 0,
     files: features.files && data.files.length > 0,
+    rawMedia: (features.rawMedia ?? true) && data.rawMedia.length > 0,
   };
 }
 
@@ -265,6 +269,7 @@ function buildKpiVisibility(features: CampaignSettings["features"]): SectionVisi
     pressPublications: features.pressPublications ?? true,
     submissions: features.submissions,
     files: features.files,
+    rawMedia: features.rawMedia ?? true,
   };
 }
 
@@ -314,6 +319,7 @@ type CampaignPublicStore = Omit<ReturnType<typeof getMockStoreForCampaign>, "mee
   meetings?: (MeetingPublicPreview | MeetingWithTasks)[];
   socialPlatformStats?: SocialPlatformStat[];
   activities?: CampaignActivity[];
+  rawMedia?: RawMediaUpload[];
 };
 
 function assemblePublicData(
@@ -362,6 +368,12 @@ function assemblePublicData(
   const files = (store.files ?? [])
     .sort((a, b) => a.sortOrder - b.sortOrder);
 
+  const rawMedia = (store.rawMedia ?? [])
+    .filter((item) => item.published)
+    .sort((a, b) => a.sortOrder - b.sortOrder || b.createdAt.localeCompare(a.createdAt));
+
+  const rawMediaStorage = buildRawMediaStorageSummary(rawMedia);
+
   const allSocialPosts = (store.socialPosts ?? [])
     .sort((a, b) => a.sortOrder - b.sortOrder || b.publishedDate.localeCompare(a.publishedDate));
 
@@ -402,6 +414,7 @@ function assemblePublicData(
     pressPublications,
     submissions,
     files,
+    rawMedia,
   });
 
   const kpis = buildKPIs(settings.features, {
@@ -454,6 +467,9 @@ function assemblePublicData(
     submissionSummary,
     files,
     fileGroups: groupByOwner(files, adminOwnerLabel),
+    rawMedia,
+    rawMediaGroups: groupByOwner(rawMedia, adminOwnerLabel),
+    rawMediaStorage,
     lastUpdated: new Date().toISOString(),
   };
 }

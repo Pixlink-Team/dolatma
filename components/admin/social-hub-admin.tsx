@@ -9,6 +9,7 @@ interface SocialHubAdminProps {
   campaignId: string;
   initialPosts: SocialMediaPost[];
   initialPlatformStats: SocialPlatformStat[];
+  contentPlans?: string[];
   isFullAdmin?: boolean;
 }
 
@@ -16,6 +17,7 @@ export function SocialHubAdmin({
   campaignId,
   initialPosts,
   initialPlatformStats,
+  contentPlans = [],
   isFullAdmin = true,
 }: SocialHubAdminProps) {
   return (
@@ -42,7 +44,12 @@ export function SocialHubAdmin({
         </TabsContent>
 
         <TabsContent value="posts" className="mt-6">
-          <SocialPostsAdmin campaignId={campaignId} initialPosts={initialPosts} embedded />
+          <SocialPostsAdmin
+            campaignId={campaignId}
+            initialPosts={initialPosts}
+            contentPlans={contentPlans}
+            embedded
+          />
         </TabsContent>
       </Tabs>
     </div>

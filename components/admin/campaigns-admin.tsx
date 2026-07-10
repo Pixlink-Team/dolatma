@@ -38,6 +38,7 @@ const featuresSchema = z.object({
   pressPublications: z.boolean(),
   submissions: z.boolean(),
   files: z.boolean(),
+  rawMedia: z.boolean(),
 });
 
 const schema = z.object({
@@ -68,6 +69,7 @@ const defaultFeatures: CampaignFeatures = {
   pressPublications: false,
   submissions: false,
   files: false,
+  rawMedia: true,
 };
 
 interface CampaignsAdminProps {
@@ -163,6 +165,7 @@ export function CampaignsAdmin({ initialCampaigns }: CampaignsAdminProps) {
     { key: "meetings", label: "جلسات و مصوبات" },
     { key: "submissions", label: "مشارکت کاربران" },
     { key: "files", label: "فایل‌های کمپین" },
+    { key: "rawMedia", label: "رسانه خام" },
   ];
 
   return (

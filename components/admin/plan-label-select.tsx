@@ -23,7 +23,7 @@ export function PlanLabelSelect({
   plans,
   value,
   onChange,
-  label = "طرح",
+  label = "موضوع",
   optional = true,
 }: PlanLabelSelectProps) {
   if (plans.length === 0) return null;
@@ -36,10 +36,10 @@ export function PlanLabelSelect({
         onValueChange={(next) => onChange(next === NO_PLAN ? null : next)}
       >
         <SelectTrigger>
-          <SelectValue placeholder="انتخاب طرح" />
+          <SelectValue placeholder="انتخاب موضوع" />
         </SelectTrigger>
         <SelectContent>
-          {optional && <SelectItem value={NO_PLAN}>بدون طرح</SelectItem>}
+          {optional && <SelectItem value={NO_PLAN}>بدون موضوع</SelectItem>}
           {plans.map((plan) => (
             <SelectItem key={plan} value={plan}>
               {plan}
