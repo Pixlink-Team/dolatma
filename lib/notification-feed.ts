@@ -3,6 +3,7 @@ import type {
   CampaignActivity,
   Poster,
   PosterVersion,
+  ScoreableContentType,
   SocialMediaPost,
   Video,
   VideoVersion,
@@ -14,6 +15,8 @@ export type NotificationView = "new" | "seen";
 
 export interface NotificationFeedItem {
   key: string;
+  contentType: ScoreableContentType;
+  contentId: string;
   title: string;
   ownerName?: string | null;
   ownerProvince?: string | null;
@@ -86,6 +89,8 @@ export function buildNotificationFeed(input: {
     const eventAt = eventTimestamp(poster.createdAt, poster.updatedAt);
     items.push({
       key: `poster:${poster.id}`,
+      contentType: "poster",
+      contentId: poster.id,
       title: poster.title,
       ownerName: poster.ownerName,
       ownerProvince: poster.ownerProvince,
@@ -106,6 +111,8 @@ export function buildNotificationFeed(input: {
     const eventAt = eventTimestamp(video.createdAt, video.updatedAt);
     items.push({
       key: `video:${video.id}`,
+      contentType: "video",
+      contentId: video.id,
       title: video.title,
       ownerName: video.ownerName,
       ownerProvince: video.ownerProvince,
@@ -126,6 +133,8 @@ export function buildNotificationFeed(input: {
     const eventAt = eventTimestamp(billboard.createdAt, billboard.updatedAt);
     items.push({
       key: `billboard:${billboard.id}`,
+      contentType: "billboard",
+      contentId: billboard.id,
       title: billboard.title,
       ownerName: billboard.ownerName,
       ownerProvince: billboard.ownerProvince ?? billboard.province,
@@ -146,6 +155,8 @@ export function buildNotificationFeed(input: {
     const eventAt = eventTimestamp(activity.createdAt, activity.updatedAt);
     items.push({
       key: `activity:${activity.id}`,
+      contentType: "activity",
+      contentId: activity.id,
       title: activity.title,
       ownerName: activity.ownerName,
       ownerProvince: activity.ownerProvince,
@@ -164,20 +175,23 @@ export function buildNotificationFeed(input: {
 
   for (const post of input.socialPosts) {
     const eventAt = eventTimestamp(post.createdAt, post.updatedAt);
+    const isSite = post.platform === "site";
     items.push({
       key: `social:${post.id}`,
+      contentType: isSite ? "site_publication" : "social_post",
+      contentId: post.id,
       title: post.title,
       ownerName: post.ownerName,
       ownerProvince: post.ownerProvince,
       ownerCity: post.ownerCity,
       planLabel: post.planLabel,
-      typeLabel: post.platform === "site" ? "انتشار در سایت" : "شبکه اجتماعی",
+      typeLabel: isSite ? "انتشار در سایت" : "شبکه اجتماعی",
       date: eventAt.slice(0, 10),
       eventAt,
       createdAt: post.createdAt,
       thumbnailUrl: post.coverImageUrl ?? post.mediaUrl,
       published: post.published,
-      adminPath: post.platform === "site" ? "/admin/site-publications" : "/admin/social-posts",
+      adminPath: isSite ? "/admin/site-publications" : "/admin/social-posts",
       score: post.score,
     });
   }

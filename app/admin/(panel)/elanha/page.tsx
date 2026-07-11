@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { canAccessNotifications } from "@/lib/auth/access";
+import { canAccessNotifications, canScoreContent } from "@/lib/auth/access";
 import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
 import { resolveAdminCampaignId } from "@/lib/admin-campaign";
 import { getAdminData } from "@/lib/data-access/admin";
@@ -20,11 +20,13 @@ export default async function ElanhaPage({ searchParams }: PageProps) {
 
   const data = await getAdminData(campaignId);
   const isAdmin = isFullAdmin(session);
+  const canScore = canScoreContent(session);
 
   return (
     <NotificationsAdmin
       campaignId={campaignId}
       isAdmin={isAdmin}
+      canScore={canScore}
       posters={data.posters ?? []}
       videos={data.videos ?? []}
       billboards={data.billboards ?? []}

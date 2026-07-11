@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Check, ExternalLink } from "lucide-react";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
+import { ContentScoreControl } from "@/components/admin/content-score-control";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -51,6 +52,7 @@ type NotificationFilterView = NotificationView | "unscored";
 interface NotificationsAdminProps {
   campaignId: string;
   isAdmin: boolean;
+  canScore?: boolean;
   posters: Poster[];
   videos: Video[];
   billboards: Billboard[];
@@ -62,18 +64,24 @@ interface NotificationsAdminProps {
 
 function NotificationCard({
   item,
+  campaignId,
+  canScore,
   selected,
   onToggleSelect,
   showConfirm,
   confirming,
   onConfirm,
+  onScoreSaved,
 }: {
   item: NotificationFeedItem;
+  campaignId: string;
+  canScore: boolean;
   selected: boolean;
   onToggleSelect: () => void;
   showConfirm?: boolean;
   confirming?: boolean;
   onConfirm?: () => void;
+  onScoreSaved?: (score: number | null) => void;
 }) {
   return (
     <div className="group flex flex-col overflow-hidden rounded-xl border bg-card transition hover:border-primary hover:shadow-md">
@@ -103,17 +111,17 @@ function NotificationCard({
           ) : (
             <MediaPlaceholder kind="poster" className="h-full w-full" />
           )}
-          <div className="absolute top-2 right-2 flex flex-wrap gap-1 justify-end">
+          <div className="absolute top-2 right-2 flex flex-wrap justify-end gap-1">
             <Badge variant="secondary" className="text-[10px]">
               {item.typeLabel}
             </Badge>
             {!item.published && (
-              <Badge variant="outline" className="text-[10px] bg-background/90">
+              <Badge variant="outline" className="bg-background/90 text-[10px]">
                 پیش‌نویس
               </Badge>
             )}
             {item.score == null ? (
-              <Badge variant="outline" className="text-[10px] bg-background/90">
+              <Badge variant="outline" className="bg-background/90 text-[10px]">
                 بدون امتیاز
               </Badge>
             ) : (
@@ -124,13 +132,11 @@ function NotificationCard({
           </div>
         </div>
         <div className="flex flex-1 flex-col gap-2 p-4">
-          <p className="font-medium leading-snug line-clamp-2">{item.title}</p>
+          <p className="line-clamp-2 font-medium leading-snug">{item.title}</p>
           <div className="space-y-1 text-xs text-muted-foreground">
             <p>{item.ownerName ?? "کاربر"}</p>
             {(item.ownerProvince || item.ownerCity) && (
-              <p>
-                {[item.ownerProvince, item.ownerCity].filter(Boolean).join(" / ")}
-              </p>
+              <p>{[item.ownerProvince, item.ownerCity].filter(Boolean).join(" / ")}</p>
             )}
             {item.planLabel && <p>موضوع: {item.planLabel}</p>}
           </div>
@@ -139,6 +145,20 @@ function NotificationCard({
           </p>
         </div>
       </Link>
+
+      {canScore && (
+        <div className="border-t px-3 py-2" onClick={(event) => event.stopPropagation()}>
+          <ContentScoreControl
+            campaignId={campaignId}
+            contentType={item.contentType}
+            contentId={item.contentId}
+            score={item.score}
+            canScore={canScore}
+            compact
+            onScoreSaved={onScoreSaved}
+          />
+        </div>
+      )}
 
       {showConfirm && onConfirm && (
         <div className="flex items-center gap-2 border-t p-3">
@@ -167,6 +187,7 @@ function NotificationCard({
 export function NotificationsAdmin({
   campaignId,
   isAdmin,
+  canScore = false,
   posters,
   videos,
   billboards,
@@ -183,6 +204,7 @@ export function NotificationsAdmin({
   const [planLabel, setPlanLabel] = useState("all");
   const [seenKeys, setSeenKeys] = useState<Set<string>>(new Set());
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
+  const [scoreOverrides, setScoreOverrides] = useState<Record<string, number | null>>({});
   const [readsLoaded, setReadsLoaded] = useState(false);
   const [confirmingKey, setConfirmingKey] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -205,10 +227,24 @@ export function NotificationsAdmin({
           socialPosts,
           posterVersions,
           videoVersions,
-        }),
+        }).map((item) =>
+          Object.prototype.hasOwnProperty.call(scoreOverrides, item.key)
+            ? { ...item, score: scoreOverrides[item.key] }
+            : item
+        ),
         sort
       ),
-    [posters, videos, billboards, activities, socialPosts, posterVersions, videoVersions, sort]
+    [
+      posters,
+      videos,
+      billboards,
+      activities,
+      socialPosts,
+      posterVersions,
+      videoVersions,
+      sort,
+      scoreOverrides,
+    ]
   );
 
   const provinces = useMemo(() => collectNotificationProvinces(feed), [feed]);
@@ -406,8 +442,8 @@ export function NotificationsAdmin({
               ? "دیده‌شده‌ها"
               : "امتیاز نداده‌ها"}
           : {formatPersianNumber(filtered.length)}
-          {view === "new" &&
-            " — موارد فقط با تأیید صریح به‌عنوان دیده‌شده ثبت می‌شوند."}
+          {view === "new" && " — موارد فقط با تأیید صریح به‌عنوان دیده‌شده ثبت می‌شوند."}
+          {view === "unscored" && canScore && " — روی هر کارت می‌توانید امتیاز بدهید."}
         </p>
       </div>
 
@@ -431,11 +467,16 @@ export function NotificationsAdmin({
                   <NotificationCard
                     key={item.key}
                     item={item}
+                    campaignId={campaignId}
+                    canScore={canScore}
                     selected={selectedKeys.has(item.key)}
                     onToggleSelect={() => toggleSelect(item.key)}
                     showConfirm={view === "new" || view === "unscored"}
                     confirming={confirmingKey === item.key}
                     onConfirm={() => handleConfirmItem(item.key)}
+                    onScoreSaved={(score) => {
+                      setScoreOverrides((prev) => ({ ...prev, [item.key]: score }));
+                    }}
                   />
                 ))}
               </div>
