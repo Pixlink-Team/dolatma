@@ -90,7 +90,7 @@ export function VideosSection({ categories, videos, groups }: VideosSectionProps
 
   const filteredVideos = useMemo(
     () =>
-      effectiveSort === "newest" || effectiveSort === "oldest"
+      effectiveSort === "newest" || effectiveSort === "oldest" || effectiveSort === "top_scored"
         ? flattenOwnerGroupsInSortOrder(filteredGroups, effectiveSort)
         : filteredGroups.flatMap((group) => group.items),
     [filteredGroups, effectiveSort]
@@ -196,10 +196,13 @@ export function VideosSection({ categories, videos, groups }: VideosSectionProps
                 {groupVideos.map((video) => (
                   <VideoCard
                     key={video.id}
+                    id={video.id}
+                    campaignId={video.campaignId}
                     title={video.title}
                     description={video.description}
                     categoryTitle={video.category?.title}
                     versions={video.versions}
+                    score={video.score}
                   />
                 ))}
               </div>

@@ -1,6 +1,8 @@
 import { RawMediaAdmin } from "@/components/admin/raw-media-admin";
 import { getAdminData } from "@/lib/data-access/admin";
 import { resolveAdminCampaignId } from "@/lib/admin-campaign";
+import { canScoreContent } from "@/lib/auth/access";
+import { getAuthSession } from "@/lib/auth/get-session";
 import type { RawMediaUpload } from "@/lib/types";
 import { redirect } from "next/navigation";
 
@@ -14,6 +16,8 @@ export default async function RawMediaPage({ searchParams }: RawMediaPageProps) 
 
   if (!campaignId) redirect("/admin/campaigns");
 
+  const session = await getAuthSession();
+  const canScore = Boolean(session && canScoreContent(session));
   const data = await getAdminData(campaignId);
   if (!data.settings) redirect("/admin/campaigns");
 
@@ -22,6 +26,8 @@ export default async function RawMediaPage({ searchParams }: RawMediaPageProps) 
       campaignId={campaignId}
       initialItems={(data.rawMedia ?? []) as RawMediaUpload[]}
       contentPlans={data.settings?.contentPlans ?? []}
+      contentTopics={data.settings?.contentTopics ?? []}
+      canScore={canScore}
     />
   );
 }

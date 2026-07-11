@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { MediaUpload } from "@/components/ui/media-upload";
 import { VideoThumbnail } from "@/components/media/video-thumbnail";
 import { PlanLabelSelect } from "@/components/admin/plan-label-select";
+import { ContentScoreControl } from "@/components/admin/content-score-control";
 import {
   Select,
   SelectContent,
@@ -26,6 +27,7 @@ import {
   saveVideoAction,
   saveVideoVersionAction,
 } from "@/lib/actions/admin-actions";
+import { normalizePlanLabels, type ContentTopic } from "@/lib/content-topics";
 import { todayISO } from "@/lib/jalali";
 import {
   buildVideoVersionMedia,
@@ -56,6 +58,8 @@ interface AdminVideoEditorProps {
   versions: VideoVersion[];
   categories: MediaCategory[];
   contentPlans?: string[];
+  contentTopics?: ContentTopic[];
+  canScore?: boolean;
   isNew?: boolean;
   onClose: () => void;
   onSaved?: (video: Video) => void;
@@ -103,6 +107,8 @@ export function AdminVideoEditor({
   versions,
   categories,
   contentPlans = [],
+  contentTopics = [],
+  canScore = false,
   isNew = false,
   onClose,
   onSaved,
@@ -118,17 +124,19 @@ export function AdminVideoEditor({
   const [editTitle, setEditTitle] = useState(video.title);
   const [editDescription, setEditDescription] = useState(video.description ?? "");
   const [editCategoryId, setEditCategoryId] = useState(video.categoryId);
-  const [editPublished, setEditPublished] = useState(video.published);
-  const [editPlanLabel, setEditPlanLabel] = useState<string | null>(video.planLabel ?? null);
+  const [editPlanLabels, setEditPlanLabels] = useState<string[]>(() =>
+    normalizePlanLabels(video.planLabels, video.planLabel)
+  );
+  const [editScore, setEditScore] = useState<number | null | undefined>(video.score);
 
   useEffect(() => {
     setEditTitle(video.title);
     setEditDescription(video.description ?? "");
     setEditCategoryId(video.categoryId);
-    setEditPublished(video.published);
-    setEditPlanLabel(video.planLabel ?? null);
+    setEditPlanLabels(normalizePlanLabels(video.planLabels, video.planLabel));
+    setEditScore(video.score);
     setVersionDrafts(buildVideoVersionDrafts(versions));
-  }, [video.id, video.title, video.description, video.categoryId, video.published, video.planLabel, versions.length]);
+  }, [video.id, video.title, video.description, video.categoryId, video.planLabel, video.planLabels, video.score, versions.length]);
 
   useLayoutEffect(() => {
     if (!shouldScrollToBottomRef.current) return;
@@ -204,8 +212,10 @@ export function AdminVideoEditor({
         title: editTitle,
         description: editDescription,
         categoryId: editCategoryId,
-        published: editPublished,
-        planLabel: editPlanLabel,
+        published: true,
+        planLabels: editPlanLabels,
+        planLabel: editPlanLabels[0] ?? null,
+        score: editScore,
         updatedAt: new Date().toISOString(),
       };
 
@@ -232,20 +242,6 @@ export function AdminVideoEditor({
 
       toast.success(`ذخیره شد — ${formatPersianNumber(savedCount)} نسخه`);
       onSaved?.(savedVideo);
-      refresh();
-    });
-  };
-
-  const handleTogglePublish = (published: boolean) => {
-    if (isNew) {
-      setEditPublished(published);
-      return;
-    }
-
-    startTransition(async () => {
-      await saveVideoAction({ ...video, published });
-      setEditPublished(published);
-      toast.success(published ? "منتشر شد" : "از انتشار خارج شد");
       refresh();
     });
   };
@@ -326,13 +322,23 @@ export function AdminVideoEditor({
             </Select>
           </div>
           <PlanLabelSelect
+            topics={contentTopics}
             plans={contentPlans}
-            value={editPlanLabel}
-            onChange={setEditPlanLabel}
+            values={editPlanLabels}
+            onChangeMultiple={setEditPlanLabels}
           />
+          {!isNew && (
+            <ContentScoreControl
+              campaignId={video.campaignId}
+              contentType="video"
+              contentId={video.id}
+              score={editScore}
+              canScore={canScore}
+              onScoreSaved={setEditScore}
+            />
+          )}
         </div>
         <div className="flex flex-col items-center gap-2 pt-6">
-          <Switch checked={editPublished} onCheckedChange={handleTogglePublish} />
           <Button variant="ghost" size="icon" onClick={handleDeleteVideo} disabled={isPending}>
             <Trash2 className="h-4 w-4 text-destructive" />
           </Button>

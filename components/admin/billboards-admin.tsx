@@ -23,9 +23,10 @@ import { MapBilboardBackupImportPanel } from "@/components/admin/map-bilboard-ba
 import { BillboardIntegrationImportPanel } from "@/components/admin/billboard-integration-import-panel";
 import { BillboardCreateAssignmentDialog } from "@/components/admin/billboard-create-assignment-dialog";
 import { BillboardAddPeriodDialog } from "@/components/admin/billboard-add-period-dialog";
-import { saveBillboardAction, deleteBillboardAction } from "@/lib/actions/admin-actions";
+import { deleteBillboardAction } from "@/lib/actions/admin-actions";
 import { canManageBillboardPeriods, isApiBillboard } from "@/lib/billboards";
-import type { Billboard, ItemStatus } from "@/lib/types";
+import type { ContentTopic } from "@/lib/content-topics";
+import type { Billboard } from "@/lib/types";
 import { getStatusLabel } from "@/lib/utils";
 
 interface ContributorProfile {
@@ -39,6 +40,8 @@ interface BillboardsAdminProps {
   campaignId: string;
   initialBillboards: Billboard[];
   contentPlans?: string[];
+  contentTopics?: ContentTopic[];
+  canScore?: boolean;
   liveApiEnabled?: boolean;
   externalCampaignSlug?: string | null;
   externalCampaignId?: string | null;
@@ -50,6 +53,8 @@ export function BillboardsAdmin({
   campaignId,
   initialBillboards,
   contentPlans = [],
+  contentTopics = [],
+  canScore = false,
   liveApiEnabled = false,
   externalCampaignSlug = null,
   externalCampaignId = null,
@@ -127,22 +132,6 @@ export function BillboardsAdmin({
     });
   };
 
-  const handleTogglePublish = (item: Billboard) => {
-    if (isApiBillboard(item)) return;
-    startTransition(async () => {
-      const published = !item.published;
-      const updated: Billboard = {
-        ...item,
-        published,
-        status: (published ? "published" : "draft") as ItemStatus,
-      };
-      await saveBillboardAction(updated);
-      setBillboards((prev) => prev.map((billboard) => (billboard.id === item.id ? updated : billboard)));
-      toast.success(published ? "منتشر شد" : "به پیش‌نویس برگشت");
-      router.refresh();
-    });
-  };
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4">
@@ -212,6 +201,8 @@ export function BillboardsAdmin({
         }}
         campaignId={campaignId}
         contentPlans={contentPlans}
+        contentTopics={contentTopics}
+        canScore={canScore}
         mode={isFullAdmin ? "admin" : "client"}
         contributorProfile={contributorProfile}
         editingBillboard={editingBillboard}
@@ -240,8 +231,13 @@ export function BillboardsAdmin({
               key={billboard.id}
               billboard={billboard}
               onClick={() => openEdit(billboard)}
-              onTogglePublish={handleTogglePublish}
-              canPublish={isFullAdmin}
+              onDelete={handleDelete}
+              canScore={canScore}
+              onScoreSaved={(item, score) => {
+                setBillboards((prev) =>
+                  prev.map((row) => (row.id === item.id ? { ...row, score } : row))
+                );
+              }}
             />
           ))}
           <AdminBillboardAddCard onClick={openCreate} />
@@ -292,7 +288,6 @@ export function BillboardsAdmin({
           ]}
           onEdit={() => undefined}
           onDelete={handleDelete}
-          onTogglePublish={handleTogglePublish}
           getPublished={(item) => item.published}
           isReadOnly={isApiBillboard}
         />

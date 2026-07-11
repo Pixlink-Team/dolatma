@@ -458,3 +458,24 @@ CREATE TABLE IF NOT EXISTS raw_media_uploads (
 CREATE INDEX IF NOT EXISTS idx_raw_media_uploads_campaign
   ON raw_media_uploads(campaign_id, published, sort_order);
 
+-- Multi-topic labels + numeric scoring (admin/client)
+ALTER TABLE billboards ADD COLUMN IF NOT EXISTS plan_labels JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE posters ADD COLUMN IF NOT EXISTS plan_labels JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE videos ADD COLUMN IF NOT EXISTS plan_labels JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE social_media_posts ADD COLUMN IF NOT EXISTS plan_labels JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE campaign_activities ADD COLUMN IF NOT EXISTS plan_labels JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE broadcast_reports ADD COLUMN IF NOT EXISTS plan_labels JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE campaign_meetings ADD COLUMN IF NOT EXISTS plan_labels JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE campaign_files ADD COLUMN IF NOT EXISTS plan_labels JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE raw_media_uploads ADD COLUMN IF NOT EXISTS plan_labels JSONB NOT NULL DEFAULT '[]'::jsonb;
+
+ALTER TABLE billboards ADD COLUMN IF NOT EXISTS score DOUBLE PRECISION;
+ALTER TABLE posters ADD COLUMN IF NOT EXISTS score DOUBLE PRECISION;
+ALTER TABLE videos ADD COLUMN IF NOT EXISTS score DOUBLE PRECISION;
+ALTER TABLE social_media_posts ADD COLUMN IF NOT EXISTS score DOUBLE PRECISION;
+ALTER TABLE campaign_activities ADD COLUMN IF NOT EXISTS score DOUBLE PRECISION;
+ALTER TABLE broadcast_reports ADD COLUMN IF NOT EXISTS score DOUBLE PRECISION;
+ALTER TABLE campaign_meetings ADD COLUMN IF NOT EXISTS score DOUBLE PRECISION;
+ALTER TABLE campaign_files ADD COLUMN IF NOT EXISTS score DOUBLE PRECISION;
+ALTER TABLE raw_media_uploads ADD COLUMN IF NOT EXISTS score DOUBLE PRECISION;
+

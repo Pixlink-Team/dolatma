@@ -66,7 +66,7 @@ export function SubmissionsSection({ groups, summary }: SubmissionsSectionProps)
   const filteredGroups = useFilteredOwnerGroups(groups);
   const filteredSubmissions = useMemo(
     () =>
-      filter.sortOrder === "newest" || filter.sortOrder === "oldest"
+      filter.sortOrder === "newest" || filter.sortOrder === "oldest" || filter.sortOrder === "top_scored"
         ? flattenOwnerGroupsInSortOrder(filteredGroups, filter.sortOrder)
         : filteredGroups.flatMap((group) => group.items),
     [filteredGroups, filter.sortOrder]

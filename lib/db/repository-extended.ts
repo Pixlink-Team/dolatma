@@ -21,6 +21,7 @@ import type {
   MeetingPublicPreview,
   MeetingTask,
   MeetingWithTasks,
+  Ownable,
   SocialMediaPost,
   SocialPlatformStat,
 } from "@/lib/types";
@@ -32,8 +33,17 @@ import {
   type ContributorPermissions,
 } from "@/lib/contributor-permissions";
 import type { ParsedUserImportRow } from "@/lib/services/users-excel-parser";
+import { normalizePlanLabels } from "@/lib/content-topics";
 import { generateId } from "@/lib/utils";
 import { hashPassword } from "@/lib/auth/password";
+
+function resolvePlanFields(data: Partial<Ownable>) {
+  const planLabels = normalizePlanLabels(data.planLabels, data.planLabel);
+  return {
+    planLabel: planLabels[0] ?? null,
+    planLabels,
+  };
+}
 
 interface CampaignAccessRow {
   campaignId: string;
@@ -342,6 +352,7 @@ export async function pgSaveSocialPost(data: Partial<SocialMediaPost> & { id?: s
   const sql = getSql();
   const now = new Date().toISOString();
   const id = data.id ?? generateId();
+  const { planLabel, planLabels } = resolvePlanFields(data);
 
   const countRows = await sql`
     SELECT COUNT(*)::int AS count FROM social_media_posts WHERE campaign_id = ${data.campaignId ?? ""}
@@ -352,7 +363,7 @@ export async function pgSaveSocialPost(data: Partial<SocialMediaPost> & { id?: s
     INSERT INTO social_media_posts (
       id, campaign_id, owner_user_id, platform, title, cover_image_url,
       views, likes, comments, shares, link, content_type, media_url, description,
-      published_date, published, sort_order, plan_label, created_at, updated_at
+      published_date, published, sort_order, plan_label, plan_labels, created_at, updated_at
     ) VALUES (
       ${id},
       ${data.campaignId ?? ""},
@@ -369,9 +380,10 @@ export async function pgSaveSocialPost(data: Partial<SocialMediaPost> & { id?: s
       ${data.mediaUrl ?? null},
       ${data.description ?? null},
       ${data.publishedDate ?? now.split("T")[0]},
-      ${data.published ?? false},
+      ${data.published ?? true},
       ${sortOrder},
-      ${data.planLabel ?? null},
+      ${planLabel},
+      ${sql.json(planLabels)},
       ${now},
       ${now}
     )
@@ -391,6 +403,7 @@ export async function pgSaveSocialPost(data: Partial<SocialMediaPost> & { id?: s
       published = EXCLUDED.published,
       sort_order = EXCLUDED.sort_order,
       plan_label = EXCLUDED.plan_label,
+      plan_labels = EXCLUDED.plan_labels,
       updated_at = EXCLUDED.updated_at
   `;
 
@@ -563,6 +576,7 @@ export async function pgSaveBroadcastReport(data: Partial<BroadcastReport> & { i
   const sql = getSql();
   const now = new Date().toISOString();
   const id = data.id ?? generateId();
+  const { planLabel, planLabels } = resolvePlanFields(data);
 
   const countRows = await sql`
     SELECT COUNT(*)::int AS count FROM broadcast_reports WHERE campaign_id = ${data.campaignId ?? ""}
@@ -572,7 +586,7 @@ export async function pgSaveBroadcastReport(data: Partial<BroadcastReport> & { i
   await sql`
     INSERT INTO broadcast_reports (
       id, campaign_id, owner_user_id, title, report_date, pdf_url, file_name,
-      summary_data, published, sort_order, plan_label, created_at, updated_at
+      summary_data, published, sort_order, plan_label, plan_labels, created_at, updated_at
     ) VALUES (
       ${id},
       ${data.campaignId ?? ""},
@@ -582,9 +596,10 @@ export async function pgSaveBroadcastReport(data: Partial<BroadcastReport> & { i
       ${data.pdfUrl ?? ""},
       ${data.fileName ?? ""},
       ${sql.json(JSON.parse(JSON.stringify(data.summaryData ?? {})))},
-      ${data.published ?? false},
+      ${data.published ?? true},
       ${sortOrder},
-      ${data.planLabel ?? null},
+      ${planLabel},
+      ${sql.json(planLabels)},
       ${now},
       ${now}
     )
@@ -597,6 +612,7 @@ export async function pgSaveBroadcastReport(data: Partial<BroadcastReport> & { i
       published = EXCLUDED.published,
       sort_order = EXCLUDED.sort_order,
       plan_label = EXCLUDED.plan_label,
+      plan_labels = EXCLUDED.plan_labels,
       updated_at = EXCLUDED.updated_at
   `;
 
@@ -639,6 +655,7 @@ export async function pgSaveCampaignActivity(data: Partial<CampaignActivity> & {
   const sql = getSql();
   const now = new Date().toISOString();
   const id = data.id ?? generateId();
+  const { planLabel, planLabels } = resolvePlanFields(data);
 
   const countRows = await sql`
     SELECT COUNT(*)::int AS count FROM campaign_activities WHERE campaign_id = ${data.campaignId ?? ""}
@@ -648,7 +665,7 @@ export async function pgSaveCampaignActivity(data: Partial<CampaignActivity> & {
   await sql`
     INSERT INTO campaign_activities (
       id, campaign_id, owner_user_id, title, activity_type, activity_date,
-      location, image_url, video_url, media_items, description, published, sort_order, plan_label, created_at, updated_at
+      location, image_url, video_url, media_items, description, published, sort_order, plan_label, plan_labels, created_at, updated_at
     ) VALUES (
       ${id},
       ${data.campaignId ?? ""},
@@ -661,9 +678,10 @@ export async function pgSaveCampaignActivity(data: Partial<CampaignActivity> & {
       ${data.videoUrl ?? null},
       ${sql.json(JSON.parse(JSON.stringify(data.mediaItems ?? [])))},
       ${data.description ?? null},
-      ${data.published ?? false},
+      ${data.published ?? true},
       ${sortOrder},
-      ${data.planLabel ?? null},
+      ${planLabel},
+      ${sql.json(planLabels)},
       ${now},
       ${now}
     )
@@ -679,6 +697,7 @@ export async function pgSaveCampaignActivity(data: Partial<CampaignActivity> & {
       published = EXCLUDED.published,
       sort_order = EXCLUDED.sort_order,
       plan_label = EXCLUDED.plan_label,
+      plan_labels = EXCLUDED.plan_labels,
       updated_at = EXCLUDED.updated_at
   `;
 

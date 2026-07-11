@@ -6,6 +6,7 @@ import { formatPersianDate, formatPersianNumber, getStatusLabel } from "@/lib/ut
 import { OwnerGroupedSection } from "@/components/public/owner-grouped-section";
 import { CollapsibleSection } from "@/components/public/collapsible-section";
 import { VideoThumbnail } from "@/components/media/video-thumbnail";
+import { ImageZoom } from "@/components/ui/image-zoom";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { ExternalLink } from "lucide-react";
@@ -26,11 +27,11 @@ interface SocialPostsSectionProps {
 function SocialPostCover({ post }: { post: SocialMediaPost }) {
   if (post.coverImageUrl) {
     return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
+      <ImageZoom
         src={post.coverImageUrl}
         alt={post.title}
-        className="h-full w-full object-cover transition-transform group-hover:scale-105"
+        className="h-full w-full"
+        imgClassName="transition-transform group-hover:scale-105"
       />
     );
   }
@@ -47,11 +48,11 @@ function SocialPostCover({ post }: { post: SocialMediaPost }) {
 
   if (post.mediaUrl) {
     return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
+      <ImageZoom
         src={post.mediaUrl}
         alt={post.title}
-        className="h-full w-full object-cover transition-transform group-hover:scale-105"
+        className="h-full w-full"
+        imgClassName="transition-transform group-hover:scale-105"
       />
     );
   }
@@ -121,7 +122,7 @@ export function SocialPostsSection({ posts, groups }: SocialPostsSectionProps) {
   const filteredGroups = useFilteredOwnerGroups(groups, (post) => post.publishedDate);
   const filteredPosts = useMemo(
     () =>
-      filter.sortOrder === "newest" || filter.sortOrder === "oldest"
+      filter.sortOrder === "newest" || filter.sortOrder === "oldest" || filter.sortOrder === "top_scored"
         ? flattenOwnerGroupsInSortOrder(filteredGroups, filter.sortOrder)
         : filteredGroups.flatMap((group) => group.items),
     [filteredGroups, filter.sortOrder]

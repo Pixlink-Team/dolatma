@@ -11,6 +11,7 @@ import {
   type AdminContentFilterState,
 } from "@/components/admin/admin-content-filter-bar";
 import { PlanLabelSelect } from "@/components/admin/plan-label-select";
+import { ContentScoreControl } from "@/components/admin/content-score-control";
 import { AdminOwnerBadge } from "@/components/admin/admin-owner-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -37,6 +38,7 @@ import {
   deleteRawMediaUploadAction,
   saveRawMediaUploadAction,
 } from "@/lib/actions/admin-actions";
+import type { ContentTopic } from "@/lib/content-topics";
 import {
   buildRawMediaStorageSummary,
   canAcceptRawMediaUpload,
@@ -50,19 +52,23 @@ interface RawMediaAdminProps {
   campaignId: string;
   initialItems: RawMediaUpload[];
   contentPlans?: string[];
+  contentTopics?: ContentTopic[];
+  canScore?: boolean;
 }
 
 export function RawMediaAdmin({
   campaignId,
   initialItems,
   contentPlans = [],
+  contentTopics = [],
+  canScore = false,
 }: RawMediaAdminProps) {
   const [items, setItems] = useState(initialItems);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [mediaKind, setMediaKind] = useState<RawMediaKind>("image");
-  const [planLabel, setPlanLabel] = useState<string | null>(null);
+  const [planLabels, setPlanLabels] = useState<string[]>([]);
   const [contentFilter, setContentFilter] = useState<AdminContentFilterState>(DEFAULT_ADMIN_CONTENT_FILTER);
   const [upload, setUpload] = useState({
     url: "",
@@ -83,7 +89,7 @@ export function RawMediaAdmin({
     setTitle("");
     setDescription("");
     setMediaKind("image");
-    setPlanLabel(null);
+    setPlanLabels([]);
     setUpload({ url: "", fileName: "", fileSize: 0, mimeType: "" });
   };
 
@@ -115,7 +121,8 @@ export function RawMediaAdmin({
         mimeType: upload.mimeType,
         published: true,
         sortOrder: items.length + 1,
-        planLabel,
+        planLabels,
+        planLabel: planLabels[0] ?? null,
       });
 
       if (!result.success || !("id" in result) || !result.id) {
@@ -137,7 +144,8 @@ export function RawMediaAdmin({
           mimeType: upload.mimeType,
           published: true,
           sortOrder: prev.length + 1,
-          planLabel,
+          planLabels,
+        planLabel: planLabels[0] ?? null,
           createdAt: now,
           updatedAt: now,
         },
@@ -244,6 +252,19 @@ export function RawMediaAdmin({
                     {formatPersianDateTime(item.createdAt)}
                   </p>
                   <AdminOwnerBadge ownerUserId={item.ownerUserId} ownerName={item.ownerName} />
+                  <ContentScoreControl
+                    campaignId={campaignId}
+                    contentType="raw_media"
+                    contentId={item.id}
+                    score={item.score}
+                    canScore={canScore}
+                    compact
+                    onScoreSaved={(score) =>
+                      setItems((prev) =>
+                        prev.map((row) => (row.id === item.id ? { ...row, score } : row))
+                      )
+                    }
+                  />
                 </div>
                 <div className="flex shrink-0 flex-col gap-2">
                   <Button variant="outline" size="sm" asChild>
@@ -313,7 +334,7 @@ export function RawMediaAdmin({
                 </SelectContent>
               </Select>
             </div>
-            <PlanLabelSelect plans={contentPlans} value={planLabel} onChange={setPlanLabel} />
+            <PlanLabelSelect topics={contentTopics} plans={contentPlans} values={planLabels} onChangeMultiple={setPlanLabels} />
             <MediaUpload
               label={mediaKind === "video" ? "ویدیو خام" : "تصویر خام"}
               kind={mediaKind}

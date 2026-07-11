@@ -2,14 +2,16 @@ import type { DataOwnerGroup, Ownable } from "@/lib/types";
 import { filterOwnerGroups } from "@/lib/owner-groups";
 import { normalizeStoredUserEmail } from "@/lib/auth/user-login";
 import { matchesDateFilter } from "@/lib/campaign-content-filter";
+import { matchesPlanLabelFilter } from "@/lib/content-topics";
 
 export const OWNER_LOCATION_ALL = "all";
 export const OWNER_USER_ALL = "all";
 export const OWNER_DATE_ALL = "all";
 export const OWNER_PLAN_ALL = "all";
+export const OWNER_TOP_SCORED = "top_scored";
 
 export type CampaignDatePreset = "all" | "this_week" | "this_month" | "custom";
-export type CampaignContentSort = "default" | "newest" | "oldest";
+export type CampaignContentSort = "default" | "newest" | "oldest" | "top_scored";
 
 export interface CampaignDateFilter {
   datePreset: CampaignDatePreset;
@@ -53,8 +55,7 @@ export function isOwnerFilterActive(filter: OwnerLocationFilter): boolean {
 }
 
 function matchesPlanLabel(item: Ownable, filter: OwnerLocationFilter): boolean {
-  if (filter.planLabel === OWNER_PLAN_ALL) return true;
-  return (item.planLabel?.trim() ?? "") === filter.planLabel;
+  return matchesPlanLabelFilter(item.planLabels, item.planLabel, filter.planLabel);
 }
 
 function matchesOwnerUser(item: Ownable, filter: OwnerLocationFilter): boolean {

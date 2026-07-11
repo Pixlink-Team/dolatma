@@ -25,6 +25,11 @@ import type {
 } from "@/lib/types";
 import type { ContributorPermissions } from "@/lib/contributor-permissions";
 import { normalizeAnalyticsConfig } from "@/lib/analytics-config";
+import {
+  contentPlansFromTopics,
+  normalizeContentTopics,
+  normalizePlanLabels,
+} from "@/lib/content-topics";
 import { truncateMeetingSummary } from "@/lib/meeting-preview";
 
 function toDateString(value: unknown): string {
@@ -39,14 +44,35 @@ function toIsoString(value: unknown): string {
   return String(value ?? "");
 }
 
+function parsePlanLabelsColumn(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => (typeof item === "string" ? item.trim() : ""))
+    .filter((item) => item.length > 0);
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function mapOwnerFromDb(row: any): Ownable {
+  const planLabels = normalizePlanLabels(
+    parsePlanLabelsColumn(row.plan_labels),
+    row.plan_label ?? null
+  );
+  const scoreRaw = row.score;
+  const score =
+    scoreRaw == null || scoreRaw === ""
+      ? null
+      : Number.isFinite(Number(scoreRaw))
+        ? Number(scoreRaw)
+        : null;
+
   return {
     ownerUserId: row.owner_user_id ?? null,
     ownerName: row.owner_name ?? null,
     ownerProvince: row.owner_province ?? null,
     ownerCity: row.owner_city ?? null,
-    planLabel: row.plan_label ?? null,
+    planLabel: planLabels[0] ?? row.plan_label ?? null,
+    planLabels,
+    score,
   };
 }
 
@@ -108,17 +134,11 @@ export function mapSettingsFromDb(row: any): CampaignSettings {
         ? JSON.parse(row.billboard_config)
         : (row.billboard_config ?? {}),
     adminOwnerLabel: row.admin_owner_label ?? "مدیریت",
-    contentPlans: parseContentPlans(row.content_plans),
+    contentTopics: normalizeContentTopics(row.content_plans),
+    contentPlans: contentPlansFromTopics(normalizeContentTopics(row.content_plans)),
     meetingsViewPasswordHash: row.meetings_view_password_hash ?? null,
     updatedAt: toIsoString(row.updated_at),
   };
-}
-
-function parseContentPlans(value: unknown): string[] {
-  if (!Array.isArray(value)) return [];
-  return value
-    .map((item) => (typeof item === "string" ? item.trim() : ""))
-    .filter((item) => item.length > 0);
 }
 
 import type { ActivityMediaItem, BillboardDisplayPeriod } from "@/lib/types";
@@ -565,7 +585,6 @@ export function mapRawMediaUploadFromDb(row: any): RawMediaUpload {
     fileSize: Number(row.file_size ?? 0),
     published: row.published ?? false,
     sortOrder: row.sort_order ?? 0,
-    planLabel: row.plan_label ?? null,
     ...mapOwnerFromDb(row),
     createdAt: toIsoString(row.created_at),
     updatedAt: toIsoString(row.updated_at),

@@ -18,6 +18,11 @@ import { MediaUpload } from "@/components/ui/media-upload";
 import { PersianDateField } from "@/components/ui/persian-date-input";
 import { updateSettingsAction } from "@/lib/actions/admin-actions";
 import { fetchExternalCampaignsAction } from "@/lib/actions/billboard-import-actions";
+import {
+  contentPlansFromTopics,
+  normalizeContentTopics,
+  type ContentTopic,
+} from "@/lib/content-topics";
 import { DEFAULT_ADMIN_OWNER_LABEL } from "@/lib/owner-groups";
 import type { AnalyticsConfig, CampaignFeatures, CampaignSettings, ChannelAnalyticsConfig } from "@/lib/types";
 import type { ExternalCampaign } from "@/lib/models/billboard-api";
@@ -213,8 +218,15 @@ export function SettingsAdmin({ initialSettings }: SettingsAdminProps) {
   const [isPending, startTransition] = useTransition();
   const [loadingCampaigns, setLoadingCampaigns] = useState(false);
   const [externalCampaigns, setExternalCampaigns] = useState<ExternalCampaign[]>([]);
-  const [contentPlans, setContentPlans] = useState<string[]>(initialSettings.contentPlans ?? []);
-  const [newPlanName, setNewPlanName] = useState("");
+  const [contentTopics, setContentTopics] = useState<ContentTopic[]>(() =>
+    normalizeContentTopics(
+      initialSettings.contentTopics?.length
+        ? initialSettings.contentTopics
+        : (initialSettings.contentPlans ?? []).map((name) => ({ name, subtopics: [] }))
+    )
+  );
+  const [newTopicName, setNewTopicName] = useState("");
+  const [newSubtopicByTopic, setNewSubtopicByTopic] = useState<Record<string, string>>({});
 
   const form = useForm({
     resolver: zodResolver(schema),
@@ -302,7 +314,8 @@ export function SettingsAdmin({ initialSettings }: SettingsAdminProps) {
           externalCampaignSlug: data.externalCampaignSlug || null,
         },
         adminOwnerLabel: data.adminOwnerLabel?.trim() || DEFAULT_ADMIN_OWNER_LABEL,
-        contentPlans,
+        contentTopics,
+        contentPlans: contentPlansFromTopics(contentTopics),
       });
       toast.success("تنظیمات ذخیره شد");
     });
@@ -337,40 +350,106 @@ export function SettingsAdmin({ initialSettings }: SettingsAdminProps) {
               <div>
                 <Label>موضوع‌های کمپین</Label>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  نام موضوع‌ها را اینجا تعریف کنید (مثلاً مهتاب، سامان) تا هنگام آپلود محتوا و فیلتر صفحه اصلی استفاده شوند.
+                  موضوع و زیرموضوع تعریف کنید (مثلاً مهتاب ← هفته اول) تا هنگام آپلود محتوا و فیلتر صفحه اصلی استفاده شوند.
                 </p>
               </div>
               <div className="flex gap-2">
                 <Input
-                  value={newPlanName}
-                  onChange={(event) => setNewPlanName(event.target.value)}
+                  value={newTopicName}
+                  onChange={(event) => setNewTopicName(event.target.value)}
                   placeholder="نام موضوع جدید"
                 />
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => {
-                    const value = newPlanName.trim();
-                    if (!value || contentPlans.includes(value)) return;
-                    setContentPlans((current) => [...current, value]);
-                    setNewPlanName("");
+                    const value = newTopicName.trim();
+                    if (!value || contentTopics.some((topic) => topic.name === value)) return;
+                    setContentTopics((current) => [...current, { name: value, subtopics: [] }]);
+                    setNewTopicName("");
                   }}
                 >
-                  افزودن
+                  افزودن موضوع
                 </Button>
               </div>
-              {contentPlans.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {contentPlans.map((plan) => (
-                    <Button
-                      key={plan}
-                      type="button"
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => setContentPlans((current) => current.filter((item) => item !== plan))}
-                    >
-                      {plan} ×
-                    </Button>
+              {contentTopics.length > 0 && (
+                <div className="space-y-3">
+                  {contentTopics.map((topic) => (
+                    <div key={topic.name} className="space-y-2 rounded-md border bg-muted/30 p-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-sm font-medium">{topic.name}</p>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 text-xs text-destructive"
+                          onClick={() =>
+                            setContentTopics((current) =>
+                              current.filter((item) => item.name !== topic.name)
+                            )
+                          }
+                        >
+                          حذف موضوع
+                        </Button>
+                      </div>
+                      {topic.subtopics.length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                          {topic.subtopics.map((sub) => (
+                            <Button
+                              key={sub}
+                              type="button"
+                              variant="secondary"
+                              size="sm"
+                              onClick={() =>
+                                setContentTopics((current) =>
+                                  current.map((item) =>
+                                    item.name === topic.name
+                                      ? {
+                                          ...item,
+                                          subtopics: item.subtopics.filter((s) => s !== sub),
+                                        }
+                                      : item
+                                  )
+                                )
+                              }
+                            >
+                              {sub} ×
+                            </Button>
+                          ))}
+                        </div>
+                      )}
+                      <div className="flex gap-2">
+                        <Input
+                          value={newSubtopicByTopic[topic.name] ?? ""}
+                          onChange={(event) =>
+                            setNewSubtopicByTopic((current) => ({
+                              ...current,
+                              [topic.name]: event.target.value,
+                            }))
+                          }
+                          placeholder="زیرموضوع جدید"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const value = (newSubtopicByTopic[topic.name] ?? "").trim();
+                            if (!value || topic.subtopics.includes(value)) return;
+                            setContentTopics((current) =>
+                              current.map((item) =>
+                                item.name === topic.name
+                                  ? { ...item, subtopics: [...item.subtopics, value] }
+                                  : item
+                              )
+                            );
+                            setNewSubtopicByTopic((current) => ({ ...current, [topic.name]: "" }));
+                          }}
+                        >
+                          افزودن
+                        </Button>
+                      </div>
+                    </div>
                   ))}
                 </div>
               )}

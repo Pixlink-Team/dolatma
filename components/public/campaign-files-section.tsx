@@ -76,7 +76,7 @@ export function CampaignFilesSection({ files, groups }: CampaignFilesSectionProp
   const filteredGroups = useFilteredOwnerGroups(groups);
   const filteredFiles = useMemo(
     () =>
-      filter.sortOrder === "newest" || filter.sortOrder === "oldest"
+      filter.sortOrder === "newest" || filter.sortOrder === "oldest" || filter.sortOrder === "top_scored"
         ? flattenOwnerGroupsInSortOrder(filteredGroups, filter.sortOrder)
         : filteredGroups.flatMap((group) => group.items),
     [filteredGroups, filter.sortOrder]

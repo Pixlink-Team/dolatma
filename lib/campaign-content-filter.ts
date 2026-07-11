@@ -118,6 +118,22 @@ export function sortCampaignContent<T>(
     return copy.sort((a, b) => getItemDate(a).localeCompare(getItemDate(b)));
   }
 
+  if (sort === "top_scored") {
+    return copy
+      .sort((a, b) => {
+        const scoreA =
+          typeof (a as { score?: number | null }).score === "number"
+            ? ((a as { score?: number | null }).score ?? -1)
+            : -1;
+        const scoreB =
+          typeof (b as { score?: number | null }).score === "number"
+            ? ((b as { score?: number | null }).score ?? -1)
+            : -1;
+        return scoreB - scoreA;
+      })
+      .slice(0, 5);
+  }
+
   if (getSortOrder) {
     return copy.sort((a, b) => getSortOrder(a) - getSortOrder(b));
   }

@@ -8,17 +8,31 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { LightboxModal } from "@/components/media/lightbox-modal";
 import { MediaPlaceholder } from "@/components/ui/media-placeholder";
+import { ImageZoom } from "@/components/ui/image-zoom";
+import { ContentScoreControl } from "@/components/admin/content-score-control";
+import { useContentScoreAccess } from "@/lib/context/content-score-context";
 import type { PosterVersion } from "@/lib/types";
 import { downloadMedia, getFilenameFromUrl, resolveDisplayVersion } from "@/lib/media-utils";
 import { cn, formatPersianDate } from "@/lib/utils";
 
 interface PosterCardProps {
+  id?: string;
+  campaignId?: string;
   title: string;
   description?: string | null;
   versions: PosterVersion[];
+  score?: number | null;
 }
 
-export function PosterCard({ title, description, versions }: PosterCardProps) {
+export function PosterCard({
+  id,
+  campaignId,
+  title,
+  description,
+  versions,
+  score,
+}: PosterCardProps) {
+  const { canScore, campaignId: scoreCampaignId } = useContentScoreAccess();
   const [expanded, setExpanded] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxVersionId, setLightboxVersionId] = useState<string | null>(null);
@@ -45,37 +59,25 @@ export function PosterCard({ title, description, versions }: PosterCardProps) {
   return (
     <>
       <Card className="overflow-hidden w-full py-0 gap-0">
-        <div
-          className="relative w-full aspect-[3/4] overflow-hidden bg-muted cursor-pointer group"
-          onClick={() => openLightbox(finalVersion.id)}
-        >
+        <div className="relative w-full aspect-[3/4] overflow-hidden bg-muted group">
           {finalVersion.imageUrl ? (
-            <Image
+            <ImageZoom
               src={finalVersion.imageUrl}
               alt={title}
-              fill
-              loading="lazy"
-              className="object-contain object-center size-full transition-transform group-hover:scale-105"
-              sizes="(max-width: 768px) 100vw, 33vw"
+              className="absolute inset-0 h-full w-full"
+              imgClassName="object-contain object-center transition-transform group-hover:scale-105"
             />
           ) : (
             <MediaPlaceholder kind="poster" className="h-full" />
           )}
-          <div className="absolute top-3 right-3">
-            <Badge status={finalVersion.isFinal ? "final" : "draft"}>
-              {finalVersion.isFinal ? "نسخه نهایی" : "پیش‌نویس"}
-            </Badge>
-          </div>
-          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center gap-2">
-            <span className="opacity-0 group-hover:opacity-100 text-white text-sm font-medium bg-black/50 px-3 py-1.5 rounded-lg transition-opacity">
-              مشاهده
-            </span>
+          <div className="absolute top-3 right-3 pointer-events-none">
+            {finalVersion.isFinal && <Badge status="final">نسخه نهایی</Badge>}
           </div>
           <Button
             type="button"
             variant="secondary"
             size="icon"
-            className="absolute bottom-3 left-3 h-8 w-8 opacity-90"
+            className="absolute bottom-3 left-3 h-8 w-8 opacity-90 z-10"
             onClick={(e) => handleDownload(finalVersion, e)}
             aria-label="دانلود تصویر"
           >
@@ -93,11 +95,24 @@ export function PosterCard({ title, description, versions }: PosterCardProps) {
 
           <div className="flex items-center justify-between text-xs text-muted-foreground">
             <span>نسخه {finalVersion.versionNumber}</span>
-            <Badge status={finalVersion.isFinal ? "final" : "draft"} className="text-[10px]">
-              {finalVersion.isFinal ? "نسخه نهایی" : "پیش‌نویس"}
-            </Badge>
+            {finalVersion.isFinal && (
+              <Badge status="final" className="text-[10px]">
+                نسخه نهایی
+              </Badge>
+            )}
           </div>
           <p className="text-xs text-muted-foreground">{formatPersianDate(finalVersion.date)}</p>
+
+          {id && (canScore || score != null) && (
+            <ContentScoreControl
+              campaignId={campaignId || scoreCampaignId}
+              contentType="poster"
+              contentId={id}
+              score={score}
+              canScore={canScore}
+              compact
+            />
+          )}
 
           {previousVersions.length > 0 && (
             <div className="border-t pt-3">

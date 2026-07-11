@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   AdminContentFilterBar,
@@ -22,9 +21,11 @@ import {
 import { AdminCompactAddCard } from "@/components/admin/admin-compact-add-card";
 import { AdminSitePublicationCompactCard } from "@/components/admin/admin-site-publication-compact-card";
 import { PlanLabelSelect } from "@/components/admin/plan-label-select";
+import { ContentScoreControl } from "@/components/admin/content-score-control";
 import { MediaUpload } from "@/components/ui/media-upload";
 import { PersianDateField } from "@/components/ui/persian-date-input";
 import { deleteSocialPostAction, saveSocialPostAction } from "@/lib/actions/extended-actions";
+import { normalizePlanLabels, type ContentTopic } from "@/lib/content-topics";
 import { todayISO } from "@/lib/jalali";
 import { isSitePublication } from "@/lib/social-posts";
 import type { SocialMediaPost } from "@/lib/types";
@@ -42,16 +43,20 @@ interface SitePublicationsAdminProps {
   campaignId: string;
   initialPosts: SocialMediaPost[];
   contentPlans?: string[];
+  contentTopics?: ContentTopic[];
+  canScore?: boolean;
 }
 
 export function SitePublicationsAdmin({
   campaignId,
   initialPosts,
   contentPlans = [],
+  contentTopics = [],
+  canScore = false,
 }: SitePublicationsAdminProps) {
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [planLabel, setPlanLabel] = useState<string | null>(null);
+  const [planLabels, setPlanLabels] = useState<string[]>([]);
   const [contentFilter, setContentFilter] = useState<AdminContentFilterState>(DEFAULT_ADMIN_CONTENT_FILTER);
   const [rows, setRows] = useState(initialPosts.filter(isSitePublication));
   const [isPending, startTransition] = useTransition();
@@ -70,27 +75,27 @@ export function SitePublicationsAdmin({
       coverImageUrl: "",
       description: "",
       publishedDate: todayISO(),
-      published: false,
+      published: true,
     },
   });
 
   const openCreate = () => {
     setEditingId(null);
-    setPlanLabel(null);
+    setPlanLabels([]);
     form.reset({
       title: "",
       link: "",
       coverImageUrl: "",
       description: "",
       publishedDate: todayISO(),
-      published: false,
+      published: true,
     });
     setOpen(true);
   };
 
   const openEdit = (post: SocialMediaPost) => {
     setEditingId(post.id);
-    setPlanLabel(post.planLabel ?? null);
+    setPlanLabels(normalizePlanLabels(post.planLabels, post.planLabel));
     form.reset({
       title: post.title,
       link: post.link,
@@ -114,12 +119,13 @@ export function SitePublicationsAdmin({
         coverImageUrl: data.coverImageUrl || null,
         description: data.description || null,
         publishedDate: data.publishedDate,
-        published: data.published,
+        published: true,
         views: 0,
         likes: 0,
         comments: 0,
         shares: 0,
-        planLabel,
+        planLabels,
+        planLabel: planLabels[0] ?? null,
       });
 
       if (!result.success) {
@@ -137,13 +143,14 @@ export function SitePublicationsAdmin({
         coverImageUrl: data.coverImageUrl || null,
         description: data.description || null,
         publishedDate: data.publishedDate,
-        published: data.published,
+        published: true,
         contentType: "text",
         views: 0,
         likes: 0,
         comments: 0,
         shares: 0,
-        planLabel,
+        planLabels,
+        planLabel: planLabels[0] ?? null,
         sortOrder: rows.length + 1,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -202,10 +209,25 @@ export function SitePublicationsAdmin({
             </div>
             <PersianDateField control={form.control} name="publishedDate" label="تاریخ انتشار" />
             <PlanLabelSelect
+              topics={contentTopics}
               plans={contentPlans}
-              value={planLabel}
-              onChange={setPlanLabel}
+              values={planLabels}
+              onChangeMultiple={setPlanLabels}
             />
+            {editingId && (
+              <ContentScoreControl
+                campaignId={campaignId}
+                contentType="site_publication"
+                contentId={editingId}
+                score={rows.find((row) => row.id === editingId)?.score}
+                canScore={canScore}
+                onScoreSaved={(score) =>
+                  setRows((prev) =>
+                    prev.map((row) => (row.id === editingId ? { ...row, score } : row))
+                  )
+                }
+              />
+            )}
             <div className="space-y-2">
               <Label>تصویر شاخص (اختیاری)</Label>
               <MediaUpload
@@ -218,10 +240,6 @@ export function SitePublicationsAdmin({
               <Label>توضیح (اختیاری)</Label>
               <Textarea {...form.register("description")} rows={3} placeholder="خلاصه یا یادداشت درباره این انتشار" />
             </div>
-            <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-              <span>منتشر در صفحه عمومی</span>
-              <Switch checked={form.watch("published")} onCheckedChange={(value) => form.setValue("published", value)} />
-            </label>
             <Button type="submit" disabled={isPending} className="w-full">
               ذخیره
             </Button>

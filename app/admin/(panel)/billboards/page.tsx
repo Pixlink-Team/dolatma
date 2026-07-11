@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getAdminData, getAllUsers } from "@/lib/data-access/admin";
 import { resolveAdminCampaignId } from "@/lib/admin-campaign";
 import { getAuthSession, getOwnerFilter, isFullAdmin } from "@/lib/auth/get-session";
+import { canScoreContent } from "@/lib/auth/access";
 import { requireContributorAccess } from "@/lib/auth/require-contributor-access";
 import { pgGetUserById } from "@/lib/db/repository-extended";
 import {
@@ -24,6 +25,7 @@ export default async function BillboardsPage({ searchParams }: PageProps) {
 
   const session = await getAuthSession();
   const fullAdmin = session ? isFullAdmin(session) : true;
+  const canScore = Boolean(session && canScoreContent(session));
   const ownerUserId = session ? getOwnerFilter(session) : undefined;
   let contributorProfile = null;
 
@@ -54,6 +56,8 @@ export default async function BillboardsPage({ searchParams }: PageProps) {
       campaignId={campaignId}
       initialBillboards={billboards}
       contentPlans={settings?.contentPlans ?? []}
+      contentTopics={settings?.contentTopics ?? []}
+      canScore={canScore}
       liveApiEnabled={Boolean(settings && hasExternalBillboardConnection(settings))}
       externalCampaignSlug={settings ? getExternalCampaignSlug(settings) : null}
       externalCampaignId={settings?.billboardConfig?.externalCampaignId ?? null}

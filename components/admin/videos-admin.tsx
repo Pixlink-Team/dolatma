@@ -20,6 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import type { ContentTopic } from "@/lib/content-topics";
 import type { MediaCategory, Video, VideoVersion } from "@/lib/types";
 
 interface VideosAdminProps {
@@ -28,6 +29,8 @@ interface VideosAdminProps {
   initialVideos: Video[];
   initialVersions: VideoVersion[];
   contentPlans?: string[];
+  contentTopics?: ContentTopic[];
+  canScore?: boolean;
 }
 
 const editorDialogClass =
@@ -39,6 +42,8 @@ export function VideosAdmin({
   initialVideos,
   initialVersions,
   contentPlans = [],
+  contentTopics = [],
+  canScore = false,
 }: VideosAdminProps) {
   const router = useRouter();
   const [videos, setVideos] = useState(initialVideos);
@@ -175,6 +180,8 @@ export function VideosAdmin({
                 versions={activeVersions}
                 categories={initialCategories}
                 contentPlans={contentPlans}
+                contentTopics={contentTopics}
+                canScore={canScore}
                 isNew={isDraftVideo}
                 onClose={closeEditor}
                 onSaved={(savedVideo) => {

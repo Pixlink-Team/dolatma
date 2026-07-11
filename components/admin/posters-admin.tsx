@@ -20,6 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import type { ContentTopic } from "@/lib/content-topics";
 import type { MediaCategory, Poster, PosterVersion } from "@/lib/types";
 
 interface PostersAdminProps {
@@ -28,6 +29,8 @@ interface PostersAdminProps {
   initialPosters: Poster[];
   initialVersions: PosterVersion[];
   contentPlans?: string[];
+  contentTopics?: ContentTopic[];
+  canScore?: boolean;
 }
 
 const editorDialogClass =
@@ -39,6 +42,8 @@ export function PostersAdmin({
   initialPosters,
   initialVersions,
   contentPlans = [],
+  contentTopics = [],
+  canScore = false,
 }: PostersAdminProps) {
   const router = useRouter();
   const [posters, setPosters] = useState(initialPosters);
@@ -173,6 +178,8 @@ export function PostersAdmin({
                 versions={activeVersions}
                 categories={initialCategories}
                 contentPlans={contentPlans}
+                contentTopics={contentTopics}
+                canScore={canScore}
                 isNew={isDraftPoster}
                 onClose={closeEditor}
                 onSaved={(savedPoster) => {

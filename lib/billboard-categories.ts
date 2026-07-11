@@ -6,6 +6,9 @@ export const BILLBOARD_CATEGORIES = [
   "monitor",
   "bridge",
   "bus_shelter",
+  "darbast",
+  "narde",
+  "sakhteman",
   "other",
 ] as const;
 
@@ -19,6 +22,9 @@ export const billboardCategoryLabels: Record<BillboardCategory, string> = {
   monitor: "مانیتور",
   bridge: "پل عابرپیاده",
   bus_shelter: "ایستگاه اتوبوس",
+  darbast: "دربست",
+  narde: "نرده",
+  sakhteman: "ساختمان",
   other: "سایر",
 };
 

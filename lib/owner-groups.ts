@@ -115,6 +115,10 @@ export function sortOwnerGroupsByItemDate<T extends Ownable>(
   });
 }
 
+export function isGlobalContentSortActive(sort: CampaignContentSort): boolean {
+  return sort === "newest" || sort === "oldest" || sort === "top_scored";
+}
+
 export function flattenOwnerGroupsInSortOrder<T extends Ownable>(
   groups: DataOwnerGroup<T>[],
   sort: CampaignContentSort

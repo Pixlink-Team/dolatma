@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import { getAdminData } from "@/lib/data-access/admin";
 import { resolveAdminCampaignId } from "@/lib/admin-campaign";
+import { canScoreContent } from "@/lib/auth/access";
+import { getAuthSession } from "@/lib/auth/get-session";
 import { PostersAdmin } from "@/components/admin/posters-admin";
 
 interface PageProps {
@@ -11,6 +13,8 @@ export default async function PostersPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const { campaignId } = await resolveAdminCampaignId(params.campaign);
   if (!campaignId) redirect("/admin/campaigns");
+  const session = await getAuthSession();
+  const canScore = Boolean(session && canScoreContent(session));
   const data = await getAdminData(campaignId);
   return (
     <PostersAdmin
@@ -19,6 +23,8 @@ export default async function PostersPage({ searchParams }: PageProps) {
       initialPosters={data.posters}
       initialVersions={data.posterVersions}
       contentPlans={data.settings?.contentPlans ?? []}
+      contentTopics={data.settings?.contentTopics ?? []}
+      canScore={canScore}
     />
   );
 }

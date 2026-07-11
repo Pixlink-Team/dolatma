@@ -10,6 +10,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { Ownable } from "@/lib/types";
+import { matchesPlanLabelFilter } from "@/lib/content-topics";
 
 export const ADMIN_FILTER_ALL = "all";
 
@@ -45,7 +46,7 @@ export function matchesAdminContentFilter<T extends Ownable>(
   }
 
   if (filter.planLabel !== ADMIN_FILTER_ALL) {
-    if ((item.planLabel?.trim() ?? "") !== filter.planLabel) return false;
+    if (!matchesPlanLabelFilter(item.planLabels, item.planLabel, filter.planLabel)) return false;
   }
 
   return true;

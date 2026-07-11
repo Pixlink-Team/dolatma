@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo } from "react";
-import Image from "next/image";
 import { ExternalLink, Globe } from "lucide-react";
 import type { DataOwnerGroup, SocialMediaPost } from "@/lib/types";
 import { formatPersianDate } from "@/lib/utils";
@@ -14,6 +13,7 @@ import { useOwnerLocationFilter } from "@/lib/context/owner-location-filter-cont
 import { ShowMoreButton } from "@/components/public/show-more-button";
 import { useSectionPagination } from "@/lib/hooks/use-section-pagination";
 import { Badge } from "@/components/ui/badge";
+import { ImageZoom } from "@/components/ui/image-zoom";
 
 const PUBLICATIONS_ITEMS_PER_ROW = 1;
 
@@ -32,12 +32,11 @@ function PublicationList({ items }: { items: SocialMediaPost[] }) {
         >
           {item.coverImageUrl && (
             <div className="relative w-full sm:w-40 h-28 shrink-0 rounded-lg overflow-hidden bg-muted">
-              <Image
+              <ImageZoom
                 src={item.coverImageUrl}
                 alt={item.title}
-                fill
-                className="object-cover"
-                sizes="160px"
+                className="h-full w-full"
+                imgClassName="object-cover"
               />
             </div>
           )}
@@ -80,7 +79,7 @@ export function SitePublicationsSection({ publications, groups }: SitePublicatio
   const filteredGroups = useFilteredOwnerGroups(groups, (item) => item.publishedDate);
   const filteredPublications = useMemo(
     () =>
-      filter.sortOrder === "newest" || filter.sortOrder === "oldest"
+      filter.sortOrder === "newest" || filter.sortOrder === "oldest" || filter.sortOrder === "top_scored"
         ? flattenOwnerGroupsInSortOrder(filteredGroups, filter.sortOrder)
         : filteredGroups.flatMap((group) => group.items),
     [filteredGroups, filter.sortOrder]

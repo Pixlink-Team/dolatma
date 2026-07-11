@@ -22,6 +22,7 @@ import { MeetingsSection } from "@/components/public/meetings-section";
 import { DeferredSection } from "@/components/public/deferred-section";
 import { CampaignScreenshotExporter } from "@/components/public/campaign-screenshot-exporter";
 import { CampaignExportProvider } from "@/lib/context/campaign-export-context";
+import { ContentScoreProvider } from "@/lib/context/content-score-context";
 import {
   collectCampaignOwnerLocations,
   OwnerLocationFilterProvider,
@@ -36,6 +37,7 @@ interface CampaignDashboardProps {
   initialData: PublicCampaignData;
   slug: string;
   exportMode?: boolean;
+  canScore?: boolean;
 }
 
 function collectAllOwnerGroups(data: PublicCampaignData): DataOwnerGroup<Ownable>[] {
@@ -197,7 +199,11 @@ function CampaignDashboardBody({
         {sections.activities && (
           <DeferredSection minHeight={320} forceRender={exportMode}>
             <section data-export-section data-export-label="اقدامات">
-              <ActivitiesSection activities={data.activities} groups={data.activityGroups} />
+              <ActivitiesSection
+                activities={data.activities}
+                groups={data.activityGroups}
+                sectionId="activities"
+              />
             </section>
           </DeferredSection>
         )}
@@ -263,7 +269,12 @@ function CampaignDashboardBody({
   );
 }
 
-export function CampaignDashboard({ initialData, slug, exportMode = false }: CampaignDashboardProps) {
+export function CampaignDashboard({
+  initialData,
+  slug,
+  exportMode = false,
+  canScore = false,
+}: CampaignDashboardProps) {
   const [data, setData] = useState(initialData);
   const [lastRefresh, setLastRefresh] = useState(() => new Date(initialData.lastUpdated));
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -299,20 +310,22 @@ export function CampaignDashboard({ initialData, slug, exportMode = false }: Cam
 
   return (
     <CampaignExportProvider exportMode={exportMode}>
-      <OwnerLocationFilterProvider
-        users={ownerUsers}
-        locations={ownerLocations}
-        plans={data.settings.contentPlans ?? []}
-      >
-        <CampaignDashboardBody
-          data={data}
-          slug={slug}
-          exportMode={exportMode}
-          lastRefresh={lastRefresh}
-          isRefreshing={isRefreshing}
-          onRefresh={refreshData}
-        />
-      </OwnerLocationFilterProvider>
+      <ContentScoreProvider canScore={canScore} campaignId={data.settings.id}>
+        <OwnerLocationFilterProvider
+          users={ownerUsers}
+          locations={ownerLocations}
+          plans={data.settings.contentPlans ?? []}
+        >
+          <CampaignDashboardBody
+            data={data}
+            slug={slug}
+            exportMode={exportMode}
+            lastRefresh={lastRefresh}
+            isRefreshing={isRefreshing}
+            onRefresh={refreshData}
+          />
+        </OwnerLocationFilterProvider>
+      </ContentScoreProvider>
     </CampaignExportProvider>
   );
 }

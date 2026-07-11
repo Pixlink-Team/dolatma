@@ -90,7 +90,7 @@ export function PostersSection({ categories, posters, groups }: PostersSectionPr
 
   const filteredPosters = useMemo(
     () =>
-      effectiveSort === "newest" || effectiveSort === "oldest"
+      effectiveSort === "newest" || effectiveSort === "oldest" || effectiveSort === "top_scored"
         ? flattenOwnerGroupsInSortOrder(filteredGroups, effectiveSort)
         : filteredGroups.flatMap((group) => group.items),
     [filteredGroups, effectiveSort]
@@ -174,9 +174,12 @@ export function PostersSection({ categories, posters, groups }: PostersSectionPr
                 {groupPosters.map((poster) => (
                   <PosterCard
                     key={poster.id}
+                    id={poster.id}
+                    campaignId={poster.campaignId}
                     title={poster.title}
                     description={poster.description}
                     versions={poster.versions}
+                    score={poster.score}
                   />
                 ))}
               </div>

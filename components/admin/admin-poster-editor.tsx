@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { MediaUpload } from "@/components/ui/media-upload";
 import { MediaThumbnail } from "@/components/ui/media-thumbnail";
 import { PlanLabelSelect } from "@/components/admin/plan-label-select";
+import { ContentScoreControl } from "@/components/admin/content-score-control";
 import {
   Select,
   SelectContent,
@@ -26,6 +27,7 @@ import {
   savePosterAction,
   savePosterVersionAction,
 } from "@/lib/actions/admin-actions";
+import { normalizePlanLabels, type ContentTopic } from "@/lib/content-topics";
 import { todayISO } from "@/lib/jalali";
 import { resolveDisplayVersion } from "@/lib/media-utils";
 import type { MediaCategory, Poster, PosterVersion } from "@/lib/types";
@@ -47,6 +49,8 @@ interface AdminPosterEditorProps {
   versions: PosterVersion[];
   categories: MediaCategory[];
   contentPlans?: string[];
+  contentTopics?: ContentTopic[];
+  canScore?: boolean;
   isNew?: boolean;
   onClose: () => void;
   onSaved?: (poster: Poster) => void;
@@ -81,6 +85,8 @@ export function AdminPosterEditor({
   versions,
   categories,
   contentPlans = [],
+  contentTopics = [],
+  canScore = false,
   isNew = false,
   onClose,
   onSaved,
@@ -96,17 +102,19 @@ export function AdminPosterEditor({
   const [editTitle, setEditTitle] = useState(poster.title);
   const [editDescription, setEditDescription] = useState(poster.description ?? "");
   const [editCategoryId, setEditCategoryId] = useState(poster.categoryId);
-  const [editPublished, setEditPublished] = useState(poster.published);
-  const [editPlanLabel, setEditPlanLabel] = useState<string | null>(poster.planLabel ?? null);
+  const [editPlanLabels, setEditPlanLabels] = useState<string[]>(() =>
+    normalizePlanLabels(poster.planLabels, poster.planLabel)
+  );
+  const [editScore, setEditScore] = useState<number | null | undefined>(poster.score);
 
   useEffect(() => {
     setEditTitle(poster.title);
     setEditDescription(poster.description ?? "");
     setEditCategoryId(poster.categoryId);
-    setEditPublished(poster.published);
-    setEditPlanLabel(poster.planLabel ?? null);
+    setEditPlanLabels(normalizePlanLabels(poster.planLabels, poster.planLabel));
+    setEditScore(poster.score);
     setVersionDrafts(buildPosterVersionDrafts(versions));
-  }, [poster.id, poster.title, poster.description, poster.categoryId, poster.published, poster.planLabel, versions.length]);
+  }, [poster.id, poster.title, poster.description, poster.categoryId, poster.planLabel, poster.planLabels, poster.score, versions.length]);
 
   useLayoutEffect(() => {
     if (!shouldScrollToBottomRef.current) return;
@@ -179,8 +187,10 @@ export function AdminPosterEditor({
         title: editTitle,
         description: editDescription,
         categoryId: editCategoryId,
-        published: editPublished,
-        planLabel: editPlanLabel,
+        published: true,
+        planLabels: editPlanLabels,
+        planLabel: editPlanLabels[0] ?? null,
+        score: editScore,
         updatedAt: new Date().toISOString(),
       };
 
@@ -205,20 +215,6 @@ export function AdminPosterEditor({
 
       toast.success(`ذخیره شد — ${formatPersianNumber(savedCount)} نسخه`);
       onSaved?.(savedPoster);
-      refresh();
-    });
-  };
-
-  const handleTogglePublish = (published: boolean) => {
-    if (isNew) {
-      setEditPublished(published);
-      return;
-    }
-
-    startTransition(async () => {
-      await savePosterAction({ ...poster, published });
-      setEditPublished(published);
-      toast.success(published ? "منتشر شد" : "از انتشار خارج شد");
       refresh();
     });
   };
@@ -291,13 +287,23 @@ export function AdminPosterEditor({
             </Select>
           </div>
           <PlanLabelSelect
+            topics={contentTopics}
             plans={contentPlans}
-            value={editPlanLabel}
-            onChange={setEditPlanLabel}
+            values={editPlanLabels}
+            onChangeMultiple={setEditPlanLabels}
           />
+          {!isNew && (
+            <ContentScoreControl
+              campaignId={poster.campaignId}
+              contentType="poster"
+              contentId={poster.id}
+              score={editScore}
+              canScore={canScore}
+              onScoreSaved={setEditScore}
+            />
+          )}
         </div>
         <div className="flex flex-col items-center gap-2 pt-6">
-          <Switch checked={editPublished} onCheckedChange={handleTogglePublish} />
           <Button variant="ghost" size="icon" onClick={handleDeletePoster} disabled={isPending}>
             <Trash2 className="h-4 w-4 text-destructive" />
           </Button>

@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getAdminData } from "@/lib/data-access/admin";
 import { resolveAdminCampaignId } from "@/lib/admin-campaign";
 import { requireContributorAccess } from "@/lib/auth/require-contributor-access";
+import { canScoreContent } from "@/lib/auth/access";
 import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
 import { SocialHubAdmin } from "@/components/admin/social-hub-admin";
 
@@ -16,6 +17,7 @@ export default async function SocialPostsPage({ searchParams }: PageProps) {
   await requireContributorAccess(campaignId, "socialPosts");
   const session = await getAuthSession();
   const fullAdmin = session ? isFullAdmin(session) : true;
+  const canScore = Boolean(session && canScoreContent(session));
   const data = await getAdminData(campaignId);
   return (
     <SocialHubAdmin
@@ -23,6 +25,8 @@ export default async function SocialPostsPage({ searchParams }: PageProps) {
       initialPosts={data.socialPosts ?? []}
       initialPlatformStats={data.socialPlatformStats ?? []}
       contentPlans={data.settings?.contentPlans ?? []}
+      contentTopics={data.settings?.contentTopics ?? []}
+      canScore={canScore}
       isFullAdmin={fullAdmin}
     />
   );

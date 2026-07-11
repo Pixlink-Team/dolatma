@@ -1,9 +1,10 @@
 "use client";
 
-import { Globe, GlobeLock } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AdminOwnerBadge } from "@/components/admin/admin-owner-badge";
+import { ContentScoreControl } from "@/components/admin/content-score-control";
 import { MediaThumbnail } from "@/components/ui/media-thumbnail";
 import { getBillboardCategoryLabel } from "@/lib/billboard-categories";
 import { formatBillboardCityLine } from "@/lib/billboard-location";
@@ -13,15 +14,17 @@ import { cn } from "@/lib/utils";
 interface AdminBillboardCompactCardProps {
   billboard: Billboard;
   onClick: () => void;
-  onTogglePublish?: (billboard: Billboard) => void;
-  canPublish?: boolean;
+  onDelete?: (billboard: Billboard) => void;
+  canScore?: boolean;
+  onScoreSaved?: (billboard: Billboard, score: number | null) => void;
 }
 
 export function AdminBillboardCompactCard({
   billboard,
   onClick,
-  onTogglePublish,
-  canPublish = false,
+  onDelete,
+  canScore = false,
+  onScoreSaved,
 }: AdminBillboardCompactCardProps) {
   return (
     <div className="group relative w-full overflow-hidden rounded-xl border bg-card text-right transition-all hover:border-primary hover:shadow-md">
@@ -45,13 +48,6 @@ export function AdminBillboardCompactCard({
               {getBillboardCategoryLabel(billboard.category)}
             </Badge>
           </div>
-          {!billboard.published && (
-            <div className="absolute top-1.5 left-1.5">
-              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                پیش‌نویس
-              </Badge>
-            </div>
-          )}
         </div>
         <div className="space-y-1 p-2">
           <p className="truncate text-xs font-medium">{billboard.title}</p>
@@ -62,28 +58,33 @@ export function AdminBillboardCompactCard({
         </div>
       </button>
 
-      {canPublish && onTogglePublish && (
+      {(canScore || billboard.score != null) && (
+        <div className="px-2 pb-2">
+          <ContentScoreControl
+            campaignId={billboard.campaignId}
+            contentType="billboard"
+            contentId={billboard.id}
+            score={billboard.score}
+            canScore={canScore}
+            compact
+            onScoreSaved={(score) => onScoreSaved?.(billboard, score)}
+          />
+        </div>
+      )}
+
+      {onDelete && (
         <Button
           type="button"
-          variant={billboard.published ? "secondary" : "default"}
+          variant="destructive"
           size="sm"
           className="absolute bottom-2 left-2 z-10 h-7 gap-1 px-2 text-[10px]"
           onClick={(event) => {
             event.stopPropagation();
-            onTogglePublish(billboard);
+            onDelete(billboard);
           }}
         >
-          {billboard.published ? (
-            <>
-              <GlobeLock className="h-3 w-3" />
-              لغو انتشار
-            </>
-          ) : (
-            <>
-              <Globe className="h-3 w-3" />
-              انتشار
-            </>
-          )}
+          <Trash2 className="h-3 w-3" />
+          حذف
         </Button>
       )}
     </div>

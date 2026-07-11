@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
@@ -23,6 +22,8 @@ import {
 import { AdminCompactAddCard } from "@/components/admin/admin-compact-add-card";
 import { AdminSocialPostCompactCard } from "@/components/admin/admin-social-post-compact-card";
 import { PlanLabelSelect } from "@/components/admin/plan-label-select";
+import { ContentScoreControl } from "@/components/admin/content-score-control";
+import { normalizePlanLabels, type ContentTopic } from "@/lib/content-topics";
 import { MediaUpload } from "@/components/ui/media-upload";
 import { PersianDateField } from "@/components/ui/persian-date-input";
 import { deleteSocialPostAction, saveSocialPostAction } from "@/lib/actions/extended-actions";
@@ -67,6 +68,8 @@ interface SocialPostsAdminProps {
   campaignId: string;
   initialPosts: SocialMediaPost[];
   contentPlans?: string[];
+  contentTopics?: ContentTopic[];
+  canScore?: boolean;
   embedded?: boolean;
 }
 
@@ -74,11 +77,13 @@ export function SocialPostsAdmin({
   campaignId,
   initialPosts,
   contentPlans = [],
+  contentTopics = [],
+  canScore = false,
   embedded = false,
 }: SocialPostsAdminProps) {
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [planLabel, setPlanLabel] = useState<string | null>(null);
+  const [planLabels, setPlanLabels] = useState<string[]>([]);
   const [contentFilter, setContentFilter] = useState<AdminContentFilterState>(DEFAULT_ADMIN_CONTENT_FILTER);
   const [rows, setRows] = useState(initialPosts.filter((post) => !isSitePublication(post)));
   const [isPending, startTransition] = useTransition();
@@ -104,13 +109,13 @@ export function SocialPostsAdmin({
       mediaUrl: "",
       description: "",
       publishedDate: todayISO(),
-      published: false,
+      published: true,
     },
   });
 
   const openCreate = () => {
     setEditingId(null);
-    setPlanLabel(null);
+    setPlanLabels([]);
     form.reset({
       platform: "instagram",
       title: "",
@@ -124,7 +129,7 @@ export function SocialPostsAdmin({
       mediaUrl: "",
       description: "",
       publishedDate: todayISO(),
-      published: false,
+      published: true,
     });
     setOpen(true);
   };
@@ -132,7 +137,7 @@ export function SocialPostsAdmin({
   const openEdit = (post: SocialMediaPost) => {
     if (isSitePublication(post)) return;
     setEditingId(post.id);
-    setPlanLabel(post.planLabel ?? null);
+    setPlanLabels(normalizePlanLabels(post.planLabels, post.planLabel));
     form.reset({
       platform: post.platform as SocialPlatform,
       title: post.title,
@@ -157,7 +162,9 @@ export function SocialPostsAdmin({
         ...data,
         campaignId,
         id: editingId ?? undefined,
-        planLabel,
+        published: true,
+        planLabels,
+        planLabel: planLabels[0] ?? null,
       });
       if (!result.success) {
         toast.error("ذخیره نشد");
@@ -170,7 +177,7 @@ export function SocialPostsAdmin({
         setRows((prev) =>
           prev.map((row) =>
             row.id === editingId
-              ? { ...row, ...data, campaignId, link: data.link ?? "", planLabel } as SocialMediaPost
+              ? { ...row, ...data, campaignId, link: data.link ?? "", published: true, planLabels, planLabel: planLabels[0] ?? null } as SocialMediaPost
               : row
           )
         );
@@ -185,7 +192,9 @@ export function SocialPostsAdmin({
             sortOrder: prev.length,
             ...data,
             link: data.link ?? "",
-            planLabel,
+            published: true,
+            planLabels,
+            planLabel: planLabels[0] ?? null,
           } as SocialMediaPost,
         ]);
       }
@@ -270,10 +279,25 @@ export function SocialPostsAdmin({
             </div>
 
             <PlanLabelSelect
+              topics={contentTopics}
               plans={contentPlans}
-              value={planLabel}
-              onChange={setPlanLabel}
+              values={planLabels}
+              onChangeMultiple={setPlanLabels}
             />
+            {editingId && (
+              <ContentScoreControl
+                campaignId={campaignId}
+                contentType="social_post"
+                contentId={editingId}
+                score={rows.find((row) => row.id === editingId)?.score}
+                canScore={canScore}
+                onScoreSaved={(score) =>
+                  setRows((prev) =>
+                    prev.map((row) => (row.id === editingId ? { ...row, score } : row))
+                  )
+                }
+              />
+            )}
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <div className="space-y-2"><Label>بازدید</Label><Input type="number" {...form.register("views")} /></div>
@@ -301,10 +325,7 @@ export function SocialPostsAdmin({
               />
             </div>
 
-            <div className="flex items-center gap-2">
-              <Switch checked={form.watch("published")} onCheckedChange={(value) => form.setValue("published", value)} />
-              <Label>منتشر شود</Label>
-            </div>
+
 
             <Button type="submit" disabled={isPending} className="w-full">ذخیره</Button>
             {editingId && (

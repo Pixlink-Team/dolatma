@@ -153,6 +153,7 @@ export function OwnerLocationFilterBar() {
             <SelectItem value="default">ترتیب پیش‌فرض</SelectItem>
             <SelectItem value="newest">جدیدترین</SelectItem>
             <SelectItem value="oldest">قدیمی‌ترین</SelectItem>
+            <SelectItem value="top_scored">۵ برتر (امتیاز)</SelectItem>
           </SelectContent>
         </Select>
 

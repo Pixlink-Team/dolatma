@@ -22,7 +22,23 @@ export interface RecentActivityItem {
   typeLabel: string;
   ownerName: string;
   timestamp: string;
+  contentType?: string;
+  contentId?: string;
+  href?: string;
 }
+
+const SECTION_HREF_BY_LABEL: Record<string, string> = {
+  بیلبورد: "#billboards",
+  پوستر: "#posters",
+  ویدیو: "#videos",
+  "پست اجتماعی": "#social-posts",
+  "انتشار سایت": "#site-publications",
+  اقدام: "#activities",
+  "رسانه چاپی": "#activities",
+  پخش: "#broadcast-reports",
+  جلسه: "#meetings",
+  فایل: "#files",
+};
 
 const DAY_MS = 86_400_000;
 
@@ -114,21 +130,25 @@ function filterCampaignData(
   };
 }
 
-function pushActivity<T extends Ownable>(
+function pushActivity<T extends Ownable & { id: string }>(
   entries: RecentActivityItem[],
   items: T[],
   typeLabel: string,
-  getTimestamp: (item: T) => string
+  getTimestamp: (item: T) => string,
+  contentType?: string
 ) {
   for (const item of items) {
     const timestamp = getTimestamp(item);
     if (!timestamp) continue;
 
     entries.push({
-      id: `${typeLabel}-${timestamp}-${item.ownerUserId ?? item.ownerEmail ?? entries.length}`,
+      id: `${typeLabel}-${item.id}-${timestamp}`,
       typeLabel,
       ownerName: item.ownerName?.trim() || "کاربر",
       timestamp,
+      contentType,
+      contentId: item.id,
+      href: SECTION_HREF_BY_LABEL[typeLabel],
     });
   }
 }
@@ -147,33 +167,34 @@ export function buildRecentActivityFeed(
       entries,
       filtered.billboards.filter((billboard) => !isLiveApiBillboard(billboard)),
       "بیلبورد",
-      (billboard) => getBillboardUploadActivityDate(billboard as Billboard)
+      (billboard) => getBillboardUploadActivityDate(billboard as Billboard),
+      "billboard"
     );
   }
   if (sections.posters) {
-    pushActivity(entries, filtered.posters, "پوستر", getSafeUploadTimestamp);
+    pushActivity(entries, filtered.posters, "پوستر", getSafeUploadTimestamp, "poster");
   }
   if (sections.videos) {
-    pushActivity(entries, filtered.videos, "ویدیو", getSafeUploadTimestamp);
+    pushActivity(entries, filtered.videos, "ویدیو", getSafeUploadTimestamp, "video");
   }
   if (sections.socialPosts) {
-    pushActivity(entries, filtered.socialPosts, "پست اجتماعی", getSafeUploadTimestamp);
+    pushActivity(entries, filtered.socialPosts, "پست اجتماعی", getSafeUploadTimestamp, "social_post");
   }
   if (sections.sitePublications) {
-    pushActivity(entries, filtered.sitePublications, "انتشار سایت", getSafeUploadTimestamp);
+    pushActivity(entries, filtered.sitePublications, "انتشار سایت", getSafeUploadTimestamp, "site_publication");
   }
   if (sections.activities) {
-    pushActivity(entries, filtered.activities, "اقدام", getSafeUploadTimestamp);
-    pushActivity(entries, filtered.pressPublications, "رسانه چاپی", getSafeUploadTimestamp);
+    pushActivity(entries, filtered.activities, "اقدام", getSafeUploadTimestamp, "activity");
+    pushActivity(entries, filtered.pressPublications, "رسانه چاپی", getSafeUploadTimestamp, "activity");
   }
   if (sections.broadcastReports) {
-    pushActivity(entries, filtered.broadcastReports, "پخش", getSafeUploadTimestamp);
+    pushActivity(entries, filtered.broadcastReports, "پخش", getSafeUploadTimestamp, "broadcast");
   }
   if (sections.meetings) {
-    pushActivity(entries, filtered.meetings, "جلسه", (item) => item.meetingDate);
+    pushActivity(entries, filtered.meetings, "جلسه", (item) => item.meetingDate, "meeting");
   }
   if (sections.files) {
-    pushActivity(entries, filtered.files, "فایل", getSafeUploadTimestamp);
+    pushActivity(entries, filtered.files, "فایل", getSafeUploadTimestamp, "file");
   }
 
   return entries

@@ -46,19 +46,19 @@ export function activityHasDisplayContent(activity: {
   return Boolean(activity.imageUrl?.trim() || activity.videoUrl?.trim());
 }
 
-export type PublicMediaSort = "default" | "title" | "newest" | "oldest";
+export type PublicMediaSort = "default" | "title" | "newest" | "oldest" | "top_scored";
 
 export function resolvePublicMediaSort(
   globalSort: string,
   localSort: PublicMediaSort
 ): PublicMediaSort {
-  if (globalSort === "newest" || globalSort === "oldest") {
+  if (globalSort === "newest" || globalSort === "oldest" || globalSort === "top_scored") {
     return globalSort;
   }
   return localSort;
 }
 
-export function sortByPublicMediaOrder<T extends { title: string; sortOrder: number }>(
+export function sortByPublicMediaOrder<T extends { title: string; sortOrder: number; score?: number | null }>(
   items: T[],
   sort: PublicMediaSort,
   getLatestDate?: (item: T) => string | undefined
@@ -83,6 +83,12 @@ export function sortByPublicMediaOrder<T extends { title: string; sortOrder: num
       const dateB = getLatestDate?.(b) ?? "";
       return dateA.localeCompare(dateB);
     });
+  }
+
+  if (sort === "top_scored") {
+    return copy
+      .sort((a, b) => (b.score ?? -1) - (a.score ?? -1))
+      .slice(0, 5);
   }
 
   return copy.sort((a, b) => a.sortOrder - b.sortOrder);

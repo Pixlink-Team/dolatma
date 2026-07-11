@@ -119,17 +119,31 @@ export function RecentActivityFeed({
           <>
             <ul className="divide-y">
               {visibleItems.map((item) => (
-                <li
-                  key={item.id}
-                  className="flex items-start justify-between gap-3 py-3 first:pt-0 last:pb-0"
-                >
-                  <div className="min-w-0 space-y-1">
-                    <p className="text-sm font-semibold">{item.ownerName}</p>
-                    <p className="text-sm text-muted-foreground">{item.typeLabel}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatPersianDateTime(item.timestamp)}
-                    </p>
-                  </div>
+                <li key={item.id} className="py-3 first:pt-0 last:pb-0">
+                  {item.href ? (
+                    <a
+                      href={item.href}
+                      className="flex items-start justify-between gap-3 rounded-md transition-colors hover:bg-muted/50"
+                    >
+                      <div className="min-w-0 space-y-1">
+                        <p className="text-sm font-semibold">{item.ownerName}</p>
+                        <p className="text-sm text-muted-foreground">{item.typeLabel}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatPersianDateTime(item.timestamp)}
+                        </p>
+                      </div>
+                    </a>
+                  ) : (
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 space-y-1">
+                        <p className="text-sm font-semibold">{item.ownerName}</p>
+                        <p className="text-sm text-muted-foreground">{item.typeLabel}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatPersianDateTime(item.timestamp)}
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </li>
               ))}
             </ul>

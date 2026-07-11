@@ -51,6 +51,7 @@ export function getOwnerFilterLabel(
 
   if (filter.sortOrder === "newest") parts.push("جدیدترین");
   if (filter.sortOrder === "oldest") parts.push("قدیمی‌ترین");
+  if (filter.sortOrder === "top_scored") parts.push("۵ برتر (امتیاز)");
 
   return parts.length > 0 ? parts.join(" · ") : null;
 }

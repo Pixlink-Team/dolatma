@@ -101,7 +101,7 @@ export function RawMediaSection({ items, groups, storage }: RawMediaSectionProps
   const filteredGroups = useFilteredOwnerGroups(groups);
   const filteredItems = useMemo(
     () =>
-      filter.sortOrder === "newest" || filter.sortOrder === "oldest"
+      filter.sortOrder === "newest" || filter.sortOrder === "oldest" || filter.sortOrder === "top_scored"
         ? flattenOwnerGroupsInSortOrder(filteredGroups, filter.sortOrder)
         : filteredGroups.flatMap((group) => group.items),
     [filteredGroups, filter.sortOrder]

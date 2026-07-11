@@ -145,7 +145,7 @@ export function ActivitiesSection({
   const filteredGroups = useFilteredOwnerGroups(groups, (activity) => activity.activityDate);
   const filteredActivities = useMemo(
     () =>
-      filter.sortOrder === "newest" || filter.sortOrder === "oldest"
+      filter.sortOrder === "newest" || filter.sortOrder === "oldest" || filter.sortOrder === "top_scored"
         ? flattenOwnerGroupsInSortOrder(filteredGroups, filter.sortOrder)
         : filteredGroups.flatMap((group) => group.items),
     [filteredGroups, filter.sortOrder]

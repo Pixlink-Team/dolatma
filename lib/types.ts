@@ -94,8 +94,10 @@ export interface CampaignSettings {
   features: CampaignFeatures;
   analyticsConfig: AnalyticsConfig;
   billboardConfig: BillboardConfig;
-  /** Campaign content plan names configured by admin (e.g. مهتاب، سامان). */
+  /** Campaign content plan names configured by admin (e.g. مهتاب، سامان). Legacy flat list. */
   contentPlans?: string[];
+  /** Hierarchical topics with optional subtopics (موضوع / زیرموضوع). */
+  contentTopics?: import("./content-topics").ContentTopic[];
   /** Public label for admin-owned content groups (no contributor user). */
   adminOwnerLabel?: string | null;
   meetingsViewPasswordHash?: string | null;
@@ -119,8 +121,25 @@ export interface Ownable {
   ownerEmail?: string | null;
   ownerProvince?: string | null;
   ownerCity?: string | null;
+  /** Legacy single topic — prefer planLabels. */
   planLabel?: string | null;
+  /** Multiple topic/subtopic tokens (e.g. "مهتاب" or "مهتاب|هفته اول"). */
+  planLabels?: string[];
+  /** Numeric score set by admin/client. */
+  score?: number | null;
 }
+
+export type ScoreableContentType =
+  | "billboard"
+  | "poster"
+  | "video"
+  | "file"
+  | "raw_media"
+  | "social_post"
+  | "site_publication"
+  | "activity"
+  | "broadcast"
+  | "meeting";
 
 export interface BillboardDisplayPeriod {
   id: string;
@@ -348,13 +367,9 @@ export interface SocialAnalyticsSummary {
   hasData: boolean;
 }
 
-export interface SocialMediaPost {
+export interface SocialMediaPost extends Ownable {
   id: string;
   campaignId: string;
-  ownerUserId?: string | null;
-  ownerName?: string | null;
-  ownerProvince?: string | null;
-  ownerCity?: string | null;
   platform: SocialPostPlatform;
   title: string;
   coverImageUrl?: string | null;
@@ -369,7 +384,6 @@ export interface SocialMediaPost {
   publishedDate: string;
   published: boolean;
   sortOrder: number;
-  planLabel?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -407,13 +421,9 @@ export interface BroadcastReportSummary {
   parseError?: string;
 }
 
-export interface BroadcastReport {
+export interface BroadcastReport extends Ownable {
   id: string;
   campaignId: string;
-  ownerUserId?: string | null;
-  ownerName?: string | null;
-  ownerProvince?: string | null;
-  ownerCity?: string | null;
   title: string;
   reportDate: string;
   pdfUrl: string;
@@ -421,7 +431,6 @@ export interface BroadcastReport {
   summaryData: BroadcastReportSummary;
   published: boolean;
   sortOrder: number;
-  planLabel?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -432,13 +441,9 @@ export interface ActivityMediaItem {
   url: string;
 }
 
-export interface CampaignActivity {
+export interface CampaignActivity extends Ownable {
   id: string;
   campaignId: string;
-  ownerUserId?: string | null;
-  ownerName?: string | null;
-  ownerProvince?: string | null;
-  ownerCity?: string | null;
   title: string;
   activityType: ActivityType;
   activityDate: string;
@@ -449,7 +454,6 @@ export interface CampaignActivity {
   description?: string | null;
   published: boolean;
   sortOrder: number;
-  planLabel?: string | null;
   createdAt: string;
   updatedAt: string;
 }

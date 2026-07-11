@@ -8,3 +8,8 @@ export function isClientUser(session: AuthSession): boolean {
 export function canAccessNotifications(session: AuthSession): boolean {
   return isFullAdmin(session) || isClientUser(session);
 }
+
+/** Only admin and client (کارفرما) can score content. */
+export function canScoreContent(session: AuthSession): boolean {
+  return isFullAdmin(session) || isClientUser(session);
+}

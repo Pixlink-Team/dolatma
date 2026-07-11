@@ -32,8 +32,18 @@ import type {
 } from "@/lib/types";
 import { generateId, slugify } from "@/lib/utils";
 import { serializeAnalyticsConfig } from "@/lib/analytics-config";
+import { normalizePlanLabels, normalizeContentTopics } from "@/lib/content-topics";
 import { resolveUploadFilePath } from "@/lib/uploads";
 import { unlink } from "fs/promises";
+import type { Ownable } from "@/lib/types";
+
+function resolvePlanFields(data: Partial<Ownable>) {
+  const planLabels = normalizePlanLabels(data.planLabels, data.planLabel);
+  return {
+    planLabel: planLabels[0] ?? null,
+    planLabels,
+  };
+}
 
 async function tryDeleteUploadedFile(fileUrl?: string | null) {
   if (!fileUrl) return;
@@ -231,6 +241,11 @@ export async function pgSaveCampaign(data: Partial<CampaignSettings> & { id?: st
   const id = data.id ?? generateId();
   const features = data.features ?? defaultFeatures;
 
+  const contentPlansPayload =
+    data.contentTopics && data.contentTopics.length > 0
+      ? normalizeContentTopics(data.contentTopics)
+      : (data.contentPlans ?? []).map((name) => ({ name, subtopics: [] as string[] }));
+
   await sql`
     INSERT INTO campaign_settings (
       id, slug, title, description, status, start_date, end_date,
@@ -249,7 +264,7 @@ export async function pgSaveCampaign(data: Partial<CampaignSettings> & { id?: st
       ${sql.json(JSON.parse(JSON.stringify(serializeAnalyticsConfig(data.analyticsConfig ?? { site: { source: "manual" }, social: { source: "manual" } }))))},
       ${sql.json(JSON.parse(JSON.stringify(data.billboardConfig ?? {})))},
       ${data.adminOwnerLabel?.trim() || "مدیریت"},
-      ${sql.json(data.contentPlans ?? [])},
+      ${sql.json(JSON.parse(JSON.stringify(contentPlansPayload)))},
       ${now}
     )
     ON CONFLICT (id) DO UPDATE SET
@@ -292,6 +307,7 @@ export async function pgSaveBillboard(data: Partial<Billboard> & { id?: string }
   const sql = getSql();
   const now = new Date().toISOString();
   const id = data.id ?? generateId();
+  const { planLabel, planLabels } = resolvePlanFields(data);
 
   const countRows = await sql`
     SELECT COUNT(*)::int AS count FROM billboards WHERE campaign_id = ${data.campaignId ?? ""}
@@ -302,7 +318,7 @@ export async function pgSaveBillboard(data: Partial<Billboard> & { id?: string }
     INSERT INTO billboards (
       id, campaign_id, title, description, province, city, location, date,
       thumbnail_url, image_url, external_url, latitude, longitude, source, external_id,
-      category, area_sqm, status, tags, notes, published, sort_order, owner_user_id, plan_label,
+      category, area_sqm, status, tags, notes, published, sort_order, owner_user_id, plan_label, plan_labels, score,
       created_at, updated_at
     ) VALUES (
       ${id},
@@ -322,13 +338,15 @@ export async function pgSaveBillboard(data: Partial<Billboard> & { id?: string }
       ${data.externalId ?? null},
       ${data.category ?? null},
       ${data.areaSqm ?? null},
-      ${data.status ?? "draft"},
+      ${data.status ?? "published"},
       ${sql.array(data.tags ?? [])},
       ${data.notes ?? null},
-      ${data.published ?? false},
+      ${data.published ?? true},
       ${sortOrder},
       ${data.ownerUserId ?? null},
-      ${data.planLabel ?? null},
+      ${planLabel},
+      ${sql.json(planLabels)},
+      ${data.score ?? null},
       ${now},
       ${now}
     )
@@ -354,6 +372,8 @@ export async function pgSaveBillboard(data: Partial<Billboard> & { id?: string }
       published = EXCLUDED.published,
       sort_order = EXCLUDED.sort_order,
       plan_label = EXCLUDED.plan_label,
+      plan_labels = EXCLUDED.plan_labels,
+      score = COALESCE(EXCLUDED.score, billboards.score),
       updated_at = EXCLUDED.updated_at
   `;
 
@@ -470,6 +490,7 @@ export async function pgSavePoster(data: Partial<Poster> & { id?: string }) {
   const sql = getSql();
   const now = new Date().toISOString();
   const id = data.id ?? generateId();
+  const { planLabel, planLabels } = resolvePlanFields(data);
 
   const countRows = await sql`
     SELECT COUNT(*)::int AS count FROM posters WHERE campaign_id = ${data.campaignId ?? ""}
@@ -478,17 +499,19 @@ export async function pgSavePoster(data: Partial<Poster> & { id?: string }) {
 
   await sql`
     INSERT INTO posters (
-      id, campaign_id, category_id, title, description, published, sort_order, owner_user_id, plan_label, created_at, updated_at
+      id, campaign_id, category_id, title, description, published, sort_order, owner_user_id, plan_label, plan_labels, score, created_at, updated_at
     ) VALUES (
       ${id},
       ${data.campaignId ?? ""},
       ${data.categoryId ?? ""},
       ${data.title ?? ""},
       ${data.description ?? null},
-      ${data.published ?? false},
+      ${data.published ?? true},
       ${sortOrder},
       ${data.ownerUserId ?? null},
-      ${data.planLabel ?? null},
+      ${planLabel},
+      ${sql.json(planLabels)},
+      ${data.score ?? null},
       ${now},
       ${now}
     )
@@ -499,6 +522,8 @@ export async function pgSavePoster(data: Partial<Poster> & { id?: string }) {
       published = EXCLUDED.published,
       sort_order = EXCLUDED.sort_order,
       plan_label = EXCLUDED.plan_label,
+      plan_labels = EXCLUDED.plan_labels,
+      score = COALESCE(EXCLUDED.score, posters.score),
       updated_at = EXCLUDED.updated_at
   `;
 
@@ -570,6 +595,7 @@ export async function pgSaveVideo(data: Partial<Video> & { id?: string }) {
   const sql = getSql();
   const now = new Date().toISOString();
   const id = data.id ?? generateId();
+  const { planLabel, planLabels } = resolvePlanFields(data);
 
   const countRows = await sql`
     SELECT COUNT(*)::int AS count FROM videos WHERE campaign_id = ${data.campaignId ?? ""}
@@ -578,17 +604,19 @@ export async function pgSaveVideo(data: Partial<Video> & { id?: string }) {
 
   await sql`
     INSERT INTO videos (
-      id, campaign_id, category_id, title, description, published, sort_order, owner_user_id, plan_label, created_at, updated_at
+      id, campaign_id, category_id, title, description, published, sort_order, owner_user_id, plan_label, plan_labels, score, created_at, updated_at
     ) VALUES (
       ${id},
       ${data.campaignId ?? ""},
       ${data.categoryId ?? ""},
       ${data.title ?? ""},
       ${data.description ?? null},
-      ${data.published ?? false},
+      ${data.published ?? true},
       ${sortOrder},
       ${data.ownerUserId ?? null},
-      ${data.planLabel ?? null},
+      ${planLabel},
+      ${sql.json(planLabels)},
+      ${data.score ?? null},
       ${now},
       ${now}
     )
@@ -599,6 +627,8 @@ export async function pgSaveVideo(data: Partial<Video> & { id?: string }) {
       published = EXCLUDED.published,
       sort_order = EXCLUDED.sort_order,
       plan_label = EXCLUDED.plan_label,
+      plan_labels = EXCLUDED.plan_labels,
+      score = COALESCE(EXCLUDED.score, videos.score),
       updated_at = EXCLUDED.updated_at
   `;
 
@@ -963,11 +993,12 @@ export async function pgSaveCampaignFile(data: Partial<CampaignFile> & { id?: st
   const sql = getSql();
   const now = new Date().toISOString();
   const id = data.id ?? generateId();
+  const { planLabel, planLabels } = resolvePlanFields(data);
 
   await sql`
     INSERT INTO campaign_files (
       id, campaign_id, title, description, file_url, file_name, mime_type, file_size,
-      published, sort_order, owner_user_id, plan_label, created_at, updated_at
+      published, sort_order, owner_user_id, plan_label, plan_labels, score, created_at, updated_at
     ) VALUES (
       ${id},
       ${data.campaignId ?? ""},
@@ -977,10 +1008,12 @@ export async function pgSaveCampaignFile(data: Partial<CampaignFile> & { id?: st
       ${data.fileName ?? ""},
       ${data.mimeType ?? "application/octet-stream"},
       ${data.fileSize ?? 0},
-      ${data.published ?? false},
+      ${data.published ?? true},
       ${data.sortOrder ?? 0},
       ${data.ownerUserId ?? null},
-      ${data.planLabel ?? null},
+      ${planLabel},
+      ${sql.json(planLabels)},
+      ${data.score ?? null},
       ${now},
       ${now}
     )
@@ -994,6 +1027,8 @@ export async function pgSaveCampaignFile(data: Partial<CampaignFile> & { id?: st
       published = EXCLUDED.published,
       sort_order = EXCLUDED.sort_order,
       plan_label = EXCLUDED.plan_label,
+      plan_labels = EXCLUDED.plan_labels,
+      score = COALESCE(EXCLUDED.score, campaign_files.score),
       updated_at = EXCLUDED.updated_at
   `;
 
@@ -1010,11 +1045,12 @@ export async function pgSaveRawMediaUpload(data: Partial<RawMediaUpload> & { id?
   const sql = getSql();
   const now = new Date().toISOString();
   const id = data.id ?? generateId();
+  const { planLabel, planLabels } = resolvePlanFields(data);
 
   await sql`
     INSERT INTO raw_media_uploads (
       id, campaign_id, title, description, media_kind, file_url, file_name, mime_type, file_size,
-      published, sort_order, owner_user_id, plan_label, created_at, updated_at
+      published, sort_order, owner_user_id, plan_label, plan_labels, score, created_at, updated_at
     ) VALUES (
       ${id},
       ${data.campaignId ?? ""},
@@ -1028,7 +1064,9 @@ export async function pgSaveRawMediaUpload(data: Partial<RawMediaUpload> & { id?
       ${data.published ?? true},
       ${data.sortOrder ?? 0},
       ${data.ownerUserId ?? null},
-      ${data.planLabel ?? null},
+      ${planLabel},
+      ${sql.json(planLabels)},
+      ${data.score ?? null},
       ${now},
       ${now}
     )
@@ -1044,6 +1082,8 @@ export async function pgSaveRawMediaUpload(data: Partial<RawMediaUpload> & { id?
       sort_order = EXCLUDED.sort_order,
       owner_user_id = EXCLUDED.owner_user_id,
       plan_label = EXCLUDED.plan_label,
+      plan_labels = EXCLUDED.plan_labels,
+      score = COALESCE(EXCLUDED.score, raw_media_uploads.score),
       updated_at = EXCLUDED.updated_at
   `;
 

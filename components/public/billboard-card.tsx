@@ -4,12 +4,15 @@ import { Eye, MapPin } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { ImageZoom } from "@/components/ui/image-zoom";
+import { ContentScoreControl } from "@/components/admin/content-score-control";
 import { BillboardThumbnail } from "@/components/public/billboard-thumbnail";
-import { PublishStatusBadge } from "@/components/public/publish-status-badge";
+import { useContentScoreAccess } from "@/lib/context/content-score-context";
 import {
   getBillboardDateLabel,
   getBillboardDisplayDays,
 } from "@/lib/billboards";
+import { getBillboardDisplayImage, hasBillboardDisplayImage } from "@/lib/billboard-media";
 import { parseProvinceFromBillboard } from "@/lib/billboard-form-utils";
 import type { Billboard } from "@/lib/types";
 import { formatPersianDate, formatPersianNumber } from "@/lib/utils";
@@ -29,24 +32,30 @@ function resolveBillboardAddress(billboard: Billboard): string {
 }
 
 export function BillboardCard({ billboard, onView }: BillboardCardProps) {
+  const { canScore, campaignId } = useContentScoreAccess();
   const province = parseProvinceFromBillboard(billboard) || "نامشخص";
   const address = resolveBillboardAddress(billboard);
   const dateLabel = getBillboardDateLabel(billboard);
   const displayDays = getBillboardDisplayDays(billboard);
+  const canZoom = hasBillboardDisplayImage(billboard);
 
   return (
     <Card className="group flex h-full w-full max-w-sm flex-col overflow-hidden">
       <div className="relative aspect-[4/3] shrink-0 overflow-hidden bg-muted">
-        <BillboardThumbnail
-          billboard={billboard}
-          alt={billboard.title}
-          sizes="(max-width: 768px) 100vw, 320px"
-          imageClassName="transition-transform group-hover:scale-105"
-        />
-        {!billboard.published && (
-          <div className="absolute top-3 left-3">
-            <PublishStatusBadge published={billboard.published} className="bg-background/90 text-xs" />
-          </div>
+        {canZoom ? (
+          <ImageZoom
+            src={getBillboardDisplayImage(billboard)}
+            alt={billboard.title}
+            className="absolute inset-0 h-full w-full"
+            imgClassName="transition-transform group-hover:scale-105"
+          />
+        ) : (
+          <BillboardThumbnail
+            billboard={billboard}
+            alt={billboard.title}
+            sizes="(max-width: 768px) 100vw, 320px"
+            imageClassName="transition-transform group-hover:scale-105"
+          />
         )}
       </div>
 
@@ -73,6 +82,17 @@ export function BillboardCard({ billboard, onView }: BillboardCardProps) {
             <p>{formatPersianNumber(displayDays)} روز نمایش</p>
           )}
         </div>
+
+        {(canScore || billboard.score != null) && (
+          <ContentScoreControl
+            campaignId={campaignId || billboard.campaignId}
+            contentType="billboard"
+            contentId={billboard.id}
+            score={billboard.score}
+            canScore={canScore}
+            compact
+          />
+        )}
       </CardContent>
 
       <CardFooter className="mt-auto p-4 pt-0">

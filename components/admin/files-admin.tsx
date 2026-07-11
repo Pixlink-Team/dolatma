@@ -3,7 +3,6 @@
 import { useMemo, useState, useTransition } from "react";
 import { Download, FileSpreadsheet, FileText, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
 import { AdminOwnerBadge } from "@/components/admin/admin-owner-badge";
 import {
   AdminContentFilterBar,
@@ -13,6 +12,7 @@ import {
   type AdminContentFilterState,
 } from "@/components/admin/admin-content-filter-bar";
 import { PlanLabelSelect } from "@/components/admin/plan-label-select";
+import { ContentScoreControl } from "@/components/admin/content-score-control";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -24,9 +24,9 @@ import {
 import { DocumentUpload } from "@/components/ui/document-upload";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { deleteCampaignFileAction, saveCampaignFileAction } from "@/lib/actions/admin-actions";
+import type { ContentTopic } from "@/lib/content-topics";
 import type { CampaignFile } from "@/lib/types";
 import { formatPersianNumber } from "@/lib/utils";
 
@@ -34,6 +34,8 @@ interface FilesAdminProps {
   campaignId: string;
   initialFiles: CampaignFile[];
   contentPlans?: string[];
+  contentTopics?: ContentTopic[];
+  canScore?: boolean;
 }
 
 function formatFileSize(bytes: number): string {
@@ -49,12 +51,18 @@ function fileIcon(mimeType: string) {
   return FileText;
 }
 
-export function FilesAdmin({ campaignId, initialFiles, contentPlans = [] }: FilesAdminProps) {
+export function FilesAdmin({
+  campaignId,
+  initialFiles,
+  contentPlans = [],
+  contentTopics = [],
+  canScore = false,
+}: FilesAdminProps) {
   const [files, setFiles] = useState(initialFiles);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [planLabel, setPlanLabel] = useState<string | null>(null);
+  const [planLabels, setPlanLabels] = useState<string[]>([]);
   const [contentFilter, setContentFilter] = useState<AdminContentFilterState>(DEFAULT_ADMIN_CONTENT_FILTER);
   const [upload, setUpload] = useState({
     url: "",
@@ -73,7 +81,7 @@ export function FilesAdmin({ campaignId, initialFiles, contentPlans = [] }: File
   const resetForm = () => {
     setTitle("");
     setDescription("");
-    setPlanLabel(null);
+    setPlanLabels([]);
     setUpload({ url: "", fileName: "", fileSize: 0, mimeType: "" });
   };
 
@@ -98,7 +106,8 @@ export function FilesAdmin({ campaignId, initialFiles, contentPlans = [] }: File
         mimeType: upload.mimeType,
         published: true,
         sortOrder: files.length + 1,
-        planLabel,
+        planLabels,
+        planLabel: planLabels[0] ?? null,
       });
 
       if (!result.success || !("id" in result) || !result.id) {
@@ -120,7 +129,8 @@ export function FilesAdmin({ campaignId, initialFiles, contentPlans = [] }: File
           mimeType: upload.mimeType,
           published: true,
           sortOrder: prev.length + 1,
-          planLabel,
+          planLabels,
+          planLabel: planLabels[0] ?? null,
           createdAt: now,
           updatedAt: now,
         },
@@ -128,16 +138,6 @@ export function FilesAdmin({ campaignId, initialFiles, contentPlans = [] }: File
       toast.success("فایل اضافه شد");
       setDialogOpen(false);
       resetForm();
-    });
-  };
-
-  const handleTogglePublish = (file: CampaignFile, published: boolean) => {
-    startTransition(async () => {
-      await saveCampaignFileAction({ ...file, published });
-      setFiles((prev) =>
-        prev.map((item) => (item.id === file.id ? { ...item, published } : item))
-      );
-      toast.success(published ? "منتشر شد" : "از انتشار خارج شد");
     });
   };
 
@@ -192,9 +192,6 @@ export function FilesAdmin({ campaignId, initialFiles, contentPlans = [] }: File
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="font-medium">{file.title}</p>
                       <AdminOwnerBadge ownerUserId={file.ownerUserId} ownerName={file.ownerName} />
-                      <Badge variant={file.published ? "success" : "secondary"}>
-                        {file.published ? "منتشر" : "پیش‌نویس"}
-                      </Badge>
                     </div>
                     <p className="text-xs text-muted-foreground">{file.fileName}</p>
                     {file.description && (
@@ -203,15 +200,25 @@ export function FilesAdmin({ campaignId, initialFiles, contentPlans = [] }: File
                     <p className="mt-1 text-xs text-muted-foreground">
                       {formatFileSize(file.fileSize)}
                     </p>
+                    <div className="mt-2">
+                      <ContentScoreControl
+                        campaignId={campaignId}
+                        contentType="file"
+                        contentId={file.id}
+                        score={file.score}
+                        canScore={canScore}
+                        compact
+                        onScoreSaved={(score) =>
+                          setFiles((prev) =>
+                            prev.map((item) => (item.id === file.id ? { ...item, score } : item))
+                          )
+                        }
+                      />
+                    </div>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <Switch
-                    checked={file.published}
-                    onCheckedChange={(value) => handleTogglePublish(file, value)}
-                    disabled={isPending}
-                  />
                   <Button variant="outline" size="sm" asChild>
                     <a href={file.fileUrl} target="_blank" rel="noopener noreferrer">
                       <Download className="h-4 w-4" />
@@ -256,9 +263,10 @@ export function FilesAdmin({ campaignId, initialFiles, contentPlans = [] }: File
               />
             </div>
             <PlanLabelSelect
+              topics={contentTopics}
               plans={contentPlans}
-              value={planLabel}
-              onChange={setPlanLabel}
+              values={planLabels}
+              onChangeMultiple={setPlanLabels}
             />
             <DocumentUpload
               label="فایل"

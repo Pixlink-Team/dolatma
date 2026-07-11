@@ -2,16 +2,19 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { ArrowRight, MapPin, Medal, Trophy, Users } from "lucide-react";
+import { ArrowRight, MapPin, Medal, Star, Trophy, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChartCard } from "@/components/charts/bar-chart-card";
 import { SectionHeader } from "@/components/public/section-header";
+import { UserContentScoreModal } from "@/components/public/user-content-score-modal";
 import {
   buildProvinceContributorLeaderboard,
   buildProvinceLeaderboard,
   buildUserLeaderboard,
+  buildUserRatingLeaderboard,
+  collectUserContentItems,
   getProvinceRankBadge,
   type ProvinceLeaderboardEntry,
   type ProvinceLeaderboardMetrics,
@@ -20,7 +23,7 @@ import {
 import type { PublicCampaignData } from "@/lib/types";
 import { formatPersianDate, formatPersianNumber } from "@/lib/utils";
 
-type LeaderboardView = "province" | "user";
+type LeaderboardView = "province" | "user" | "rating";
 
 interface CityLeaderboardDashboardProps {
   data: PublicCampaignData;
@@ -67,9 +70,16 @@ function ProvincePodiumCard({ entry }: { entry: ProvinceLeaderboardEntry }) {
   );
 }
 
-function UserPodiumCard({ entry }: { entry: UserLeaderboardEntry }) {
+function UserPodiumCard({
+  entry,
+  showRating = false,
+}: {
+  entry: UserLeaderboardEntry;
+  showRating?: boolean;
+}) {
   const heightClass =
     entry.rank === 1 ? "min-h-[220px]" : entry.rank === 2 ? "min-h-[190px]" : "min-h-[170px]";
+  const scoreValue = showRating ? entry.ratingScore : entry.score;
 
   return (
     <Card className={`${heightClass} flex flex-col justify-end border-primary/20 bg-gradient-to-b from-primary/5 to-card`}>
@@ -78,7 +88,7 @@ function UserPodiumCard({ entry }: { entry: UserLeaderboardEntry }) {
         <p className="font-bold">{entry.userName}</p>
         <p className="text-xs text-muted-foreground">{entry.province}</p>
         <div className="flex flex-wrap justify-center gap-2">
-          <Badge variant="secondary">{formatPersianNumber(entry.score)} امتیاز</Badge>
+          <Badge variant="secondary">{formatPersianNumber(scoreValue)} امتیاز</Badge>
           <Badge variant="outline">{formatPersianNumber(entry.totalUploads)} محتوا</Badge>
         </div>
       </CardContent>
@@ -113,6 +123,15 @@ function LeaderboardViewToggle({
         <Users className="h-4 w-4" />
         بر اساس کاربر
       </Button>
+      <Button
+        type="button"
+        size="sm"
+        variant={view === "rating" ? "default" : "outline"}
+        onClick={() => onChange("rating")}
+      >
+        <Star className="h-4 w-4" />
+        بر اساس امتیاز
+      </Button>
     </div>
   );
 }
@@ -120,35 +139,46 @@ function LeaderboardViewToggle({
 export function CityLeaderboardDashboard({ data, slug }: CityLeaderboardDashboardProps) {
   const { settings } = data;
   const [view, setView] = useState<LeaderboardView>("province");
+  const [selectedUser, setSelectedUser] = useState<UserLeaderboardEntry | null>(null);
 
   const provinces = useMemo(() => buildProvinceLeaderboard(data), [data]);
   const users = useMemo(() => buildUserLeaderboard(data), [data]);
+  const ratingUsers = useMemo(() => buildUserRatingLeaderboard(data), [data]);
   const contributors = useMemo(() => buildProvinceContributorLeaderboard(data), [data]);
 
-  const activeEntries = view === "province" ? provinces : users;
+  const activeEntries = view === "province" ? provinces : view === "rating" ? ratingUsers : users;
+  const isProvinceView = view === "province";
+  const isUserLikeView = view === "user" || view === "rating";
+
+  const selectedUserItems = useMemo(
+    () => (selectedUser ? collectUserContentItems(data, selectedUser.userKey) : []),
+    [data, selectedUser]
+  );
 
   const chartData = useMemo(
     () =>
-      (view === "province" ? provinces : users).slice(0, 10).map((entry) => ({
-        label: view === "province" ? entry.province : (entry as UserLeaderboardEntry).userName,
-        value: entry.score,
+      activeEntries.slice(0, 10).map((entry) => ({
+        label: isProvinceView
+          ? (entry as ProvinceLeaderboardEntry).province
+          : (entry as UserLeaderboardEntry).userName,
+        value: view === "rating" ? entry.ratingScore : entry.score,
       })),
-    [provinces, users, view]
+    [activeEntries, isProvinceView, view]
   );
 
   const uploadChartData = useMemo(
     () =>
-      (view === "province" ? provinces : users).slice(0, 10).map((entry) => ({
-        label: view === "province" ? entry.province : (entry as UserLeaderboardEntry).userName,
+      activeEntries.slice(0, 10).map((entry) => ({
+        label: isProvinceView
+          ? (entry as ProvinceLeaderboardEntry).province
+          : (entry as UserLeaderboardEntry).userName,
         value: entry.totalUploads,
       })),
-    [provinces, users, view]
+    [activeEntries, isProvinceView]
   );
 
   const podium = activeEntries.slice(0, 3);
   const orderedPodium = podium.length === 3 ? [podium[1], podium[0], podium[2]] : podium;
-
-  const isProvinceView = view === "province";
 
   return (
     <div className="min-h-screen">
@@ -163,24 +193,37 @@ export function CityLeaderboardDashboard({ data, slug }: CityLeaderboardDashboar
               بازگشت به گزارش کمپین
             </Link>
             <h1 className="text-lg font-bold">
-              {isProvinceView ? "رتبه‌بندی استان‌ها" : "رتبه‌بندی کاربران"}
+              {isProvinceView
+                ? "رتبه‌بندی استان‌ها"
+                : view === "rating"
+                  ? "رتبه‌بندی بر اساس امتیاز"
+                  : "رتبه‌بندی کاربران"}
             </h1>
             <p className="text-sm text-muted-foreground">{settings.title}</p>
           </div>
           <Badge variant="outline" className="gap-1">
             <Trophy className="h-3.5 w-3.5" />
-            {formatPersianNumber(activeEntries.length)} {isProvinceView ? "استان" : "کاربر"}
+            {formatPersianNumber(activeEntries.length)}{" "}
+            {isProvinceView ? "استان" : "کاربر"}
           </Badge>
         </div>
       </header>
 
       <main className="container mx-auto max-w-[1280px] space-y-8 px-4 py-8">
         <SectionHeader
-          title={isProvinceView ? "مقایسه عملکرد استان‌ها" : "مقایسه عملکرد کاربران"}
+          title={
+            isProvinceView
+              ? "مقایسه عملکرد استان‌ها"
+              : view === "rating"
+                ? "مقایسه امتیاز محتوایی کاربران"
+                : "مقایسه عملکرد کاربران"
+          }
           description={
             isProvinceView
               ? "رتبه‌بندی استان‌ها بر اساس امتیاز فعالیت کاربران و حجم محتوای ثبت‌شده"
-              : "رتبه‌بندی کاربران بر اساس امتیاز فعالیت و حجم محتوای ثبت‌شده"
+              : view === "rating"
+                ? "رتبه‌بندی کاربران بر اساس مجموع امتیازهای ثبت‌شده روی محتوا"
+                : "رتبه‌بندی کاربران بر اساس امتیاز فعالیت و حجم محتوای ثبت‌شده"
           }
         >
           <Badge status={settings.status}>
@@ -221,6 +264,7 @@ export function CityLeaderboardDashboard({ data, slug }: CityLeaderboardDashboar
                       <UserPodiumCard
                         key={(entry as UserLeaderboardEntry).userKey}
                         entry={entry as UserLeaderboardEntry}
+                        showRating={view === "rating"}
                       />
                     )
                   )}
@@ -231,7 +275,13 @@ export function CityLeaderboardDashboard({ data, slug }: CityLeaderboardDashboar
             <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
               <BarChartCard
                 data={chartData}
-                title={isProvinceView ? "امتیاز استان‌ها (۱۰ استان برتر)" : "امتیاز کاربران (۱۰ نفر برتر)"}
+                title={
+                  isProvinceView
+                    ? "امتیاز استان‌ها (۱۰ استان برتر)"
+                    : view === "rating"
+                      ? "مجموع امتیاز محتوا (۱۰ نفر برتر)"
+                      : "امتیاز کاربران (۱۰ نفر برتر)"
+                }
                 color="#2563eb"
               />
               <BarChartCard data={uploadChartData} title="تعداد محتوای ثبت‌شده" color="#16a34a" />
@@ -239,40 +289,66 @@ export function CityLeaderboardDashboard({ data, slug }: CityLeaderboardDashboar
 
             <section className="space-y-4">
               <h2 className="text-base font-semibold">
-                {isProvinceView ? "جدول رتبه‌بندی استان‌ها" : "جدول رتبه‌بندی کاربران"}
+                {isProvinceView
+                  ? "جدول رتبه‌بندی استان‌ها"
+                  : view === "rating"
+                    ? "جدول رتبه‌بندی بر اساس امتیاز محتوا"
+                    : "جدول رتبه‌بندی کاربران"}
               </h2>
               <div className="space-y-3">
-                {activeEntries.map((entry) => (
-                  <Card key={isProvinceView ? (entry as ProvinceLeaderboardEntry).provinceKey : (entry as UserLeaderboardEntry).userKey}>
-                    <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
-                      <div className="space-y-2">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="text-lg">{getProvinceRankBadge(entry.rank)}</span>
-                          <p className="font-semibold">
-                            {isProvinceView
-                              ? (entry as ProvinceLeaderboardEntry).province
-                              : (entry as UserLeaderboardEntry).userName}
-                          </p>
-                          {!isProvinceView && (
-                            <span className="text-sm text-muted-foreground">
-                              — {(entry as UserLeaderboardEntry).province}
-                            </span>
-                          )}
-                          {entry.todayUploads > 0 && (
-                            <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">
-                              +{formatPersianNumber(entry.todayUploads)} امروز
-                            </Badge>
-                          )}
+                {activeEntries.map((entry) => {
+                  const userEntry = entry as UserLeaderboardEntry;
+                  const clickable = isUserLikeView;
+                  return (
+                    <Card
+                      key={
+                        isProvinceView
+                          ? (entry as ProvinceLeaderboardEntry).provinceKey
+                          : userEntry.userKey
+                      }
+                      className={clickable ? "cursor-pointer transition-colors hover:border-primary" : undefined}
+                      onClick={
+                        clickable
+                          ? () => setSelectedUser(userEntry)
+                          : undefined
+                      }
+                    >
+                      <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="space-y-2">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-lg">{getProvinceRankBadge(entry.rank)}</span>
+                            <p className="font-semibold">
+                              {isProvinceView
+                                ? (entry as ProvinceLeaderboardEntry).province
+                                : userEntry.userName}
+                            </p>
+                            {isUserLikeView && (
+                              <span className="text-sm text-muted-foreground">
+                                — {userEntry.province}
+                              </span>
+                            )}
+                            {entry.todayUploads > 0 && (
+                              <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">
+                                +{formatPersianNumber(entry.todayUploads)} امروز
+                              </Badge>
+                            )}
+                          </div>
+                          <MetricsBreakdown entry={entry} />
                         </div>
-                        <MetricsBreakdown entry={entry} />
-                      </div>
-                      <div className="flex shrink-0 flex-wrap gap-2">
-                        <Badge variant="secondary">{formatPersianNumber(entry.score)} امتیاز</Badge>
-                        <Badge variant="outline">{formatPersianNumber(entry.totalUploads)} محتوا</Badge>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                        <div className="flex shrink-0 flex-wrap gap-2">
+                          {view === "rating" ? (
+                            <Badge variant="secondary">
+                              {formatPersianNumber(entry.ratingScore)} امتیاز محتوا
+                            </Badge>
+                          ) : (
+                            <Badge variant="secondary">{formatPersianNumber(entry.score)} امتیاز</Badge>
+                          )}
+                          <Badge variant="outline">{formatPersianNumber(entry.totalUploads)} محتوا</Badge>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
             </section>
 
@@ -305,6 +381,15 @@ export function CityLeaderboardDashboard({ data, slug }: CityLeaderboardDashboar
           </>
         )}
       </main>
+
+      <UserContentScoreModal
+        open={Boolean(selectedUser)}
+        onOpenChange={(open) => {
+          if (!open) setSelectedUser(null);
+        }}
+        userName={selectedUser?.userName ?? ""}
+        items={selectedUserItems}
+      />
     </div>
   );
 }

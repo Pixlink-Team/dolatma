@@ -15,6 +15,8 @@ export interface ProvinceLeaderboardMetrics {
   todayUploads: number;
   totalUploads: number;
   score: number;
+  /** Sum of Ownable.score values across content items. */
+  ratingScore: number;
 }
 
 export interface ProvinceLeaderboardEntry extends ProvinceLeaderboardMetrics {
@@ -30,6 +32,7 @@ export interface ProvinceContributorEntry {
   provinceKey: string;
   totalUploads: number;
   score: number;
+  ratingScore?: number;
 }
 
 export interface UserLeaderboardEntry extends ProvinceLeaderboardMetrics {
@@ -93,6 +96,7 @@ function emptyMetrics(): ProvinceLeaderboardMetrics {
     todayUploads: 0,
     totalUploads: 0,
     score: 0,
+    ratingScore: 0,
   };
 }
 
@@ -120,6 +124,9 @@ function addItem<T extends Ownable & { createdAt?: string | null; province?: str
   current[field]++;
   current.totalUploads++;
   current.score += SCORE_WEIGHTS[field];
+  if (typeof item.score === "number" && Number.isFinite(item.score)) {
+    current.ratingScore += item.score;
+  }
 
   if (countsAsTodayUpload(item, field)) {
     current.todayUploads++;
@@ -144,10 +151,14 @@ function addContributor<T extends Ownable & { createdAt?: string | null; provinc
     provinceKey: province,
     totalUploads: 0,
     score: 0,
+    ratingScore: 0,
   };
 
   current.totalUploads++;
   current.score += SCORE_WEIGHTS[field];
+  if (typeof item.score === "number" && Number.isFinite(item.score)) {
+    current.ratingScore = (current.ratingScore ?? 0) + item.score;
+  }
   map.set(contributorKey, current);
 }
 
@@ -172,6 +183,9 @@ function addUserItem<T extends Ownable & { createdAt?: string | null; province?:
   current[field]++;
   current.totalUploads++;
   current.score += SCORE_WEIGHTS[field];
+  if (typeof item.score === "number" && Number.isFinite(item.score)) {
+    current.ratingScore += item.score;
+  }
 
   if (countsAsTodayUpload(item, field)) {
     current.todayUploads++;
@@ -221,6 +235,7 @@ export function buildProvinceLeaderboard(data: PublicCampaignData): ProvinceLead
       todayUploads: metrics.todayUploads,
       totalUploads: metrics.totalUploads,
       score: metrics.score,
+      ratingScore: metrics.ratingScore,
       rank: 0,
     }))
     .sort((a, b) => b.score - a.score || b.totalUploads - a.totalUploads)
@@ -249,10 +264,85 @@ export function buildUserLeaderboard(data: PublicCampaignData): UserLeaderboardE
       todayUploads: metrics.todayUploads,
       totalUploads: metrics.totalUploads,
       score: metrics.score,
+      ratingScore: metrics.ratingScore,
       rank: 0,
     }))
     .sort((a, b) => b.score - a.score || b.totalUploads - a.totalUploads)
     .map((entry, index) => ({ ...entry, rank: index + 1 }));
+}
+
+export function buildUserRatingLeaderboard(data: PublicCampaignData): UserLeaderboardEntry[] {
+  return buildUserLeaderboard(data)
+    .slice()
+    .sort((a, b) => b.ratingScore - a.ratingScore || b.totalUploads - a.totalUploads)
+    .map((entry, index) => ({ ...entry, rank: index + 1 }));
+}
+
+export interface UserContentScoreItem {
+  id: string;
+  title: string;
+  typeLabel: string;
+  contentType: string;
+  thumbnailUrl?: string | null;
+  score: number | null;
+}
+
+function resolveUserKeyMatch(item: Ownable, userKey: string): boolean {
+  if (item.ownerUserId && item.ownerUserId === userKey) return true;
+  if (item.ownerEmail && item.ownerEmail === userKey) return true;
+  if ((item.ownerName?.trim() || "کاربر") === userKey) return true;
+  return false;
+}
+
+export function collectUserContentItems(
+  data: PublicCampaignData,
+  userKey: string
+): UserContentScoreItem[] {
+  const items: UserContentScoreItem[] = [];
+
+  const push = <T extends Ownable & { id: string; title: string }>(
+    list: T[],
+    typeLabel: string,
+    contentType: string,
+    getThumb?: (item: T) => string | null | undefined
+  ) => {
+    for (const item of list) {
+      if (!resolveUserKeyMatch(item, userKey)) continue;
+      items.push({
+        id: item.id,
+        title: item.title,
+        typeLabel,
+        contentType,
+        thumbnailUrl: getThumb?.(item) ?? null,
+        score: typeof item.score === "number" ? item.score : null,
+      });
+    }
+  };
+
+  if (data.sections.billboards) {
+    push(data.billboards, "بیلبورد", "billboard", (item) => item.thumbnailUrl);
+  }
+  if (data.sections.posters) {
+    push(data.posters, "پوستر", "poster");
+  }
+  if (data.sections.videos) {
+    push(data.videos, "ویدیو", "video");
+  }
+  if (data.sections.socialPosts) {
+    push(data.socialPosts, "پست اجتماعی", "social_post", (item) => item.coverImageUrl);
+  }
+  if (data.sections.sitePublications) {
+    push(data.sitePublications, "انتشار سایت", "site_publication", (item) => item.coverImageUrl);
+  }
+  if (data.sections.activities) {
+    push(data.activities, "اقدام", "activity", (item) => item.imageUrl);
+    push(data.pressPublications, "رسانه چاپی", "activity", (item) => item.imageUrl);
+  }
+  if (data.sections.files) {
+    push(data.files, "فایل", "file");
+  }
+
+  return items.sort((a, b) => (b.score ?? -1) - (a.score ?? -1));
 }
 
 export function buildProvinceContributorLeaderboard(

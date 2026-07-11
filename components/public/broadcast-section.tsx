@@ -51,7 +51,7 @@ export function BroadcastSection({ reports, groups }: BroadcastSectionProps) {
   const filteredGroups = useFilteredOwnerGroups(groups, (report) => report.reportDate);
   const filteredReports = useMemo(
     () =>
-      filter.sortOrder === "newest" || filter.sortOrder === "oldest"
+      filter.sortOrder === "newest" || filter.sortOrder === "oldest" || filter.sortOrder === "top_scored"
         ? flattenOwnerGroupsInSortOrder(filteredGroups, filter.sortOrder)
         : filteredGroups.flatMap((group) => group.items),
     [filteredGroups, filter.sortOrder]

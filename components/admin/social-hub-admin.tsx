@@ -3,6 +3,7 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SocialAnalyticsAdmin } from "@/components/admin/social-analytics-admin";
 import { SocialPostsAdmin } from "@/components/admin/social-posts-admin";
+import type { ContentTopic } from "@/lib/content-topics";
 import type { SocialMediaPost, SocialPlatformStat } from "@/lib/types";
 
 interface SocialHubAdminProps {
@@ -10,6 +11,8 @@ interface SocialHubAdminProps {
   initialPosts: SocialMediaPost[];
   initialPlatformStats: SocialPlatformStat[];
   contentPlans?: string[];
+  contentTopics?: ContentTopic[];
+  canScore?: boolean;
   isFullAdmin?: boolean;
 }
 
@@ -18,6 +21,8 @@ export function SocialHubAdmin({
   initialPosts,
   initialPlatformStats,
   contentPlans = [],
+  contentTopics = [],
+  canScore = false,
   isFullAdmin = true,
 }: SocialHubAdminProps) {
   return (
@@ -48,6 +53,8 @@ export function SocialHubAdmin({
             campaignId={campaignId}
             initialPosts={initialPosts}
             contentPlans={contentPlans}
+            contentTopics={contentTopics}
+            canScore={canScore}
             embedded
           />
         </TabsContent>

@@ -7,18 +7,32 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { VideoModal } from "@/components/media/video-modal";
 import { VideoThumbnail } from "@/components/media/video-thumbnail";
+import { ContentScoreControl } from "@/components/admin/content-score-control";
+import { useContentScoreAccess } from "@/lib/context/content-score-context";
 import type { VideoVersion } from "@/lib/types";
 import { downloadMedia, getFilenameFromUrl, hasDistinctThumbnail, resolveDisplayVersion } from "@/lib/media-utils";
 import { cn, formatPersianDate } from "@/lib/utils";
 
 interface VideoCardProps {
+  id?: string;
+  campaignId?: string;
   title: string;
   description?: string | null;
   categoryTitle?: string;
   versions: VideoVersion[];
+  score?: number | null;
 }
 
-export function VideoCard({ title, description, categoryTitle, versions }: VideoCardProps) {
+export function VideoCard({
+  id,
+  campaignId,
+  title,
+  description,
+  categoryTitle,
+  versions,
+  score,
+}: VideoCardProps) {
+  const { canScore, campaignId: scoreCampaignId } = useContentScoreAccess();
   const [expanded, setExpanded] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [activeVersionId, setActiveVersionId] = useState<string | null>(null);
@@ -68,9 +82,7 @@ export function VideoCard({ title, description, categoryTitle, versions }: Video
             <Play className="h-12 w-12 text-white" />
           </div>
           <div className="absolute top-3 right-3">
-            <Badge status={finalVersion.isFinal ? "final" : "draft"}>
-              {finalVersion.isFinal ? "نسخه نهایی" : "پیش‌نویس"}
-            </Badge>
+            {finalVersion.isFinal && <Badge status="final">نسخه نهایی</Badge>}
           </div>
           <div className="absolute bottom-3 left-3 flex gap-1">
             <Button
@@ -110,11 +122,24 @@ export function VideoCard({ title, description, categoryTitle, versions }: Video
           </div>
           <div className="flex items-center justify-between text-xs text-muted-foreground">
             <span>نسخه {finalVersion.versionNumber}{finalVersion.duration ? ` — ${finalVersion.duration}` : ""}</span>
-            <Badge status={finalVersion.isFinal ? "final" : "draft"} className="text-[10px]">
-              {finalVersion.isFinal ? "نسخه نهایی" : "پیش‌نویس"}
-            </Badge>
+            {finalVersion.isFinal && (
+              <Badge status="final" className="text-[10px]">
+                نسخه نهایی
+              </Badge>
+            )}
           </div>
           <p className="text-xs text-muted-foreground">{formatPersianDate(finalVersion.date)}</p>
+
+          {id && (canScore || score != null) && (
+            <ContentScoreControl
+              campaignId={campaignId || scoreCampaignId}
+              contentType="video"
+              contentId={id}
+              score={score}
+              canScore={canScore}
+              compact
+            />
+          )}
 
           {previousVersions.length > 0 && (
             <div className="border-t pt-3">

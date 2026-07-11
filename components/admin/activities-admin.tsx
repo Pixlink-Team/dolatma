@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
@@ -23,10 +22,12 @@ import {
 import { AdminActivityCompactCard } from "@/components/admin/admin-activity-compact-card";
 import { AdminCompactAddCard } from "@/components/admin/admin-compact-add-card";
 import { PlanLabelSelect } from "@/components/admin/plan-label-select";
+import { ContentScoreControl } from "@/components/admin/content-score-control";
 import { MediaUpload } from "@/components/ui/media-upload";
 import { PersianDateField } from "@/components/ui/persian-date-input";
 import { fieldActivityTypeOptions, getActivityTypeLabel } from "@/lib/activity-types";
 import { deleteCampaignActivityAction, saveCampaignActivityAction } from "@/lib/actions/extended-actions";
+import { normalizePlanLabels, type ContentTopic } from "@/lib/content-topics";
 import { todayISO } from "@/lib/jalali";
 import { isPressPublication } from "@/lib/press-publications";
 import type { ActivityMediaItem, ActivityType, CampaignActivity } from "@/lib/types";
@@ -61,6 +62,8 @@ interface ActivitiesAdminProps {
   campaignId: string;
   initialActivities: CampaignActivity[];
   contentPlans?: string[];
+  contentTopics?: ContentTopic[];
+  canScore?: boolean;
 }
 
 function resolveFieldActivityType(type: ActivityType): FieldActivityType {
@@ -71,11 +74,13 @@ export function ActivitiesAdmin({
   campaignId,
   initialActivities,
   contentPlans = [],
+  contentTopics = [],
+  canScore = false,
 }: ActivitiesAdminProps) {
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [mediaItems, setMediaItems] = useState<ActivityMediaItem[]>([]);
-  const [planLabel, setPlanLabel] = useState<string | null>(null);
+  const [planLabels, setPlanLabels] = useState<string[]>([]);
   const [contentFilter, setContentFilter] = useState<AdminContentFilterState>(DEFAULT_ADMIN_CONTENT_FILTER);
   const [rows, setRows] = useState(
     initialActivities.filter((activity) => !isPressPublication(activity))
@@ -98,14 +103,14 @@ export function ActivitiesAdmin({
       imageUrl: "",
       videoUrl: "",
       description: "",
-      published: false,
+      published: true,
     },
   });
 
   const openCreate = () => {
     setEditingId(null);
     setMediaItems([]);
-    setPlanLabel(null);
+    setPlanLabels([]);
     form.reset({
       title: "",
       activityType: "field",
@@ -114,7 +119,7 @@ export function ActivitiesAdmin({
       imageUrl: "",
       videoUrl: "",
       description: "",
-      published: false,
+      published: true,
     });
     setOpen(true);
   };
@@ -122,7 +127,7 @@ export function ActivitiesAdmin({
   const openEdit = (activity: CampaignActivity) => {
     setEditingId(activity.id);
     setMediaItems(activity.mediaItems ?? []);
-    setPlanLabel(activity.planLabel ?? null);
+    setPlanLabels(normalizePlanLabels(activity.planLabels, activity.planLabel));
     form.reset({
       title: activity.title,
       activityType: resolveFieldActivityType(activity.activityType),
@@ -158,8 +163,9 @@ export function ActivitiesAdmin({
         videoUrl: filledMedia.find((item) => item.type === "video")?.url ?? (data.videoUrl || null),
         mediaItems: filledMedia,
         description: data.description || null,
-        published: data.published,
-        planLabel,
+        published: true,
+        planLabels,
+        planLabel: planLabels[0] ?? null,
       });
 
       if (!result.success) {
@@ -179,8 +185,9 @@ export function ActivitiesAdmin({
         videoUrl: filledMedia.find((item) => item.type === "video")?.url ?? (data.videoUrl || null),
         mediaItems: filledMedia,
         description: data.description || null,
-        published: data.published,
-        planLabel,
+        published: true,
+        planLabels,
+        planLabel: planLabels[0] ?? null,
         sortOrder: rows.length + 1,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -259,10 +266,25 @@ export function ActivitiesAdmin({
               <Input {...form.register("location")} placeholder="شهر یا محل برگزاری" />
             </div>
             <PlanLabelSelect
+              topics={contentTopics}
               plans={contentPlans}
-              value={planLabel}
-              onChange={setPlanLabel}
+              values={planLabels}
+              onChangeMultiple={setPlanLabels}
             />
+            {editingId && (
+              <ContentScoreControl
+                campaignId={campaignId}
+                contentType="activity"
+                contentId={editingId}
+                score={rows.find((row) => row.id === editingId)?.score}
+                canScore={canScore}
+                onScoreSaved={(score) =>
+                  setRows((prev) =>
+                    prev.map((row) => (row.id === editingId ? { ...row, score } : row))
+                  )
+                }
+              />
+            )}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <Label>رسانه‌ها (حداکثر {MAX_MEDIA_ITEMS})</Label>
@@ -311,10 +333,6 @@ export function ActivitiesAdmin({
               <Label>توضیحات (اختیاری)</Label>
               <Textarea {...form.register("description")} rows={4} placeholder="جزئیات اقدام، تعداد مخاطب، نتایج و ..." />
             </div>
-            <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-              <span>منتشر در صفحه عمومی</span>
-              <Switch checked={form.watch("published")} onCheckedChange={(value) => form.setValue("published", value)} />
-            </label>
             <Button type="submit" disabled={isPending} className="w-full">
               ذخیره
             </Button>
