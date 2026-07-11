@@ -162,7 +162,7 @@ export function BillboardSection({ billboards, adminOwnerLabel }: BillboardSecti
       <CollapsibleSection
         id="billboards"
         title="تبلیغات محیطی"
-        description="نمایش بیلبوردهای کمپین روی نقشه و کارت‌ها"
+        description="نمایش تبلیغات محیطی کمپین روی نقشه و کارت‌ها"
         controls={controls}
       >
         <div className="mb-6 space-y-3">

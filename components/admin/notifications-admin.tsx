@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Check, ExternalLink } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -46,6 +46,8 @@ import type {
 } from "@/lib/types";
 import { formatPersianDate, formatPersianDateTime, formatPersianNumber } from "@/lib/utils";
 
+type NotificationFilterView = NotificationView | "unscored";
+
 interface NotificationsAdminProps {
   campaignId: string;
   isAdmin: boolean;
@@ -60,17 +62,31 @@ interface NotificationsAdminProps {
 
 function NotificationCard({
   item,
+  selected,
+  onToggleSelect,
   showConfirm,
   confirming,
   onConfirm,
 }: {
   item: NotificationFeedItem;
+  selected: boolean;
+  onToggleSelect: () => void;
   showConfirm?: boolean;
   confirming?: boolean;
   onConfirm?: () => void;
 }) {
   return (
     <div className="group flex flex-col overflow-hidden rounded-xl border bg-card transition hover:border-primary hover:shadow-md">
+      <div className="flex items-center gap-2 border-b px-3 py-2">
+        <input
+          type="checkbox"
+          checked={selected}
+          onChange={onToggleSelect}
+          className="h-4 w-4 accent-primary"
+          aria-label={`انتخاب ${item.title}`}
+        />
+        <span className="text-xs text-muted-foreground">انتخاب</span>
+      </div>
       <Link
         href={item.adminPath}
         className="flex flex-1 flex-col focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -94,6 +110,15 @@ function NotificationCard({
             {!item.published && (
               <Badge variant="outline" className="text-[10px] bg-background/90">
                 پیش‌نویس
+              </Badge>
+            )}
+            {item.score == null ? (
+              <Badge variant="outline" className="text-[10px] bg-background/90">
+                بدون امتیاز
+              </Badge>
+            ) : (
+              <Badge variant="secondary" className="text-[10px]">
+                امتیاز {formatPersianNumber(item.score)}
               </Badge>
             )}
           </div>
@@ -150,17 +175,17 @@ export function NotificationsAdmin({
   posterVersions = [],
   videoVersions = [],
 }: NotificationsAdminProps) {
-  const [view, setView] = useState<NotificationView>("new");
+  const [view, setView] = useState<NotificationFilterView>("new");
   const [range, setRange] = useState<NotificationRange>("week");
   const [sort, setSort] = useState<NotificationSort>("upload");
   const [province, setProvince] = useState("all");
   const [ownerName, setOwnerName] = useState("all");
   const [planLabel, setPlanLabel] = useState("all");
   const [seenKeys, setSeenKeys] = useState<Set<string>>(new Set());
+  const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
   const [readsLoaded, setReadsLoaded] = useState(false);
   const [confirmingKey, setConfirmingKey] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-  const pendingSeenRef = useRef<string[]>([]);
 
   useEffect(() => {
     void getNotificationReadsAction().then((keys) => {
@@ -195,6 +220,11 @@ export function NotificationsAdmin({
     items = filterNotificationByProvince(items, province);
     items = filterNotificationByOwner(items, ownerName);
     items = filterNotificationByPlan(items, planLabel);
+
+    if (view === "unscored") {
+      return items.filter((item) => item.score == null);
+    }
+
     return items.filter((item) => (view === "seen" ? seenKeys.has(item.key) : !seenKeys.has(item.key)));
   }, [feed, range, province, ownerName, planLabel, view, seenKeys]);
 
@@ -208,38 +238,50 @@ export function NotificationsAdmin({
     return [...map.entries()].sort((a, b) => b[0].localeCompare(a[0]));
   }, [filtered]);
 
-  useEffect(() => {
-    if (!readsLoaded || view !== "new" || filtered.length === 0) return;
-    pendingSeenRef.current = filtered.map((item) => item.key);
-  }, [filtered, readsLoaded, view]);
+  const allFilteredSelected =
+    filtered.length > 0 && filtered.every((item) => selectedKeys.has(item.key));
 
-  useEffect(() => {
-    return () => {
-      const keys = pendingSeenRef.current;
-      if (keys.length === 0) return;
-      void markNotificationsSeenAction(campaignId, keys);
-    };
-  }, [campaignId]);
+  const toggleSelectAll = () => {
+    if (allFilteredSelected) {
+      setSelectedKeys(new Set());
+      return;
+    }
+    setSelectedKeys(new Set(filtered.map((item) => item.key)));
+  };
 
-  const handleConfirm = () => {
-    if (view !== "new" || filtered.length === 0) return;
+  const toggleSelect = (key: string) => {
+    setSelectedKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
 
+  const markKeysSeen = (keys: string[]) => {
+    if (keys.length === 0) return;
     startTransition(async () => {
-      const keys = filtered.map((item) => item.key);
       const result = await markNotificationsSeenAction(campaignId, keys, true);
       if (!result.success) {
         toast.error("ثبت تأیید ناموفق بود");
         return;
       }
       setSeenKeys((prev) => new Set([...prev, ...keys]));
-      pendingSeenRef.current = pendingSeenRef.current.filter((key) => !keys.includes(key));
-      toast.success("موارد مشاهده‌شده تأیید شد");
+      setSelectedKeys((prev) => {
+        const next = new Set(prev);
+        for (const key of keys) next.delete(key);
+        return next;
+      });
+      toast.success("موارد انتخاب‌شده به‌عنوان دیده‌شده ثبت شد");
     });
   };
 
-  const handleConfirmItem = (key: string) => {
-    if (view !== "new" || seenKeys.has(key)) return;
+  const handleConfirmSelected = () => {
+    markKeysSeen([...selectedKeys].filter((key) => filtered.some((item) => item.key === key)));
+  };
 
+  const handleConfirmItem = (key: string) => {
+    if (seenKeys.has(key)) return;
     setConfirmingKey(key);
     startTransition(async () => {
       const result = await markNotificationsSeenAction(campaignId, [key], true);
@@ -249,7 +291,11 @@ export function NotificationsAdmin({
         return;
       }
       setSeenKeys((prev) => new Set([...prev, key]));
-      pendingSeenRef.current = pendingSeenRef.current.filter((itemKey) => itemKey !== key);
+      setSelectedKeys((prev) => {
+        const next = new Set(prev);
+        next.delete(key);
+        return next;
+      });
       toast.success("مشاهده تأیید شد");
     });
   };
@@ -263,10 +309,11 @@ export function NotificationsAdmin({
             {isAdmin ? "مدیر و کارفرما" : "کارفرما"} — محتوای آپلودشده با نمایش کارتی
           </p>
         </div>
-        <Tabs value={view} onValueChange={(value) => setView(value as NotificationView)}>
+        <Tabs value={view} onValueChange={(value) => setView(value as NotificationFilterView)}>
           <TabsList>
             <TabsTrigger value="new">جدید</TabsTrigger>
             <TabsTrigger value="seen">دیده‌شده‌ها</TabsTrigger>
+            <TabsTrigger value="unscored">امتیاز نداده‌ها</TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
@@ -339,17 +386,28 @@ export function NotificationsAdmin({
             </SelectContent>
           </Select>
         )}
-        {view === "new" && filtered.length > 0 && (
-          <Button variant="outline" onClick={handleConfirm} disabled={isPending}>
-            تأیید مشاهده ({formatPersianNumber(filtered.length)})
+        {filtered.length > 0 && (
+          <Button variant="outline" onClick={toggleSelectAll}>
+            {allFilteredSelected ? "لغو انتخاب همه" : "انتخاب همه"}
+          </Button>
+        )}
+        {selectedKeys.size > 0 && (
+          <Button variant="outline" onClick={handleConfirmSelected} disabled={isPending}>
+            علامت‌گذاری دیده‌شده ({formatPersianNumber(selectedKeys.size)})
           </Button>
         )}
       </div>
 
       <div className="rounded-xl border bg-card p-4">
         <p className="text-sm text-muted-foreground">
-          {view === "new" ? "موارد جدید" : "دیده‌شده‌ها"}: {formatPersianNumber(filtered.length)}
-          {view === "new" && " — روی هر کارت می‌توانید جداگانه «تأیید مشاهده» بزنید؛ با خروج از صفحه، موارد نمایش‌داده‌شده هم ثبت می‌شوند."}
+          {view === "new"
+            ? "موارد جدید"
+            : view === "seen"
+              ? "دیده‌شده‌ها"
+              : "امتیاز نداده‌ها"}
+          : {formatPersianNumber(filtered.length)}
+          {view === "new" &&
+            " — موارد فقط با تأیید صریح به‌عنوان دیده‌شده ثبت می‌شوند."}
         </p>
       </div>
 
@@ -357,7 +415,11 @@ export function NotificationsAdmin({
         <div className="rounded-xl border py-12 text-center text-muted-foreground">در حال بارگذاری...</div>
       ) : grouped.length === 0 ? (
         <div className="rounded-xl border py-12 text-center text-muted-foreground">
-          {view === "new" ? "اعلان جدیدی در این فیلتر وجود ندارد." : "مورد دیده‌شده‌ای در این فیلتر وجود ندارد."}
+          {view === "new"
+            ? "اعلان جدیدی در این فیلتر وجود ندارد."
+            : view === "seen"
+              ? "مورد دیده‌شده‌ای در این فیلتر وجود ندارد."
+              : "مورد بدون امتیازی در این فیلتر وجود ندارد."}
         </div>
       ) : (
         <div className="space-y-6">
@@ -369,7 +431,9 @@ export function NotificationsAdmin({
                   <NotificationCard
                     key={item.key}
                     item={item}
-                    showConfirm={view === "new"}
+                    selected={selectedKeys.has(item.key)}
+                    onToggleSelect={() => toggleSelect(item.key)}
+                    showConfirm={view === "new" || view === "unscored"}
                     confirming={confirmingKey === item.key}
                     onConfirm={() => handleConfirmItem(item.key)}
                   />

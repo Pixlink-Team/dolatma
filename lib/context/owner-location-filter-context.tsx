@@ -26,7 +26,8 @@ interface OwnerLocationFilterContextValue {
   setDateFrom: (dateFrom: string) => void;
   setDateTo: (dateTo: string) => void;
   setSortOrder: (sortOrder: CampaignContentSort) => void;
-  setPlanLabel: (planLabel: string) => void;
+  setPlanLabels: (planLabels: string[]) => void;
+  togglePlanLabel: (planLabel: string) => void;
   resetFilters: () => void;
   provinces: string[];
   cities: string[];
@@ -125,7 +126,17 @@ export function OwnerLocationFilterProvider({
       setDateFrom: (dateFrom) => setFilter((current) => ({ ...current, dateFrom })),
       setDateTo: (dateTo) => setFilter((current) => ({ ...current, dateTo })),
       setSortOrder: (sortOrder) => setFilter((current) => ({ ...current, sortOrder })),
-      setPlanLabel: (planLabel) => setFilter((current) => ({ ...current, planLabel })),
+      setPlanLabels: (planLabels) => setFilter((current) => ({ ...current, planLabels })),
+      togglePlanLabel: (planLabel) =>
+        setFilter((current) => {
+          const exists = current.planLabels.includes(planLabel);
+          return {
+            ...current,
+            planLabels: exists
+              ? current.planLabels.filter((label) => label !== planLabel)
+              : [...current.planLabels, planLabel],
+          };
+        }),
       resetFilters: () => setFilter(DEFAULT_OWNER_LOCATION_FILTER),
       provinces,
       cities,
@@ -154,7 +165,8 @@ export function useOwnerLocationFilter(): OwnerLocationFilterContextValue {
       setDateFrom: () => undefined,
       setDateTo: () => undefined,
       setSortOrder: () => undefined,
-      setPlanLabel: () => undefined,
+      setPlanLabels: () => undefined,
+      togglePlanLabel: () => undefined,
       resetFilters: () => undefined,
       provinces: [],
       cities: [],

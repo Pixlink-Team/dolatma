@@ -31,11 +31,11 @@ export const defaultContributorPermissions = (): ContributorPermissions => ({
 });
 
 export const contributorPermissionLabels: Record<ContributorPermissionKey, string> = {
-  billboards: "بیلبوردها",
+  billboards: "تبلیغات محیطی",
   posters: "پوسترها",
   videos: "ویدیوها",
   files: "فایل‌ها",
-  rawMedia: "رسانه خام",
+  rawMedia: "ارسال رویش",
   analytics: "آمار سایت",
   socialPosts: "شبکه‌های اجتماعی",
   sitePublications: "انتشار در سایت",

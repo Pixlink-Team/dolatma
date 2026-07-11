@@ -34,6 +34,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { cn, adminHref, isSupabaseConfigured } from "@/lib/utils";
 import { logoutAdminAction } from "@/lib/actions/auth-actions";
 import { getSessionContextAction } from "@/lib/actions/extended-actions";
@@ -61,7 +62,7 @@ const allNavItems: {
   { href: "/admin/posters", label: "پوسترها", icon: ImageIcon, permissionKey: "posters" },
   { href: "/admin/videos", label: "ویدیوها", icon: Video, permissionKey: "videos" },
   { href: "/admin/files", label: "فایل‌ها", icon: FileStack, permissionKey: "files" },
-  { href: "/admin/raw-media", label: "رسانه خام", icon: HardDrive, permissionKey: "rawMedia" },
+  { href: "/admin/raw-media", label: "ارسال رویش", icon: HardDrive, permissionKey: "rawMedia" },
   { href: "/admin/analytics", label: "آمار سایت", icon: BarChart3, permissionKey: "analytics" },
   { href: "/admin/site-publications", label: "انتشار در سایت", icon: Globe, permissionKey: "sitePublications" },
   { href: "/admin/social-posts", label: "شبکه‌های اجتماعی", icon: Share2, permissionKey: "socialPosts" },
@@ -154,6 +155,7 @@ export function AdminSidebar() {
               <Link
                 key={item.href}
                 href={href}
+                prefetch={item.href === "/admin" ? false : undefined}
                 onClick={() => setMobileOpen(false)}
                 className={cn(
                   "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
@@ -200,6 +202,10 @@ export function AdminSidebar() {
         )}
       </nav>
       <div className="p-3 border-t space-y-2">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-xs text-muted-foreground">تم</span>
+          <ThemeToggle />
+        </div>
         {currentCampaign && (
           <Link href={`/campaign/${currentCampaign.slug}`} target="_blank">
             <Button variant="outline" size="sm" className="w-full">

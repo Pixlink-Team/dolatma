@@ -4,8 +4,9 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { AdminVideoAddCard, AdminVideoCompactCard } from "@/components/admin/admin-video-compact-card";
-import { AdminMediaCategories } from "@/components/admin/admin-media-categories";
 import { AdminVideoEditor } from "@/components/admin/admin-video-editor";
+import { AdminItemActions } from "@/components/admin/admin-item-actions";
+import { AdminViewModeToggle } from "@/components/admin/admin-view-mode-toggle";
 import {
   AdminContentFilterBar,
   collectAdminFilterUsers,
@@ -20,7 +21,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { deleteVideoAction } from "@/lib/actions/admin-actions";
 import type { ContentTopic } from "@/lib/content-topics";
+import { useAdminViewMode } from "@/lib/hooks/use-admin-view-mode";
+import { resolveDisplayVersion } from "@/lib/media-utils";
 import type { MediaCategory, Video, VideoVersion } from "@/lib/types";
 
 interface VideosAdminProps {
@@ -51,8 +55,10 @@ export function VideosAdmin({
   const [editorOpen, setEditorOpen] = useState(false);
   const [activeVideoId, setActiveVideoId] = useState<string | null>(null);
   const [draftVideo, setDraftVideo] = useState<Video | null>(null);
+  const [previewVideo, setPreviewVideo] = useState<Video | null>(null);
   const [contentFilter, setContentFilter] = useState<AdminContentFilterState>(DEFAULT_ADMIN_CONTENT_FILTER);
-  const [isPending] = useTransition();
+  const { viewMode, setViewMode } = useAdminViewMode("videos");
+  const [, startTransition] = useTransition();
 
   useEffect(() => {
     setVideos(initialVideos);
@@ -82,9 +88,7 @@ export function VideosAdmin({
   }, [activeVideoId, draftVideo, videos]);
 
   const isDraftVideo = Boolean(draftVideo && activeVideoId === draftVideo.id);
-
   const activeVersions = activeVideoId ? versionsByVideoId.get(activeVideoId) ?? [] : [];
-
   const refresh = () => router.refresh();
 
   const openEditor = (videoId: string) => {
@@ -99,13 +103,8 @@ export function VideosAdmin({
   };
 
   const handleCreateVideo = () => {
-    if (initialCategories.length === 0) {
-      toast.error("ابتدا یک دسته بسازید");
-      return;
-    }
-
     const videoId = crypto.randomUUID();
-    const categoryId = initialCategories[0].id;
+    const categoryId = initialCategories[0]?.id ?? "";
     const now = new Date().toISOString();
     const newVideo: Video = {
       id: videoId,
@@ -124,13 +123,26 @@ export function VideosAdmin({
     openEditor(videoId);
   };
 
+  const handleDelete = (video: Video) => {
+    if (!window.confirm(`حذف «${video.title}»؟`)) return;
+    startTransition(async () => {
+      await deleteVideoAction(video.id);
+      setVideos((prev) => prev.filter((item) => item.id !== video.id));
+      toast.success("حذف شد");
+      refresh();
+    });
+  };
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">ویدیوها</h1>
-        <p className="text-sm text-muted-foreground">
-          نمای فشرده — روی کارت کلیک کنید یا با + ویدیو جدید بسازید
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold">ویدیوها</h1>
+          <p className="text-sm text-muted-foreground">
+            نمای فشرده — روی کارت کلیک کنید یا با + ویدیو جدید بسازید
+          </p>
+        </div>
+        <AdminViewModeToggle value={viewMode} onChange={setViewMode} />
       </div>
 
       <AdminContentFilterBar
@@ -140,18 +152,14 @@ export function VideosAdmin({
         plans={contentPlans}
       />
 
-      <AdminMediaCategories
-        campaignId={campaignId}
-        type="video"
-        categories={initialCategories}
-        label="ویدیو"
-      />
-
-      {initialCategories.length === 0 ? (
+      {filteredVideos.length === 0 && videos.length === 0 ? (
         <div className="rounded-xl border py-12 text-center text-muted-foreground">
-          ابتدا یک دسته‌بندی بسازید.
+          هنوز ویدیویی ثبت نشده است.
+          <div className="mt-4 flex justify-center">
+            <AdminVideoAddCard onClick={handleCreateVideo} />
+          </div>
         </div>
-      ) : (
+      ) : viewMode === "grid" ? (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
           {filteredVideos.map((video) => (
             <AdminVideoCompactCard
@@ -159,9 +167,46 @@ export function VideosAdmin({
               video={video}
               versions={versionsByVideoId.get(video.id) ?? []}
               onClick={() => openEditor(video.id)}
+              onView={() => setPreviewVideo(video)}
+              onEdit={() => openEditor(video.id)}
+              onDelete={() => handleDelete(video)}
+              canScore={canScore}
+              onScoreSaved={(score) => {
+                setVideos((prev) =>
+                  prev.map((item) => (item.id === video.id ? { ...item, score } : item))
+                );
+              }}
             />
           ))}
-          <AdminVideoAddCard onClick={handleCreateVideo} disabled={isPending} />
+          <AdminVideoAddCard onClick={handleCreateVideo} />
+        </div>
+      ) : (
+        <div className="overflow-hidden rounded-xl border">
+          {filteredVideos.map((video) => {
+            const displayVersion = resolveDisplayVersion(versionsByVideoId.get(video.id) ?? []);
+            return (
+              <div
+                key={video.id}
+                className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3 last:border-b-0"
+              >
+                <div className="min-w-0">
+                  <p className="truncate font-medium">{video.title}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {video.ownerName ?? "—"}
+                    {displayVersion ? ` · نسخه ${displayVersion.versionNumber}` : " · بدون ویدیو"}
+                  </p>
+                </div>
+                <AdminItemActions
+                  onView={() => setPreviewVideo(video)}
+                  onEdit={() => openEditor(video.id)}
+                  onDelete={() => handleDelete(video)}
+                />
+              </div>
+            );
+          })}
+          {filteredVideos.length === 0 && (
+            <div className="px-4 py-8 text-center text-sm text-muted-foreground">موردی یافت نشد.</div>
+          )}
         </div>
       )}
 
@@ -170,7 +215,7 @@ export function VideosAdmin({
           <DialogHeader className="shrink-0 border-b px-6 py-4 pr-12">
             <DialogTitle>{activeVideo?.title ?? "ویرایش ویدیو"}</DialogTitle>
             <DialogDescription className="sr-only">
-              ویرایش عنوان، دسته، نسخه‌ها و وضعیت انتشار ویدیو
+              ویرایش عنوان، نسخه‌ها و وضعیت انتشار ویدیو
             </DialogDescription>
           </DialogHeader>
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-6 pb-4 pt-4">
@@ -202,6 +247,34 @@ export function VideosAdmin({
               </div>
             )}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={Boolean(previewVideo)} onOpenChange={(open) => !open && setPreviewVideo(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{previewVideo?.title ?? "نمایش ویدیو"}</DialogTitle>
+            <DialogDescription className="sr-only">پیش‌نمایش ویدیو</DialogDescription>
+          </DialogHeader>
+          {previewVideo && (
+            <div className="space-y-3">
+              {resolveDisplayVersion(versionsByVideoId.get(previewVideo.id) ?? [])?.videoUrl ? (
+                <video
+                  src={resolveDisplayVersion(versionsByVideoId.get(previewVideo.id) ?? [])?.videoUrl}
+                  controls
+                  className="max-h-80 w-full rounded-lg bg-muted"
+                />
+              ) : (
+                <p className="text-sm text-muted-foreground">ویدیویی برای پیش‌نمایش وجود ندارد.</p>
+              )}
+              <AdminItemActions
+                onEdit={() => {
+                  setPreviewVideo(null);
+                  openEditor(previewVideo.id);
+                }}
+              />
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

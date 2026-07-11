@@ -4,8 +4,9 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { AdminPosterAddCard, AdminPosterCompactCard } from "@/components/admin/admin-poster-compact-card";
-import { AdminMediaCategories } from "@/components/admin/admin-media-categories";
 import { AdminPosterEditor } from "@/components/admin/admin-poster-editor";
+import { AdminItemActions } from "@/components/admin/admin-item-actions";
+import { AdminViewModeToggle } from "@/components/admin/admin-view-mode-toggle";
 import {
   AdminContentFilterBar,
   collectAdminFilterUsers,
@@ -20,7 +21,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { deletePosterAction } from "@/lib/actions/admin-actions";
 import type { ContentTopic } from "@/lib/content-topics";
+import { useAdminViewMode } from "@/lib/hooks/use-admin-view-mode";
+import { resolveDisplayVersion } from "@/lib/media-utils";
 import type { MediaCategory, Poster, PosterVersion } from "@/lib/types";
 
 interface PostersAdminProps {
@@ -51,8 +55,10 @@ export function PostersAdmin({
   const [editorOpen, setEditorOpen] = useState(false);
   const [activePosterId, setActivePosterId] = useState<string | null>(null);
   const [draftPoster, setDraftPoster] = useState<Poster | null>(null);
+  const [previewPoster, setPreviewPoster] = useState<Poster | null>(null);
   const [contentFilter, setContentFilter] = useState<AdminContentFilterState>(DEFAULT_ADMIN_CONTENT_FILTER);
-  const [isPending] = useTransition();
+  const { viewMode, setViewMode } = useAdminViewMode("posters");
+  const [, startTransition] = useTransition();
 
   useEffect(() => {
     setPosters(initialPosters);
@@ -97,13 +103,8 @@ export function PostersAdmin({
   };
 
   const handleCreatePoster = () => {
-    if (initialCategories.length === 0) {
-      toast.error("ابتدا یک دسته بسازید");
-      return;
-    }
-
     const posterId = crypto.randomUUID();
-    const categoryId = initialCategories[0].id;
+    const categoryId = initialCategories[0]?.id ?? "";
     const now = new Date().toISOString();
     const newPoster: Poster = {
       id: posterId,
@@ -122,13 +123,26 @@ export function PostersAdmin({
     openEditor(posterId);
   };
 
+  const handleDelete = (poster: Poster) => {
+    if (!window.confirm(`حذف «${poster.title}»؟`)) return;
+    startTransition(async () => {
+      await deletePosterAction(poster.id);
+      setPosters((prev) => prev.filter((item) => item.id !== poster.id));
+      toast.success("حذف شد");
+      refresh();
+    });
+  };
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">پوسترها</h1>
-        <p className="text-sm text-muted-foreground">
-          نمای فشرده — روی کارت کلیک کنید یا با + پوستر جدید بسازید
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold">پوسترها</h1>
+          <p className="text-sm text-muted-foreground">
+            نمای فشرده — روی کارت کلیک کنید یا با + پوستر جدید بسازید
+          </p>
+        </div>
+        <AdminViewModeToggle value={viewMode} onChange={setViewMode} />
       </div>
 
       <AdminContentFilterBar
@@ -138,18 +152,14 @@ export function PostersAdmin({
         plans={contentPlans}
       />
 
-      <AdminMediaCategories
-        campaignId={campaignId}
-        type="poster"
-        categories={initialCategories}
-        label="پوستر"
-      />
-
-      {initialCategories.length === 0 ? (
+      {filteredPosters.length === 0 && posters.length === 0 ? (
         <div className="rounded-xl border py-12 text-center text-muted-foreground">
-          ابتدا یک دسته‌بندی بسازید.
+          هنوز پوستری ثبت نشده است.
+          <div className="mt-4 flex justify-center">
+            <AdminPosterAddCard onClick={handleCreatePoster} />
+          </div>
         </div>
-      ) : (
+      ) : viewMode === "grid" ? (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
           {filteredPosters.map((poster) => (
             <AdminPosterCompactCard
@@ -157,9 +167,46 @@ export function PostersAdmin({
               poster={poster}
               versions={versionsByPosterId.get(poster.id) ?? []}
               onClick={() => openEditor(poster.id)}
+              onView={() => setPreviewPoster(poster)}
+              onEdit={() => openEditor(poster.id)}
+              onDelete={() => handleDelete(poster)}
+              canScore={canScore}
+              onScoreSaved={(score) => {
+                setPosters((prev) =>
+                  prev.map((item) => (item.id === poster.id ? { ...item, score } : item))
+                );
+              }}
             />
           ))}
-          <AdminPosterAddCard onClick={handleCreatePoster} disabled={isPending} />
+          <AdminPosterAddCard onClick={handleCreatePoster} />
+        </div>
+      ) : (
+        <div className="overflow-hidden rounded-xl border">
+          {filteredPosters.map((poster) => {
+            const displayVersion = resolveDisplayVersion(versionsByPosterId.get(poster.id) ?? []);
+            return (
+              <div
+                key={poster.id}
+                className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3 last:border-b-0"
+              >
+                <div className="min-w-0">
+                  <p className="truncate font-medium">{poster.title}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {poster.ownerName ?? "—"}
+                    {displayVersion ? ` · نسخه ${displayVersion.versionNumber}` : " · بدون تصویر"}
+                  </p>
+                </div>
+                <AdminItemActions
+                  onView={() => setPreviewPoster(poster)}
+                  onEdit={() => openEditor(poster.id)}
+                  onDelete={() => handleDelete(poster)}
+                />
+              </div>
+            );
+          })}
+          {filteredPosters.length === 0 && (
+            <div className="px-4 py-8 text-center text-sm text-muted-foreground">موردی یافت نشد.</div>
+          )}
         </div>
       )}
 
@@ -168,7 +215,7 @@ export function PostersAdmin({
           <DialogHeader className="shrink-0 border-b px-6 py-4 pr-12">
             <DialogTitle>{activePoster?.title ?? "ویرایش پوستر"}</DialogTitle>
             <DialogDescription className="sr-only">
-              ویرایش عنوان، دسته، نسخه‌ها و وضعیت انتشار پوستر
+              ویرایش عنوان، نسخه‌ها و وضعیت انتشار پوستر
             </DialogDescription>
           </DialogHeader>
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-6 pb-4 pt-4">
@@ -200,6 +247,35 @@ export function PostersAdmin({
               </div>
             )}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={Boolean(previewPoster)} onOpenChange={(open) => !open && setPreviewPoster(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{previewPoster?.title ?? "نمایش پوستر"}</DialogTitle>
+            <DialogDescription className="sr-only">پیش‌نمایش پوستر</DialogDescription>
+          </DialogHeader>
+          {previewPoster && (
+            <div className="space-y-3">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={
+                  resolveDisplayVersion(versionsByPosterId.get(previewPoster.id) ?? [])?.imageUrl ??
+                  ""
+                }
+                alt={previewPoster.title}
+                className="max-h-80 w-full rounded-lg object-contain bg-muted"
+              />
+              <p className="text-sm text-muted-foreground">{previewPoster.description || "بدون توضیحات"}</p>
+              <AdminItemActions
+                onEdit={() => {
+                  setPreviewPoster(null);
+                  openEditor(previewPoster.id);
+                }}
+              />
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

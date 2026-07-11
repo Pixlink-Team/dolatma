@@ -4,6 +4,8 @@ import { useMemo, useState, useTransition } from "react";
 import { Download, FileSpreadsheet, FileText, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { AdminOwnerBadge } from "@/components/admin/admin-owner-badge";
+import { AdminViewModeToggle } from "@/components/admin/admin-view-mode-toggle";
+import { AdminItemActions } from "@/components/admin/admin-item-actions";
 import {
   AdminContentFilterBar,
   collectAdminFilterUsers,
@@ -27,6 +29,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { deleteCampaignFileAction, saveCampaignFileAction } from "@/lib/actions/admin-actions";
 import type { ContentTopic } from "@/lib/content-topics";
+import { useAdminViewMode } from "@/lib/hooks/use-admin-view-mode";
 import type { CampaignFile } from "@/lib/types";
 import { formatPersianNumber } from "@/lib/utils";
 
@@ -64,6 +67,7 @@ export function FilesAdmin({
   const [description, setDescription] = useState("");
   const [planLabels, setPlanLabels] = useState<string[]>([]);
   const [contentFilter, setContentFilter] = useState<AdminContentFilterState>(DEFAULT_ADMIN_CONTENT_FILTER);
+  const { viewMode, setViewMode } = useAdminViewMode("files");
   const [upload, setUpload] = useState({
     url: "",
     fileName: "",
@@ -158,10 +162,13 @@ export function FilesAdmin({
             PDF، Word، Excel و سایر فایل‌های قابل دانلود
           </p>
         </div>
-        <Button onClick={() => setDialogOpen(true)}>
-          <Plus className="h-4 w-4" />
-          فایل جدید
-        </Button>
+        <div className="flex items-center gap-2">
+          <AdminViewModeToggle value={viewMode} onChange={setViewMode} />
+          <Button onClick={() => setDialogOpen(true)}>
+            <Plus className="h-4 w-4" />
+            فایل جدید
+          </Button>
+        </div>
       </div>
 
       <AdminContentFilterBar
@@ -174,6 +181,24 @@ export function FilesAdmin({
       {filteredFiles.length === 0 ? (
         <div className="rounded-xl border py-12 text-center text-muted-foreground">
           {files.length === 0 ? "هنوز فایلی آپلود نشده است." : "موردی با این فیلتر پیدا نشد."}
+        </div>
+      ) : viewMode === "list" ? (
+        <div className="overflow-hidden rounded-xl border">
+          {filteredFiles.map((file) => (
+            <div
+              key={file.id}
+              className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3 last:border-b-0"
+            >
+              <div className="min-w-0">
+                <p className="truncate font-medium">{file.title}</p>
+                <p className="text-xs text-muted-foreground">{file.fileName}</p>
+              </div>
+              <AdminItemActions
+                onView={() => window.open(file.fileUrl, "_blank")}
+                onDelete={() => handleDelete(file)}
+              />
+            </div>
+          ))}
         </div>
       ) : (
         <div className="space-y-3">

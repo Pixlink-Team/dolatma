@@ -23,11 +23,15 @@ import { MapBilboardBackupImportPanel } from "@/components/admin/map-bilboard-ba
 import { BillboardIntegrationImportPanel } from "@/components/admin/billboard-integration-import-panel";
 import { BillboardCreateAssignmentDialog } from "@/components/admin/billboard-create-assignment-dialog";
 import { BillboardAddPeriodDialog } from "@/components/admin/billboard-add-period-dialog";
+import { AdminViewModeToggle } from "@/components/admin/admin-view-mode-toggle";
+import { AdminItemActions } from "@/components/admin/admin-item-actions";
 import { deleteBillboardAction } from "@/lib/actions/admin-actions";
 import { canManageBillboardPeriods, isApiBillboard } from "@/lib/billboards";
 import type { ContentTopic } from "@/lib/content-topics";
+import { useAdminViewMode } from "@/lib/hooks/use-admin-view-mode";
 import type { Billboard } from "@/lib/types";
 import { getStatusLabel } from "@/lib/utils";
+import { formatBillboardCityLine } from "@/lib/billboard-location";
 
 interface ContributorProfile {
   province?: string | null;
@@ -69,6 +73,7 @@ export function BillboardsAdmin({
   const [periodBillboard, setPeriodBillboard] = useState<Billboard | null>(null);
   const [isNormalizing, setIsNormalizing] = useState(false);
   const [contentFilter, setContentFilter] = useState<AdminContentFilterState>(DEFAULT_ADMIN_CONTENT_FILTER);
+  const { viewMode, setViewMode } = useAdminViewMode("billboards");
   const [, startTransition] = useTransition();
 
   useEffect(() => {
@@ -144,10 +149,13 @@ export function BillboardsAdmin({
               : ""}
           </p>
         </div>
-        <Button onClick={openCreate}>
-          <Plus className="h-4 w-4" />
-          ثبت جدید
-        </Button>
+        <div className="flex items-center gap-2">
+          <AdminViewModeToggle value={viewMode} onChange={setViewMode} />
+          <Button onClick={openCreate}>
+            <Plus className="h-4 w-4" />
+            ثبت جدید
+          </Button>
+        </div>
       </div>
 
       <AdminContentFilterBar
@@ -224,13 +232,15 @@ export function BillboardsAdmin({
         <div className="rounded-xl border py-12 text-center text-muted-foreground">
           هنوز تبلیغات محیطی ثبت نشده است.
         </div>
-      ) : (
+      ) : viewMode === "grid" ? (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
           {manualBillboards.map((billboard) => (
             <AdminBillboardCompactCard
               key={billboard.id}
               billboard={billboard}
               onClick={() => openEdit(billboard)}
+              onView={() => openEdit(billboard)}
+              onEdit={() => openEdit(billboard)}
               onDelete={handleDelete}
               canScore={canScore}
               onScoreSaved={(item, score) => {
@@ -241,6 +251,25 @@ export function BillboardsAdmin({
             />
           ))}
           <AdminBillboardAddCard onClick={openCreate} />
+        </div>
+      ) : (
+        <div className="overflow-hidden rounded-xl border">
+          {manualBillboards.map((billboard) => (
+            <div
+              key={billboard.id}
+              className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3 last:border-b-0"
+            >
+              <div className="min-w-0">
+                <p className="truncate font-medium">{billboard.title}</p>
+                <p className="text-xs text-muted-foreground">{formatBillboardCityLine(billboard)}</p>
+              </div>
+              <AdminItemActions
+                onView={() => openEdit(billboard)}
+                onEdit={() => openEdit(billboard)}
+                onDelete={() => handleDelete(billboard)}
+              />
+            </div>
+          ))}
         </div>
       )}
 

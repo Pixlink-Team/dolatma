@@ -4,15 +4,14 @@ import {
   filterItemsByOwnerLocation,
   OWNER_DATE_ALL,
   OWNER_LOCATION_ALL,
-  OWNER_PLAN_ALL,
   OWNER_USER_ALL,
   type OwnerLocationFilter,
 } from "@/lib/owner-location-filter";
 import type { OwnerFilterOption } from "@/lib/owner-users";
 
 const DATE_PRESET_LABELS: Record<string, string> = {
-  this_week: "این هفته",
-  this_month: "این ماه",
+  this_week: "۷ روز اخیر",
+  this_month: "۳۰ روز اخیر",
   custom: "بازه دستی",
 };
 
@@ -23,7 +22,7 @@ export function getOwnerFilterLabel(
   const parts: string[] = [];
 
   if (filter.userKey !== OWNER_USER_ALL) {
-    parts.push(users.find((user) => user.key === filter.userKey)?.label ?? "کاربر");
+    parts.push(users.find((user) => user.key === filter.userKey)?.label ?? "شرکت");
   }
 
   if (filter.province !== OWNER_LOCATION_ALL) {
@@ -45,8 +44,8 @@ export function getOwnerFilterLabel(
     }
   }
 
-  if (filter.planLabel !== OWNER_PLAN_ALL) {
-    parts.push(`موضوع: ${filter.planLabel}`);
+  if (filter.planLabels.length > 0) {
+    parts.push(`موضوع: ${filter.planLabels.join("، ")}`);
   }
 
   if (filter.sortOrder === "newest") parts.push("جدیدترین");

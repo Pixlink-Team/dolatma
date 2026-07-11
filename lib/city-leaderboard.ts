@@ -17,6 +17,8 @@ export interface ProvinceLeaderboardMetrics {
   score: number;
   /** Sum of Ownable.score values across content items. */
   ratingScore: number;
+  /** Sum of billboard areaSqm values. */
+  totalAreaSqm: number;
 }
 
 export interface ProvinceLeaderboardEntry extends ProvinceLeaderboardMetrics {
@@ -97,6 +99,7 @@ function emptyMetrics(): ProvinceLeaderboardMetrics {
     totalUploads: 0,
     score: 0,
     ratingScore: 0,
+    totalAreaSqm: 0,
   };
 }
 
@@ -126,6 +129,13 @@ function addItem<T extends Ownable & { createdAt?: string | null; province?: str
   current.score += SCORE_WEIGHTS[field];
   if (typeof item.score === "number" && Number.isFinite(item.score)) {
     current.ratingScore += item.score;
+  }
+
+  if (field === "billboards") {
+    const area = Number((item as { areaSqm?: number | null }).areaSqm || 0);
+    if (Number.isFinite(area) && area > 0) {
+      current.totalAreaSqm += area;
+    }
   }
 
   if (countsAsTodayUpload(item, field)) {
@@ -187,6 +197,13 @@ function addUserItem<T extends Ownable & { createdAt?: string | null; province?:
     current.ratingScore += item.score;
   }
 
+  if (field === "billboards") {
+    const area = Number((item as { areaSqm?: number | null }).areaSqm || 0);
+    if (Number.isFinite(area) && area > 0) {
+      current.totalAreaSqm += area;
+    }
+  }
+
   if (countsAsTodayUpload(item, field)) {
     current.todayUploads++;
   }
@@ -236,6 +253,7 @@ export function buildProvinceLeaderboard(data: PublicCampaignData): ProvinceLead
       totalUploads: metrics.totalUploads,
       score: metrics.score,
       ratingScore: metrics.ratingScore,
+      totalAreaSqm: metrics.totalAreaSqm,
       rank: 0,
     }))
     .sort((a, b) => b.score - a.score || b.totalUploads - a.totalUploads)
@@ -265,6 +283,7 @@ export function buildUserLeaderboard(data: PublicCampaignData): UserLeaderboardE
       totalUploads: metrics.totalUploads,
       score: metrics.score,
       ratingScore: metrics.ratingScore,
+      totalAreaSqm: metrics.totalAreaSqm,
       rank: 0,
     }))
     .sort((a, b) => b.score - a.score || b.totalUploads - a.totalUploads)
@@ -320,7 +339,7 @@ export function collectUserContentItems(
   };
 
   if (data.sections.billboards) {
-    push(data.billboards, "بیلبورد", "billboard", (item) => item.thumbnailUrl);
+    push(data.billboards, "تبلیغات محیطی", "billboard", (item) => item.thumbnailUrl);
   }
   if (data.sections.posters) {
     push(data.posters, "پوستر", "poster");

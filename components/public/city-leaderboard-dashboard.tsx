@@ -32,7 +32,8 @@ interface CityLeaderboardDashboardProps {
 
 function MetricsBreakdown({ entry }: { entry: ProvinceLeaderboardMetrics }) {
   const items = [
-    { label: "بیلبورد", value: entry.billboards },
+    { label: "تبلیغات محیطی", value: entry.billboards },
+    { label: "متراژ", value: entry.totalAreaSqm },
     { label: "پوستر", value: entry.posters },
     { label: "ویدیو", value: entry.videos },
     { label: "شبکه اجتماعی", value: entry.socialPosts },

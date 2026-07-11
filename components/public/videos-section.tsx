@@ -25,7 +25,7 @@ import { useCampaignSectionVisibility } from "@/lib/hooks/use-campaign-section-v
 import { useOwnerLocationFilter } from "@/lib/context/owner-location-filter-context";
 import { flattenOwnerGroupsInSortOrder } from "@/lib/owner-groups";
 import type { DataOwnerGroup, MediaCategory, VideoWithVersions } from "@/lib/types";
-import { cn, formatPersianNumber } from "@/lib/utils";
+import { formatPersianNumber } from "@/lib/utils";
 
 function getVideoLatestDate(video: VideoWithVersions): string | undefined {
   return [...video.versions].sort((a, b) => b.versionNumber - a.versionNumber)[0]?.date;
@@ -70,22 +70,18 @@ function filterVideoGroups(
     .filter((group) => group.items.length > 0);
 }
 
-export function VideosSection({ categories, videos, groups }: VideosSectionProps) {
-  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+export function VideosSection({ categories: _categories, videos, groups }: VideosSectionProps) {
+  // Category filter UI removed; always show all items.
+  const categoryFilter = "all";
   const [sort, setSort] = useState<PublicMediaSort>("default");
   const { filter } = useOwnerLocationFilter();
-
-  const sortedCategories = useMemo(
-    () => [...categories].sort((a, b) => a.sortOrder - b.sortOrder),
-    [categories]
-  );
 
   const locationFilteredGroups = useFilteredOwnerGroups(groups, getVideoLatestDate);
   const effectiveSort = resolvePublicMediaSort(filter.sortOrder, sort);
 
   const filteredGroups = useMemo(
     () => filterVideoGroups(locationFilteredGroups, categoryFilter, effectiveSort),
-    [locationFilteredGroups, categoryFilter, effectiveSort]
+    [locationFilteredGroups, effectiveSort]
   );
 
   const filteredVideos = useMemo(
@@ -115,8 +111,7 @@ export function VideosSection({ categories, videos, groups }: VideosSectionProps
   if (!sectionVisible) return null;
 
   const controls = filter.sortOrder === "default" ? (
-    <>
-      <Select value={sort} onValueChange={(value) => setSort(value as PublicMediaSort)}>
+    <Select value={sort} onValueChange={(value) => setSort(value as PublicMediaSort)}>
       <SelectTrigger className="w-36">
         <SelectValue placeholder="مرتب‌سازی" />
       </SelectTrigger>
@@ -127,66 +122,18 @@ export function VideosSection({ categories, videos, groups }: VideosSectionProps
         <SelectItem value="oldest">قدیمی‌ترین</SelectItem>
       </SelectContent>
     </Select>
-    </>
   ) : null;
 
   return (
     <CollapsibleSection
       id="videos"
       title="ویدیوها"
-      description={`${formatPersianNumber(videos.length)} ویدیو — همه را ببینید و با دسته فیلتر کنید`}
+      description={`${formatPersianNumber(videos.length)} ویدیو`}
       controls={controls}
     >
-      {sortedCategories.length > 0 && (
-        <div className="mb-4 flex flex-wrap gap-2">
-          <Button
-            type="button"
-            size="sm"
-            variant={categoryFilter === "all" ? "default" : "outline"}
-            onClick={() => setCategoryFilter("all")}
-          >
-            همه ({formatPersianNumber(videos.length)})
-          </Button>
-          {sortedCategories.map((category) => {
-            const count = videos.filter((video) => video.categoryId === category.id).length;
-
-            return (
-              <Button
-                key={category.id}
-                type="button"
-                size="sm"
-                variant={categoryFilter === category.id ? "default" : "outline"}
-                onClick={() => setCategoryFilter(category.id)}
-                className={cn(count === 0 && "opacity-60")}
-              >
-                {category.title} ({formatPersianNumber(count)})
-              </Button>
-            );
-          })}
-        </div>
-      )}
-
-      {sortedCategories.length > 1 && (
-        <div className="mb-4 sm:hidden">
-          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="انتخاب دسته" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">همه دسته‌ها</SelectItem>
-              {sortedCategories.map((category) => (
-                <SelectItem key={category.id} value={category.id}>
-                  {category.title}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      )}
-
       {filteredVideos.length === 0 ? (
         <div className="rounded-xl border bg-card py-12 text-center text-muted-foreground">
-          ویدیویی در این دسته یافت نشد.
+          ویدیویی یافت نشد.
         </div>
       ) : (
         <div className="space-y-4">
@@ -210,8 +157,8 @@ export function VideosSection({ categories, videos, groups }: VideosSectionProps
           </OwnerGroupedSection>
 
           {hasMore && (
-              <div className="flex justify-center" data-export-hide>
-                <Button variant="outline" onClick={loadMore}>
+            <div className="flex justify-center" data-export-hide>
+              <Button variant="outline" onClick={loadMore}>
                 مشاهده بیشتر ({formatPersianNumber(filteredVideos.length - visibleCount)} باقی‌مانده)
               </Button>
             </div>

@@ -70,22 +70,17 @@ function filterPosterGroups(
     .filter((group) => group.items.length > 0);
 }
 
-export function PostersSection({ categories, posters, groups }: PostersSectionProps) {
-  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+export function PostersSection({ categories: _categories, posters, groups }: PostersSectionProps) {
+  const categoryFilter = "all";
   const [sort, setSort] = useState<PublicMediaSort>("default");
   const { filter } = useOwnerLocationFilter();
-
-  const activeCategories = useMemo(
-    () => categories.filter((cat) => posters.some((poster) => poster.categoryId === cat.id)),
-    [categories, posters]
-  );
 
   const locationFilteredGroups = useFilteredOwnerGroups(groups, getPosterLatestDate);
   const effectiveSort = resolvePublicMediaSort(filter.sortOrder, sort);
 
   const filteredGroups = useMemo(
     () => filterPosterGroups(locationFilteredGroups, categoryFilter, effectiveSort),
-    [locationFilteredGroups, categoryFilter, effectiveSort]
+    [locationFilteredGroups, effectiveSort]
   );
 
   const filteredPosters = useMemo(
@@ -114,51 +109,18 @@ export function PostersSection({ categories, posters, groups }: PostersSectionPr
   if (!sectionVisible) return null;
 
   const controls = filter.sortOrder === "default" ? (
-    <>
-      <Select value={sort} onValueChange={(value) => setSort(value as PublicMediaSort)}>
-        <SelectTrigger className="w-36">
-          <SelectValue placeholder="مرتب‌سازی" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="default">ترتیب پیش‌فرض</SelectItem>
-          <SelectItem value="title">عنوان</SelectItem>
-          <SelectItem value="newest">جدیدترین</SelectItem>
-          <SelectItem value="oldest">قدیمی‌ترین</SelectItem>
-        </SelectContent>
-      </Select>
-      {activeCategories.length > 0 && (
-        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-          <SelectTrigger className="w-40">
-            <SelectValue placeholder="دسته" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">همه دسته‌ها</SelectItem>
-            {activeCategories.map((cat) => (
-              <SelectItem key={cat.id} value={cat.id}>
-                {cat.title}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      )}
-    </>
-  ) : (
-    activeCategories.length > 0 ? (
-      <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-        <SelectTrigger className="w-40">
-          <SelectValue placeholder="دسته" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">همه دسته‌ها</SelectItem>
-          {activeCategories.map((cat) => (
-            <SelectItem key={cat.id} value={cat.id}>
-              {cat.title}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    ) : null
-  );
+    <Select value={sort} onValueChange={(value) => setSort(value as PublicMediaSort)}>
+      <SelectTrigger className="w-36">
+        <SelectValue placeholder="مرتب‌سازی" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="default">ترتیب پیش‌فرض</SelectItem>
+        <SelectItem value="title">عنوان</SelectItem>
+        <SelectItem value="newest">جدیدترین</SelectItem>
+        <SelectItem value="oldest">قدیمی‌ترین</SelectItem>
+      </SelectContent>
+    </Select>
+  ) : null;
 
   return (
     <CollapsibleSection

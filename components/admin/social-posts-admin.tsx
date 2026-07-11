@@ -20,13 +20,16 @@ import {
   type AdminContentFilterState,
 } from "@/components/admin/admin-content-filter-bar";
 import { AdminCompactAddCard } from "@/components/admin/admin-compact-add-card";
+import { AdminItemActions } from "@/components/admin/admin-item-actions";
 import { AdminSocialPostCompactCard } from "@/components/admin/admin-social-post-compact-card";
+import { AdminViewModeToggle } from "@/components/admin/admin-view-mode-toggle";
 import { PlanLabelSelect } from "@/components/admin/plan-label-select";
 import { ContentScoreControl } from "@/components/admin/content-score-control";
 import { normalizePlanLabels, type ContentTopic } from "@/lib/content-topics";
 import { MediaUpload } from "@/components/ui/media-upload";
 import { PersianDateField } from "@/components/ui/persian-date-input";
 import { deleteSocialPostAction, saveSocialPostAction } from "@/lib/actions/extended-actions";
+import { useAdminViewMode } from "@/lib/hooks/use-admin-view-mode";
 import { todayISO } from "@/lib/jalali";
 import { isSitePublication } from "@/lib/social-posts";
 import type { SocialContentType, SocialMediaPost, SocialPlatform } from "@/lib/types";
@@ -85,6 +88,7 @@ export function SocialPostsAdmin({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [planLabels, setPlanLabels] = useState<string[]>([]);
   const [contentFilter, setContentFilter] = useState<AdminContentFilterState>(DEFAULT_ADMIN_CONTENT_FILTER);
+  const { viewMode, setViewMode } = useAdminViewMode("social-posts");
   const [rows, setRows] = useState(initialPosts.filter((post) => !isSitePublication(post)));
   const [isPending, startTransition] = useTransition();
 
@@ -156,6 +160,15 @@ export function SocialPostsAdmin({
     setOpen(true);
   };
 
+  const handleDelete = (post: SocialMediaPost) => {
+    if (!window.confirm(`حذف «${post.title}»؟`)) return;
+    startTransition(async () => {
+      await deleteSocialPostAction(post.id);
+      setRows((prev) => prev.filter((row) => row.id !== post.id));
+      toast.success("حذف شد");
+    });
+  };
+
   const onSubmit = form.handleSubmit((data) => {
     startTransition(async () => {
       const result = await saveSocialPostAction({
@@ -212,15 +225,19 @@ export function SocialPostsAdmin({
             <h1 className="text-2xl font-bold">شبکه‌های اجتماعی</h1>
             <p className="text-sm text-muted-foreground">ثبت پست‌ها، بازدید، لینک و نوع محتوا</p>
           </div>
-          <Button onClick={openCreate}>
-            <Plus className="h-4 w-4" />
-            افزودن پست
-          </Button>
+          <div className="flex items-center gap-2">
+            <AdminViewModeToggle value={viewMode} onChange={setViewMode} />
+            <Button onClick={openCreate}>
+              <Plus className="h-4 w-4" />
+              افزودن پست
+            </Button>
+          </div>
         </div>
       )}
 
       {embedded && (
-        <div className="flex items-center justify-end">
+        <div className="flex items-center justify-end gap-2">
+          <AdminViewModeToggle value={viewMode} onChange={setViewMode} />
           <Button onClick={openCreate}>
             <Plus className="h-4 w-4" />
             افزودن پست
@@ -235,12 +252,45 @@ export function SocialPostsAdmin({
         plans={contentPlans}
       />
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-        {filteredRows.map((post) => (
-          <AdminSocialPostCompactCard key={post.id} post={post} onClick={() => openEdit(post)} />
-        ))}
-        <AdminCompactAddCard onClick={openCreate} label="پست جدید" />
-      </div>
+      {viewMode === "grid" ? (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+          {filteredRows.map((post) => (
+            <AdminSocialPostCompactCard
+              key={post.id}
+              post={post}
+              onClick={() => openEdit(post)}
+              onView={() => openEdit(post)}
+              onEdit={() => openEdit(post)}
+              onDelete={() => handleDelete(post)}
+            />
+          ))}
+          <AdminCompactAddCard onClick={openCreate} label="پست جدید" />
+        </div>
+      ) : (
+        <div className="overflow-hidden rounded-xl border">
+          {filteredRows.map((post) => (
+            <div
+              key={post.id}
+              className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3 last:border-b-0"
+            >
+              <div className="min-w-0">
+                <p className="truncate font-medium">{post.title}</p>
+                <p className="text-xs text-muted-foreground">
+                  {getStatusLabel(post.platform)} · {post.ownerName ?? "—"}
+                </p>
+              </div>
+              <AdminItemActions
+                onView={() => openEdit(post)}
+                onEdit={() => openEdit(post)}
+                onDelete={() => handleDelete(post)}
+              />
+            </div>
+          ))}
+          {filteredRows.length === 0 && (
+            <div className="px-4 py-8 text-center text-sm text-muted-foreground">موردی یافت نشد.</div>
+          )}
+        </div>
+      )}
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">

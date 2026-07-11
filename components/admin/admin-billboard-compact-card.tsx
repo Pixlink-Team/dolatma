@@ -1,8 +1,7 @@
 "use client";
 
-import { Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { AdminItemActions } from "@/components/admin/admin-item-actions";
 import { AdminOwnerBadge } from "@/components/admin/admin-owner-badge";
 import { ContentScoreControl } from "@/components/admin/content-score-control";
 import { MediaThumbnail } from "@/components/ui/media-thumbnail";
@@ -14,6 +13,8 @@ import { cn } from "@/lib/utils";
 interface AdminBillboardCompactCardProps {
   billboard: Billboard;
   onClick: () => void;
+  onView?: () => void;
+  onEdit?: () => void;
   onDelete?: (billboard: Billboard) => void;
   canScore?: boolean;
   onScoreSaved?: (billboard: Billboard, score: number | null) => void;
@@ -22,6 +23,8 @@ interface AdminBillboardCompactCardProps {
 export function AdminBillboardCompactCard({
   billboard,
   onClick,
+  onView,
+  onEdit,
   onDelete,
   canScore = false,
   onScoreSaved,
@@ -72,21 +75,14 @@ export function AdminBillboardCompactCard({
         </div>
       )}
 
-      {onDelete && (
-        <Button
-          type="button"
-          variant="destructive"
-          size="sm"
-          className="absolute bottom-2 left-2 z-10 h-7 gap-1 px-2 text-[10px]"
-          onClick={(event) => {
-            event.stopPropagation();
-            onDelete(billboard);
-          }}
-        >
-          <Trash2 className="h-3 w-3" />
-          حذف
-        </Button>
-      )}
+      <div className="absolute bottom-2 left-2 z-10">
+        <AdminItemActions
+          compact
+          onView={onView}
+          onEdit={onEdit}
+          onDelete={onDelete ? () => onDelete(billboard) : undefined}
+        />
+      </div>
     </div>
   );
 }

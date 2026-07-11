@@ -100,3 +100,15 @@ export function matchesPlanLabelFilter(
     return false;
   });
 }
+
+/** True when any selected filter label matches the item (empty selected = all). */
+export function matchesAnyPlanLabelFilter(
+  planLabels: string[] | null | undefined,
+  legacyPlanLabel: string | null | undefined,
+  selectedLabels: string[]
+): boolean {
+  if (selectedLabels.length === 0) return true;
+  return selectedLabels.some((label) =>
+    matchesPlanLabelFilter(planLabels, legacyPlanLabel, label)
+  );
+}

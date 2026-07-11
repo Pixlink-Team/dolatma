@@ -23,7 +23,8 @@ export interface OwnerLocationFilter extends CampaignDateFilter {
   province: string;
   city: string;
   userKey: string;
-  planLabel: string;
+  /** Empty array means all plan labels. */
+  planLabels: string[];
   sortOrder: CampaignContentSort;
 }
 
@@ -31,7 +32,7 @@ export const DEFAULT_OWNER_LOCATION_FILTER: OwnerLocationFilter = {
   province: OWNER_LOCATION_ALL,
   city: OWNER_LOCATION_ALL,
   userKey: OWNER_USER_ALL,
-  planLabel: OWNER_PLAN_ALL,
+  planLabels: [],
   datePreset: OWNER_DATE_ALL,
   dateFrom: "",
   dateTo: "",
@@ -47,7 +48,7 @@ export function isOwnerUserFilterActive(filter: OwnerLocationFilter): boolean {
 }
 
 export function isOwnerPlanFilterActive(filter: OwnerLocationFilter): boolean {
-  return filter.planLabel !== OWNER_PLAN_ALL;
+  return filter.planLabels.length > 0;
 }
 
 export function isOwnerFilterActive(filter: OwnerLocationFilter): boolean {
@@ -55,7 +56,10 @@ export function isOwnerFilterActive(filter: OwnerLocationFilter): boolean {
 }
 
 function matchesPlanLabel(item: Ownable, filter: OwnerLocationFilter): boolean {
-  return matchesPlanLabelFilter(item.planLabels, item.planLabel, filter.planLabel);
+  if (filter.planLabels.length === 0) return true;
+  return filter.planLabels.some((label) =>
+    matchesPlanLabelFilter(item.planLabels, item.planLabel, label)
+  );
 }
 
 function matchesOwnerUser(item: Ownable, filter: OwnerLocationFilter): boolean {

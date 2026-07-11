@@ -15,13 +15,6 @@ import { MediaThumbnail } from "@/components/ui/media-thumbnail";
 import { PlanLabelSelect } from "@/components/admin/plan-label-select";
 import { ContentScoreControl } from "@/components/admin/content-score-control";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   deletePosterAction,
   deletePosterVersionAction,
   savePosterAction,
@@ -275,17 +268,7 @@ export function AdminPosterEditor({
               placeholder="توضیحات (اختیاری)"
             />
           </div>
-          <div>
-            <Label>دسته</Label>
-            <Select value={editCategoryId} onValueChange={setEditCategoryId}>
-              <SelectTrigger><SelectValue placeholder="دسته" /></SelectTrigger>
-              <SelectContent>
-                {categories.map((category) => (
-                  <SelectItem key={category.id} value={category.id}>{category.title}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {/* Category select hidden from UX; categoryId still persisted for DB compatibility. */}
           <PlanLabelSelect
             topics={contentTopics}
             plans={contentPlans}

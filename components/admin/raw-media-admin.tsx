@@ -13,6 +13,8 @@ import {
 import { PlanLabelSelect } from "@/components/admin/plan-label-select";
 import { ContentScoreControl } from "@/components/admin/content-score-control";
 import { AdminOwnerBadge } from "@/components/admin/admin-owner-badge";
+import { AdminItemActions } from "@/components/admin/admin-item-actions";
+import { AdminViewModeToggle } from "@/components/admin/admin-view-mode-toggle";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -38,6 +40,7 @@ import {
   deleteRawMediaUploadAction,
   saveRawMediaUploadAction,
 } from "@/lib/actions/admin-actions";
+import { useAdminViewMode } from "@/lib/hooks/use-admin-view-mode";
 import type { ContentTopic } from "@/lib/content-topics";
 import {
   buildRawMediaStorageSummary,
@@ -70,6 +73,7 @@ export function RawMediaAdmin({
   const [mediaKind, setMediaKind] = useState<RawMediaKind>("image");
   const [planLabels, setPlanLabels] = useState<string[]>([]);
   const [contentFilter, setContentFilter] = useState<AdminContentFilterState>(DEFAULT_ADMIN_CONTENT_FILTER);
+  const { viewMode, setViewMode } = useAdminViewMode("raw-media");
   const [upload, setUpload] = useState({
     url: "",
     fileName: "",
@@ -151,7 +155,7 @@ export function RawMediaAdmin({
         },
         ...prev,
       ]);
-      toast.success("رسانه خام ذخیره شد");
+      toast.success("ارسال رویش ذخیره شد");
       setDialogOpen(false);
       resetForm();
     });
@@ -169,22 +173,25 @@ export function RawMediaAdmin({
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">رسانه خام</h1>
+          <h1 className="text-2xl font-bold">ارسال رویش</h1>
           <p className="text-sm text-muted-foreground">
             آپلود عکس و فیلم خام با حجم بالا — قابل دانلود توسط مدیر/کارفرما
           </p>
         </div>
-        <Button onClick={() => setDialogOpen(true)}>
-          <Plus className="h-4 w-4" />
-          آپلود جدید
-        </Button>
+        <div className="flex items-center gap-2">
+          <AdminViewModeToggle value={viewMode} onChange={setViewMode} />
+          <Button onClick={() => setDialogOpen(true)}>
+            <Plus className="h-4 w-4" />
+            آپلود جدید
+          </Button>
+        </div>
       </div>
 
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
             <HardDrive className="h-4 w-4 text-primary" />
-            فضای ذخیره‌سازی رسانه خام
+            فضای ذخیره‌سازی ارسال رویش
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -222,7 +229,27 @@ export function RawMediaAdmin({
 
       {filteredItems.length === 0 ? (
         <div className="rounded-xl border py-12 text-center text-muted-foreground">
-          هنوز رسانه خامی آپلود نشده است.
+          هنوز موردی برای ارسال رویش آپلود نشده است.
+        </div>
+      ) : viewMode === "list" ? (
+        <div className="overflow-hidden rounded-xl border">
+          {filteredItems.map((item) => (
+            <div
+              key={item.id}
+              className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3 last:border-b-0"
+            >
+              <div className="min-w-0">
+                <p className="truncate font-medium">{item.title}</p>
+                <p className="text-xs text-muted-foreground">
+                  {item.fileName} — {formatStorageBytes(item.fileSize)}
+                </p>
+              </div>
+              <AdminItemActions
+                onView={() => window.open(item.fileUrl, "_blank")}
+                onDelete={() => handleDelete(item)}
+              />
+            </div>
+          ))}
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
@@ -297,7 +324,7 @@ export function RawMediaAdmin({
       >
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>آپلود رسانه خام</DialogTitle>
+            <DialogTitle>آپلود ارسال رویش</DialogTitle>
             <DialogDescription>
               عکس یا فیلم خام با حجم بالا — حداکثر هر فایل {formatStorageBytes(RAW_MEDIA_MAX_FILE_BYTES)}
             </DialogDescription>

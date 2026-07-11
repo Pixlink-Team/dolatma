@@ -165,7 +165,7 @@ export function CampaignsAdmin({ initialCampaigns }: CampaignsAdminProps) {
     { key: "meetings", label: "جلسات و مصوبات" },
     { key: "submissions", label: "مشارکت کاربران" },
     { key: "files", label: "فایل‌های کمپین" },
-    { key: "rawMedia", label: "رسانه خام" },
+    { key: "rawMedia", label: "ارسال رویش" },
   ];
 
   return (

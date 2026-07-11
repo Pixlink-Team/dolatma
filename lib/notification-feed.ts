@@ -26,6 +26,7 @@ export interface NotificationFeedItem {
   thumbnailUrl?: string | null;
   published: boolean;
   adminPath: string;
+  score?: number | null;
 }
 
 function eventTimestamp(createdAt: string, updatedAt?: string): string {
@@ -97,6 +98,7 @@ export function buildNotificationFeed(input: {
       thumbnailUrl: posterThumbnail(poster.id, posterVersions),
       published: poster.published,
       adminPath: "/admin/posters",
+      score: poster.score,
     });
   }
 
@@ -116,6 +118,7 @@ export function buildNotificationFeed(input: {
       thumbnailUrl: videoThumbnail(video.id, videoVersions),
       published: video.published,
       adminPath: "/admin/videos",
+      score: video.score,
     });
   }
 
@@ -135,6 +138,7 @@ export function buildNotificationFeed(input: {
       thumbnailUrl: billboard.thumbnailUrl,
       published: billboard.published,
       adminPath: "/admin/billboards",
+      score: billboard.score,
     });
   }
 
@@ -154,6 +158,7 @@ export function buildNotificationFeed(input: {
       thumbnailUrl: activityThumbnail(activity),
       published: activity.published,
       adminPath: "/admin/activities",
+      score: activity.score,
     });
   }
 
@@ -173,6 +178,7 @@ export function buildNotificationFeed(input: {
       thumbnailUrl: post.coverImageUrl ?? post.mediaUrl,
       published: post.published,
       adminPath: post.platform === "site" ? "/admin/site-publications" : "/admin/social-posts",
+      score: post.score,
     });
   }
 

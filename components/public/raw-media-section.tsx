@@ -68,7 +68,7 @@ function StorageMeter({ storage }: { storage: RawMediaStorageSummary }) {
     <div className="mb-4 rounded-xl border bg-card p-4">
       <div className="mb-2 flex items-center gap-2 text-sm font-medium">
         <HardDrive className="h-4 w-4 text-primary" />
-        فضای ذخیره‌سازی رسانه خام
+        فضای ذخیره‌سازی ارسال رویش
       </div>
       <div className="mb-2 flex items-center justify-between text-sm">
         <span className="text-muted-foreground">
@@ -130,7 +130,7 @@ export function RawMediaSection({ items, groups, storage }: RawMediaSectionProps
   return (
     <CollapsibleSection
       id="raw-media"
-      title="رسانه خام"
+      title="ارسال رویش"
       description="عکس و فیلم خام با حجم بالا — قابل دانلود توسط مدیر و کارفرما"
     >
       <StorageMeter storage={storage} />

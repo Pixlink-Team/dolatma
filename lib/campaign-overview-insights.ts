@@ -29,12 +29,14 @@ export interface RecentActivityItem {
 
 const SECTION_HREF_BY_LABEL: Record<string, string> = {
   بیلبورد: "#billboards",
+  "تبلیغات محیطی": "#billboards",
   پوستر: "#posters",
   ویدیو: "#videos",
   "پست اجتماعی": "#social-posts",
   "انتشار سایت": "#site-publications",
   اقدام: "#activities",
-  "رسانه چاپی": "#activities",
+  "رسانه چاپی": "#press-publications",
+  "مجله و روزنامه": "#press-publications",
   پخش: "#broadcast-reports",
   جلسه: "#meetings",
   فایل: "#files",
@@ -99,7 +101,7 @@ export function buildContentMixStats(
   const { sections } = data;
 
   return [
-    { label: "بیلبورد", count: kpis.totalBillboards, show: Boolean(sections.billboards) },
+    { label: "تبلیغات محیطی", count: kpis.totalBillboards, show: Boolean(sections.billboards) },
     { label: "پوستر", count: kpis.totalPosters, show: Boolean(sections.posters) },
     { label: "ویدیو", count: kpis.totalVideos, show: Boolean(sections.videos) },
     { label: "پست اجتماعی", count: kpis.totalSocialPosts, show: Boolean(sections.socialPosts) },
@@ -166,7 +168,7 @@ export function buildRecentActivityFeed(
     pushActivity(
       entries,
       filtered.billboards.filter((billboard) => !isLiveApiBillboard(billboard)),
-      "بیلبورد",
+      "تبلیغات محیطی",
       (billboard) => getBillboardUploadActivityDate(billboard as Billboard),
       "billboard"
     );

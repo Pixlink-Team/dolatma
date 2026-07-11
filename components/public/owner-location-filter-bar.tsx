@@ -1,7 +1,8 @@
 "use client";
 
 import { isCampaignContentFilterActive } from "@/lib/campaign-content-filter";
-import { CalendarRange, MapPin, RotateCcw, UserRound } from "lucide-react";
+import { Building2, CalendarRange, MapPin, RotateCcw, X } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -15,7 +16,6 @@ import { useOwnerLocationFilter } from "@/lib/context/owner-location-filter-cont
 import {
   OWNER_DATE_ALL,
   OWNER_LOCATION_ALL,
-  OWNER_PLAN_ALL,
   OWNER_USER_ALL,
   type CampaignContentSort,
   type CampaignDatePreset,
@@ -31,7 +31,8 @@ export function OwnerLocationFilterBar() {
     setDateFrom,
     setDateTo,
     setSortOrder,
-    setPlanLabel,
+    setPlanLabels,
+    togglePlanLabel,
     resetFilters,
     provinces,
     cities,
@@ -68,16 +69,15 @@ export function OwnerLocationFilterBar() {
           <Select value={filter.userKey} onValueChange={setUserKey}>
             <SelectTrigger className="w-full">
               <div className="flex items-center gap-2">
-                <UserRound className="h-4 w-4 shrink-0 text-muted-foreground" />
-                <SelectValue placeholder="کاربر" />
+                <Building2 className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <SelectValue placeholder="شرکت" />
               </div>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={OWNER_USER_ALL}>همه کاربران</SelectItem>
+              <SelectItem value={OWNER_USER_ALL}>همه شرکت‌ها</SelectItem>
               {users.map((user) => (
                 <SelectItem key={user.key} value={user.key}>
                   {user.label}
-                  {user.province ? ` — ${user.province}${user.city ? ` / ${user.city}` : ""}` : ""}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -136,8 +136,8 @@ export function OwnerLocationFilterBar() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value={OWNER_DATE_ALL}>همه زمان‌ها</SelectItem>
-            <SelectItem value="this_week">این هفته</SelectItem>
-            <SelectItem value="this_month">این ماه</SelectItem>
+            <SelectItem value="this_week">۷ روز اخیر</SelectItem>
+            <SelectItem value="this_month">۳۰ روز اخیر</SelectItem>
             <SelectItem value="custom">تاریخ دستی</SelectItem>
           </SelectContent>
         </Select>
@@ -158,21 +158,49 @@ export function OwnerLocationFilterBar() {
         </Select>
 
         {plans.length > 0 && (
-          <Select value={filter.planLabel} onValueChange={setPlanLabel}>
+          <Select
+            key={filter.planLabels.join("|")}
+            onValueChange={(value) => {
+              if (!filter.planLabels.includes(value)) togglePlanLabel(value);
+            }}
+          >
             <SelectTrigger className="w-full">
-              <SelectValue placeholder="موضوع" />
+              <SelectValue placeholder="افزودن موضوع" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={OWNER_PLAN_ALL}>همه موضوع‌ها</SelectItem>
-              {plans.map((plan) => (
-                <SelectItem key={plan} value={plan}>
-                  {plan}
-                </SelectItem>
-              ))}
+              {plans
+                .filter((plan) => !filter.planLabels.includes(plan))
+                .map((plan) => (
+                  <SelectItem key={plan} value={plan}>
+                    {plan}
+                  </SelectItem>
+                ))}
             </SelectContent>
           </Select>
         )}
       </div>
+
+      {filter.planLabels.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs text-muted-foreground">موضوع‌های انتخاب‌شده:</span>
+          {filter.planLabels.map((label) => (
+            <Badge key={label} variant="secondary" className="gap-1 pl-1">
+              {label}
+              <button
+                type="button"
+                className="rounded-sm p-0.5 hover:bg-muted"
+                onClick={() => togglePlanLabel(label)}
+                aria-label={`حذف ${label}`}
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          ))}
+          <Button type="button" variant="ghost" size="sm" onClick={() => setPlanLabels([])}>
+            پاک کردن موضوع‌ها
+          </Button>
+        </div>
+      )}
 
       {filter.datePreset === "custom" && (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

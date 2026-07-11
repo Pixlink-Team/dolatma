@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowRight, RefreshCw, Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { CampaignOverviewSection } from "@/components/public/campaign-overview-section";
 import { BillboardSection } from "@/components/public/billboard-section";
 import { PostersSection } from "@/components/public/posters-section";
@@ -95,6 +96,9 @@ function CampaignDashboardBody({
             <p className="text-xs text-muted-foreground hidden sm:block">
               آخرین بروزرسانی: {formatPersianDateTime(lastRefresh.toISOString())}
             </p>
+            <span data-export-hide>
+              <ThemeToggle />
+            </span>
             <Button variant="outline" size="sm" asChild data-export-hide>
               <Link href={`/campaign/${slug}/cities`}>
                 <Trophy className="h-4 w-4" />
@@ -239,7 +243,7 @@ function CampaignDashboardBody({
 
         {sections.rawMedia && (
           <DeferredSection minHeight={240} forceRender={exportMode}>
-            <section data-export-section data-export-label="رسانه خام">
+            <section data-export-section data-export-label="ارسال رویش">
               <RawMediaSection
                 items={data.rawMedia}
                 groups={data.rawMediaGroups}

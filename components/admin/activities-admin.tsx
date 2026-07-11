@@ -21,6 +21,8 @@ import {
 } from "@/components/admin/admin-content-filter-bar";
 import { AdminActivityCompactCard } from "@/components/admin/admin-activity-compact-card";
 import { AdminCompactAddCard } from "@/components/admin/admin-compact-add-card";
+import { AdminItemActions } from "@/components/admin/admin-item-actions";
+import { AdminViewModeToggle } from "@/components/admin/admin-view-mode-toggle";
 import { PlanLabelSelect } from "@/components/admin/plan-label-select";
 import { ContentScoreControl } from "@/components/admin/content-score-control";
 import { MediaUpload } from "@/components/ui/media-upload";
@@ -28,6 +30,7 @@ import { PersianDateField } from "@/components/ui/persian-date-input";
 import { fieldActivityTypeOptions, getActivityTypeLabel } from "@/lib/activity-types";
 import { deleteCampaignActivityAction, saveCampaignActivityAction } from "@/lib/actions/extended-actions";
 import { normalizePlanLabels, type ContentTopic } from "@/lib/content-topics";
+import { useAdminViewMode } from "@/lib/hooks/use-admin-view-mode";
 import { todayISO } from "@/lib/jalali";
 import { isPressPublication } from "@/lib/press-publications";
 import type { ActivityMediaItem, ActivityType, CampaignActivity } from "@/lib/types";
@@ -82,6 +85,7 @@ export function ActivitiesAdmin({
   const [mediaItems, setMediaItems] = useState<ActivityMediaItem[]>([]);
   const [planLabels, setPlanLabels] = useState<string[]>([]);
   const [contentFilter, setContentFilter] = useState<AdminContentFilterState>(DEFAULT_ADMIN_CONTENT_FILTER);
+  const { viewMode, setViewMode } = useAdminViewMode("activities");
   const [rows, setRows] = useState(
     initialActivities.filter((activity) => !isPressPublication(activity))
   );
@@ -139,6 +143,15 @@ export function ActivitiesAdmin({
       published: activity.published,
     });
     setOpen(true);
+  };
+
+  const handleDelete = (activity: CampaignActivity) => {
+    if (!window.confirm(`حذف «${activity.title}»؟`)) return;
+    startTransition(async () => {
+      await deleteCampaignActivityAction(activity.id);
+      setRows((prev) => prev.filter((row) => row.id !== activity.id));
+      toast.success("حذف شد");
+    });
   };
 
   const addMediaItem = (type: "image" | "video") => {
@@ -212,10 +225,13 @@ export function ActivitiesAdmin({
             ثبت فعالیت‌های میدانی: تراکت، غرفه، شعرخوانی، نقاشی و ... (تا {MAX_MEDIA_ITEMS} رسانه)
           </p>
         </div>
-        <Button onClick={openCreate}>
-          <Plus className="h-4 w-4" />
-          اقدام جدید
-        </Button>
+        <div className="flex items-center gap-2">
+          <AdminViewModeToggle value={viewMode} onChange={setViewMode} />
+          <Button onClick={openCreate}>
+            <Plus className="h-4 w-4" />
+            اقدام جدید
+          </Button>
+        </div>
       </div>
 
       <AdminContentFilterBar
@@ -225,12 +241,45 @@ export function ActivitiesAdmin({
         plans={contentPlans}
       />
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-        {filteredRows.map((activity) => (
-          <AdminActivityCompactCard key={activity.id} activity={activity} onClick={() => openEdit(activity)} />
-        ))}
-        <AdminCompactAddCard onClick={openCreate} label="اقدام جدید" />
-      </div>
+      {viewMode === "grid" ? (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+          {filteredRows.map((activity) => (
+            <AdminActivityCompactCard
+              key={activity.id}
+              activity={activity}
+              onClick={() => openEdit(activity)}
+              onView={() => openEdit(activity)}
+              onEdit={() => openEdit(activity)}
+              onDelete={() => handleDelete(activity)}
+            />
+          ))}
+          <AdminCompactAddCard onClick={openCreate} label="اقدام جدید" />
+        </div>
+      ) : (
+        <div className="overflow-hidden rounded-xl border">
+          {filteredRows.map((activity) => (
+            <div
+              key={activity.id}
+              className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3 last:border-b-0"
+            >
+              <div className="min-w-0">
+                <p className="truncate font-medium">{activity.title}</p>
+                <p className="text-xs text-muted-foreground">
+                  {getActivityTypeLabel(activity.activityType)} · {activity.ownerName ?? "—"}
+                </p>
+              </div>
+              <AdminItemActions
+                onView={() => openEdit(activity)}
+                onEdit={() => openEdit(activity)}
+                onDelete={() => handleDelete(activity)}
+              />
+            </div>
+          ))}
+          {filteredRows.length === 0 && (
+            <div className="px-4 py-8 text-center text-sm text-muted-foreground">موردی یافت نشد.</div>
+          )}
+        </div>
+      )}
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">

@@ -1,4 +1,4 @@
-import { isoFromGregorian, isoToJalaali, jalaaliMonthLength, jalaaliToISO, todayISO } from "@/lib/jalali";
+import { isoFromGregorian } from "@/lib/jalali";
 import type { Ownable } from "@/lib/types";
 import {
   isOwnerFilterActive,
@@ -16,33 +16,26 @@ export function isCampaignContentFilterActive(filter: OwnerLocationFilter): bool
   return isOwnerFilterActive(filter) || isDateFilterActive(filter);
 }
 
-function iranWeekStart(date: Date): Date {
-  const copy = new Date(date);
-  const iranDay = (copy.getDay() + 1) % 7;
-  copy.setDate(copy.getDate() - iranDay);
-  copy.setHours(0, 0, 0, 0);
-  return copy;
+function rollingDayRange(dayCountInclusive: number): { from: string; to: string } {
+  const end = new Date();
+  const start = new Date(end);
+  start.setDate(end.getDate() - (dayCountInclusive - 1));
+  return {
+    from: isoFromGregorian(start.getFullYear(), start.getMonth() + 1, start.getDate()),
+    to: isoFromGregorian(end.getFullYear(), end.getMonth() + 1, end.getDate()),
+  };
 }
 
 export function resolveDateFilterRange(filter: CampaignDateFilter): { from: string; to: string } | null {
   if (filter.datePreset === OWNER_DATE_ALL) return null;
 
+  // this_week / this_month map to rolling last 7 / last 30 days (inclusive).
   if (filter.datePreset === "this_week") {
-    const start = iranWeekStart(new Date());
-    const end = new Date(start);
-    end.setDate(start.getDate() + 6);
-    return {
-      from: isoFromGregorian(start.getFullYear(), start.getMonth() + 1, start.getDate()),
-      to: isoFromGregorian(end.getFullYear(), end.getMonth() + 1, end.getDate()),
-    };
+    return rollingDayRange(7);
   }
 
   if (filter.datePreset === "this_month") {
-    const { jy, jm } = isoToJalaali(todayISO());
-    return {
-      from: jalaaliToISO(jy, jm, 1),
-      to: jalaaliToISO(jy, jm, jalaaliMonthLength(jy, jm)),
-    };
+    return rollingDayRange(30);
   }
 
   if (filter.datePreset === "custom") {

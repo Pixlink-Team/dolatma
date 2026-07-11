@@ -53,7 +53,7 @@ export const DASHBOARD_STAT_DEFINITIONS: DashboardStatDefinition[] = [
   {
     permissionKey: "billboards",
     featureKey: "billboards",
-    label: "بیلبوردها",
+    label: "تبلیغات محیطی",
     href: "/admin/billboards",
     icon: LayoutGrid,
     getCount: (_, billboards) => billboards.length,
