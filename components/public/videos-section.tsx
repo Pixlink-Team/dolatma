@@ -149,7 +149,6 @@ export function VideosSection({ categories: _categories, videos, groups }: Video
                     campaignId={video.campaignId}
                     title={video.title}
                     description={video.description}
-                    categoryTitle={video.category?.title}
                     versions={video.versions}
                     score={video.score}
                   />

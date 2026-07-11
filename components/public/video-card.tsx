@@ -18,7 +18,6 @@ interface VideoCardProps {
   campaignId?: string;
   title: string;
   description?: string | null;
-  categoryTitle?: string;
   versions: VideoVersion[];
   score?: number | null;
 }
@@ -28,7 +27,6 @@ export function VideoCard({
   campaignId,
   title,
   description,
-  categoryTitle,
   versions,
   score,
 }: VideoCardProps) {
@@ -112,11 +110,6 @@ export function VideoCard({
 
         <CardContent className="p-4 space-y-3">
           <div>
-            {categoryTitle && (
-              <Badge variant="outline" className="mb-2 text-[10px]">
-                {categoryTitle}
-              </Badge>
-            )}
             <h3 className="font-semibold">{title}</h3>
             {description && <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{description}</p>}
           </div>
