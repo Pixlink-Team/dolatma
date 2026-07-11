@@ -31,6 +31,7 @@ const platformOptions: SocialPlatform[] = [
   "linkedin",
   "rubika",
   "eitaa",
+  "soroush",
   "bale",
   "other",
 ];
@@ -45,6 +46,7 @@ const schema = z.object({
     "aparat",
     "rubika",
     "eitaa",
+    "soroush",
     "bale",
     "other",
   ]),

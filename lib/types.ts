@@ -6,7 +6,7 @@ export type SubmissionStatus = "pending" | "approved" | "rejected";
 export type TrafficSource = "instagram" | "telegram" | "direct" | "google" | "referral" | "other";
 export type DeviceType = "mobile" | "desktop" | "tablet";
 export type AdminRole = "admin" | "contributor" | "client";
-export type SocialPlatform = "instagram" | "x" | "telegram" | "linkedin" | "youtube" | "aparat" | "rubika" | "eitaa" | "bale" | "other";
+export type SocialPlatform = "instagram" | "x" | "telegram" | "linkedin" | "youtube" | "aparat" | "rubika" | "eitaa" | "soroush" | "bale" | "other";
 export type SocialPostPlatform = SocialPlatform | "site";
 export type ActivityType =
   | "magazine"

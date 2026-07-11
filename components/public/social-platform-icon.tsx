@@ -46,6 +46,11 @@ const platformStyles: Record<
     className: "bg-[#F58220] text-white",
     glyph: "ET",
   },
+  soroush: {
+    label: "سروش",
+    className: "bg-[#0088CC] text-white",
+    glyph: "SR",
+  },
   bale: {
     label: "بله",
     className: "bg-[#21C063] text-white",

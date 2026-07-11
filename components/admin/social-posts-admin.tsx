@@ -32,7 +32,7 @@ import type { SocialContentType, SocialMediaPost, SocialPlatform } from "@/lib/t
 import { getStatusLabel } from "@/lib/utils";
 
 const schema = z.object({
-  platform: z.enum(["instagram", "x", "telegram", "linkedin", "youtube", "aparat", "rubika", "eitaa", "bale", "other"]),
+  platform: z.enum(["instagram", "x", "telegram", "linkedin", "youtube", "aparat", "rubika", "eitaa", "soroush", "bale", "other"]),
   title: z.string().min(1),
   coverImageUrl: z.string().optional(),
   views: z.coerce.number().min(0),
@@ -56,6 +56,7 @@ const platformOptions: SocialPlatform[] = [
   "aparat",
   "rubika",
   "eitaa",
+  "soroush",
   "bale",
   "other",
 ];
