@@ -364,6 +364,19 @@ export function collectUserContentItems(
   return items.sort((a, b) => (b.score ?? -1) - (a.score ?? -1));
 }
 
+export function collectLeaderboardBillboards(
+  data: PublicCampaignData,
+  filter: { provinceKey?: string; userKey?: string }
+): Billboard[] {
+  if (!data.sections.billboards) return [];
+
+  return data.billboards.filter((item) => {
+    if (filter.provinceKey && resolveProvince(item) !== filter.provinceKey) return false;
+    if (filter.userKey && !resolveUserKeyMatch(item, filter.userKey)) return false;
+    return true;
+  });
+}
+
 export function buildProvinceContributorLeaderboard(
   data: PublicCampaignData
 ): ProvinceContributorEntry[] {

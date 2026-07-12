@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChartCard } from "@/components/charts/bar-chart-card";
 import { SectionHeader } from "@/components/public/section-header";
+import { LeaderboardBillboardsModal } from "@/components/public/leaderboard-billboards-modal";
 import { UserContentScoreModal } from "@/components/public/user-content-score-modal";
 import { ThemeToggle } from "@/components/theme-toggle";
 import {
@@ -15,6 +16,7 @@ import {
   buildProvinceLeaderboard,
   buildUserLeaderboard,
   buildUserRatingLeaderboard,
+  collectLeaderboardBillboards,
   collectUserContentItems,
   getProvinceRankBadge,
   type ProvinceLeaderboardEntry,
@@ -32,8 +34,6 @@ interface CityLeaderboardDashboardProps {
 }
 
 const SECTION_HREF_BY_METRIC_LABEL: Record<string, string> = {
-  "تبلیغات محیطی": "billboards",
-  متراژ: "billboards",
   پوستر: "posters",
   ویدیو: "videos",
   "شبکه اجتماعی": "social-posts",
@@ -42,12 +42,22 @@ const SECTION_HREF_BY_METRIC_LABEL: Record<string, string> = {
   فایل: "files",
 };
 
+const BILLBOARD_METRIC_LABELS = new Set(["تبلیغات محیطی", "متراژ"]);
+
+interface BillboardModalScope {
+  title: string;
+  provinceKey?: string;
+  userKey?: string;
+}
+
 function MetricsBreakdown({
   entry,
   slug,
+  onOpenBillboards,
 }: {
   entry: ProvinceLeaderboardMetrics;
   slug: string;
+  onOpenBillboards?: () => void;
 }) {
   const items = [
     { label: "تبلیغات محیطی", value: entry.billboards },
@@ -63,9 +73,30 @@ function MetricsBreakdown({
   return (
     <div className="flex flex-wrap gap-2">
       {items.map((item) => {
-        const sectionId = SECTION_HREF_BY_METRIC_LABEL[item.label];
         const label = `${item.label}: ${formatPersianNumber(item.value)}`;
 
+        if (BILLBOARD_METRIC_LABELS.has(item.label) && onOpenBillboards) {
+          return (
+            <button
+              key={item.label}
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                onOpenBillboards();
+              }}
+              className="inline-flex"
+            >
+              <Badge
+                variant="outline"
+                className="cursor-pointer text-[11px] transition-colors hover:border-primary hover:bg-primary/10 hover:text-primary"
+              >
+                {label}
+              </Badge>
+            </button>
+          );
+        }
+
+        const sectionId = SECTION_HREF_BY_METRIC_LABEL[item.label];
         if (!sectionId) {
           return (
             <Badge key={item.label} variant="outline" className="text-[11px]">
@@ -182,6 +213,7 @@ export function CityLeaderboardDashboard({ data, slug }: CityLeaderboardDashboar
   const { settings } = data;
   const [view, setView] = useState<LeaderboardView>("province");
   const [selectedUser, setSelectedUser] = useState<UserLeaderboardEntry | null>(null);
+  const [billboardScope, setBillboardScope] = useState<BillboardModalScope | null>(null);
 
   const provinces = useMemo(() => buildProvinceLeaderboard(data), [data]);
   const users = useMemo(() => buildUserLeaderboard(data), [data]);
@@ -195,6 +227,17 @@ export function CityLeaderboardDashboard({ data, slug }: CityLeaderboardDashboar
   const selectedUserItems = useMemo(
     () => (selectedUser ? collectUserContentItems(data, selectedUser.userKey) : []),
     [data, selectedUser]
+  );
+
+  const scopedBillboards = useMemo(
+    () =>
+      billboardScope
+        ? collectLeaderboardBillboards(data, {
+            provinceKey: billboardScope.provinceKey,
+            userKey: billboardScope.userKey,
+          })
+        : [],
+    [billboardScope, data]
   );
 
   const chartData = useMemo(
@@ -378,7 +421,24 @@ export function CityLeaderboardDashboard({ data, slug }: CityLeaderboardDashboar
                               </Badge>
                             )}
                           </div>
-                          <MetricsBreakdown entry={entry} slug={slug} />
+                          <MetricsBreakdown
+                            entry={entry}
+                            slug={slug}
+                            onOpenBillboards={() => {
+                              if (isProvinceView) {
+                                const provinceEntry = entry as ProvinceLeaderboardEntry;
+                                setBillboardScope({
+                                  title: provinceEntry.province,
+                                  provinceKey: provinceEntry.provinceKey,
+                                });
+                                return;
+                              }
+                              setBillboardScope({
+                                title: userEntry.userName,
+                                userKey: userEntry.userKey,
+                              });
+                            }}
+                          />
                         </div>
                         <div className="flex shrink-0 flex-wrap gap-2">
                           {view === "rating" ? (
@@ -434,6 +494,15 @@ export function CityLeaderboardDashboard({ data, slug }: CityLeaderboardDashboar
         }}
         userName={selectedUser?.userName ?? ""}
         items={selectedUserItems}
+      />
+
+      <LeaderboardBillboardsModal
+        open={Boolean(billboardScope)}
+        onOpenChange={(open) => {
+          if (!open) setBillboardScope(null);
+        }}
+        title={billboardScope?.title ?? ""}
+        billboards={scopedBillboards}
       />
     </div>
   );
