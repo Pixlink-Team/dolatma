@@ -5,7 +5,7 @@ import { getAuthSession, getOwnerFilter, isFullAdmin } from "@/lib/auth/get-sess
 import { hasContributorPermission, type ContributorPermissionKey } from "@/lib/contributor-permissions";
 import { normalizePlanLabels } from "@/lib/content-topics";
 import { getSql } from "@/lib/db/client";
-import { pgGetUserPermissionsForCampaign } from "@/lib/db/repository-extended";
+import { pgGetUserById, pgGetUserPermissionsForCampaign } from "@/lib/db/repository-extended";
 import { updateMockStore } from "@/lib/mock-data";
 import { PRESS_ACTIVITY_TYPES } from "@/lib/press-publications";
 import type { ActivityType, ItemStatus, Ownable } from "@/lib/types";
@@ -30,6 +30,8 @@ export interface BulkContentPatch {
   status?: ItemStatus;
   categoryId?: string;
   activityType?: ActivityType;
+  /** Admin-only: transfer content ownership (null clears owner). */
+  ownerUserId?: string | null;
 }
 
 const PERMISSION_BY_TYPE: Record<BulkEditableContentType, ContributorPermissionKey> = {
@@ -65,6 +67,9 @@ function applyOwnablePatch<T extends Ownable & { published?: boolean }>(
   if (patch.published !== undefined) {
     next.published = patch.published;
   }
+  if (patch.ownerUserId !== undefined) {
+    next.ownerUserId = patch.ownerUserId;
+  }
   return next;
 }
 
@@ -96,7 +101,8 @@ function hasAnyPatch(patch: BulkContentPatch): boolean {
     patch.category !== undefined ||
     patch.status !== undefined ||
     patch.categoryId !== undefined ||
-    patch.activityType !== undefined
+    patch.activityType !== undefined ||
+    patch.ownerUserId !== undefined
   );
 }
 
@@ -112,6 +118,22 @@ export async function bulkUpdateContentAction(input: {
   }
   if (!hasAnyPatch(input.patch)) {
     return { success: false, updated: 0, error: "هیچ تغییری برای اعمال انتخاب نشده است" };
+  }
+
+  const session = await getAuthSession();
+  if (!session) return { success: false, updated: 0, error: "ورود لازم است" };
+
+  if (input.patch.ownerUserId !== undefined && !isFullAdmin(session)) {
+    return { success: false, updated: 0, error: "فقط مدیر می‌تواند مالک محتوا را تغییر دهد" };
+  }
+
+  if (input.patch.ownerUserId) {
+    if (isPostgresConfigured()) {
+      const user = await pgGetUserById(input.patch.ownerUserId);
+      if (!user) {
+        return { success: false, updated: 0, error: "کاربر مقصد یافت نشد" };
+      }
+    }
   }
 
   const access = await assertCanBulkEdit(input.campaignId, input.contentType);
@@ -151,6 +173,78 @@ async function bulkUpdatePostgres(
   const now = new Date().toISOString();
   const ownerFilter = ownerUserId ?? null;
 
+  const applyOwnerTransfer = async () => {
+    if (patch.ownerUserId === undefined) return;
+    const nextOwnerId = patch.ownerUserId;
+
+    if (contentType === "billboard") {
+      await sql`
+        UPDATE billboards
+        SET owner_user_id = ${nextOwnerId}, updated_at = ${now}
+        WHERE campaign_id = ${campaignId} AND id IN ${sql(ids)}
+      `;
+      return;
+    }
+    if (contentType === "poster") {
+      await sql`
+        UPDATE posters
+        SET owner_user_id = ${nextOwnerId}, updated_at = ${now}
+        WHERE campaign_id = ${campaignId} AND id IN ${sql(ids)}
+      `;
+      return;
+    }
+    if (contentType === "video") {
+      await sql`
+        UPDATE videos
+        SET owner_user_id = ${nextOwnerId}, updated_at = ${now}
+        WHERE campaign_id = ${campaignId} AND id IN ${sql(ids)}
+      `;
+      return;
+    }
+    if (contentType === "file") {
+      await sql`
+        UPDATE campaign_files
+        SET owner_user_id = ${nextOwnerId}, updated_at = ${now}
+        WHERE campaign_id = ${campaignId} AND id IN ${sql(ids)}
+      `;
+      return;
+    }
+    if (contentType === "raw_media") {
+      await sql`
+        UPDATE raw_media_uploads
+        SET owner_user_id = ${nextOwnerId}, updated_at = ${now}
+        WHERE campaign_id = ${campaignId} AND id IN ${sql(ids)}
+      `;
+      return;
+    }
+    if (contentType === "social_post" || contentType === "site_publication") {
+      const isSite = contentType === "site_publication";
+      await sql`
+        UPDATE social_media_posts
+        SET owner_user_id = ${nextOwnerId}, updated_at = ${now}
+        WHERE campaign_id = ${campaignId} AND id IN ${sql(ids)}
+          AND (
+            (${isSite} = true AND platform = 'site')
+            OR (${isSite} = false AND platform <> 'site')
+          )
+      `;
+      return;
+    }
+    if (contentType === "activity" || contentType === "press") {
+      const pressTypes = PRESS_ACTIVITY_TYPES;
+      const isPress = contentType === "press";
+      await sql`
+        UPDATE campaign_activities
+        SET owner_user_id = ${nextOwnerId}, updated_at = ${now}
+        WHERE campaign_id = ${campaignId} AND id IN ${sql(ids)}
+          AND (
+            (${isPress} = true AND activity_type = ANY(${sql.array(pressTypes)}))
+            OR (${isPress} = false AND NOT (activity_type = ANY(${sql.array(pressTypes)})))
+          )
+      `;
+    }
+  };
+
   if (contentType === "billboard") {
     if (patch.planLabels !== undefined) {
       const { planLabel, planLabels } = resolvePlanColumns(patch.planLabels);
@@ -185,6 +279,7 @@ async function bulkUpdatePostgres(
           AND (${ownerFilter}::text IS NULL OR owner_user_id = ${ownerFilter})
       `;
     }
+    await applyOwnerTransfer();
     return;
   }
 
@@ -214,6 +309,7 @@ async function bulkUpdatePostgres(
           AND (${ownerFilter}::text IS NULL OR owner_user_id = ${ownerFilter})
       `;
     }
+    await applyOwnerTransfer();
     return;
   }
 
@@ -243,6 +339,7 @@ async function bulkUpdatePostgres(
           AND (${ownerFilter}::text IS NULL OR owner_user_id = ${ownerFilter})
       `;
     }
+    await applyOwnerTransfer();
     return;
   }
 
@@ -264,6 +361,7 @@ async function bulkUpdatePostgres(
           AND (${ownerFilter}::text IS NULL OR owner_user_id = ${ownerFilter})
       `;
     }
+    await applyOwnerTransfer();
     return;
   }
 
@@ -285,6 +383,7 @@ async function bulkUpdatePostgres(
           AND (${ownerFilter}::text IS NULL OR owner_user_id = ${ownerFilter})
       `;
     }
+    await applyOwnerTransfer();
     return;
   }
 
@@ -315,6 +414,7 @@ async function bulkUpdatePostgres(
           AND (${ownerFilter}::text IS NULL OR owner_user_id = ${ownerFilter})
       `;
     }
+    await applyOwnerTransfer();
     return;
   }
 
@@ -358,6 +458,7 @@ async function bulkUpdatePostgres(
           AND (${ownerFilter}::text IS NULL OR owner_user_id = ${ownerFilter})
       `;
     }
+    await applyOwnerTransfer();
   }
 }
 

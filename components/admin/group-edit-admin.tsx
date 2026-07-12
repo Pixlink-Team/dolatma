@@ -36,6 +36,7 @@ import { splitPressActivities } from "@/lib/press-publications";
 import { splitSocialPosts } from "@/lib/social-posts";
 import type {
   ActivityType,
+  AdminUser,
   Billboard,
   CampaignActivity,
   CampaignFile,
@@ -64,6 +65,7 @@ interface GroupEditAdminProps {
   campaignId: string;
   isFullAdmin: boolean;
   permissions: ContributorPermissions | null;
+  users: AdminUser[];
   contentPlans: string[];
   contentTopics: ContentTopic[];
   billboards: Billboard[];
@@ -181,6 +183,8 @@ export function GroupEditAdmin(props: GroupEditAdminProps) {
   const [billboardStatus, setBillboardStatus] = useState<string>("unchanged");
   const [mediaCategoryId, setMediaCategoryId] = useState<string>("unchanged");
   const [activityType, setActivityType] = useState<string>("unchanged");
+  const [ownerMode, setOwnerMode] = useState<string>("unchanged");
+  const [ownerSearch, setOwnerSearch] = useState("");
 
   useEffect(() => {
     if (!allowedTypes.some((option) => option.type === contentType) && allowedTypes[0]) {
@@ -198,6 +202,8 @@ export function GroupEditAdmin(props: GroupEditAdminProps) {
     setBillboardStatus("unchanged");
     setMediaCategoryId("unchanged");
     setActivityType("unchanged");
+    setOwnerMode("unchanged");
+    setOwnerSearch("");
   }, [contentType]);
 
   const rows = useMemo(() => toRows(contentType, props), [contentType, props]);
@@ -228,6 +234,23 @@ export function GroupEditAdmin(props: GroupEditAdminProps) {
 
   const activityOptions =
     contentType === "press" ? pressActivityTypeOptions : fieldActivityTypeOptions;
+
+  const transferableUsers = useMemo(() => {
+    const q = ownerSearch.trim().toLowerCase();
+    const sorted = [...props.users].sort((a, b) => a.name.localeCompare(b.name, "fa"));
+    if (!q) return sorted;
+    return sorted.filter(
+      (user) =>
+        user.name.toLowerCase().includes(q) ||
+        user.email.toLowerCase().includes(q) ||
+        (user.province ?? "").toLowerCase().includes(q)
+    );
+  }, [ownerSearch, props.users]);
+
+  const selectedOwner = useMemo(
+    () => props.users.find((user) => user.id === ownerMode) ?? null,
+    [ownerMode, props.users]
+  );
 
   const toggleRow = (id: string) => {
     setSelectedIds((prev) => {
@@ -280,13 +303,18 @@ export function GroupEditAdmin(props: GroupEditAdminProps) {
       patch.activityType = activityType as ActivityType;
     }
 
+    if (props.isFullAdmin && ownerMode !== "unchanged") {
+      patch.ownerUserId = ownerMode === "clear" ? null : ownerMode;
+    }
+
     if (
       patch.planLabels === undefined &&
       patch.published === undefined &&
       patch.category === undefined &&
       patch.status === undefined &&
       patch.categoryId === undefined &&
-      patch.activityType === undefined
+      patch.activityType === undefined &&
+      patch.ownerUserId === undefined
     ) {
       return null;
     }
@@ -310,6 +338,17 @@ export function GroupEditAdmin(props: GroupEditAdminProps) {
       if (patch.activityType !== undefined) {
         next.activityType = patch.activityType;
         next.subtitle = activityTypeLabels[patch.activityType];
+      }
+      if (patch.ownerUserId !== undefined) {
+        next.ownerUserId = patch.ownerUserId;
+        next.ownerName =
+          patch.ownerUserId == null
+            ? null
+            : props.users.find((user) => user.id === patch.ownerUserId)?.name ?? next.ownerName;
+        next.ownerEmail =
+          patch.ownerUserId == null
+            ? null
+            : props.users.find((user) => user.id === patch.ownerUserId)?.email ?? next.ownerEmail;
       }
       return next;
     });
@@ -599,6 +638,66 @@ export function GroupEditAdmin(props: GroupEditAdminProps) {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+          )}
+
+          {props.isFullAdmin && (
+            <div className="space-y-2 rounded-lg border border-dashed p-3">
+              <Label>انتقال مالکیت</Label>
+              <p className="text-[11px] text-muted-foreground">
+                فقط برای مدیر — محتوای انتخاب‌شده به کاربر مقصد منتقل می‌شود.
+              </p>
+              <Select value={ownerMode} onValueChange={setOwnerMode}>
+                <SelectTrigger>
+                  <SelectValue placeholder="بدون تغییر" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unchanged">بدون تغییر</SelectItem>
+                  <SelectItem value="clear">حذف مالک</SelectItem>
+                  {selectedOwner && (
+                    <SelectItem value={selectedOwner.id}>
+                      {selectedOwner.name} — {selectedOwner.email}
+                    </SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
+              {ownerMode !== "unchanged" && ownerMode !== "clear" && selectedOwner && (
+                <p className="text-xs text-muted-foreground">
+                  مقصد: {selectedOwner.name} ({selectedOwner.email})
+                </p>
+              )}
+              <Input
+                value={ownerSearch}
+                onChange={(event) => setOwnerSearch(event.target.value)}
+                placeholder="جستجوی کاربر..."
+                className="h-8 text-xs"
+              />
+              <div className="max-h-40 space-y-1 overflow-y-auto rounded-md border p-1">
+                {transferableUsers.length === 0 ? (
+                  <p className="px-2 py-3 text-center text-[11px] text-muted-foreground">
+                    کاربری یافت نشد
+                  </p>
+                ) : (
+                  transferableUsers.slice(0, 40).map((user) => (
+                    <button
+                      key={user.id}
+                      type="button"
+                      onClick={() => setOwnerMode(user.id)}
+                      className={
+                        ownerMode === user.id
+                          ? "w-full rounded-md bg-primary px-2 py-1.5 text-right text-xs text-primary-foreground"
+                          : "w-full rounded-md px-2 py-1.5 text-right text-xs hover:bg-muted"
+                      }
+                    >
+                      <span className="block font-medium">{user.name}</span>
+                      <span className="block text-[10px] opacity-80">
+                        {user.email}
+                        {user.province ? ` — ${user.province}` : ""}
+                      </span>
+                    </button>
+                  ))
+                )}
+              </div>
             </div>
           )}
 

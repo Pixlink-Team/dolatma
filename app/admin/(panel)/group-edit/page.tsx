@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { GroupEditAdmin } from "@/components/admin/group-edit-admin";
 import { resolveAdminCampaignId } from "@/lib/admin-campaign";
-import { getAdminData } from "@/lib/data-access/admin";
+import { getAdminData, getAllUsers } from "@/lib/data-access/admin";
 import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
 import { defaultContributorPermissions } from "@/lib/contributor-permissions";
 import { pgGetUserById } from "@/lib/db/repository-extended";
@@ -36,7 +36,10 @@ export default async function GroupEditPage({ searchParams }: PageProps) {
     permissions = user?.campaignPermissions[campaignId] ?? defaultContributorPermissions();
   }
 
-  const data = await getAdminData(campaignId);
+  const [data, users] = await Promise.all([
+    getAdminData(campaignId),
+    fullAdmin ? getAllUsers() : Promise.resolve([]),
+  ]);
   if (!data.settings) redirect("/admin/campaigns");
 
   return (
@@ -44,6 +47,7 @@ export default async function GroupEditPage({ searchParams }: PageProps) {
       campaignId={campaignId}
       isFullAdmin={fullAdmin}
       permissions={permissions}
+      users={users}
       contentPlans={data.settings.contentPlans ?? []}
       contentTopics={data.settings.contentTopics ?? []}
       billboards={(data.billboards ?? []) as Billboard[]}
