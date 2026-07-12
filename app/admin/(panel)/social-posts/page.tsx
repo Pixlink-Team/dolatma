@@ -1,9 +1,10 @@
 import { redirect } from "next/navigation";
 import { getAdminData } from "@/lib/data-access/admin";
 import { resolveAdminCampaignId } from "@/lib/admin-campaign";
+import { getAdminBulkEditProps } from "@/lib/admin-bulk-edit-props";
 import { requireContributorAccess } from "@/lib/auth/require-contributor-access";
 import { canScoreContent } from "@/lib/auth/access";
-import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
+import { getAuthSession } from "@/lib/auth/get-session";
 import { SocialHubAdmin } from "@/components/admin/social-hub-admin";
 
 interface PageProps {
@@ -16,9 +17,11 @@ export default async function SocialPostsPage({ searchParams }: PageProps) {
   if (!campaignId) redirect("/admin/campaigns");
   await requireContributorAccess(campaignId, "socialPosts");
   const session = await getAuthSession();
-  const fullAdmin = session ? isFullAdmin(session) : true;
   const canScore = Boolean(session && canScoreContent(session));
-  const data = await getAdminData(campaignId);
+  const [data, bulkProps] = await Promise.all([
+    getAdminData(campaignId),
+    getAdminBulkEditProps(),
+  ]);
   return (
     <SocialHubAdmin
       campaignId={campaignId}
@@ -27,7 +30,8 @@ export default async function SocialPostsPage({ searchParams }: PageProps) {
       contentPlans={data.settings?.contentPlans ?? []}
       contentTopics={data.settings?.contentTopics ?? []}
       canScore={canScore}
-      isFullAdmin={fullAdmin}
+      isFullAdmin={bulkProps.isFullAdmin}
+      users={bulkProps.users}
     />
   );
 }

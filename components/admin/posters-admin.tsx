@@ -22,11 +22,16 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ImageZoom } from "@/components/ui/image-zoom";
+import {
+  BulkItemShell,
+  SectionBulkEditBar,
+  useSectionBulkEdit,
+} from "@/components/admin/section-bulk-edit";
 import { deletePosterAction } from "@/lib/actions/admin-actions";
 import type { ContentTopic } from "@/lib/content-topics";
 import { useAdminViewMode } from "@/lib/hooks/use-admin-view-mode";
 import { resolveDisplayVersion } from "@/lib/media-utils";
-import type { MediaCategory, Poster, PosterVersion } from "@/lib/types";
+import type { AdminUser, MediaCategory, Poster, PosterVersion } from "@/lib/types";
 
 interface PostersAdminProps {
   campaignId: string;
@@ -36,6 +41,8 @@ interface PostersAdminProps {
   contentPlans?: string[];
   contentTopics?: ContentTopic[];
   canScore?: boolean;
+  isFullAdmin?: boolean;
+  users?: AdminUser[];
 }
 
 const editorDialogClass =
@@ -49,6 +56,8 @@ export function PostersAdmin({
   contentPlans = [],
   contentTopics = [],
   canScore = false,
+  isFullAdmin = false,
+  users = [],
 }: PostersAdminProps) {
   const router = useRouter();
   const [posters, setPosters] = useState(initialPosters);
@@ -81,6 +90,8 @@ export function PostersAdmin({
     () => posters.filter((item) => matchesAdminContentFilter(item, contentFilter)),
     [posters, contentFilter]
   );
+  const filteredIds = useMemo(() => filteredPosters.map((item) => item.id), [filteredPosters]);
+  const bulk = useSectionBulkEdit(filteredIds);
 
   const activePoster = useMemo(() => {
     if (!activePosterId) return null;
@@ -143,7 +154,9 @@ export function PostersAdmin({
             نمای فشرده — روی کارت کلیک کنید یا با + پوستر جدید بسازید
           </p>
         </div>
-        <AdminViewModeToggle value={viewMode} onChange={setViewMode} />
+        <div className="flex flex-wrap items-center gap-2">
+          <AdminViewModeToggle value={viewMode} onChange={setViewMode} />
+        </div>
       </div>
 
       <AdminContentFilterBar
@@ -151,6 +164,23 @@ export function PostersAdmin({
         onChange={setContentFilter}
         users={filterUsers}
         plans={contentPlans}
+      />
+
+      <SectionBulkEditBar
+        campaignId={campaignId}
+        contentType="poster"
+        bulkMode={bulk.bulkMode}
+        onBulkModeChange={bulk.setBulkMode}
+        selectedIds={[...bulk.selectedIds]}
+        visibleCount={filteredPosters.length}
+        allVisibleSelected={bulk.allVisibleSelected}
+        onToggleAllVisible={bulk.toggleAllVisible}
+        onClearSelection={bulk.clearSelection}
+        contentPlans={contentPlans}
+        contentTopics={contentTopics}
+        mediaCategories={initialCategories}
+        isFullAdmin={isFullAdmin}
+        users={users}
       />
 
       {filteredPosters.length === 0 && posters.length === 0 ? (
@@ -162,23 +192,29 @@ export function PostersAdmin({
         </div>
       ) : viewMode === "grid" ? (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-          <AdminPosterAddCard onClick={handleCreatePoster} />
+          {!bulk.bulkMode && <AdminPosterAddCard onClick={handleCreatePoster} />}
           {filteredPosters.map((poster) => (
-            <AdminPosterCompactCard
+            <BulkItemShell
               key={poster.id}
-              poster={poster}
-              versions={versionsByPosterId.get(poster.id) ?? []}
-              onClick={() => openEditor(poster.id)}
-              onView={() => setPreviewPoster(poster)}
-              onEdit={() => openEditor(poster.id)}
-              onDelete={() => handleDelete(poster)}
-              canScore={canScore}
-              onScoreSaved={(score) => {
-                setPosters((prev) =>
-                  prev.map((item) => (item.id === poster.id ? { ...item, score } : item))
-                );
-              }}
-            />
+              enabled={bulk.bulkMode}
+              selected={bulk.isSelected(poster.id)}
+              onToggle={() => bulk.toggle(poster.id)}
+            >
+              <AdminPosterCompactCard
+                poster={poster}
+                versions={versionsByPosterId.get(poster.id) ?? []}
+                onClick={() => openEditor(poster.id)}
+                onView={() => setPreviewPoster(poster)}
+                onEdit={() => openEditor(poster.id)}
+                onDelete={() => handleDelete(poster)}
+                canScore={canScore}
+                onScoreSaved={(score) => {
+                  setPosters((prev) =>
+                    prev.map((item) => (item.id === poster.id ? { ...item, score } : item))
+                  );
+                }}
+              />
+            </BulkItemShell>
           ))}
         </div>
       ) : (
@@ -190,18 +226,30 @@ export function PostersAdmin({
                 key={poster.id}
                 className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3 last:border-b-0"
               >
-                <div className="min-w-0">
-                  <p className="truncate font-medium">{poster.title}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {poster.ownerName ?? "—"}
-                    {displayVersion ? ` · نسخه ${displayVersion.versionNumber}` : " · بدون تصویر"}
-                  </p>
+                <div className="flex min-w-0 items-start gap-3">
+                  {bulk.bulkMode && (
+                    <input
+                      type="checkbox"
+                      className="mt-1 h-4 w-4"
+                      checked={bulk.isSelected(poster.id)}
+                      onChange={() => bulk.toggle(poster.id)}
+                    />
+                  )}
+                  <div className="min-w-0">
+                    <p className="truncate font-medium">{poster.title}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {poster.ownerName ?? "—"}
+                      {displayVersion ? ` · نسخه ${displayVersion.versionNumber}` : " · بدون تصویر"}
+                    </p>
+                  </div>
                 </div>
-                <AdminItemActions
-                  onView={() => setPreviewPoster(poster)}
-                  onEdit={() => openEditor(poster.id)}
-                  onDelete={() => handleDelete(poster)}
-                />
+                {!bulk.bulkMode && (
+                  <AdminItemActions
+                    onView={() => setPreviewPoster(poster)}
+                    onEdit={() => openEditor(poster.id)}
+                    onDelete={() => handleDelete(poster)}
+                  />
+                )}
               </div>
             );
           })}

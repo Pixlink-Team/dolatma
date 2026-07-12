@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getAdminData } from "@/lib/data-access/admin";
 import { resolveAdminCampaignId } from "@/lib/admin-campaign";
+import { getAdminBulkEditProps } from "@/lib/admin-bulk-edit-props";
 import { canScoreContent } from "@/lib/auth/access";
 import { getAuthSession } from "@/lib/auth/get-session";
 import { PostersAdmin } from "@/components/admin/posters-admin";
@@ -15,7 +16,10 @@ export default async function PostersPage({ searchParams }: PageProps) {
   if (!campaignId) redirect("/admin/campaigns");
   const session = await getAuthSession();
   const canScore = Boolean(session && canScoreContent(session));
-  const data = await getAdminData(campaignId);
+  const [data, bulkProps] = await Promise.all([
+    getAdminData(campaignId),
+    getAdminBulkEditProps(),
+  ]);
   return (
     <PostersAdmin
       campaignId={campaignId}
@@ -25,6 +29,8 @@ export default async function PostersPage({ searchParams }: PageProps) {
       contentPlans={data.settings?.contentPlans ?? []}
       contentTopics={data.settings?.contentTopics ?? []}
       canScore={canScore}
+      isFullAdmin={bulkProps.isFullAdmin}
+      users={bulkProps.users}
     />
   );
 }

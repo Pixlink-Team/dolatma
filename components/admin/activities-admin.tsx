@@ -26,6 +26,11 @@ import { AdminContentPreviewDialog } from "@/components/admin/admin-content-prev
 import { AdminViewModeToggle } from "@/components/admin/admin-view-mode-toggle";
 import { PlanLabelSelect } from "@/components/admin/plan-label-select";
 import { ContentScoreControl } from "@/components/admin/content-score-control";
+import {
+  BulkItemShell,
+  SectionBulkEditBar,
+  useSectionBulkEdit,
+} from "@/components/admin/section-bulk-edit";
 import { MediaUpload } from "@/components/ui/media-upload";
 import { PersianDateField } from "@/components/ui/persian-date-input";
 import { fieldActivityTypeOptions, getActivityTypeLabel } from "@/lib/activity-types";
@@ -34,7 +39,7 @@ import { normalizePlanLabels, type ContentTopic } from "@/lib/content-topics";
 import { useAdminViewMode } from "@/lib/hooks/use-admin-view-mode";
 import { todayISO } from "@/lib/jalali";
 import { isPressPublication } from "@/lib/press-publications";
-import type { ActivityMediaItem, ActivityType, CampaignActivity } from "@/lib/types";
+import type { ActivityMediaItem, ActivityType, AdminUser, CampaignActivity } from "@/lib/types";
 
 const ACTIVITY_VIDEO_MAX_BYTES = 50 * 1024 * 1024;
 
@@ -68,6 +73,8 @@ interface ActivitiesAdminProps {
   contentPlans?: string[];
   contentTopics?: ContentTopic[];
   canScore?: boolean;
+  isFullAdmin?: boolean;
+  users?: AdminUser[];
 }
 
 function resolveFieldActivityType(type: ActivityType): FieldActivityType {
@@ -80,6 +87,8 @@ export function ActivitiesAdmin({
   contentPlans = [],
   contentTopics = [],
   canScore = false,
+  isFullAdmin = false,
+  users = [],
 }: ActivitiesAdminProps) {
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -98,6 +107,8 @@ export function ActivitiesAdmin({
     () => rows.filter((item) => matchesAdminContentFilter(item, contentFilter)),
     [rows, contentFilter]
   );
+  const filteredIds = useMemo(() => filteredRows.map((item) => item.id), [filteredRows]);
+  const bulk = useSectionBulkEdit(filteredIds);
 
   const form = useForm({
     resolver: zodResolver(schema),
@@ -243,18 +254,40 @@ export function ActivitiesAdmin({
         plans={contentPlans}
       />
 
+      <SectionBulkEditBar
+        campaignId={campaignId}
+        contentType="activity"
+        bulkMode={bulk.bulkMode}
+        onBulkModeChange={bulk.setBulkMode}
+        selectedIds={[...bulk.selectedIds]}
+        visibleCount={filteredRows.length}
+        allVisibleSelected={bulk.allVisibleSelected}
+        onToggleAllVisible={bulk.toggleAllVisible}
+        onClearSelection={bulk.clearSelection}
+        contentPlans={contentPlans}
+        contentTopics={contentTopics}
+        isFullAdmin={isFullAdmin}
+        users={users}
+      />
+
       {viewMode === "grid" ? (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-          <AdminCompactAddCard onClick={openCreate} label="اقدام جدید" />
+          {!bulk.bulkMode && <AdminCompactAddCard onClick={openCreate} label="اقدام جدید" />}
           {filteredRows.map((activity) => (
-            <AdminActivityCompactCard
+            <BulkItemShell
               key={activity.id}
-              activity={activity}
-              onClick={() => openEdit(activity)}
-              onView={() => setPreviewActivity(activity)}
-              onEdit={() => openEdit(activity)}
-              onDelete={() => handleDelete(activity)}
-            />
+              enabled={bulk.bulkMode}
+              selected={bulk.isSelected(activity.id)}
+              onToggle={() => bulk.toggle(activity.id)}
+            >
+              <AdminActivityCompactCard
+                activity={activity}
+                onClick={() => openEdit(activity)}
+                onView={() => setPreviewActivity(activity)}
+                onEdit={() => openEdit(activity)}
+                onDelete={() => handleDelete(activity)}
+              />
+            </BulkItemShell>
           ))}
         </div>
       ) : (
@@ -264,17 +297,29 @@ export function ActivitiesAdmin({
               key={activity.id}
               className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3 last:border-b-0"
             >
-              <div className="min-w-0">
-                <p className="truncate font-medium">{activity.title}</p>
-                <p className="text-xs text-muted-foreground">
-                  {getActivityTypeLabel(activity.activityType)} · {activity.ownerName ?? "—"}
-                </p>
+              <div className="flex min-w-0 items-start gap-3">
+                {bulk.bulkMode && (
+                  <input
+                    type="checkbox"
+                    className="mt-1 h-4 w-4"
+                    checked={bulk.isSelected(activity.id)}
+                    onChange={() => bulk.toggle(activity.id)}
+                  />
+                )}
+                <div className="min-w-0">
+                  <p className="truncate font-medium">{activity.title}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {getActivityTypeLabel(activity.activityType)} · {activity.ownerName ?? "—"}
+                  </p>
+                </div>
               </div>
-              <AdminItemActions
-                onView={() => setPreviewActivity(activity)}
-                onEdit={() => openEdit(activity)}
-                onDelete={() => handleDelete(activity)}
-              />
+              {!bulk.bulkMode && (
+                <AdminItemActions
+                  onView={() => setPreviewActivity(activity)}
+                  onEdit={() => openEdit(activity)}
+                  onDelete={() => handleDelete(activity)}
+                />
+              )}
             </div>
           ))}
           {filteredRows.length === 0 && (

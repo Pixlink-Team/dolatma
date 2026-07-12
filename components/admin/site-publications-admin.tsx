@@ -22,13 +22,18 @@ import { AdminCompactAddCard } from "@/components/admin/admin-compact-add-card";
 import { AdminSitePublicationCompactCard } from "@/components/admin/admin-site-publication-compact-card";
 import { PlanLabelSelect } from "@/components/admin/plan-label-select";
 import { ContentScoreControl } from "@/components/admin/content-score-control";
+import {
+  BulkItemShell,
+  SectionBulkEditBar,
+  useSectionBulkEdit,
+} from "@/components/admin/section-bulk-edit";
 import { MediaUpload } from "@/components/ui/media-upload";
 import { PersianDateField } from "@/components/ui/persian-date-input";
 import { deleteSocialPostAction, saveSocialPostAction } from "@/lib/actions/extended-actions";
 import { normalizePlanLabels, type ContentTopic } from "@/lib/content-topics";
 import { todayISO } from "@/lib/jalali";
 import { isSitePublication } from "@/lib/social-posts";
-import type { SocialMediaPost } from "@/lib/types";
+import type { AdminUser, SocialMediaPost } from "@/lib/types";
 
 const schema = z.object({
   title: z.string().min(1, "عنوان الزامی است"),
@@ -45,6 +50,8 @@ interface SitePublicationsAdminProps {
   contentPlans?: string[];
   contentTopics?: ContentTopic[];
   canScore?: boolean;
+  isFullAdmin?: boolean;
+  users?: AdminUser[];
 }
 
 export function SitePublicationsAdmin({
@@ -53,6 +60,8 @@ export function SitePublicationsAdmin({
   contentPlans = [],
   contentTopics = [],
   canScore = false,
+  isFullAdmin = false,
+  users = [],
 }: SitePublicationsAdminProps) {
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -66,6 +75,8 @@ export function SitePublicationsAdmin({
     () => rows.filter((item) => matchesAdminContentFilter(item, contentFilter)),
     [rows, contentFilter]
   );
+  const filteredIds = useMemo(() => filteredRows.map((item) => item.id), [filteredRows]);
+  const bulk = useSectionBulkEdit(filteredIds);
 
   const form = useForm({
     resolver: zodResolver(schema),
@@ -186,10 +197,33 @@ export function SitePublicationsAdmin({
         plans={contentPlans}
       />
 
+      <SectionBulkEditBar
+        campaignId={campaignId}
+        contentType="site_publication"
+        bulkMode={bulk.bulkMode}
+        onBulkModeChange={bulk.setBulkMode}
+        selectedIds={[...bulk.selectedIds]}
+        visibleCount={filteredRows.length}
+        allVisibleSelected={bulk.allVisibleSelected}
+        onToggleAllVisible={bulk.toggleAllVisible}
+        onClearSelection={bulk.clearSelection}
+        contentPlans={contentPlans}
+        contentTopics={contentTopics}
+        isFullAdmin={isFullAdmin}
+        users={users}
+      />
+
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-        <AdminCompactAddCard onClick={openCreate} label="انتشار جدید" />
+        {!bulk.bulkMode && <AdminCompactAddCard onClick={openCreate} label="انتشار جدید" />}
         {filteredRows.map((post) => (
-          <AdminSitePublicationCompactCard key={post.id} post={post} onClick={() => openEdit(post)} />
+          <BulkItemShell
+            key={post.id}
+            enabled={bulk.bulkMode}
+            selected={bulk.isSelected(post.id)}
+            onToggle={() => bulk.toggle(post.id)}
+          >
+            <AdminSitePublicationCompactCard post={post} onClick={() => openEdit(post)} />
+          </BulkItemShell>
         ))}
       </div>
 

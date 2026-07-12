@@ -1,6 +1,7 @@
 import { FilesAdmin } from "@/components/admin/files-admin";
 import { getAdminData } from "@/lib/data-access/admin";
 import { resolveAdminCampaignId } from "@/lib/admin-campaign";
+import { getAdminBulkEditProps } from "@/lib/admin-bulk-edit-props";
 import { canScoreContent } from "@/lib/auth/access";
 import { getAuthSession } from "@/lib/auth/get-session";
 import type { CampaignFile } from "@/lib/types";
@@ -18,7 +19,10 @@ export default async function FilesPage({ searchParams }: FilesPageProps) {
 
   const session = await getAuthSession();
   const canScore = Boolean(session && canScoreContent(session));
-  const data = await getAdminData(campaignId);
+  const [data, bulkProps] = await Promise.all([
+    getAdminData(campaignId),
+    getAdminBulkEditProps(),
+  ]);
   if (!data.settings) redirect("/admin/campaigns");
 
   return (
@@ -28,6 +32,8 @@ export default async function FilesPage({ searchParams }: FilesPageProps) {
       contentPlans={data.settings?.contentPlans ?? []}
       contentTopics={data.settings?.contentTopics ?? []}
       canScore={canScore}
+      isFullAdmin={bulkProps.isFullAdmin}
+      users={bulkProps.users}
     />
   );
 }

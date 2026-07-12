@@ -15,6 +15,11 @@ import { ContentScoreControl } from "@/components/admin/content-score-control";
 import { AdminOwnerBadge } from "@/components/admin/admin-owner-badge";
 import { AdminItemActions } from "@/components/admin/admin-item-actions";
 import { AdminViewModeToggle } from "@/components/admin/admin-view-mode-toggle";
+import {
+  BulkItemShell,
+  SectionBulkEditBar,
+  useSectionBulkEdit,
+} from "@/components/admin/section-bulk-edit";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -48,7 +53,7 @@ import {
   formatStorageBytes,
   RAW_MEDIA_MAX_FILE_BYTES,
 } from "@/lib/raw-media-storage";
-import type { RawMediaKind, RawMediaUpload } from "@/lib/types";
+import type { AdminUser, RawMediaKind, RawMediaUpload } from "@/lib/types";
 import { formatPersianDateTime, formatPersianNumber } from "@/lib/utils";
 
 interface RawMediaAdminProps {
@@ -57,6 +62,8 @@ interface RawMediaAdminProps {
   contentPlans?: string[];
   contentTopics?: ContentTopic[];
   canScore?: boolean;
+  isFullAdmin?: boolean;
+  users?: AdminUser[];
 }
 
 export function RawMediaAdmin({
@@ -65,6 +72,8 @@ export function RawMediaAdmin({
   contentPlans = [],
   contentTopics = [],
   canScore = false,
+  isFullAdmin = false,
+  users = [],
 }: RawMediaAdminProps) {
   const [items, setItems] = useState(initialItems);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -88,6 +97,8 @@ export function RawMediaAdmin({
     () => items.filter((item) => matchesAdminContentFilter(item, contentFilter)),
     [items, contentFilter]
   );
+  const filteredIds = useMemo(() => filteredItems.map((item) => item.id), [filteredItems]);
+  const bulk = useSectionBulkEdit(filteredIds);
 
   const resetForm = () => {
     setTitle("");
@@ -227,6 +238,22 @@ export function RawMediaAdmin({
         plans={contentPlans}
       />
 
+      <SectionBulkEditBar
+        campaignId={campaignId}
+        contentType="raw_media"
+        bulkMode={bulk.bulkMode}
+        onBulkModeChange={bulk.setBulkMode}
+        selectedIds={[...bulk.selectedIds]}
+        visibleCount={filteredItems.length}
+        allVisibleSelected={bulk.allVisibleSelected}
+        onToggleAllVisible={bulk.toggleAllVisible}
+        onClearSelection={bulk.clearSelection}
+        contentPlans={contentPlans}
+        contentTopics={contentTopics}
+        isFullAdmin={isFullAdmin}
+        users={users}
+      />
+
       {filteredItems.length === 0 ? (
         <div className="rounded-xl border py-12 text-center text-muted-foreground">
           هنوز موردی برای راش تصویر آپلود نشده است.
@@ -238,79 +265,100 @@ export function RawMediaAdmin({
               key={item.id}
               className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3 last:border-b-0"
             >
-              <div className="min-w-0">
-                <p className="truncate font-medium">{item.title}</p>
-                <p className="text-xs text-muted-foreground">
-                  {item.fileName} — {formatStorageBytes(item.fileSize)}
-                </p>
+              <div className="flex min-w-0 items-start gap-3">
+                {bulk.bulkMode && (
+                  <input
+                    type="checkbox"
+                    className="mt-1 h-4 w-4"
+                    checked={bulk.isSelected(item.id)}
+                    onChange={() => bulk.toggle(item.id)}
+                  />
+                )}
+                <div className="min-w-0">
+                  <p className="truncate font-medium">{item.title}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {item.fileName} — {formatStorageBytes(item.fileSize)}
+                  </p>
+                </div>
               </div>
-              <AdminItemActions
-                onView={() => window.open(item.fileUrl, "_blank")}
-                onDelete={() => handleDelete(item)}
-              />
+              {!bulk.bulkMode && (
+                <AdminItemActions
+                  onView={() => window.open(item.fileUrl, "_blank")}
+                  onDelete={() => handleDelete(item)}
+                />
+              )}
             </div>
           ))}
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           {filteredItems.map((item) => (
-            <Card key={item.id}>
-              <CardContent className="flex items-start justify-between gap-3 p-4">
-                <div className="min-w-0 space-y-2">
-                  <div className="flex flex-wrap items-center gap-2">
-                    {item.mediaKind === "video" ? (
-                      <Film className="h-4 w-4 text-primary" />
-                    ) : (
-                      <ImageIcon className="h-4 w-4 text-primary" />
+            <BulkItemShell
+              key={item.id}
+              enabled={bulk.bulkMode}
+              selected={bulk.isSelected(item.id)}
+              onToggle={() => bulk.toggle(item.id)}
+            >
+              <Card>
+                <CardContent className="flex items-start justify-between gap-3 p-4">
+                  <div className="min-w-0 space-y-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      {item.mediaKind === "video" ? (
+                        <Film className="h-4 w-4 text-primary" />
+                      ) : (
+                        <ImageIcon className="h-4 w-4 text-primary" />
+                      )}
+                      <p className="font-semibold">{item.title}</p>
+                      <Badge variant="outline">
+                        {item.mediaKind === "video" ? "ویدیو" : "تصویر"}
+                      </Badge>
+                      {item.planLabel && <Badge variant="secondary">{item.planLabel}</Badge>}
+                    </div>
+                    {item.description && (
+                      <p className="text-sm text-muted-foreground">{item.description}</p>
                     )}
-                    <p className="font-semibold">{item.title}</p>
-                    <Badge variant="outline">
-                      {item.mediaKind === "video" ? "ویدیو" : "تصویر"}
-                    </Badge>
-                    {item.planLabel && <Badge variant="secondary">{item.planLabel}</Badge>}
+                    <p className="text-xs text-muted-foreground">
+                      {item.fileName} — {formatStorageBytes(item.fileSize)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatPersianDateTime(item.createdAt)}
+                    </p>
+                    <AdminOwnerBadge ownerUserId={item.ownerUserId} ownerName={item.ownerName} />
+                    <ContentScoreControl
+                      campaignId={campaignId}
+                      contentType="raw_media"
+                      contentId={item.id}
+                      score={item.score}
+                      canScore={canScore}
+                      compact
+                      onScoreSaved={(score) =>
+                        setItems((prev) =>
+                          prev.map((row) => (row.id === item.id ? { ...row, score } : row))
+                        )
+                      }
+                    />
                   </div>
-                  {item.description && (
-                    <p className="text-sm text-muted-foreground">{item.description}</p>
+                  {!bulk.bulkMode && (
+                    <div className="flex shrink-0 flex-col gap-2">
+                      <Button variant="outline" size="sm" asChild>
+                        <a href={item.fileUrl} download={item.fileName} target="_blank" rel="noreferrer">
+                          <Download className="h-4 w-4" />
+                          دانلود
+                        </a>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        disabled={isPending}
+                        onClick={() => handleDelete(item)}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
                   )}
-                  <p className="text-xs text-muted-foreground">
-                    {item.fileName} — {formatStorageBytes(item.fileSize)}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatPersianDateTime(item.createdAt)}
-                  </p>
-                  <AdminOwnerBadge ownerUserId={item.ownerUserId} ownerName={item.ownerName} />
-                  <ContentScoreControl
-                    campaignId={campaignId}
-                    contentType="raw_media"
-                    contentId={item.id}
-                    score={item.score}
-                    canScore={canScore}
-                    compact
-                    onScoreSaved={(score) =>
-                      setItems((prev) =>
-                        prev.map((row) => (row.id === item.id ? { ...row, score } : row))
-                      )
-                    }
-                  />
-                </div>
-                <div className="flex shrink-0 flex-col gap-2">
-                  <Button variant="outline" size="sm" asChild>
-                    <a href={item.fileUrl} download={item.fileName} target="_blank" rel="noreferrer">
-                      <Download className="h-4 w-4" />
-                      دانلود
-                    </a>
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    disabled={isPending}
-                    onClick={() => handleDelete(item)}
-                  >
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </BulkItemShell>
           ))}
         </div>
       )}

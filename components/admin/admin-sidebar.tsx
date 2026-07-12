@@ -11,7 +11,6 @@ import {
   HardDrive,
   ImageIcon,
   Globe,
-  Layers,
   LayoutDashboard,
   LayoutGrid,
   LogOut,
@@ -57,7 +56,6 @@ const allNavItems: {
 }[] = [
   { href: "/admin", label: "داشبورد", icon: LayoutDashboard },
   { href: "/admin/profile", label: "پروفایل من", icon: UserCircle },
-  { href: "/admin/group-edit", label: "ویرایش گروهی", icon: Layers },
   { href: "/admin/integrations", label: "اتصال Map-Bilboard", icon: Unplug, adminOnly: true },
   { href: "/admin/settings", label: "تنظیمات کمپین", icon: Settings, adminOnly: true },
   { href: "/admin/billboards", label: "تبلیغات محیطی", icon: LayoutGrid, permissionKey: "billboards" },

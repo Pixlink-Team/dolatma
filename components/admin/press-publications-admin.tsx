@@ -15,13 +15,19 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AdminActivityCompactCard } from "@/components/admin/admin-activity-compact-card";
 import { AdminCompactAddCard } from "@/components/admin/admin-compact-add-card";
+import {
+  BulkItemShell,
+  SectionBulkEditBar,
+  useSectionBulkEdit,
+} from "@/components/admin/section-bulk-edit";
 import { MediaUpload } from "@/components/ui/media-upload";
 import { PersianDateField } from "@/components/ui/persian-date-input";
 import { getActivityTypeLabel, pressActivityTypeOptions } from "@/lib/activity-types";
 import { deleteCampaignActivityAction, saveCampaignActivityAction } from "@/lib/actions/extended-actions";
+import type { ContentTopic } from "@/lib/content-topics";
 import { todayISO } from "@/lib/jalali";
 import { isPressPublication } from "@/lib/press-publications";
-import type { ActivityMediaItem, CampaignActivity } from "@/lib/types";
+import type { ActivityMediaItem, AdminUser, CampaignActivity } from "@/lib/types";
 
 const ACTIVITY_VIDEO_MAX_BYTES = 50 * 1024 * 1024;
 const MAX_MEDIA_ITEMS = 10;
@@ -38,11 +44,19 @@ const schema = z.object({
 interface PressPublicationsAdminProps {
   campaignId: string;
   initialActivities: CampaignActivity[];
+  contentPlans?: string[];
+  contentTopics?: ContentTopic[];
+  isFullAdmin?: boolean;
+  users?: AdminUser[];
 }
 
 export function PressPublicationsAdmin({
   campaignId,
   initialActivities,
+  contentPlans = [],
+  contentTopics = [],
+  isFullAdmin = false,
+  users = [],
 }: PressPublicationsAdminProps) {
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -51,6 +65,8 @@ export function PressPublicationsAdmin({
     initialActivities.filter((activity) => isPressPublication(activity))
   );
   const [isPending, startTransition] = useTransition();
+  const filteredIds = useMemo(() => rows.map((item) => item.id), [rows]);
+  const bulk = useSectionBulkEdit(filteredIds);
 
   const form = useForm({
     resolver: zodResolver(schema),
@@ -166,16 +182,42 @@ export function PressPublicationsAdmin({
           <h1 className="text-2xl font-bold">مجله و روزنامه</h1>
           <p className="text-sm text-muted-foreground">ثبت آگهی‌های مجله و روزنامه با چند رسانه</p>
         </div>
-        <Button onClick={openCreate}>
+        <Button onClick={openCreate} disabled={bulk.bulkMode}>
           <Plus className="h-4 w-4" />
           ثبت جدید
         </Button>
       </div>
 
+      <SectionBulkEditBar
+        campaignId={campaignId}
+        contentType="press"
+        bulkMode={bulk.bulkMode}
+        onBulkModeChange={bulk.setBulkMode}
+        selectedIds={[...bulk.selectedIds]}
+        visibleCount={rows.length}
+        allVisibleSelected={bulk.allVisibleSelected}
+        onToggleAllVisible={bulk.toggleAllVisible}
+        onClearSelection={bulk.clearSelection}
+        contentPlans={contentPlans}
+        contentTopics={contentTopics}
+        isFullAdmin={isFullAdmin}
+        users={users}
+      />
+
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-        <AdminCompactAddCard onClick={openCreate} label="ثبت جدید" />
+        {!bulk.bulkMode && <AdminCompactAddCard onClick={openCreate} label="ثبت جدید" />}
         {rows.map((activity) => (
-          <AdminActivityCompactCard key={activity.id} activity={activity} onClick={() => openEdit(activity)} />
+          <BulkItemShell
+            key={activity.id}
+            enabled={bulk.bulkMode}
+            selected={bulk.isSelected(activity.id)}
+            onToggle={() => bulk.toggle(activity.id)}
+          >
+            <AdminActivityCompactCard
+              activity={activity}
+              onClick={() => openEdit(activity)}
+            />
+          </BulkItemShell>
         ))}
       </div>
 

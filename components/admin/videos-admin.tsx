@@ -21,11 +21,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  BulkItemShell,
+  SectionBulkEditBar,
+  useSectionBulkEdit,
+} from "@/components/admin/section-bulk-edit";
 import { deleteVideoAction } from "@/lib/actions/admin-actions";
 import type { ContentTopic } from "@/lib/content-topics";
 import { useAdminViewMode } from "@/lib/hooks/use-admin-view-mode";
 import { resolveDisplayVersion } from "@/lib/media-utils";
-import type { MediaCategory, Video, VideoVersion } from "@/lib/types";
+import type { AdminUser, MediaCategory, Video, VideoVersion } from "@/lib/types";
 import { pickDefaultVideoCategoryId } from "@/lib/video-types";
 
 interface VideosAdminProps {
@@ -36,6 +41,8 @@ interface VideosAdminProps {
   contentPlans?: string[];
   contentTopics?: ContentTopic[];
   canScore?: boolean;
+  isFullAdmin?: boolean;
+  users?: AdminUser[];
 }
 
 const editorDialogClass =
@@ -49,6 +56,8 @@ export function VideosAdmin({
   contentPlans = [],
   contentTopics = [],
   canScore = false,
+  isFullAdmin = false,
+  users = [],
 }: VideosAdminProps) {
   const router = useRouter();
   const [videos, setVideos] = useState(initialVideos);
@@ -81,6 +90,8 @@ export function VideosAdmin({
     () => videos.filter((item) => matchesAdminContentFilter(item, contentFilter)),
     [videos, contentFilter]
   );
+  const filteredIds = useMemo(() => filteredVideos.map((item) => item.id), [filteredVideos]);
+  const bulk = useSectionBulkEdit(filteredIds);
 
   const activeVideo = useMemo(() => {
     if (!activeVideoId) return null;
@@ -153,6 +164,23 @@ export function VideosAdmin({
         plans={contentPlans}
       />
 
+      <SectionBulkEditBar
+        campaignId={campaignId}
+        contentType="video"
+        bulkMode={bulk.bulkMode}
+        onBulkModeChange={bulk.setBulkMode}
+        selectedIds={[...bulk.selectedIds]}
+        visibleCount={filteredVideos.length}
+        allVisibleSelected={bulk.allVisibleSelected}
+        onToggleAllVisible={bulk.toggleAllVisible}
+        onClearSelection={bulk.clearSelection}
+        contentPlans={contentPlans}
+        contentTopics={contentTopics}
+        mediaCategories={initialCategories}
+        isFullAdmin={isFullAdmin}
+        users={users}
+      />
+
       {filteredVideos.length === 0 && videos.length === 0 ? (
         <div className="rounded-xl border px-4 py-8 text-center text-sm text-muted-foreground">
           هنوز ویدیویی ثبت نشده است.
@@ -162,23 +190,29 @@ export function VideosAdmin({
         </div>
       ) : viewMode === "grid" ? (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-          <AdminVideoAddCard onClick={handleCreateVideo} />
+          {!bulk.bulkMode && <AdminVideoAddCard onClick={handleCreateVideo} />}
           {filteredVideos.map((video) => (
-            <AdminVideoCompactCard
+            <BulkItemShell
               key={video.id}
-              video={video}
-              versions={versionsByVideoId.get(video.id) ?? []}
-              onClick={() => openEditor(video.id)}
-              onView={() => setPreviewVideo(video)}
-              onEdit={() => openEditor(video.id)}
-              onDelete={() => handleDelete(video)}
-              canScore={canScore}
-              onScoreSaved={(score) => {
-                setVideos((prev) =>
-                  prev.map((item) => (item.id === video.id ? { ...item, score } : item))
-                );
-              }}
-            />
+              enabled={bulk.bulkMode}
+              selected={bulk.isSelected(video.id)}
+              onToggle={() => bulk.toggle(video.id)}
+            >
+              <AdminVideoCompactCard
+                video={video}
+                versions={versionsByVideoId.get(video.id) ?? []}
+                onClick={() => openEditor(video.id)}
+                onView={() => setPreviewVideo(video)}
+                onEdit={() => openEditor(video.id)}
+                onDelete={() => handleDelete(video)}
+                canScore={canScore}
+                onScoreSaved={(score) => {
+                  setVideos((prev) =>
+                    prev.map((item) => (item.id === video.id ? { ...item, score } : item))
+                  );
+                }}
+              />
+            </BulkItemShell>
           ))}
         </div>
       ) : (
@@ -190,18 +224,30 @@ export function VideosAdmin({
                 key={video.id}
                 className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3 last:border-b-0"
               >
-                <div className="min-w-0">
-                  <p className="truncate font-medium">{video.title}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {video.ownerName ?? "—"}
-                    {displayVersion ? ` · نسخه ${displayVersion.versionNumber}` : " · بدون ویدیو"}
-                  </p>
+                <div className="flex min-w-0 items-start gap-3">
+                  {bulk.bulkMode && (
+                    <input
+                      type="checkbox"
+                      className="mt-1 h-4 w-4"
+                      checked={bulk.isSelected(video.id)}
+                      onChange={() => bulk.toggle(video.id)}
+                    />
+                  )}
+                  <div className="min-w-0">
+                    <p className="truncate font-medium">{video.title}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {video.ownerName ?? "—"}
+                      {displayVersion ? ` · نسخه ${displayVersion.versionNumber}` : " · بدون ویدیو"}
+                    </p>
+                  </div>
                 </div>
-                <AdminItemActions
-                  onView={() => setPreviewVideo(video)}
-                  onEdit={() => openEditor(video.id)}
-                  onDelete={() => handleDelete(video)}
-                />
+                {!bulk.bulkMode && (
+                  <AdminItemActions
+                    onView={() => setPreviewVideo(video)}
+                    onEdit={() => openEditor(video.id)}
+                    onDelete={() => handleDelete(video)}
+                  />
+                )}
               </div>
             );
           })}

@@ -26,12 +26,17 @@ import { BillboardAddPeriodDialog } from "@/components/admin/billboard-add-perio
 import { AdminViewModeToggle } from "@/components/admin/admin-view-mode-toggle";
 import { AdminItemActions } from "@/components/admin/admin-item-actions";
 import { AdminContentPreviewDialog } from "@/components/admin/admin-content-preview-dialog";
+import {
+  BulkItemShell,
+  SectionBulkEditBar,
+  useSectionBulkEdit,
+} from "@/components/admin/section-bulk-edit";
 import { deleteBillboardAction } from "@/lib/actions/admin-actions";
 import { canManageBillboardPeriods, isApiBillboard } from "@/lib/billboards";
 import { getBillboardDisplayImage } from "@/lib/billboard-media";
 import type { ContentTopic } from "@/lib/content-topics";
 import { useAdminViewMode } from "@/lib/hooks/use-admin-view-mode";
-import type { Billboard } from "@/lib/types";
+import type { AdminUser, Billboard } from "@/lib/types";
 import { getStatusLabel } from "@/lib/utils";
 import { formatBillboardCityLine } from "@/lib/billboard-location";
 
@@ -52,6 +57,7 @@ interface BillboardsAdminProps {
   externalCampaignSlug?: string | null;
   externalCampaignId?: string | null;
   isFullAdmin?: boolean;
+  users?: AdminUser[];
   contributorProfile?: ContributorProfile | null;
 }
 
@@ -65,6 +71,7 @@ export function BillboardsAdmin({
   externalCampaignSlug = null,
   externalCampaignId = null,
   isFullAdmin = true,
+  users = [],
   contributorProfile = null,
 }: BillboardsAdminProps) {
   const router = useRouter();
@@ -116,6 +123,8 @@ export function BillboardsAdmin({
   const manualBillboards = filteredBillboards.filter((billboard) => !isApiBillboard(billboard));
   const apiBillboards = filteredBillboards.filter((billboard) => isApiBillboard(billboard));
   const allApiBillboards = billboards.filter((billboard) => isApiBillboard(billboard));
+  const manualIds = useMemo(() => manualBillboards.map((item) => item.id), [manualBillboards]);
+  const bulk = useSectionBulkEdit(manualIds);
   const showExternalMigrationTools = isFullAdmin && liveApiEnabled && Boolean(externalCampaignSlug);
   const showExternalPeriodTools = showExternalMigrationTools && Boolean(externalCampaignId);
 
@@ -166,6 +175,22 @@ export function BillboardsAdmin({
         onChange={setContentFilter}
         users={filterUsers}
         plans={contentPlans}
+      />
+
+      <SectionBulkEditBar
+        campaignId={campaignId}
+        contentType="billboard"
+        bulkMode={bulk.bulkMode}
+        onBulkModeChange={bulk.setBulkMode}
+        selectedIds={[...bulk.selectedIds]}
+        visibleCount={manualBillboards.length}
+        allVisibleSelected={bulk.allVisibleSelected}
+        onToggleAllVisible={bulk.toggleAllVisible}
+        onClearSelection={bulk.clearSelection}
+        contentPlans={contentPlans}
+        contentTopics={contentTopics}
+        isFullAdmin={isFullAdmin}
+        users={users}
       />
 
       {showExternalMigrationTools && (
@@ -237,22 +262,28 @@ export function BillboardsAdmin({
         </div>
       ) : viewMode === "grid" ? (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-          <AdminBillboardAddCard onClick={openCreate} />
+          {!bulk.bulkMode && <AdminBillboardAddCard onClick={openCreate} />}
           {manualBillboards.map((billboard) => (
-            <AdminBillboardCompactCard
+            <BulkItemShell
               key={billboard.id}
-              billboard={billboard}
-              onClick={() => openEdit(billboard)}
-              onView={() => setPreviewBillboard(billboard)}
-              onEdit={() => openEdit(billboard)}
-              onDelete={handleDelete}
-              canScore={canScore}
-              onScoreSaved={(item, score) => {
-                setBillboards((prev) =>
-                  prev.map((row) => (row.id === item.id ? { ...row, score } : row))
-                );
-              }}
-            />
+              enabled={bulk.bulkMode}
+              selected={bulk.isSelected(billboard.id)}
+              onToggle={() => bulk.toggle(billboard.id)}
+            >
+              <AdminBillboardCompactCard
+                billboard={billboard}
+                onClick={() => openEdit(billboard)}
+                onView={() => setPreviewBillboard(billboard)}
+                onEdit={() => openEdit(billboard)}
+                onDelete={handleDelete}
+                canScore={canScore}
+                onScoreSaved={(item, score) => {
+                  setBillboards((prev) =>
+                    prev.map((row) => (row.id === item.id ? { ...row, score } : row))
+                  );
+                }}
+              />
+            </BulkItemShell>
           ))}
         </div>
       ) : (
@@ -262,15 +293,27 @@ export function BillboardsAdmin({
               key={billboard.id}
               className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3 last:border-b-0"
             >
-              <div className="min-w-0">
-                <p className="truncate font-medium">{billboard.title}</p>
-                <p className="text-xs text-muted-foreground">{formatBillboardCityLine(billboard)}</p>
+              <div className="flex min-w-0 items-start gap-3">
+                {bulk.bulkMode && (
+                  <input
+                    type="checkbox"
+                    className="mt-1 h-4 w-4"
+                    checked={bulk.isSelected(billboard.id)}
+                    onChange={() => bulk.toggle(billboard.id)}
+                  />
+                )}
+                <div className="min-w-0">
+                  <p className="truncate font-medium">{billboard.title}</p>
+                  <p className="text-xs text-muted-foreground">{formatBillboardCityLine(billboard)}</p>
+                </div>
               </div>
-              <AdminItemActions
-                onView={() => setPreviewBillboard(billboard)}
-                onEdit={() => openEdit(billboard)}
-                onDelete={() => handleDelete(billboard)}
-              />
+              {!bulk.bulkMode && (
+                <AdminItemActions
+                  onView={() => setPreviewBillboard(billboard)}
+                  onEdit={() => openEdit(billboard)}
+                  onDelete={() => handleDelete(billboard)}
+                />
+              )}
             </div>
           ))}
         </div>

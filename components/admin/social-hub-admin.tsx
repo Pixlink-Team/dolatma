@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SocialAnalyticsAdmin } from "@/components/admin/social-analytics-admin";
 import { SocialPostsAdmin } from "@/components/admin/social-posts-admin";
 import type { ContentTopic } from "@/lib/content-topics";
-import type { SocialMediaPost, SocialPlatformStat } from "@/lib/types";
+import type { AdminUser, SocialMediaPost, SocialPlatformStat } from "@/lib/types";
 
 interface SocialHubAdminProps {
   campaignId: string;
@@ -14,6 +14,7 @@ interface SocialHubAdminProps {
   contentTopics?: ContentTopic[];
   canScore?: boolean;
   isFullAdmin?: boolean;
+  users?: AdminUser[];
 }
 
 export function SocialHubAdmin({
@@ -24,6 +25,7 @@ export function SocialHubAdmin({
   contentTopics = [],
   canScore = false,
   isFullAdmin = true,
+  users = [],
 }: SocialHubAdminProps) {
   return (
     <div className="space-y-6">
@@ -56,6 +58,8 @@ export function SocialHubAdmin({
             contentTopics={contentTopics}
             canScore={canScore}
             embedded
+            isFullAdmin={isFullAdmin}
+            users={users}
           />
         </TabsContent>
       </Tabs>

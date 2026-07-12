@@ -13,6 +13,11 @@ import {
   matchesAdminContentFilter,
   type AdminContentFilterState,
 } from "@/components/admin/admin-content-filter-bar";
+import {
+  BulkItemShell,
+  SectionBulkEditBar,
+  useSectionBulkEdit,
+} from "@/components/admin/section-bulk-edit";
 import { PlanLabelSelect } from "@/components/admin/plan-label-select";
 import { ContentScoreControl } from "@/components/admin/content-score-control";
 import { Button } from "@/components/ui/button";
@@ -30,7 +35,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { deleteCampaignFileAction, saveCampaignFileAction } from "@/lib/actions/admin-actions";
 import type { ContentTopic } from "@/lib/content-topics";
 import { useAdminViewMode } from "@/lib/hooks/use-admin-view-mode";
-import type { CampaignFile } from "@/lib/types";
+import type { AdminUser, CampaignFile } from "@/lib/types";
 import { formatPersianNumber } from "@/lib/utils";
 
 interface FilesAdminProps {
@@ -39,6 +44,8 @@ interface FilesAdminProps {
   contentPlans?: string[];
   contentTopics?: ContentTopic[];
   canScore?: boolean;
+  isFullAdmin?: boolean;
+  users?: AdminUser[];
 }
 
 function formatFileSize(bytes: number): string {
@@ -60,6 +67,8 @@ export function FilesAdmin({
   contentPlans = [],
   contentTopics = [],
   canScore = false,
+  isFullAdmin = false,
+  users = [],
 }: FilesAdminProps) {
   const [files, setFiles] = useState(initialFiles);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -81,6 +90,8 @@ export function FilesAdmin({
     () => files.filter((item) => matchesAdminContentFilter(item, contentFilter)),
     [files, contentFilter]
   );
+  const filteredIds = useMemo(() => filteredFiles.map((item) => item.id), [filteredFiles]);
+  const bulk = useSectionBulkEdit(filteredIds);
 
   const resetForm = () => {
     setTitle("");
@@ -178,6 +189,22 @@ export function FilesAdmin({
         plans={contentPlans}
       />
 
+      <SectionBulkEditBar
+        campaignId={campaignId}
+        contentType="file"
+        bulkMode={bulk.bulkMode}
+        onBulkModeChange={bulk.setBulkMode}
+        selectedIds={[...bulk.selectedIds]}
+        visibleCount={filteredFiles.length}
+        allVisibleSelected={bulk.allVisibleSelected}
+        onToggleAllVisible={bulk.toggleAllVisible}
+        onClearSelection={bulk.clearSelection}
+        contentPlans={contentPlans}
+        contentTopics={contentTopics}
+        isFullAdmin={isFullAdmin}
+        users={users}
+      />
+
       {filteredFiles.length === 0 ? (
         <div className="rounded-xl border py-12 text-center text-muted-foreground">
           {files.length === 0 ? "هنوز فایلی آپلود نشده است." : "موردی با این فیلتر پیدا نشد."}
@@ -189,14 +216,26 @@ export function FilesAdmin({
               key={file.id}
               className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3 last:border-b-0"
             >
-              <div className="min-w-0">
-                <p className="truncate font-medium">{file.title}</p>
-                <p className="text-xs text-muted-foreground">{file.fileName}</p>
+              <div className="flex min-w-0 items-start gap-3">
+                {bulk.bulkMode && (
+                  <input
+                    type="checkbox"
+                    className="mt-1 h-4 w-4"
+                    checked={bulk.isSelected(file.id)}
+                    onChange={() => bulk.toggle(file.id)}
+                  />
+                )}
+                <div className="min-w-0">
+                  <p className="truncate font-medium">{file.title}</p>
+                  <p className="text-xs text-muted-foreground">{file.fileName}</p>
+                </div>
               </div>
-              <AdminItemActions
-                onView={() => window.open(file.fileUrl, "_blank")}
-                onDelete={() => handleDelete(file)}
-              />
+              {!bulk.bulkMode && (
+                <AdminItemActions
+                  onView={() => window.open(file.fileUrl, "_blank")}
+                  onDelete={() => handleDelete(file)}
+                />
+              )}
             </div>
           ))}
         </div>
@@ -205,61 +244,67 @@ export function FilesAdmin({
           {filteredFiles.map((file) => {
             const Icon = fileIcon(file.mimeType);
             return (
-              <div
+              <BulkItemShell
                 key={file.id}
-                className="flex flex-col gap-3 rounded-xl border bg-card p-4 sm:flex-row sm:items-center sm:justify-between"
+                enabled={bulk.bulkMode}
+                selected={bulk.isSelected(file.id)}
+                onToggle={() => bulk.toggle(file.id)}
               >
-                <div className="flex items-start gap-3">
-                  <div className="rounded-lg bg-muted p-2">
-                    <Icon className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="font-medium">{file.title}</p>
-                      <AdminOwnerBadge ownerUserId={file.ownerUserId} ownerName={file.ownerName} />
+                <div className="flex flex-col gap-3 rounded-xl border bg-card p-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-start gap-3">
+                    <div className="rounded-lg bg-muted p-2">
+                      <Icon className="h-5 w-5 text-primary" />
                     </div>
-                    <p className="text-xs text-muted-foreground">{file.fileName}</p>
-                    {file.description && (
-                      <p className="mt-1 text-sm text-muted-foreground">{file.description}</p>
-                    )}
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {formatFileSize(file.fileSize)}
-                    </p>
-                    <div className="mt-2">
-                      <ContentScoreControl
-                        campaignId={campaignId}
-                        contentType="file"
-                        contentId={file.id}
-                        score={file.score}
-                        canScore={canScore}
-                        compact
-                        onScoreSaved={(score) =>
-                          setFiles((prev) =>
-                            prev.map((item) => (item.id === file.id ? { ...item, score } : item))
-                          )
-                        }
-                      />
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-medium">{file.title}</p>
+                        <AdminOwnerBadge ownerUserId={file.ownerUserId} ownerName={file.ownerName} />
+                      </div>
+                      <p className="text-xs text-muted-foreground">{file.fileName}</p>
+                      {file.description && (
+                        <p className="mt-1 text-sm text-muted-foreground">{file.description}</p>
+                      )}
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {formatFileSize(file.fileSize)}
+                      </p>
+                      <div className="mt-2">
+                        <ContentScoreControl
+                          campaignId={campaignId}
+                          contentType="file"
+                          contentId={file.id}
+                          score={file.score}
+                          canScore={canScore}
+                          compact
+                          onScoreSaved={(score) =>
+                            setFiles((prev) =>
+                              prev.map((item) => (item.id === file.id ? { ...item, score } : item))
+                            )
+                          }
+                        />
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm" asChild>
-                    <a href={file.fileUrl} target="_blank" rel="noopener noreferrer">
-                      <Download className="h-4 w-4" />
-                      دانلود
-                    </a>
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleDelete(file)}
-                    disabled={isPending}
-                  >
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
+                  {!bulk.bulkMode && (
+                    <div className="flex items-center gap-2">
+                      <Button variant="outline" size="sm" asChild>
+                        <a href={file.fileUrl} target="_blank" rel="noopener noreferrer">
+                          <Download className="h-4 w-4" />
+                          دانلود
+                        </a>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDelete(file)}
+                        disabled={isPending}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  )}
                 </div>
-              </div>
+              </BulkItemShell>
             );
           })}
         </div>

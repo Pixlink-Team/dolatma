@@ -26,6 +26,11 @@ import { AdminSocialPostCompactCard } from "@/components/admin/admin-social-post
 import { AdminViewModeToggle } from "@/components/admin/admin-view-mode-toggle";
 import { PlanLabelSelect } from "@/components/admin/plan-label-select";
 import { ContentScoreControl } from "@/components/admin/content-score-control";
+import {
+  BulkItemShell,
+  SectionBulkEditBar,
+  useSectionBulkEdit,
+} from "@/components/admin/section-bulk-edit";
 import { normalizePlanLabels, type ContentTopic } from "@/lib/content-topics";
 import { MediaUpload } from "@/components/ui/media-upload";
 import { PersianDateField } from "@/components/ui/persian-date-input";
@@ -33,7 +38,7 @@ import { deleteSocialPostAction, saveSocialPostAction } from "@/lib/actions/exte
 import { useAdminViewMode } from "@/lib/hooks/use-admin-view-mode";
 import { todayISO } from "@/lib/jalali";
 import { isSitePublication } from "@/lib/social-posts";
-import type { SocialContentType, SocialMediaPost, SocialPlatform } from "@/lib/types";
+import type { AdminUser, SocialContentType, SocialMediaPost, SocialPlatform } from "@/lib/types";
 import { getStatusLabel } from "@/lib/utils";
 
 const schema = z.object({
@@ -75,6 +80,8 @@ interface SocialPostsAdminProps {
   contentTopics?: ContentTopic[];
   canScore?: boolean;
   embedded?: boolean;
+  isFullAdmin?: boolean;
+  users?: AdminUser[];
 }
 
 export function SocialPostsAdmin({
@@ -84,6 +91,8 @@ export function SocialPostsAdmin({
   contentTopics = [],
   canScore = false,
   embedded = false,
+  isFullAdmin = false,
+  users = [],
 }: SocialPostsAdminProps) {
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -99,6 +108,8 @@ export function SocialPostsAdmin({
     () => rows.filter((item) => matchesAdminContentFilter(item, contentFilter)),
     [rows, contentFilter]
   );
+  const filteredIds = useMemo(() => filteredRows.map((item) => item.id), [filteredRows]);
+  const bulk = useSectionBulkEdit(filteredIds);
 
   const form = useForm({
     resolver: zodResolver(schema),
@@ -254,18 +265,40 @@ export function SocialPostsAdmin({
         plans={contentPlans}
       />
 
+      <SectionBulkEditBar
+        campaignId={campaignId}
+        contentType="social_post"
+        bulkMode={bulk.bulkMode}
+        onBulkModeChange={bulk.setBulkMode}
+        selectedIds={[...bulk.selectedIds]}
+        visibleCount={filteredRows.length}
+        allVisibleSelected={bulk.allVisibleSelected}
+        onToggleAllVisible={bulk.toggleAllVisible}
+        onClearSelection={bulk.clearSelection}
+        contentPlans={contentPlans}
+        contentTopics={contentTopics}
+        isFullAdmin={isFullAdmin}
+        users={users}
+      />
+
       {viewMode === "grid" ? (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-          <AdminCompactAddCard onClick={openCreate} label="پست جدید" />
+          {!bulk.bulkMode && <AdminCompactAddCard onClick={openCreate} label="پست جدید" />}
           {filteredRows.map((post) => (
-            <AdminSocialPostCompactCard
+            <BulkItemShell
               key={post.id}
-              post={post}
-              onClick={() => openEdit(post)}
-              onView={() => setPreviewPost(post)}
-              onEdit={() => openEdit(post)}
-              onDelete={() => handleDelete(post)}
-            />
+              enabled={bulk.bulkMode}
+              selected={bulk.isSelected(post.id)}
+              onToggle={() => bulk.toggle(post.id)}
+            >
+              <AdminSocialPostCompactCard
+                post={post}
+                onClick={() => openEdit(post)}
+                onView={() => setPreviewPost(post)}
+                onEdit={() => openEdit(post)}
+                onDelete={() => handleDelete(post)}
+              />
+            </BulkItemShell>
           ))}
         </div>
       ) : (
@@ -275,17 +308,29 @@ export function SocialPostsAdmin({
               key={post.id}
               className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3 last:border-b-0"
             >
-              <div className="min-w-0">
-                <p className="truncate font-medium">{post.title}</p>
-                <p className="text-xs text-muted-foreground">
-                  {getStatusLabel(post.platform)} · {post.ownerName ?? "—"}
-                </p>
+              <div className="flex min-w-0 items-start gap-3">
+                {bulk.bulkMode && (
+                  <input
+                    type="checkbox"
+                    className="mt-1 h-4 w-4"
+                    checked={bulk.isSelected(post.id)}
+                    onChange={() => bulk.toggle(post.id)}
+                  />
+                )}
+                <div className="min-w-0">
+                  <p className="truncate font-medium">{post.title}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {getStatusLabel(post.platform)} · {post.ownerName ?? "—"}
+                  </p>
+                </div>
               </div>
-              <AdminItemActions
-                onView={() => setPreviewPost(post)}
-                onEdit={() => openEdit(post)}
-                onDelete={() => handleDelete(post)}
-              />
+              {!bulk.bulkMode && (
+                <AdminItemActions
+                  onView={() => setPreviewPost(post)}
+                  onEdit={() => openEdit(post)}
+                  onDelete={() => handleDelete(post)}
+                />
+              )}
             </div>
           ))}
           {filteredRows.length === 0 && (

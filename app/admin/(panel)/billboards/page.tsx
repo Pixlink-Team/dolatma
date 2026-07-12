@@ -62,6 +62,7 @@ export default async function BillboardsPage({ searchParams }: PageProps) {
       externalCampaignSlug={settings ? getExternalCampaignSlug(settings) : null}
       externalCampaignId={settings?.billboardConfig?.externalCampaignId ?? null}
       isFullAdmin={fullAdmin}
+      users={fullAdmin ? users : []}
       contributorProfile={contributorProfile}
     />
   );
