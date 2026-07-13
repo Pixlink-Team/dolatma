@@ -5,7 +5,7 @@ import { AdminItemActions } from "@/components/admin/admin-item-actions";
 import { AdminOwnerBadge } from "@/components/admin/admin-owner-badge";
 import { ContentScoreControl } from "@/components/admin/content-score-control";
 import { MediaThumbnail } from "@/components/ui/media-thumbnail";
-import { getBillboardCategoryLabel } from "@/lib/billboard-categories";
+import { resolveBillboardCategoryDisplay } from "@/lib/billboard-categories";
 import { formatBillboardCityLine } from "@/lib/billboard-location";
 import type { Billboard } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -29,7 +29,7 @@ export function AdminBillboardCompactCard({
   canScore = false,
   onScoreSaved,
 }: AdminBillboardCompactCardProps) {
-  const categoryLabel = getBillboardCategoryLabel(billboard.category);
+  const categoryLabel = resolveBillboardCategoryDisplay(billboard);
   const city = billboard.city?.trim() || "";
   const cityLine = formatBillboardCityLine(billboard);
 
@@ -51,9 +51,11 @@ export function AdminBillboardCompactCard({
             objectFit="cover"
           />
           <div className="absolute top-1.5 right-1.5 flex max-w-[calc(100%-0.75rem)] flex-wrap gap-1 justify-end">
-            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 shadow-sm">
-              {categoryLabel}
-            </Badge>
+            {categoryLabel && (
+              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 shadow-sm">
+                {categoryLabel}
+              </Badge>
+            )}
             {city && (
               <Badge variant="outline" className="bg-background/90 text-[10px] px-1.5 py-0 shadow-sm">
                 {city}

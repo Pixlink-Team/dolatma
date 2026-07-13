@@ -32,7 +32,7 @@ import {
   useSectionBulkEdit,
 } from "@/components/admin/section-bulk-edit";
 import { deleteBillboardAction } from "@/lib/actions/admin-actions";
-import { getBillboardCategoryLabel } from "@/lib/billboard-categories";
+import { resolveBillboardCategoryLabel } from "@/lib/billboard-categories";
 import { canManageBillboardPeriods, isApiBillboard } from "@/lib/billboards";
 import { getBillboardDisplayImage } from "@/lib/billboard-media";
 import type { ContentTopic } from "@/lib/content-topics";
@@ -307,7 +307,7 @@ export function BillboardsAdmin({
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="truncate font-medium">{billboard.title}</p>
                     <Badge variant="outline" className="text-[10px]">
-                      {getBillboardCategoryLabel(billboard.category)}
+                      {resolveBillboardCategoryLabel(billboard)}
                     </Badge>
                   </div>
                   <p className="text-xs text-muted-foreground">{formatBillboardCityLine(billboard)}</p>
@@ -341,7 +341,7 @@ export function BillboardsAdmin({
               key: "category",
               label: "دسته",
               render: (item: Billboard) => (
-                <Badge variant="outline">{getBillboardCategoryLabel(item.category)}</Badge>
+                <Badge variant="outline">{resolveBillboardCategoryLabel(item)}</Badge>
               ),
             },
             { key: "city", label: "شهر" },

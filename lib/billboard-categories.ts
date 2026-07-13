@@ -29,6 +29,26 @@ export const billboardCategoryLabels: Record<BillboardCategory, string> = {
 };
 
 export function getBillboardCategoryLabel(value: string | null | undefined): string {
-  if (!value) return "دسته تبلیغات محیطی";
+  if (!value) return "نامشخص";
   return billboardCategoryLabels[value as BillboardCategory] ?? value;
+}
+
+export function resolveBillboardCategoryDisplay(billboard: {
+  category?: string | null;
+  billboardTypeLabel?: string | null;
+}): string | null {
+  const category = billboard.category?.trim();
+  if (category) {
+    return billboardCategoryLabels[category as BillboardCategory] ?? category;
+  }
+
+  const typeLabel = billboard.billboardTypeLabel?.trim();
+  return typeLabel || null;
+}
+
+export function resolveBillboardCategoryLabel(billboard: {
+  category?: string | null;
+  billboardTypeLabel?: string | null;
+}): string {
+  return resolveBillboardCategoryDisplay(billboard) ?? "نامشخص";
 }
