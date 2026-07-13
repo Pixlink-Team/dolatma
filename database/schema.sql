@@ -162,6 +162,9 @@ ALTER TABLE campaign_settings
   ADD COLUMN IF NOT EXISTS meetings_view_password_hash TEXT;
 
 ALTER TABLE campaign_settings
+  ADD COLUMN IF NOT EXISTS page_view_password_hash TEXT;
+
+ALTER TABLE campaign_settings
   ADD COLUMN IF NOT EXISTS admin_owner_label TEXT NOT NULL DEFAULT 'مدیریت';
 
 ALTER TABLE billboards

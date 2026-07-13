@@ -101,6 +101,8 @@ export interface CampaignSettings {
   /** Public label for admin-owned content groups (no contributor user). */
   adminOwnerLabel?: string | null;
   meetingsViewPasswordHash?: string | null;
+  /** Public campaign page password (bcrypt hash). Never expose to clients. */
+  pageViewPasswordHash?: string | null;
   updatedAt: string;
 }
 

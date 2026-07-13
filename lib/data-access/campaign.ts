@@ -26,6 +26,7 @@ import { splitSocialPosts } from "@/lib/social-posts";
 import { splitPressActivities } from "@/lib/press-publications";
 import { buildSocialAnalyticsSummary } from "@/lib/social-analytics";
 import { buildRawMediaStorageSummary } from "@/lib/raw-media-storage";
+import { sanitizePublicCampaignSettings } from "@/lib/campaign-page-unlock";
 import { isPostgresConfigured, isSupabaseConfigured } from "@/lib/utils";
 import * as pg from "@/lib/db/repository";
 import { fetchMetabaseMetrics, resolveChannelMetabaseEmbedUrl } from "@/lib/services/metabase";
@@ -436,7 +437,7 @@ function assemblePublicData(
   const adminOwnerLabel = resolveAdminOwnerLabel(settings.adminOwnerLabel);
 
   return {
-    settings,
+    settings: sanitizePublicCampaignSettings(settings),
     kpis,
     sections,
     billboards,

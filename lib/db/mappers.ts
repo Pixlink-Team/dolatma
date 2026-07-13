@@ -137,6 +137,7 @@ export function mapSettingsFromDb(row: any): CampaignSettings {
     contentTopics: normalizeContentTopics(row.content_plans),
     contentPlans: contentPlansFromTopics(normalizeContentTopics(row.content_plans)),
     meetingsViewPasswordHash: row.meetings_view_password_hash ?? null,
+    pageViewPasswordHash: row.page_view_password_hash ?? null,
     updatedAt: toIsoString(row.updated_at),
   };
 }

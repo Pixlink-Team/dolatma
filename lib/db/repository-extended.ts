@@ -928,6 +928,48 @@ export async function pgUpdateMeetingsViewPassword(campaignId: string, passwordH
   return { success: true };
 }
 
+export async function pgUpdatePageViewPassword(campaignId: string, passwordHash: string | null) {
+  const sql = getSql();
+  const now = new Date().toISOString();
+  await sql`
+    UPDATE campaign_settings
+    SET page_view_password_hash = ${passwordHash}, updated_at = ${now}
+    WHERE id = ${campaignId}
+  `;
+  return { success: true };
+}
+
+export async function pgVerifyCampaignPagePassword(
+  slug: string,
+  password: string
+): Promise<
+  | { status: "not_found" }
+  | { status: "wrong_password" }
+  | { status: "ok"; passwordHash: string | null; title: string }
+> {
+  const sql = getSql();
+  const rows = await sql`
+    SELECT title, page_view_password_hash
+    FROM campaign_settings
+    WHERE slug = ${slug} AND published = true
+    LIMIT 1
+  `;
+
+  if (!rows[0]) return { status: "not_found" };
+
+  const hash = (rows[0].page_view_password_hash as string | null) ?? null;
+  if (hash) {
+    const valid = await verifyPassword(password, hash);
+    if (!valid) return { status: "wrong_password" };
+  }
+
+  return {
+    status: "ok",
+    passwordHash: hash,
+    title: String(rows[0].title ?? ""),
+  };
+}
+
 export async function pgUnlockMeetingDetail(
   meetingId: string,
   password: string

@@ -17,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { MediaUpload } from "@/components/ui/media-upload";
 import { PersianDateField } from "@/components/ui/persian-date-input";
 import { updateSettingsAction } from "@/lib/actions/admin-actions";
+import { saveCampaignPagePasswordAction } from "@/lib/actions/extended-actions";
 import { fetchExternalCampaignsAction } from "@/lib/actions/billboard-import-actions";
 import {
   contentPlansFromTopics,
@@ -77,6 +78,8 @@ const schema = z.object({
 
 interface SettingsAdminProps {
   initialSettings: CampaignSettings;
+  canEditFullSettings?: boolean;
+  hasPagePassword?: boolean;
 }
 
 const featureLabels: { key: keyof CampaignFeatures; label: string }[] = [
@@ -214,7 +217,11 @@ function ChannelAnalyticsSettings({
   );
 }
 
-export function SettingsAdmin({ initialSettings }: SettingsAdminProps) {
+export function SettingsAdmin({
+  initialSettings,
+  canEditFullSettings = true,
+  hasPagePassword = false,
+}: SettingsAdminProps) {
   const [isPending, startTransition] = useTransition();
   const [loadingCampaigns, setLoadingCampaigns] = useState(false);
   const [externalCampaigns, setExternalCampaigns] = useState<ExternalCampaign[]>([]);
@@ -227,6 +234,8 @@ export function SettingsAdmin({ initialSettings }: SettingsAdminProps) {
   );
   const [newTopicName, setNewTopicName] = useState("");
   const [newSubtopicByTopic, setNewSubtopicByTopic] = useState<Record<string, string>>({});
+  const [pagePassword, setPagePassword] = useState("");
+  const [pagePasswordConfigured, setPagePasswordConfigured] = useState(hasPagePassword);
 
   const form = useForm({
     resolver: zodResolver(schema),
@@ -296,6 +305,7 @@ export function SettingsAdmin({ initialSettings }: SettingsAdminProps) {
   }, [externalCampaigns, form]);
 
   const onSubmit = form.handleSubmit((data) => {
+    if (!canEditFullSettings) return;
     startTransition(async () => {
       await updateSettingsAction({
         id: initialSettings.id,
@@ -321,16 +331,82 @@ export function SettingsAdmin({ initialSettings }: SettingsAdminProps) {
     });
   });
 
+  const savePagePassword = (removePassword = false) => {
+    startTransition(async () => {
+      const result = await saveCampaignPagePasswordAction(initialSettings.id, {
+        password: removePassword ? undefined : pagePassword,
+        removePassword,
+      });
+      if (!result.success) {
+        toast.error("error" in result && result.error ? result.error : "ذخیره رمز نشد");
+        return;
+      }
+      setPagePassword("");
+      setPagePasswordConfigured(!removePassword);
+      toast.success(removePassword ? "رمز صفحه کمپین حذف شد" : "رمز صفحه کمپین ذخیره شد");
+    });
+  };
+
   return (
     <div className="space-y-6 max-w-2xl">
       <div>
         <h1 className="text-2xl font-bold">تنظیمات کمپین</h1>
-        <p className="text-sm text-muted-foreground">اطلاعات، بیلبورد زنده، آمار سایت و شبکه‌های اجتماعی</p>
-        <Link href="/admin/campaigns" className="text-sm text-primary hover:underline inline-block mt-1">
-          ساخت یا حذف کمپین ← مدیریت کمپین‌ها
-        </Link>
+        <p className="text-sm text-muted-foreground">
+          {canEditFullSettings
+            ? "اطلاعات، بیلبورد زنده، آمار سایت و شبکه‌های اجتماعی"
+            : "رمز دسترسی به صفحه نمایش کمپین"}
+        </p>
+        {canEditFullSettings && (
+          <Link href="/admin/campaigns" className="text-sm text-primary hover:underline inline-block mt-1">
+            ساخت یا حذف کمپین ← مدیریت کمپین‌ها
+          </Link>
+        )}
       </div>
 
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">رمز صفحه نمایش کمپین</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-sm text-muted-foreground">
+            با تنظیم رمز، بازدیدکنندگان عمومی فقط بعد از وارد کردن رمز می‌توانند صفحه کمپین را ببینند.
+            ادمین و کارفرما وقتی وارد پنل هستند بدون رمز صفحه را می‌بینند.
+          </p>
+          <Input
+            type="password"
+            value={pagePassword}
+            onChange={(event) => setPagePassword(event.target.value)}
+            placeholder={pagePasswordConfigured ? "رمز جدید (برای تغییر)" : "رمز صفحه کمپین"}
+            dir="ltr"
+            className="text-left"
+            autoComplete="new-password"
+          />
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              onClick={() => savePagePassword(false)}
+              disabled={isPending || !pagePassword.trim()}
+            >
+              {pagePasswordConfigured ? "تغییر رمز" : "تنظیم رمز"}
+            </Button>
+            {pagePasswordConfigured && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => savePagePassword(true)}
+                disabled={isPending}
+              >
+                حذف رمز
+              </Button>
+            )}
+          </div>
+          {pagePasswordConfigured && (
+            <p className="text-xs text-muted-foreground">رمز فعلی تنظیم شده است.</p>
+          )}
+        </CardContent>
+      </Card>
+
+      {canEditFullSettings && (
       <Card>
         <CardHeader><CardTitle className="text-base">اطلاعات کمپین</CardTitle></CardHeader>
         <CardContent>
@@ -548,6 +624,7 @@ export function SettingsAdmin({ initialSettings }: SettingsAdminProps) {
           </form>
         </CardContent>
       </Card>
+      )}
     </div>
   );
 }

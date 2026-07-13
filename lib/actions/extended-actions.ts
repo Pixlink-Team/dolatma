@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getAuthSession, getOwnerFilter, isFullAdmin } from "@/lib/auth/get-session";
-import { isClientUser } from "@/lib/auth/access";
+import { canScoreContent, isClientUser } from "@/lib/auth/access";
 import {
   defaultContributorPermissions,
   hasContributorPermission,
@@ -249,6 +249,41 @@ export async function saveMeetingsViewPasswordAction(
   const passwordHash = await hashPassword(password);
   await pgExt.pgUpdateMeetingsViewPassword(campaignId, passwordHash);
   await revalidateExtended();
+  return { success: true };
+}
+
+export async function saveCampaignPagePasswordAction(
+  campaignId: string,
+  options: { password?: string; removePassword?: boolean }
+) {
+  const session = await getAuthSession();
+  if (!session || !canScoreContent(session)) {
+    return { success: false, error: "Unauthorized" };
+  }
+
+  if (!isPostgresConfigured()) {
+    return { success: false, error: "Database required" };
+  }
+
+  if (options.removePassword) {
+    await pgExt.pgUpdatePageViewPassword(campaignId, null);
+    await revalidateExtended();
+    revalidatePath("/campaign");
+    return { success: true };
+  }
+
+  const password = options.password?.trim();
+  if (!password) {
+    return { success: false, error: "رمز الزامی است" };
+  }
+  if (password.length < 4) {
+    return { success: false, error: "رمز باید حداقل ۴ کاراکتر باشد" };
+  }
+
+  const passwordHash = await hashPassword(password);
+  await pgExt.pgUpdatePageViewPassword(campaignId, passwordHash);
+  await revalidateExtended();
+  revalidatePath("/campaign");
   return { success: true };
 }
 
