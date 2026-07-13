@@ -29,6 +29,6 @@ export const billboardCategoryLabels: Record<BillboardCategory, string> = {
 };
 
 export function getBillboardCategoryLabel(value: string | null | undefined): string {
-  if (!value) return "نامشخص";
+  if (!value) return "دسته تبلیغات محیطی";
   return billboardCategoryLabels[value as BillboardCategory] ?? value;
 }
