@@ -8,6 +8,7 @@ import { ImageZoom } from "@/components/ui/image-zoom";
 import { ContentScoreControl } from "@/components/admin/content-score-control";
 import { BillboardThumbnail } from "@/components/public/billboard-thumbnail";
 import { useContentScoreAccess } from "@/lib/context/content-score-context";
+import { getBillboardCategoryLabel } from "@/lib/billboard-categories";
 import {
   getBillboardDateLabel,
   getBillboardDisplayDays,
@@ -34,6 +35,11 @@ function resolveBillboardAddress(billboard: Billboard): string {
 export function BillboardCard({ billboard, onView }: BillboardCardProps) {
   const { canScore, campaignId } = useContentScoreAccess();
   const province = parseProvinceFromBillboard(billboard) || "نامشخص";
+  const city = billboard.city?.trim() || "";
+  const showCity = Boolean(city && city !== province);
+  const categoryLabel = getBillboardCategoryLabel(billboard.category);
+  const typeLabel = billboard.billboardTypeLabel?.trim() || "";
+  const showTypeLabel = Boolean(typeLabel && typeLabel !== categoryLabel);
   const address = resolveBillboardAddress(billboard);
   const dateLabel = getBillboardDateLabel(billboard);
   const displayDays = getBillboardDisplayDays(billboard);
@@ -57,21 +63,39 @@ export function BillboardCard({ billboard, onView }: BillboardCardProps) {
             imageClassName="transition-transform group-hover:scale-105"
           />
         )}
+        <div className="absolute top-1.5 right-1.5 flex max-w-[calc(100%-0.75rem)] flex-wrap gap-1 justify-end">
+          <Badge variant="secondary" className="text-[10px] px-1.5 py-0 shadow-sm">
+            {categoryLabel}
+          </Badge>
+          {showCity && (
+            <Badge variant="outline" className="bg-background/90 text-[10px] px-1.5 py-0 shadow-sm">
+              {city}
+            </Badge>
+          )}
+        </div>
       </div>
 
       <CardContent className="flex flex-1 flex-col space-y-3 p-4">
         <h3 className="line-clamp-2 min-h-[2.5rem] font-semibold leading-tight">{billboard.title}</h3>
 
-        {billboard.billboardTypeLabel && (
-          <Badge variant="secondary" className="w-fit text-xs">
-            {billboard.billboardTypeLabel}
+        <div className="flex flex-wrap gap-1.5">
+          <Badge variant="outline" className="text-xs">
+            {categoryLabel}
           </Badge>
-        )}
+          {showTypeLabel && (
+            <Badge variant="secondary" className="text-xs">
+              {typeLabel}
+            </Badge>
+          )}
+        </div>
 
         <div className="space-y-1.5 text-sm text-muted-foreground">
           <div className="flex items-start gap-1">
             <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-            <span>{province}</span>
+            <span>
+              {province}
+              {showCity ? ` — ${city}` : ""}
+            </span>
           </div>
           <p className="line-clamp-2 pr-5 text-xs leading-relaxed">{address}</p>
         </div>

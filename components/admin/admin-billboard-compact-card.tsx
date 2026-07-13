@@ -29,6 +29,10 @@ export function AdminBillboardCompactCard({
   canScore = false,
   onScoreSaved,
 }: AdminBillboardCompactCardProps) {
+  const categoryLabel = getBillboardCategoryLabel(billboard.category);
+  const city = billboard.city?.trim() || "";
+  const cityLine = formatBillboardCityLine(billboard);
+
   return (
     <div className="group relative w-full overflow-hidden rounded-xl border bg-card text-right transition-all hover:border-primary hover:shadow-md">
       <button
@@ -46,17 +50,20 @@ export function AdminBillboardCompactCard({
             sizes="200px"
             objectFit="cover"
           />
-          <div className="absolute top-1.5 right-1.5 flex flex-wrap gap-1 justify-end">
-            <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-              {getBillboardCategoryLabel(billboard.category)}
+          <div className="absolute top-1.5 right-1.5 flex max-w-[calc(100%-0.75rem)] flex-wrap gap-1 justify-end">
+            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 shadow-sm">
+              {categoryLabel}
             </Badge>
+            {city && (
+              <Badge variant="outline" className="bg-background/90 text-[10px] px-1.5 py-0 shadow-sm">
+                {city}
+              </Badge>
+            )}
           </div>
         </div>
         <div className="space-y-1 p-2">
           <p className="truncate text-xs font-medium">{billboard.title}</p>
-          <p className="truncate text-[10px] text-muted-foreground">
-            {formatBillboardCityLine(billboard)}
-          </p>
+          <p className="truncate text-[10px] text-muted-foreground">{cityLine}</p>
           <AdminOwnerBadge ownerUserId={billboard.ownerUserId} ownerName={billboard.ownerName} />
         </div>
       </button>

@@ -32,6 +32,7 @@ import {
   useSectionBulkEdit,
 } from "@/components/admin/section-bulk-edit";
 import { deleteBillboardAction } from "@/lib/actions/admin-actions";
+import { getBillboardCategoryLabel } from "@/lib/billboard-categories";
 import { canManageBillboardPeriods, isApiBillboard } from "@/lib/billboards";
 import { getBillboardDisplayImage } from "@/lib/billboard-media";
 import type { ContentTopic } from "@/lib/content-topics";
@@ -303,7 +304,12 @@ export function BillboardsAdmin({
                   />
                 )}
                 <div className="min-w-0">
-                  <p className="truncate font-medium">{billboard.title}</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="truncate font-medium">{billboard.title}</p>
+                    <Badge variant="outline" className="text-[10px]">
+                      {getBillboardCategoryLabel(billboard.category)}
+                    </Badge>
+                  </div>
                   <p className="text-xs text-muted-foreground">{formatBillboardCityLine(billboard)}</p>
                 </div>
               </div>
@@ -331,6 +337,13 @@ export function BillboardsAdmin({
             },
             { key: "title", label: "عنوان" },
             ...(isFullAdmin ? [adminOwnerTableColumn<Billboard>()] : []),
+            {
+              key: "category",
+              label: "دسته",
+              render: (item: Billboard) => (
+                <Badge variant="outline">{getBillboardCategoryLabel(item.category)}</Badge>
+              ),
+            },
             { key: "city", label: "شهر" },
             {
               key: "status",
