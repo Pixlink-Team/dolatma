@@ -79,10 +79,7 @@ export function SitePublicationsSection({ publications, groups }: SitePublicatio
   const { filter } = useOwnerLocationFilter();
   const filteredGroups = useFilteredOwnerGroups(groups, (item) => item.publishedDate);
   const filteredPublications = useMemo(
-    () =>
-      filter.sortOrder === "newest" || filter.sortOrder === "oldest" || filter.sortOrder === "top_scored"
-        ? flattenOwnerGroupsInSortOrder(filteredGroups, filter.sortOrder)
-        : filteredGroups.flatMap((group) => group.items),
+    () => flattenOwnerGroupsInSortOrder(filteredGroups, filter.sortOrder),
     [filteredGroups, filter.sortOrder]
   );
   const sectionVisible = useCampaignSectionVisibility(publications.length, filteredPublications.length);

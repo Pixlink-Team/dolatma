@@ -122,10 +122,7 @@ export function SocialPostsSection({ posts, groups }: SocialPostsSectionProps) {
   const { filter } = useOwnerLocationFilter();
   const filteredGroups = useFilteredOwnerGroups(groups, (post) => post.publishedDate);
   const filteredPosts = useMemo(
-    () =>
-      filter.sortOrder === "newest" || filter.sortOrder === "oldest" || filter.sortOrder === "top_scored"
-        ? flattenOwnerGroupsInSortOrder(filteredGroups, filter.sortOrder)
-        : filteredGroups.flatMap((group) => group.items),
+    () => flattenOwnerGroupsInSortOrder(filteredGroups, filter.sortOrder),
     [filteredGroups, filter.sortOrder]
   );
   const sectionVisible = useCampaignSectionVisibility(posts.length, filteredPosts.length);

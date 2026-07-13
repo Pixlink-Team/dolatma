@@ -145,10 +145,7 @@ export function ActivitiesSection({
   const { filter } = useOwnerLocationFilter();
   const filteredGroups = useFilteredOwnerGroups(groups, (activity) => activity.activityDate);
   const filteredActivities = useMemo(
-    () =>
-      filter.sortOrder === "newest" || filter.sortOrder === "oldest" || filter.sortOrder === "top_scored"
-        ? flattenOwnerGroupsInSortOrder(filteredGroups, filter.sortOrder)
-        : filteredGroups.flatMap((group) => group.items),
+    () => flattenOwnerGroupsInSortOrder(filteredGroups, filter.sortOrder),
     [filteredGroups, filter.sortOrder]
   );
   const sectionVisible = useCampaignSectionVisibility(activities.length, filteredActivities.length);

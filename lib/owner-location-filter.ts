@@ -76,6 +76,26 @@ function matchesOwnerUser(item: Ownable, filter: OwnerLocationFilter): boolean {
   return false;
 }
 
+function resolveItemProvince(item: Ownable): string | null {
+  const ownerProvince = item.ownerProvince?.trim();
+  if (ownerProvince) return ownerProvince;
+  const geoProvince =
+    "province" in item && typeof (item as { province?: unknown }).province === "string"
+      ? (item as { province?: string | null }).province?.trim()
+      : undefined;
+  return geoProvince || null;
+}
+
+function resolveItemCity(item: Ownable): string | null {
+  const ownerCity = item.ownerCity?.trim();
+  if (ownerCity) return ownerCity;
+  const geoCity =
+    "city" in item && typeof (item as { city?: unknown }).city === "string"
+      ? (item as { city?: string | null }).city?.trim()
+      : undefined;
+  return geoCity || null;
+}
+
 export function matchesOwnerLocation(
   item: Ownable,
   filter: OwnerLocationFilter,
@@ -88,12 +108,14 @@ export function matchesOwnerLocation(
     return matchesDateFilter(item, filter, getItemDate);
   }
 
-  if (!item.ownerUserId && !item.ownerEmail) return false;
-  if (item.ownerProvince !== filter.province) return false;
+  const itemProvince = resolveItemProvince(item);
+  if (!itemProvince || itemProvince !== filter.province) return false;
   if (filter.city === OWNER_LOCATION_ALL) {
     return matchesDateFilter(item, filter, getItemDate);
   }
-  if (item.ownerCity !== filter.city) return false;
+
+  const itemCity = resolveItemCity(item);
+  if (!itemCity || itemCity !== filter.city) return false;
 
   return matchesDateFilter(item, filter, getItemDate);
 }
@@ -125,18 +147,23 @@ export function collectOwnerLocations(groups: DataOwnerGroup<Ownable>[]): {
   const provinceSet = new Set<string>();
   const citiesByProvince = new Map<string, Set<string>>();
 
-  for (const group of groups) {
-    if (!group.ownerUserId) continue;
-    const province = group.ownerProvince?.trim();
-    const city = group.ownerCity?.trim();
-    if (!province) continue;
-
+  const addLocation = (provinceRaw?: string | null, cityRaw?: string | null) => {
+    const province = provinceRaw?.trim();
+    const city = cityRaw?.trim();
+    if (!province) return;
     provinceSet.add(province);
     if (!citiesByProvince.has(province)) {
       citiesByProvince.set(province, new Set());
     }
     if (city) {
       citiesByProvince.get(province)?.add(city);
+    }
+  };
+
+  for (const group of groups) {
+    addLocation(group.ownerProvince, group.ownerCity);
+    for (const item of group.items) {
+      addLocation(resolveItemProvince(item), resolveItemCity(item));
     }
   }
 

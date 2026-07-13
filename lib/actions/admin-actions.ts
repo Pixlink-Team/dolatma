@@ -56,13 +56,21 @@ async function revalidateAll(slug?: string) {
   revalidatePath("/admin/files");
   revalidatePath("/admin/settings");
   revalidatePath("/admin/users");
+  revalidatePath("/campaign");
   if (slug) revalidatePath(`/campaign/${slug}`);
 }
 
-async function withOwnerScope<T extends { ownerUserId?: string | null }>(data: T): Promise<T> {
+async function withOwnerScope<T extends { ownerUserId?: string | null; published?: boolean }>(
+  data: T
+): Promise<T> {
   const session = await getAuthSession();
   if (!session || isFullAdmin(session)) return data;
-  return { ...data, ownerUserId: session.userId };
+  return {
+    ...data,
+    ownerUserId: session.userId,
+    // Contributor uploads must be public on the campaign page.
+    published: true,
+  };
 }
 
 async function assertContributorOwnsBillboard(

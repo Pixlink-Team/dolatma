@@ -123,13 +123,15 @@ export function flattenOwnerGroupsInSortOrder<T extends Ownable>(
   groups: DataOwnerGroup<T>[],
   sort: CampaignContentSort
 ): T[] {
-  if (sort === "default") {
-    return groups.flatMap((group) => group.items);
-  }
+  const flat = groups.flatMap((group) => group.items);
+
+  // Default public pagination should surface newest uploads first so
+  // contributor content is not buried behind admin-owned groups.
+  const effectiveSort: CampaignContentSort = sort === "default" ? "newest" : sort;
 
   return sortCampaignContent(
-    groups.flatMap((group) => group.items),
-    sort,
+    flat,
+    effectiveSort,
     (item) => getOwnableUploadDate(item as T & Record<string, unknown>),
     (item) => ("sortOrder" in item ? Number(item.sortOrder) : 0) || 0
   );

@@ -23,7 +23,20 @@ async function revalidateExtended(slug?: string) {
   revalidatePath("/admin/users");
   revalidatePath("/admin/profile");
   revalidatePath("/admin/analytics");
+  revalidatePath("/campaign");
   if (slug) revalidatePath(`/campaign/${slug}`);
+}
+
+function withContributorPublish<T extends { ownerUserId?: string | null; published?: boolean }>(
+  session: NonNullable<Awaited<ReturnType<typeof getAuthSession>>>,
+  data: T
+): T {
+  if (isFullAdmin(session)) return data;
+  return {
+    ...data,
+    ownerUserId: session.userId,
+    published: true,
+  };
 }
 
 export async function saveSocialPostAction(data: Partial<SocialMediaPost> & { id?: string }) {
@@ -37,8 +50,10 @@ export async function saveSocialPostAction(data: Partial<SocialMediaPost> & { id
     }
   }
 
-  const ownerUserId = isFullAdmin(session) ? (data.ownerUserId ?? null) : session.userId;
-  const payload = { ...data, ownerUserId };
+  const payload = withContributorPublish(session, {
+    ...data,
+    ownerUserId: isFullAdmin(session) ? (data.ownerUserId ?? null) : session.userId,
+  });
 
   if (!isPostgresConfigured()) {
     return { success: false, error: "Database required" };
@@ -123,7 +138,7 @@ export async function saveBroadcastReportAction(data: Partial<BroadcastReport> &
   }
 
   const ownerUserId = isFullAdmin(session) ? (data.ownerUserId ?? null) : session.userId;
-  const payload = { ...data, ownerUserId };
+  const payload = withContributorPublish(session, { ...data, ownerUserId });
 
   if (!isPostgresConfigured()) {
     return { success: false, error: "Database required" };
@@ -155,7 +170,7 @@ export async function saveCampaignActivityAction(data: Partial<CampaignActivity>
   }
 
   const ownerUserId = isFullAdmin(session) ? (data.ownerUserId ?? null) : session.userId;
-  const payload = { ...data, ownerUserId };
+  const payload = withContributorPublish(session, { ...data, ownerUserId });
 
   if (!isPostgresConfigured()) {
     return { success: false, error: "Database required" };
@@ -191,7 +206,7 @@ export async function saveMeetingAction(
   }
 
   const ownerUserId = isFullAdmin(session) ? (data.ownerUserId ?? null) : session.userId;
-  const payload = { ...data, ownerUserId };
+  const payload = withContributorPublish(session, { ...data, ownerUserId });
 
   if (!isPostgresConfigured()) {
     return { success: false, error: "Database required" };

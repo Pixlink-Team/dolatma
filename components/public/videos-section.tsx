@@ -85,13 +85,12 @@ export function VideosSection({ categories: _categories, videos, groups }: Video
     [locationFilteredGroups, effectiveSort]
   );
 
-  const filteredVideos = useMemo(
-    () =>
-      effectiveSort === "newest" || effectiveSort === "oldest" || effectiveSort === "top_scored"
-        ? flattenOwnerGroupsInSortOrder(filteredGroups, effectiveSort)
-        : filteredGroups.flatMap((group) => group.items),
-    [filteredGroups, effectiveSort]
-  );
+  const filteredVideos = useMemo(() => {
+    if (effectiveSort === "title") {
+      return filteredGroups.flatMap((group) => group.items);
+    }
+    return flattenOwnerGroupsInSortOrder(filteredGroups, effectiveSort);
+  }, [filteredGroups, effectiveSort]);
   const sectionVisible = useCampaignSectionVisibility(videos.length, filteredVideos.length);
 
   const { visibleCount, hasMore, loadMore } = usePublicMediaPagination(

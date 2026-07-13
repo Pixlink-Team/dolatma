@@ -550,6 +550,8 @@ export async function getPublicCampaignData(slug: string): Promise<PublicCampaig
     try {
       const settings = await pg.pgGetPublishedCampaignBySlug(slug);
       if (!settings) return null;
+      // Backfill: publish older contributor drafts that never reached the public page.
+      await pg.pgPublishContributorUploads(settings.id);
       const campaignStore = await pg.pgGetPublicCampaignData(settings.id);
       const [siteMetrics, users] = await Promise.all([
         resolveChannelAnalyticsMetrics(

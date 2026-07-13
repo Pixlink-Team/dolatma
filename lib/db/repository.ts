@@ -375,6 +375,7 @@ export async function pgSaveBillboard(data: Partial<Billboard> & { id?: string }
       notes = EXCLUDED.notes,
       published = EXCLUDED.published,
       sort_order = EXCLUDED.sort_order,
+      owner_user_id = COALESCE(EXCLUDED.owner_user_id, billboards.owner_user_id),
       plan_label = EXCLUDED.plan_label,
       plan_labels = EXCLUDED.plan_labels,
       score = COALESCE(EXCLUDED.score, billboards.score),
@@ -525,6 +526,7 @@ export async function pgSavePoster(data: Partial<Poster> & { id?: string }) {
       description = EXCLUDED.description,
       published = EXCLUDED.published,
       sort_order = EXCLUDED.sort_order,
+      owner_user_id = COALESCE(EXCLUDED.owner_user_id, posters.owner_user_id),
       plan_label = EXCLUDED.plan_label,
       plan_labels = EXCLUDED.plan_labels,
       score = COALESCE(EXCLUDED.score, posters.score),
@@ -630,6 +632,7 @@ export async function pgSaveVideo(data: Partial<Video> & { id?: string }) {
       description = EXCLUDED.description,
       published = EXCLUDED.published,
       sort_order = EXCLUDED.sort_order,
+      owner_user_id = COALESCE(EXCLUDED.owner_user_id, videos.owner_user_id),
       plan_label = EXCLUDED.plan_label,
       plan_labels = EXCLUDED.plan_labels,
       score = COALESCE(EXCLUDED.score, videos.score),
@@ -737,7 +740,8 @@ export async function pgSaveAnalyticsMetric(data: Partial<AnalyticsMetric> & { i
       source = EXCLUDED.source,
       device = EXCLUDED.device,
       page = EXCLUDED.page,
-      city = EXCLUDED.city
+      city = EXCLUDED.city,
+      owner_user_id = COALESCE(EXCLUDED.owner_user_id, analytics_metrics.owner_user_id)
   `;
 
   return { success: true };
@@ -1030,6 +1034,7 @@ export async function pgSaveCampaignFile(data: Partial<CampaignFile> & { id?: st
       file_size = EXCLUDED.file_size,
       published = EXCLUDED.published,
       sort_order = EXCLUDED.sort_order,
+      owner_user_id = COALESCE(EXCLUDED.owner_user_id, campaign_files.owner_user_id),
       plan_label = EXCLUDED.plan_label,
       plan_labels = EXCLUDED.plan_labels,
       score = COALESCE(EXCLUDED.score, campaign_files.score),
@@ -1110,4 +1115,76 @@ export async function pgGetPublishedCampaignBySlug(slug: string) {
     SELECT * FROM campaign_settings WHERE slug = ${slug} AND published = true LIMIT 1
   `;
   return rows[0] ? mapSettingsFromDb(rows[0]) : null;
+}
+
+/** Publish contributor-owned drafts so they appear on the public campaign page. */
+export async function pgPublishContributorUploads(campaignId: string) {
+  const sql = getSql();
+  await Promise.all([
+    sql`
+      UPDATE billboards
+      SET published = true,
+          status = CASE WHEN status = 'draft' THEN 'published' ELSE status END,
+          updated_at = NOW()
+      WHERE campaign_id = ${campaignId}
+        AND owner_user_id IS NOT NULL
+        AND (published = false OR status = 'draft')
+    `,
+    sql`
+      UPDATE posters
+      SET published = true, updated_at = NOW()
+      WHERE campaign_id = ${campaignId}
+        AND owner_user_id IS NOT NULL
+        AND published = false
+    `,
+    sql`
+      UPDATE videos
+      SET published = true, updated_at = NOW()
+      WHERE campaign_id = ${campaignId}
+        AND owner_user_id IS NOT NULL
+        AND published = false
+    `,
+    sql`
+      UPDATE campaign_files
+      SET published = true, updated_at = NOW()
+      WHERE campaign_id = ${campaignId}
+        AND owner_user_id IS NOT NULL
+        AND published = false
+    `,
+    sql`
+      UPDATE raw_media_uploads
+      SET published = true, updated_at = NOW()
+      WHERE campaign_id = ${campaignId}
+        AND owner_user_id IS NOT NULL
+        AND published = false
+    `,
+    sql`
+      UPDATE social_media_posts
+      SET published = true, updated_at = NOW()
+      WHERE campaign_id = ${campaignId}
+        AND owner_user_id IS NOT NULL
+        AND published = false
+    `,
+    sql`
+      UPDATE broadcast_reports
+      SET published = true, updated_at = NOW()
+      WHERE campaign_id = ${campaignId}
+        AND owner_user_id IS NOT NULL
+        AND published = false
+    `,
+    sql`
+      UPDATE campaign_activities
+      SET published = true, updated_at = NOW()
+      WHERE campaign_id = ${campaignId}
+        AND owner_user_id IS NOT NULL
+        AND published = false
+    `,
+    sql`
+      UPDATE campaign_meetings
+      SET published = true, updated_at = NOW()
+      WHERE campaign_id = ${campaignId}
+        AND owner_user_id IS NOT NULL
+        AND published = false
+    `,
+  ]);
 }

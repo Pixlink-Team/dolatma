@@ -84,13 +84,12 @@ export function PostersSection({ categories: _categories, posters, groups }: Pos
     [locationFilteredGroups, effectiveSort]
   );
 
-  const filteredPosters = useMemo(
-    () =>
-      effectiveSort === "newest" || effectiveSort === "oldest" || effectiveSort === "top_scored"
-        ? flattenOwnerGroupsInSortOrder(filteredGroups, effectiveSort)
-        : filteredGroups.flatMap((group) => group.items),
-    [filteredGroups, effectiveSort]
-  );
+  const filteredPosters = useMemo(() => {
+    if (effectiveSort === "title") {
+      return filteredGroups.flatMap((group) => group.items);
+    }
+    return flattenOwnerGroupsInSortOrder(filteredGroups, effectiveSort);
+  }, [filteredGroups, effectiveSort]);
   const sectionVisible = useCampaignSectionVisibility(posters.length, filteredPosters.length);
 
   const { visibleCount, hasMore, loadMore } = usePublicMediaPagination(

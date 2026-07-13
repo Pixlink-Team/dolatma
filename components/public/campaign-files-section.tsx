@@ -76,10 +76,7 @@ export function CampaignFilesSection({ files, groups }: CampaignFilesSectionProp
   const { filter } = useOwnerLocationFilter();
   const filteredGroups = useFilteredOwnerGroups(groups);
   const filteredFiles = useMemo(
-    () =>
-      filter.sortOrder === "newest" || filter.sortOrder === "oldest" || filter.sortOrder === "top_scored"
-        ? flattenOwnerGroupsInSortOrder(filteredGroups, filter.sortOrder)
-        : filteredGroups.flatMap((group) => group.items),
+    () => flattenOwnerGroupsInSortOrder(filteredGroups, filter.sortOrder),
     [filteredGroups, filter.sortOrder]
   );
   const sectionVisible = useCampaignSectionVisibility(files.length, filteredFiles.length);

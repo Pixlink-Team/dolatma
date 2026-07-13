@@ -32,7 +32,7 @@ import { usePublicMediaPagination } from "@/lib/hooks/use-public-media-paginatio
 import { useFilteredOwnableItems } from "@/lib/hooks/use-filtered-owner-groups";
 import { useCampaignSectionVisibility } from "@/lib/hooks/use-campaign-section-visibility";
 import { useOwnerLocationFilter } from "@/lib/context/owner-location-filter-context";
-import { groupByOwner, groupByOwnerPreservingOrder } from "@/lib/owner-groups";
+import { groupByOwnerPreservingOrder } from "@/lib/owner-groups";
 import { hasBillboardCoordinates } from "@/lib/billboards";
 import type { Billboard } from "@/lib/types";
 import { formatPersianNumber, getStatusLabel } from "@/lib/utils";
@@ -79,7 +79,9 @@ export function BillboardSection({ billboards, adminOwnerLabel }: BillboardSecti
       if (effectiveSort !== "default" && !billboardHasDisplayContent(billboard)) return false;
       return true;
     });
-    return sortByPublicMediaOrder(items, effectiveSort, getBillboardUploadDate);
+    // Default view surfaces newest uploads so contributor content is not buried.
+    const sortForList: PublicMediaSort = effectiveSort === "default" ? "newest" : effectiveSort;
+    return sortByPublicMediaOrder(items, sortForList, getBillboardUploadDate);
   }, [locationFilteredBillboards, cityFilter, statusFilter, search, effectiveSort]);
 
   const sectionVisible = useCampaignSectionVisibility(billboards.length, filtered.length);
@@ -91,18 +93,12 @@ export function BillboardSection({ billboards, adminOwnerLabel }: BillboardSecti
 
   const visibleBillboards = filtered.slice(0, visibleCount);
   const visibleGroups = useMemo(() => {
-    const groupItems =
-      effectiveSort !== "default"
-        ? groupByOwnerPreservingOrder(visibleBillboards, adminOwnerLabel ?? undefined)
-        : groupByOwner(visibleBillboards, adminOwnerLabel ?? undefined);
-    return groupItems;
-  }, [visibleBillboards, adminOwnerLabel, effectiveSort]);
+    return groupByOwnerPreservingOrder(visibleBillboards, adminOwnerLabel ?? undefined);
+  }, [visibleBillboards, adminOwnerLabel]);
 
   const rankingGroups = useMemo(() => {
-    return effectiveSort !== "default"
-      ? groupByOwnerPreservingOrder(filtered, adminOwnerLabel ?? undefined)
-      : groupByOwner(filtered, adminOwnerLabel ?? undefined);
-  }, [filtered, adminOwnerLabel, effectiveSort]);
+    return groupByOwnerPreservingOrder(filtered, adminOwnerLabel ?? undefined);
+  }, [filtered, adminOwnerLabel]);
 
   const openBillboard = (billboard: Billboard) => {
     setSelectedBillboard(billboard);

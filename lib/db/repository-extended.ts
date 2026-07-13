@@ -426,6 +426,7 @@ export async function pgSaveSocialPost(data: Partial<SocialMediaPost> & { id?: s
       published_date = EXCLUDED.published_date,
       published = EXCLUDED.published,
       sort_order = EXCLUDED.sort_order,
+      owner_user_id = COALESCE(EXCLUDED.owner_user_id, social_media_posts.owner_user_id),
       plan_label = EXCLUDED.plan_label,
       plan_labels = EXCLUDED.plan_labels,
       updated_at = EXCLUDED.updated_at
@@ -635,6 +636,7 @@ export async function pgSaveBroadcastReport(data: Partial<BroadcastReport> & { i
       summary_data = EXCLUDED.summary_data,
       published = EXCLUDED.published,
       sort_order = EXCLUDED.sort_order,
+      owner_user_id = COALESCE(EXCLUDED.owner_user_id, broadcast_reports.owner_user_id),
       plan_label = EXCLUDED.plan_label,
       plan_labels = EXCLUDED.plan_labels,
       updated_at = EXCLUDED.updated_at
@@ -720,6 +722,7 @@ export async function pgSaveCampaignActivity(data: Partial<CampaignActivity> & {
       description = EXCLUDED.description,
       published = EXCLUDED.published,
       sort_order = EXCLUDED.sort_order,
+      owner_user_id = COALESCE(EXCLUDED.owner_user_id, campaign_activities.owner_user_id),
       plan_label = EXCLUDED.plan_label,
       plan_labels = EXCLUDED.plan_labels,
       updated_at = EXCLUDED.updated_at
@@ -1071,8 +1074,9 @@ export async function pgSaveMeetingWithTasks(
         audio_url = EXCLUDED.audio_url,
         published = EXCLUDED.published,
         sort_order = EXCLUDED.sort_order,
+        owner_user_id = COALESCE(EXCLUDED.owner_user_id, campaign_meetings.owner_user_id),
         updated_at = EXCLUDED.updated_at
-    `;
+      `;
   } else {
     await sql`
       INSERT INTO campaign_meetings (
