@@ -389,7 +389,12 @@ export function BillboardsAdmin({
         imageUrl={previewBillboard ? getBillboardDisplayImage(previewBillboard) : null}
         meta={
           previewBillboard ? (
-            <p className="text-xs text-muted-foreground">{formatBillboardCityLine(previewBillboard)}</p>
+            <div className="space-y-1">
+              <Badge variant="outline" className="text-[10px]">
+                {resolveBillboardCategoryLabel(previewBillboard)}
+              </Badge>
+              <p className="text-xs text-muted-foreground">{formatBillboardCityLine(previewBillboard)}</p>
+            </div>
           ) : null
         }
         onEdit={

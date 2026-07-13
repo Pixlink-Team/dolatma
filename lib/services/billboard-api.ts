@@ -8,6 +8,7 @@ import {
   type ExternalCampaignsResponse,
   type IntegrationBillboard,
 } from "@/lib/models/billboard-api";
+import { matchBillboardCategoryKey } from "@/lib/billboard-categories";
 import { resolveBillboardLocation } from "@/lib/billboard-location-resolver";
 import { billboardApiRoutes } from "@/lib/routes/billboard-api";
 import type { AdminUser, Billboard } from "@/lib/types";
@@ -165,6 +166,9 @@ export function mapIntegrationBillboardToBillboard(
     longitude,
     source: options?.source ?? "api",
     externalId: external.billboard_id,
+    category:
+      matchBillboardCategoryKey(external.billboard_type) ??
+      matchBillboardCategoryKey(external.billboard_type_label),
     status: "published",
     tags,
     notes: external.notes,
@@ -237,6 +241,7 @@ export function mapExternalBillboardToBillboard(
     longitude,
     source: "api",
     externalId: external.id,
+    category: matchBillboardCategoryKey(external.billboard_type),
     status: external.status === "active" ? "published" : "draft",
     tags,
     notes: `کد: ${external.code} | محور: ${external.axis}`,

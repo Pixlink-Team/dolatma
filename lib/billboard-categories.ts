@@ -33,22 +33,67 @@ export function getBillboardCategoryLabel(value: string | null | undefined): str
   return billboardCategoryLabels[value as BillboardCategory] ?? value;
 }
 
+const billboardCategoryLookup = new Map<string, BillboardCategory>(
+  BILLBOARD_CATEGORIES.flatMap((key) => [
+    [key, key],
+    [billboardCategoryLabels[key], key],
+  ])
+);
+
+export function matchBillboardCategoryKey(
+  value: string | null | undefined
+): BillboardCategory | null {
+  const normalized = value?.trim();
+  if (!normalized) return null;
+
+  const slug = normalized.toLowerCase().replace(/-/g, "_");
+  if (BILLBOARD_CATEGORIES.includes(slug as BillboardCategory)) {
+    return slug as BillboardCategory;
+  }
+
+  return billboardCategoryLookup.get(normalized) ?? billboardCategoryLookup.get(slug) ?? null;
+}
+
+function findCategoryLabelInTags(tags: string[]): string | null {
+  const knownLabels = new Set(Object.values(billboardCategoryLabels));
+
+  for (const tag of tags) {
+    const trimmed = tag.trim();
+    if (!trimmed || trimmed.startsWith("map:") || trimmed.startsWith("assignment:")) continue;
+    if (knownLabels.has(trimmed)) return trimmed;
+
+    const matched = matchBillboardCategoryKey(trimmed);
+    if (matched) return billboardCategoryLabels[matched];
+  }
+
+  return null;
+}
+
 export function resolveBillboardCategoryDisplay(billboard: {
   category?: string | null;
   billboardTypeLabel?: string | null;
+  tags?: string[];
 }): string | null {
-  const category = billboard.category?.trim();
-  if (category) {
-    return billboardCategoryLabels[category as BillboardCategory] ?? category;
-  }
+  const categoryKey = matchBillboardCategoryKey(billboard.category);
+  if (categoryKey) return billboardCategoryLabels[categoryKey];
 
   const typeLabel = billboard.billboardTypeLabel?.trim();
-  return typeLabel || null;
+  if (typeLabel) {
+    const fromLabel = matchBillboardCategoryKey(typeLabel);
+    return fromLabel ? billboardCategoryLabels[fromLabel] : typeLabel;
+  }
+
+  if (billboard.tags?.length) {
+    return findCategoryLabelInTags(billboard.tags);
+  }
+
+  return null;
 }
 
 export function resolveBillboardCategoryLabel(billboard: {
   category?: string | null;
   billboardTypeLabel?: string | null;
+  tags?: string[];
 }): string {
   return resolveBillboardCategoryDisplay(billboard) ?? "نامشخص";
 }

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { BillboardThumbnail } from "@/components/public/billboard-thumbnail";
 import { ImageZoom } from "@/components/ui/image-zoom";
+import { resolveBillboardCategoryDisplay } from "@/lib/billboard-categories";
 import {
   filterPublicBillboardTags,
   getBillboardDateLabel,
@@ -29,6 +30,7 @@ export function BillboardModal({ open, onOpenChange, billboard }: BillboardModal
   if (!billboard) return null;
 
   const displayTags = filterPublicBillboardTags(billboard.tags);
+  const categoryLabel = resolveBillboardCategoryDisplay(billboard);
   const showStatus = shouldShowBillboardStatus(billboard);
   const showNotes = shouldShowBillboardNotes(billboard);
   const canDownload = hasBillboardDisplayImage(billboard);
@@ -90,11 +92,11 @@ export function BillboardModal({ open, onOpenChange, billboard }: BillboardModal
             <p className="text-sm text-muted-foreground">{formatPersianDate(billboard.date)}</p>
           )}
 
-          {(billboard.providerName || billboard.qualityTierLabel || billboard.billboardTypeLabel) && (
+          {(categoryLabel || billboard.providerName || billboard.qualityTierLabel) && (
             <div className="flex flex-wrap gap-1">
+              {categoryLabel && <Badge variant="outline">{categoryLabel}</Badge>}
               {billboard.providerName && <Badge variant="secondary">{billboard.providerName}</Badge>}
               {billboard.qualityTierLabel && <Badge variant="outline">{billboard.qualityTierLabel}</Badge>}
-              {billboard.billboardTypeLabel && <Badge variant="outline">{billboard.billboardTypeLabel}</Badge>}
             </div>
           )}
 

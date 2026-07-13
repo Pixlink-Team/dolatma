@@ -65,6 +65,11 @@ export function AdminBillboardCompactCard({
         </div>
         <div className="space-y-1 p-2">
           <p className="truncate text-xs font-medium">{billboard.title}</p>
+          {categoryLabel && (
+            <Badge variant="outline" className="text-[10px] font-normal">
+              {categoryLabel}
+            </Badge>
+          )}
           <p className="truncate text-[10px] text-muted-foreground">{cityLine}</p>
           <AdminOwnerBadge ownerUserId={billboard.ownerUserId} ownerName={billboard.ownerName} />
         </div>

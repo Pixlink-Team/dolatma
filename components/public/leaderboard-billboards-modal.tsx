@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { BillboardModal } from "@/components/public/billboard-modal";
 import { BillboardThumbnail } from "@/components/public/billboard-thumbnail";
+import { resolveBillboardCategoryDisplay } from "@/lib/billboard-categories";
 import { formatBillboardCityLine } from "@/lib/billboard-location";
 import { getBillboardDisplayImage, hasBillboardDisplayImage } from "@/lib/billboards";
 import type { Billboard } from "@/lib/types";
@@ -55,6 +56,7 @@ export function LeaderboardBillboardsModal({
             <ul className="space-y-3">
               {billboards.map((billboard) => {
                 const canShowImage = hasBillboardDisplayImage(billboard);
+                const categoryLabel = resolveBillboardCategoryDisplay(billboard);
                 return (
                   <li key={billboard.id}>
                     <button
@@ -80,6 +82,11 @@ export function LeaderboardBillboardsModal({
                       </div>
                       <div className="min-w-0 flex-1 space-y-1">
                         <p className="break-words text-sm font-medium">{billboard.title}</p>
+                        {categoryLabel && (
+                          <Badge variant="secondary" className="text-[10px] font-normal">
+                            {categoryLabel}
+                          </Badge>
+                        )}
                         <p className="flex items-center gap-1 truncate text-[11px] text-muted-foreground">
                           <MapPin className="h-3 w-3 shrink-0" />
                           {formatBillboardCityLine(billboard)}
