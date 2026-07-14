@@ -1,13 +1,7 @@
 "use client";
 
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import {
   ensureSelectOptions,
   IRAN_PROVINCES,
@@ -45,15 +39,24 @@ export function ProvinceCityFields({
   const provinceValue = resolveSelectValue(province, provinceOptions);
   const cityValue = resolveSelectValue(city, cityOptions);
 
+  const searchableProvinces = [
+    { value: EMPTY_VALUE, label: "انتخاب نشده" },
+    ...provinceOptions.map((item) => ({ value: item, label: item })),
+  ];
+
+  const searchableCities = [
+    { value: EMPTY_VALUE, label: "انتخاب نشده" },
+    ...cityOptions.map((item) => ({ value: item, label: item })),
+  ];
+
   return (
     <div className={hideCity ? "grid grid-cols-1 gap-4" : "grid grid-cols-1 sm:grid-cols-2 gap-4"}>
       <div className="space-y-2">
         <Label>استان</Label>
-        <Select
+        <SearchableSelect
           value={provinceValue}
           onValueChange={(value) => {
             const nextProvince = value === EMPTY_VALUE ? "" : value;
-            // Keep city empty until user picks one — do not auto-pick cities[0].
             const resolved = resolveLocationNames(nextProvince, "");
             onProvinceChange(resolved.province);
             onCityChange("");
@@ -61,25 +64,16 @@ export function ProvinceCityFields({
               onLocationCenterChange?.(getLocationCenter(resolved.province, ""));
             }
           }}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="انتخاب استان" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={EMPTY_VALUE}>انتخاب نشده</SelectItem>
-            {provinceOptions.map((item) => (
-              <SelectItem key={item} value={item}>
-                {item}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+          options={searchableProvinces}
+          placeholder="انتخاب استان"
+          searchPlaceholder="جستجوی استان..."
+        />
       </div>
 
       {!hideCity && (
         <div className="space-y-2">
           <Label>شهر</Label>
-          <Select
+          <SearchableSelect
             value={cityValue}
             onValueChange={(value) => {
               const nextCity = value === EMPTY_VALUE ? "" : value;
@@ -88,20 +82,11 @@ export function ProvinceCityFields({
                 onLocationCenterChange?.(getLocationCenter(province, nextCity));
               }
             }}
+            options={searchableCities}
+            placeholder={province ? "انتخاب شهر" : "ابتدا استان را انتخاب کنید"}
+            searchPlaceholder="جستجوی شهر..."
             disabled={!province}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder={province ? "انتخاب شهر" : "ابتدا استان را انتخاب کنید"} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={EMPTY_VALUE}>انتخاب نشده</SelectItem>
-              {cityOptions.map((item) => (
-                <SelectItem key={item} value={item}>
-                  {item}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          />
         </div>
       )}
     </div>

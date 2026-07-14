@@ -4,13 +4,7 @@ import { X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import {
   encodePlanLabel,
   formatPlanLabelDisplay,
@@ -87,6 +81,15 @@ export function PlanLabelSelect({
     }
   };
 
+  const searchableOptions = available.map((option) => {
+    const isSub = option.includes("|");
+    return {
+      value: option,
+      label: isSub ? `↳ ${formatPlanLabelDisplay(option)}` : formatPlanLabelDisplay(option),
+      keywords: option,
+    };
+  });
+
   return (
     <div className="space-y-2">
       <Label>{label}</Label>
@@ -108,21 +111,15 @@ export function PlanLabelSelect({
         </div>
       )}
       {available.length > 0 ? (
-        <Select value="" onValueChange={addValue}>
-          <SelectTrigger>
-            <SelectValue placeholder={multiple ? "افزودن موضوع / زیرموضوع" : "انتخاب موضوع"} />
-          </SelectTrigger>
-          <SelectContent>
-            {available.map((option) => {
-              const isSub = option.includes("|");
-              return (
-                <SelectItem key={option} value={option}>
-                  {isSub ? `↳ ${formatPlanLabelDisplay(option)}` : formatPlanLabelDisplay(option)}
-                </SelectItem>
-              );
-            })}
-          </SelectContent>
-        </Select>
+        <SearchableSelect
+          key={selected.join("|")}
+          value=""
+          onValueChange={addValue}
+          options={searchableOptions}
+          placeholder={multiple ? "افزودن موضوع / زیرموضوع" : "انتخاب موضوع"}
+          searchPlaceholder="جستجوی موضوع..."
+          clearAfterSelect
+        />
       ) : (
         optional && selected.length === 0 && (
           <p className="text-xs text-muted-foreground">موضوعی تعریف نشده است.</p>

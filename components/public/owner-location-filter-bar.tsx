@@ -12,6 +12,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
+import { formatPlanLabelDisplay } from "@/lib/content-topics";
 import { useOwnerLocationFilter } from "@/lib/context/owner-location-filter-context";
 import {
   OWNER_DATE_ALL,
@@ -46,6 +48,33 @@ export function OwnerLocationFilterBar() {
 
   const filterActive = isCampaignContentFilterActive(filter);
 
+  const userOptions = [
+    { value: OWNER_USER_ALL, label: "همه شرکت‌ها" },
+    ...users.map((user) => ({
+      value: user.key,
+      label: user.label,
+      keywords: `${user.province ?? ""} ${user.city ?? ""}`,
+    })),
+  ];
+
+  const provinceOptions = [
+    { value: OWNER_LOCATION_ALL, label: "همه استان‌ها" },
+    ...provinces.map((province) => ({ value: province, label: province })),
+  ];
+
+  const cityOptions = [
+    { value: OWNER_LOCATION_ALL, label: "همه شهرها" },
+    ...cities.map((city) => ({ value: city, label: city })),
+  ];
+
+  const planOptions = plans
+    .filter((plan) => !filter.planLabels.includes(plan))
+    .map((plan) => ({
+      value: plan,
+      label: formatPlanLabelDisplay(plan),
+      keywords: plan,
+    }));
+
   return (
     <div
       className="flex flex-col gap-4 rounded-xl border bg-card/60 p-4"
@@ -66,63 +95,35 @@ export function OwnerLocationFilterBar() {
 
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 xl:grid-cols-3">
         {users.length > 0 && (
-          <Select value={filter.userKey} onValueChange={setUserKey}>
-            <SelectTrigger className="w-full">
-              <div className="flex items-center gap-2">
-                <Building2 className="h-4 w-4 shrink-0 text-muted-foreground" />
-                <SelectValue placeholder="شرکت" />
-              </div>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={OWNER_USER_ALL}>همه شرکت‌ها</SelectItem>
-              {users.map((user) => (
-                <SelectItem key={user.key} value={user.key}>
-                  {user.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <SearchableSelect
+            value={filter.userKey}
+            onValueChange={setUserKey}
+            options={userOptions}
+            placeholder="شرکت"
+            searchPlaceholder="جستجوی شرکت..."
+            leadingIcon={<Building2 className="h-4 w-4 shrink-0 text-muted-foreground" />}
+          />
         )}
 
-        <Select
+        <SearchableSelect
           value={filter.province}
           onValueChange={setProvince}
+          options={provinceOptions}
+          placeholder="استان"
+          searchPlaceholder="جستجوی استان..."
           disabled={provinceLocked}
-        >
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="استان" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={OWNER_LOCATION_ALL}>همه استان‌ها</SelectItem>
-            {provinces.map((province) => (
-              <SelectItem key={province} value={province}>
-                {province}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        />
 
-        <Select
+        <SearchableSelect
           value={filter.city}
           onValueChange={setCity}
+          options={cityOptions}
+          placeholder={
+            filter.province === OWNER_LOCATION_ALL ? "ابتدا استان را انتخاب کنید" : "شهر"
+          }
+          searchPlaceholder="جستجوی شهر..."
           disabled={filter.province === OWNER_LOCATION_ALL || cityLocked}
-        >
-          <SelectTrigger className="w-full">
-            <SelectValue
-              placeholder={
-                filter.province === OWNER_LOCATION_ALL ? "ابتدا استان را انتخاب کنید" : "شهر"
-              }
-            />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={OWNER_LOCATION_ALL}>همه شهرها</SelectItem>
-            {cities.map((city) => (
-              <SelectItem key={city} value={city}>
-                {city}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        />
 
         <Select
           value={filter.datePreset}
@@ -158,25 +159,18 @@ export function OwnerLocationFilterBar() {
         </Select>
 
         {plans.length > 0 && (
-          <Select
+          <SearchableSelect
             key={filter.planLabels.join("|")}
+            value=""
             onValueChange={(value) => {
               if (!filter.planLabels.includes(value)) togglePlanLabel(value);
             }}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="افزودن موضوع" />
-            </SelectTrigger>
-            <SelectContent>
-              {plans
-                .filter((plan) => !filter.planLabels.includes(plan))
-                .map((plan) => (
-                  <SelectItem key={plan} value={plan}>
-                    {plan}
-                  </SelectItem>
-                ))}
-            </SelectContent>
-          </Select>
+            options={planOptions}
+            placeholder="افزودن موضوع"
+            searchPlaceholder="جستجوی موضوع..."
+            clearAfterSelect
+            emptyText="موضوعی برای افزودن نیست"
+          />
         )}
       </div>
 
@@ -185,7 +179,7 @@ export function OwnerLocationFilterBar() {
           <span className="text-xs text-muted-foreground">موضوع‌های انتخاب‌شده:</span>
           {filter.planLabels.map((label) => (
             <Badge key={label} variant="secondary" className="gap-1 pl-1">
-              {label}
+              {formatPlanLabelDisplay(label)}
               <button
                 type="button"
                 className="rounded-sm p-0.5 hover:bg-muted"

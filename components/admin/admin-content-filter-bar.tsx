@@ -3,15 +3,9 @@
 import { Filter, RotateCcw, UserRound, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import type { Ownable } from "@/lib/types";
-import { matchesAnyPlanLabelFilter } from "@/lib/content-topics";
+import { formatPlanLabelDisplay, matchesAnyPlanLabelFilter } from "@/lib/content-topics";
 
 export const ADMIN_FILTER_ALL = "all";
 
@@ -90,6 +84,19 @@ export function AdminContentFilterBar({
     });
   };
 
+  const userOptions = [
+    { value: ADMIN_FILTER_ALL, label: "همه کاربران" },
+    ...users.map((user) => ({ value: user.key, label: user.label })),
+  ];
+
+  const planOptions = plans
+    .filter((plan) => !filter.planLabels.includes(plan))
+    .map((plan) => ({
+      value: plan,
+      label: formatPlanLabelDisplay(plan),
+      keywords: plan,
+    }));
+
   return (
     <div className="mb-4 flex flex-col gap-3 rounded-xl border bg-card/60 p-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
@@ -99,47 +106,31 @@ export function AdminContentFilterBar({
         </div>
 
         {users.length > 0 && (
-          <Select
+          <SearchableSelect
             value={filter.userKey}
             onValueChange={(userKey) => onChange({ ...filter, userKey })}
-          >
-            <SelectTrigger className="w-full sm:w-52">
-              <div className="flex items-center gap-2">
-                <UserRound className="h-4 w-4 shrink-0 text-muted-foreground" />
-                <SelectValue placeholder="کاربر" />
-              </div>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ADMIN_FILTER_ALL}>همه کاربران</SelectItem>
-              {users.map((user) => (
-                <SelectItem key={user.key} value={user.key}>
-                  {user.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            options={userOptions}
+            placeholder="کاربر"
+            searchPlaceholder="جستجوی کاربر..."
+            className="w-full sm:w-52"
+            leadingIcon={<UserRound className="h-4 w-4 shrink-0 text-muted-foreground" />}
+          />
         )}
 
         {plans.length > 0 && (
-          <Select
+          <SearchableSelect
             key={filter.planLabels.join("|")}
+            value=""
             onValueChange={(value) => {
               if (!filter.planLabels.includes(value)) togglePlan(value);
             }}
-          >
-            <SelectTrigger className="w-full sm:w-44">
-              <SelectValue placeholder="افزودن موضوع" />
-            </SelectTrigger>
-            <SelectContent>
-              {plans
-                .filter((plan) => !filter.planLabels.includes(plan))
-                .map((plan) => (
-                  <SelectItem key={plan} value={plan}>
-                    {plan}
-                  </SelectItem>
-                ))}
-            </SelectContent>
-          </Select>
+            options={planOptions}
+            placeholder="افزودن موضوع"
+            searchPlaceholder="جستجوی موضوع..."
+            className="w-full sm:w-44"
+            clearAfterSelect
+            emptyText="موضوعی برای افزودن نیست"
+          />
         )}
 
         {active && (
@@ -160,7 +151,7 @@ export function AdminContentFilterBar({
         <div className="flex flex-wrap items-center gap-2">
           {filter.planLabels.map((label) => (
             <Badge key={label} variant="secondary" className="gap-1 pl-1">
-              {label}
+              {formatPlanLabelDisplay(label)}
               <button
                 type="button"
                 className="rounded-sm p-0.5 hover:bg-muted"
