@@ -4,7 +4,7 @@ import { isCampaignContentFilterActive } from "@/lib/campaign-content-filter";
 import { Building2, CalendarRange, MapPin, RotateCcw, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { PersianDateInput } from "@/components/ui/persian-date-input";
 import {
   Select,
   SelectContent,
@@ -200,18 +200,20 @@ export function OwnerLocationFilterBar() {
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="space-y-1.5">
             <label className="text-xs text-muted-foreground">از تاریخ</label>
-            <Input
-              type="date"
+            <PersianDateInput
               value={filter.dateFrom}
-              onChange={(event) => setDateFrom(event.target.value)}
+              onChange={setDateFrom}
+              allowEmpty
+              placeholder="از تاریخ"
             />
           </div>
           <div className="space-y-1.5">
             <label className="text-xs text-muted-foreground">تا تاریخ</label>
-            <Input
-              type="date"
+            <PersianDateInput
               value={filter.dateTo}
-              onChange={(event) => setDateTo(event.target.value)}
+              onChange={setDateTo}
+              allowEmpty
+              placeholder="تا تاریخ"
             />
           </div>
         </div>

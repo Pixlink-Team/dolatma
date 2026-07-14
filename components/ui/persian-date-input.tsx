@@ -18,19 +18,30 @@ interface PersianDateInputProps {
   value?: string;
   onChange: (isoDate: string) => void;
   id?: string;
+  /** Allow empty value and show placeholder until a day is picked. */
+  allowEmpty?: boolean;
+  placeholder?: string;
 }
 
-export function PersianDateInput({ value, onChange, id }: PersianDateInputProps) {
+export function PersianDateInput({
+  value,
+  onChange,
+  id,
+  allowEmpty = false,
+  placeholder = "انتخاب تاریخ",
+}: PersianDateInputProps) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const isoValue = value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : todayISO();
+  const hasValue = Boolean(value && /^\d{4}-\d{2}-\d{2}$/.test(value));
+  const isoValue = hasValue ? value! : todayISO();
   const selected = isoToJalaali(isoValue);
   const [viewYear, setViewYear] = useState(selected.jy);
   const [viewMonth, setViewMonth] = useState(selected.jm);
 
   const displayLabel = useMemo(() => {
+    if (allowEmpty && !hasValue) return placeholder;
     return `${formatPersianNumber(selected.jd)} ${getPersianMonthName(selected.jm)} ${formatPersianNumber(selected.jy)}`;
-  }, [selected.jd, selected.jm, selected.jy]);
+  }, [allowEmpty, hasValue, placeholder, selected.jd, selected.jm, selected.jy]);
 
   const dayOptions = useMemo(
     () => Array.from({ length: jalaaliMonthLength(viewYear, viewMonth) }, (_, index) => index + 1),
@@ -72,7 +83,9 @@ export function PersianDateInput({ value, onChange, id }: PersianDateInputProps)
           setOpen((current) => !current);
         }}
       >
-        <span>{displayLabel}</span>
+        <span className={!hasValue && allowEmpty ? "text-muted-foreground" : undefined}>
+          {displayLabel}
+        </span>
         <CalendarDays className="h-4 w-4 text-muted-foreground" />
       </Button>
 
@@ -101,6 +114,7 @@ export function PersianDateInput({ value, onChange, id }: PersianDateInputProps)
             <div className="mt-1 grid grid-cols-7 gap-1">
               {dayOptions.map((day) => {
                 const isSelected =
+                  hasValue &&
                   day === selected.jd &&
                   viewMonth === selected.jm &&
                   viewYear === selected.jy;
@@ -120,6 +134,21 @@ export function PersianDateInput({ value, onChange, id }: PersianDateInputProps)
                 );
               })}
             </div>
+
+            {allowEmpty && hasValue && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="mt-2 w-full text-xs"
+                onClick={() => {
+                  onChange("");
+                  setOpen(false);
+                }}
+              >
+                پاک کردن تاریخ
+              </Button>
+            )}
           </div>
         </>
       )}

@@ -8,6 +8,8 @@ import {
   type OwnerLocationFilter,
 } from "@/lib/owner-location-filter";
 import type { OwnerFilterOption } from "@/lib/owner-users";
+import { formatPersianDate } from "@/lib/utils";
+import { formatPlanLabelDisplay } from "@/lib/content-topics";
 
 const DATE_PRESET_LABELS: Record<string, string> = {
   this_week: "۷ روز اخیر",
@@ -35,7 +37,7 @@ export function getOwnerFilterLabel(
     if (filter.datePreset === "custom") {
       const range = resolveDateFilterRange(filter);
       if (range) {
-        parts.push(`${range.from} تا ${range.to}`);
+        parts.push(`${formatPersianDate(range.from)} تا ${formatPersianDate(range.to)}`);
       } else {
         parts.push(DATE_PRESET_LABELS.custom);
       }
@@ -45,7 +47,7 @@ export function getOwnerFilterLabel(
   }
 
   if (filter.planLabels.length > 0) {
-    parts.push(`موضوع: ${filter.planLabels.join("، ")}`);
+    parts.push(`موضوع: ${filter.planLabels.map((label) => formatPlanLabelDisplay(label)).join("، ")}`);
   }
 
   if (filter.sortOrder === "newest") parts.push("جدیدترین");
