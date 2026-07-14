@@ -80,18 +80,13 @@ export function BillboardCard({ billboard, onView }: BillboardCardProps) {
       <CardContent className="flex flex-1 flex-col space-y-3 p-4">
         <h3 className="line-clamp-2 min-h-[2.5rem] font-semibold leading-tight">{billboard.title}</h3>
 
-        <div className="flex flex-wrap gap-1.5">
-          {categoryLabel && (
-            <Badge variant="outline" className="text-xs">
-              {categoryLabel}
-            </Badge>
-          )}
-          {showTypeLabel && (
+        {showTypeLabel && (
+          <div className="flex flex-wrap gap-1.5">
             <Badge variant="secondary" className="text-xs">
               {typeLabel}
             </Badge>
-          )}
-        </div>
+          </div>
+        )}
 
         <div className="space-y-1.5 text-sm text-muted-foreground">
           <div className="flex items-start gap-1">
