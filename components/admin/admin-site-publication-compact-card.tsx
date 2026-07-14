@@ -3,6 +3,7 @@
 import { Globe } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { AdminOwnerBadge } from "@/components/admin/admin-owner-badge";
+import { AdminPlanLabelsBadges } from "@/components/admin/admin-plan-labels-badges";
 import { MediaThumbnail } from "@/components/ui/media-thumbnail";
 import type { SocialMediaPost } from "@/lib/types";
 import { cn, formatPersianDate } from "@/lib/utils";
@@ -41,6 +42,7 @@ export function AdminSitePublicationCompactCard({ post, onClick }: AdminSitePubl
       </div>
       <div className="space-y-1 p-2">
         <p className="truncate text-xs font-medium">{post.title}</p>
+        <AdminPlanLabelsBadges planLabels={post.planLabels} planLabel={post.planLabel} />
         <p className="truncate text-[10px] text-muted-foreground">{formatPersianDate(post.publishedDate)}</p>
         <AdminOwnerBadge ownerUserId={post.ownerUserId} ownerName={post.ownerName} />
       </div>

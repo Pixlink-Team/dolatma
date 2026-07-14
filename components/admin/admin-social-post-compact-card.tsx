@@ -3,6 +3,7 @@
 import { Badge } from "@/components/ui/badge";
 import { AdminItemActions } from "@/components/admin/admin-item-actions";
 import { AdminOwnerBadge } from "@/components/admin/admin-owner-badge";
+import { AdminPlanLabelsBadges } from "@/components/admin/admin-plan-labels-badges";
 import { ContentScoreControl } from "@/components/admin/content-score-control";
 import { MediaThumbnail } from "@/components/ui/media-thumbnail";
 import type { SocialMediaPost } from "@/lib/types";
@@ -59,6 +60,7 @@ export function AdminSocialPostCompactCard({
         </div>
         <div className="space-y-1 p-2">
           <p className="truncate text-xs font-medium">{post.title}</p>
+          <AdminPlanLabelsBadges planLabels={post.planLabels} planLabel={post.planLabel} />
           <p className="truncate text-[10px] text-muted-foreground">
             {formatPersianDate(post.publishedDate)} · {formatPersianNumber(post.views)} بازدید
           </p>

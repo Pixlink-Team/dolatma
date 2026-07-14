@@ -97,8 +97,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "کاربر یافت نشد" }, { status: 404 });
     }
     ownerUserId = user.id;
-    province = user.province ?? province;
-    city = user.city ?? city;
+    // Prefer explicit form selection; fall back to profile only when form left empty.
+    province = province || user.province || null;
+    city = city || user.city || null;
   }
 
   const address = String(formData.get("address") ?? "").trim() || undefined;
@@ -106,6 +107,10 @@ export async function POST(request: Request) {
   const areaSqm = areaSqmRaw ? Number(areaSqmRaw) : undefined;
   const notes = String(formData.get("notes") ?? "").trim() || null;
   const planLabel = String(formData.get("planLabel") ?? "").trim() || null;
+  const planLabels = formData
+    .getAll("planLabels")
+    .map((value) => String(value).trim())
+    .filter(Boolean);
 
   try {
     const periods = parseRequiredPeriods(formData);
@@ -125,7 +130,8 @@ export async function POST(request: Request) {
       // Always publish so contributor uploads appear on the public campaign page.
       published: true,
       status: "published",
-      planLabel,
+      planLabel: planLabels[0] ?? planLabel,
+      planLabels: planLabels.length > 0 ? planLabels : planLabel ? [planLabel] : undefined,
       periods,
       ownerUserId,
     });

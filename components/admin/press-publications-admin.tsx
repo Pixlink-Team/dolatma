@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AdminActivityCompactCard } from "@/components/admin/admin-activity-compact-card";
 import { AdminCompactAddCard } from "@/components/admin/admin-compact-add-card";
+import { PlanLabelSelect } from "@/components/admin/plan-label-select";
 import {
   BulkItemShell,
   SectionBulkEditBar,
@@ -24,7 +25,7 @@ import { MediaUpload } from "@/components/ui/media-upload";
 import { PersianDateField } from "@/components/ui/persian-date-input";
 import { getActivityTypeLabel, pressActivityTypeOptions } from "@/lib/activity-types";
 import { deleteCampaignActivityAction, saveCampaignActivityAction } from "@/lib/actions/extended-actions";
-import type { ContentTopic } from "@/lib/content-topics";
+import { normalizePlanLabels, type ContentTopic } from "@/lib/content-topics";
 import { todayISO } from "@/lib/jalali";
 import { isPressPublication } from "@/lib/press-publications";
 import type { ActivityMediaItem, AdminUser, CampaignActivity } from "@/lib/types";
@@ -61,6 +62,7 @@ export function PressPublicationsAdmin({
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [mediaItems, setMediaItems] = useState<ActivityMediaItem[]>([]);
+  const [planLabels, setPlanLabels] = useState<string[]>([]);
   const [rows, setRows] = useState(
     initialActivities.filter((activity) => isPressPublication(activity))
   );
@@ -92,6 +94,7 @@ export function PressPublicationsAdmin({
   const openCreate = () => {
     setEditingId(null);
     setMediaItems([]);
+    setPlanLabels([]);
     form.reset({
       title: "",
       activityType: "magazine",
@@ -106,6 +109,7 @@ export function PressPublicationsAdmin({
   const openEdit = (activity: CampaignActivity) => {
     setEditingId(activity.id);
     setMediaItems(activity.mediaItems ?? []);
+    setPlanLabels(normalizePlanLabels(activity.planLabels, activity.planLabel));
     form.reset({
       title: activity.title,
       activityType: activity.activityType === "newspaper" ? "newspaper" : "magazine",
@@ -140,6 +144,8 @@ export function PressPublicationsAdmin({
         mediaItems: filledMedia,
         description: data.description || null,
         published: data.published,
+        planLabels,
+        planLabel: planLabels[0] ?? null,
       });
 
       if (!result.success) {
@@ -160,6 +166,8 @@ export function PressPublicationsAdmin({
         mediaItems: filledMedia,
         description: data.description || null,
         published: data.published,
+        planLabels,
+        planLabel: planLabels[0] ?? null,
         sortOrder: rows.length + 1,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -300,6 +308,12 @@ export function PressPublicationsAdmin({
               <Label>توضیحات (اختیاری)</Label>
               <Textarea {...form.register("description")} rows={4} />
             </div>
+            <PlanLabelSelect
+              topics={contentTopics}
+              plans={contentPlans}
+              values={planLabels}
+              onChangeMultiple={setPlanLabels}
+            />
             <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
               <span>منتشر در صفحه عمومی</span>
               <Switch checked={form.watch("published")} onCheckedChange={(value) => form.setValue("published", value)} />

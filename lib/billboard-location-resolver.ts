@@ -176,17 +176,38 @@ export function resolveBillboardLocation(input: {
   const parsedFromAddress = parseLocationFromAddress(input.address?.trim() ?? "");
 
   const knownRawCity = resolveKnownCity(rawCity);
+  const knownRawProvince = resolveKnownProvince(rawProvince);
+
+  // Trust explicit known province+city that already match — never let address tokens
+  // (e.g. street "بهار") steal another province like همدان.
+  if (
+    knownRawCity &&
+    knownRawProvince &&
+    knownRawCity.province === knownRawProvince
+  ) {
+    return {
+      province: knownRawProvince,
+      city: knownRawCity.city,
+    };
+  }
+
+  const addressCity = parsedFromFull.city ?? parsedFromAddress.city;
+  const addressProvince = addressCity
+    ? CITY_TO_PROVINCE.get(normalizeLocationName(addressCity)) ?? null
+    : null;
+
   const rawCityIsReliable =
     knownRawCity !== null &&
     !(
       normalizeLocationName(rawCity) === normalizeLocationName(rawProvince) &&
-      (parsedFromFull.city ?? parsedFromAddress.city) &&
-      (parsedFromFull.city ?? parsedFromAddress.city) !== knownRawCity.city
+      addressCity &&
+      addressCity !== knownRawCity.city &&
+      addressProvince === knownRawCity.province
     );
 
   let city = rawCityIsReliable
     ? knownRawCity.city
-    : parsedFromFull.city ?? parsedFromAddress.city ?? "";
+    : addressCity ?? "";
 
   let province: string | null = null;
   if (rawCityIsReliable) {

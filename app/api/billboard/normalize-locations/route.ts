@@ -49,21 +49,31 @@ export async function POST(request: Request) {
       billboard.description ?? billboard.location ?? billboard.title ?? ""
     ).trim();
 
+    const existingProvince = billboard.province?.trim() || null;
+    const existingCity = billboard.city?.trim() || null;
+    const hasUsableCity =
+      Boolean(existingCity) && existingCity !== "نامشخص";
+
+    // Keep known manual/API locations intact; only fill blanks from address.
+    if (existingProvince && hasUsableCity) {
+      unchanged++;
+      continue;
+    }
+
     const resolved = resolveBillboardLocation({
-      province: billboard.province ?? null,
-      city: billboard.city ?? null,
+      province: existingProvince,
+      city: existingCity,
       address: rawLocationText,
       fullAddress: rawLocationText,
       code: billboard.code ?? null,
     });
 
-    const nextProvince = resolved.province ?? billboard.province ?? null;
-    const shouldTrustResolvedCity = billboard.city?.trim() === "" || billboard.city === "نامشخص";
-    const nextCity = shouldTrustResolvedCity
-      ? resolved.city
+    const nextProvince = resolved.province ?? existingProvince;
+    const nextCity = hasUsableCity
+      ? existingCity
       : resolved.city && resolved.city !== "نامشخص"
         ? resolved.city
-        : billboard.city;
+        : existingCity;
 
     if (nextProvince === billboard.province && nextCity === billboard.city) {
       unchanged++;
@@ -75,7 +85,7 @@ export async function POST(request: Request) {
     await pgSaveBillboard({
       ...billboard,
       province: nextProvince,
-      city: nextCity,
+      city: nextCity ?? billboard.city,
       tags: nextTags,
     });
 

@@ -25,6 +25,7 @@ import { BillboardCreateAssignmentDialog } from "@/components/admin/billboard-cr
 import { BillboardAddPeriodDialog } from "@/components/admin/billboard-add-period-dialog";
 import { AdminViewModeToggle } from "@/components/admin/admin-view-mode-toggle";
 import { AdminItemActions } from "@/components/admin/admin-item-actions";
+import { AdminPlanLabelsBadges } from "@/components/admin/admin-plan-labels-badges";
 import { AdminContentPreviewDialog } from "@/components/admin/admin-content-preview-dialog";
 import {
   BulkItemShell,
@@ -311,6 +312,11 @@ export function BillboardsAdmin({
                     </Badge>
                   </div>
                   <p className="text-xs text-muted-foreground">{formatBillboardCityLine(billboard)}</p>
+                  <AdminPlanLabelsBadges
+                    planLabels={billboard.planLabels}
+                    planLabel={billboard.planLabel}
+                    className="mt-1"
+                  />
                 </div>
               </div>
               {!bulk.bulkMode && (

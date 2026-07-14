@@ -3,6 +3,7 @@
 import { Badge } from "@/components/ui/badge";
 import { AdminItemActions } from "@/components/admin/admin-item-actions";
 import { AdminOwnerBadge } from "@/components/admin/admin-owner-badge";
+import { AdminPlanLabelsBadges } from "@/components/admin/admin-plan-labels-badges";
 import { ContentScoreControl } from "@/components/admin/content-score-control";
 import { MediaThumbnail } from "@/components/ui/media-thumbnail";
 import { resolveBillboardCategoryDisplay } from "@/lib/billboard-categories";
@@ -65,11 +66,7 @@ export function AdminBillboardCompactCard({
         </div>
         <div className="space-y-1 p-2">
           <p className="truncate text-xs font-medium">{billboard.title}</p>
-          {categoryLabel && (
-            <Badge variant="outline" className="text-[10px] font-normal">
-              {categoryLabel}
-            </Badge>
-          )}
+          <AdminPlanLabelsBadges planLabels={billboard.planLabels} planLabel={billboard.planLabel} />
           <p className="truncate text-[10px] text-muted-foreground">{cityLine}</p>
           <AdminOwnerBadge ownerUserId={billboard.ownerUserId} ownerName={billboard.ownerName} />
         </div>

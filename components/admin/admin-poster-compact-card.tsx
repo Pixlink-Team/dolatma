@@ -3,6 +3,7 @@
 import { Badge } from "@/components/ui/badge";
 import { AdminItemActions } from "@/components/admin/admin-item-actions";
 import { AdminOwnerBadge } from "@/components/admin/admin-owner-badge";
+import { AdminPlanLabelsBadges } from "@/components/admin/admin-plan-labels-badges";
 import { ContentScoreControl } from "@/components/admin/content-score-control";
 import { MediaThumbnail } from "@/components/ui/media-thumbnail";
 import { resolveDisplayVersion } from "@/lib/media-utils";
@@ -70,6 +71,7 @@ export function AdminPosterCompactCard({
         </div>
         <div className="space-y-1 p-2">
           <p className="truncate text-xs font-medium">{poster.title}</p>
+          <AdminPlanLabelsBadges planLabels={poster.planLabels} planLabel={poster.planLabel} />
           <AdminOwnerBadge ownerUserId={poster.ownerUserId} ownerName={poster.ownerName} />
           {!displayVersion && (
             <p className="text-[10px] text-muted-foreground">بدون تصویر</p>

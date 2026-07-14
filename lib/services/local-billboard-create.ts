@@ -20,6 +20,7 @@ export interface CreateLocalBillboardInput {
   published?: boolean;
   status?: string;
   planLabel?: string | null;
+  planLabels?: string[] | null;
   periods: BillboardDisplayPeriodInput[];
   ownerUserId?: string | null;
 }
@@ -157,6 +158,7 @@ export async function saveLocalBillboard(params: CreateLocalBillboardInput): Pro
     }),
     published: params.published ?? false,
     planLabel: params.planLabel ?? null,
+    planLabels: params.planLabels ?? undefined,
     ownerUserId: params.ownerUserId ?? null,
   });
 

@@ -3,6 +3,7 @@
 import { Badge } from "@/components/ui/badge";
 import { AdminItemActions } from "@/components/admin/admin-item-actions";
 import { AdminOwnerBadge } from "@/components/admin/admin-owner-badge";
+import { AdminPlanLabelsBadges } from "@/components/admin/admin-plan-labels-badges";
 import { ContentScoreControl } from "@/components/admin/content-score-control";
 import { MediaThumbnail } from "@/components/ui/media-thumbnail";
 import { getActivityTypeLabel } from "@/lib/activity-types";
@@ -65,6 +66,7 @@ export function AdminActivityCompactCard({
         </div>
         <div className="space-y-1 p-2">
           <p className="truncate text-xs font-medium">{activity.title}</p>
+          <AdminPlanLabelsBadges planLabels={activity.planLabels} planLabel={activity.planLabel} />
           <p className="truncate text-[10px] text-muted-foreground">
             {formatPersianDate(activity.activityDate)}
             {activity.location ? ` — ${activity.location}` : ""}

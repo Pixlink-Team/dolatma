@@ -53,13 +53,12 @@ export function ProvinceCityFields({
           value={provinceValue}
           onValueChange={(value) => {
             const nextProvince = value === EMPTY_VALUE ? "" : value;
-            const resolved = resolveLocationNames(nextProvince, hideCity ? "" : "");
+            // Keep city empty until user picks one — do not auto-pick cities[0].
+            const resolved = resolveLocationNames(nextProvince, "");
             onProvinceChange(resolved.province);
-            onCityChange(hideCity ? "" : resolved.city);
+            onCityChange("");
             if (resolved.province) {
-              onLocationCenterChange?.(
-                getLocationCenter(resolved.province, hideCity ? "" : resolved.city)
-              );
+              onLocationCenterChange?.(getLocationCenter(resolved.province, ""));
             }
           }}
         >

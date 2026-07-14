@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import { Download, FileSpreadsheet, FileText, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { AdminOwnerBadge } from "@/components/admin/admin-owner-badge";
+import { AdminPlanLabelsBadges } from "@/components/admin/admin-plan-labels-badges";
 import { AdminViewModeToggle } from "@/components/admin/admin-view-mode-toggle";
 import { AdminItemActions } from "@/components/admin/admin-item-actions";
 import {
@@ -228,6 +229,11 @@ export function FilesAdmin({
                 <div className="min-w-0">
                   <p className="truncate font-medium">{file.title}</p>
                   <p className="text-xs text-muted-foreground">{file.fileName}</p>
+                  <AdminPlanLabelsBadges
+                    planLabels={file.planLabels}
+                    planLabel={file.planLabel}
+                    className="mt-1"
+                  />
                 </div>
               </div>
               {!bulk.bulkMode && (
@@ -261,6 +267,11 @@ export function FilesAdmin({
                         <AdminOwnerBadge ownerUserId={file.ownerUserId} ownerName={file.ownerName} />
                       </div>
                       <p className="text-xs text-muted-foreground">{file.fileName}</p>
+                      <AdminPlanLabelsBadges
+                        planLabels={file.planLabels}
+                        planLabel={file.planLabel}
+                        className="mt-1"
+                      />
                       {file.description && (
                         <p className="mt-1 text-sm text-muted-foreground">{file.description}</p>
                       )}

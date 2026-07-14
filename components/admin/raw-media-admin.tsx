@@ -13,6 +13,7 @@ import {
 import { PlanLabelSelect } from "@/components/admin/plan-label-select";
 import { ContentScoreControl } from "@/components/admin/content-score-control";
 import { AdminOwnerBadge } from "@/components/admin/admin-owner-badge";
+import { AdminPlanLabelsBadges } from "@/components/admin/admin-plan-labels-badges";
 import { AdminItemActions } from "@/components/admin/admin-item-actions";
 import { AdminViewModeToggle } from "@/components/admin/admin-view-mode-toggle";
 import {
@@ -279,6 +280,11 @@ export function RawMediaAdmin({
                   <p className="text-xs text-muted-foreground">
                     {item.fileName} — {formatStorageBytes(item.fileSize)}
                   </p>
+                  <AdminPlanLabelsBadges
+                    planLabels={item.planLabels}
+                    planLabel={item.planLabel}
+                    className="mt-1"
+                  />
                 </div>
               </div>
               {!bulk.bulkMode && (
@@ -312,7 +318,7 @@ export function RawMediaAdmin({
                       <Badge variant="outline">
                         {item.mediaKind === "video" ? "ویدیو" : "تصویر"}
                       </Badge>
-                      {item.planLabel && <Badge variant="secondary">{item.planLabel}</Badge>}
+                      <AdminPlanLabelsBadges planLabels={item.planLabels} planLabel={item.planLabel} />
                     </div>
                     {item.description && (
                       <p className="text-sm text-muted-foreground">{item.description}</p>
