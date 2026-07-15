@@ -22,7 +22,6 @@ import {
 } from "@/components/public/billboard-map-dialog";
 import { BillboardModal } from "@/components/public/billboard-modal";
 import {
-  billboardHasDisplayContent,
   PUBLIC_MEDIA_GRID_CLASS,
   resolvePublicMediaSort,
   sortByPublicMediaOrder,
@@ -89,7 +88,6 @@ export function BillboardSection({ billboards, adminOwnerLabel }: BillboardSecti
       if (!matchesBillboardCategoryFilter(billboard, categoryFilter)) return false;
       if (!matchesBillboardStatusFilter(billboard, statusFilter)) return false;
       if (search && !billboard.title.includes(search) && !billboard.city.includes(search)) return false;
-      if (effectiveSort !== "default" && !billboardHasDisplayContent(billboard)) return false;
       return true;
     });
     // Default view surfaces newest uploads so contributor content is not buried.
@@ -189,7 +187,7 @@ export function BillboardSection({ billboards, adminOwnerLabel }: BillboardSecti
       <CollapsibleSection
         id="billboards"
         title="تبلیغات محیطی"
-        description="نمایش تبلیغات محیطی کمپین روی نقشه و کارت‌ها"
+        description={`${formatPersianNumber(filtered.length)} مورد — نمایش روی نقشه و کارت‌ها`}
         controls={controls}
       >
         <SectionTopCompaniesBox groups={rankingGroups} />

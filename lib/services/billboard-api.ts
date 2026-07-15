@@ -190,7 +190,14 @@ export function mapExternalBillboardToLocal(
   campaignId: string,
   options?: { date?: string; sortOrder?: number; published?: boolean }
 ): Partial<Billboard> & { campaignId: string } {
-  return mapExternalBillboardToBillboard(external, campaignId, options);
+  const mapped = mapExternalBillboardToBillboard(external, campaignId, options);
+  // Drop ephemeral api-* id so Postgres generates a UUID; keep externalId + map tags.
+  const { id: _ephemeralId, ...rest } = mapped;
+  void _ephemeralId;
+  return {
+    ...rest,
+    source: "manual",
+  };
 }
 
 export function mapExternalBillboardToBillboard(

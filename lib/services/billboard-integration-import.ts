@@ -65,12 +65,13 @@ export async function importIntegrationBillboards(params: {
         sortOrder: existing.sortOrder,
         published: existing.published,
         matchedUser,
-        source: existing.source ?? "manual",
+        source: "manual",
       });
 
       await pgSaveBillboard({
         ...mapped,
         id: existing.id,
+        source: "manual",
         ownerUserId: mapped.ownerUserId ?? existing.ownerUserId ?? null,
       });
 

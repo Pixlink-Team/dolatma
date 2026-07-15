@@ -51,9 +51,12 @@ export function collectPersistedExternalBillboardIds(dbBillboards: Billboard[]):
   return ids;
 }
 
-/** Ephemeral billboards fetched live from map-bilboard API (not saved locally). */
+/**
+ * Ephemeral billboards from a live map-bilboard fetch (not DB rows).
+ * Persisted imports use a real UUID id even if source was historically "api".
+ */
 export function isLiveApiBillboard(billboard: Billboard): boolean {
-  return billboard.source === "api" || billboard.id.startsWith("api-");
+  return billboard.id.startsWith("api-") || billboard.id.startsWith("int-");
 }
 
 export function isApiBillboard(billboard: Billboard): boolean {
@@ -85,10 +88,6 @@ export function filterBillboardsByOwnerUser(
   return billboards.filter((billboard) => billboardBelongsToUser(billboard, ownerUserId));
 }
 
-function isManualBillboard(billboard: Billboard): boolean {
-  return !isLiveApiBillboard(billboard);
-}
-
 function excludePersistedLiveBillboards(
   liveBillboards: Billboard[],
   dbBillboards: Billboard[]
@@ -100,6 +99,10 @@ function excludePersistedLiveBillboards(
     const externalId = getBillboardExternalMapId(billboard);
     return !externalId || !persistedIds.has(externalId);
   });
+}
+
+function sortLocalBillboards(dbBillboards: Billboard[]): Billboard[] {
+  return [...dbBillboards].sort((a, b) => a.sortOrder - b.sortOrder);
 }
 
 export function getExternalCampaignSlug(settings: CampaignSettings): string | null {
@@ -153,14 +156,13 @@ export async function resolveAdminBillboards(
   users: AdminUser[] = [],
   ownerUserId?: string | null
 ): Promise<Billboard[]> {
-  const manualBillboards = dbBillboards
-    .filter(isManualBillboard)
-    .sort((a, b) => a.sortOrder - b.sortOrder);
+  // Always keep every persisted row; only merge live items not already saved.
+  const localBillboards = sortLocalBillboards(dbBillboards);
 
   let resolved: Billboard[];
 
   if (!hasExternalBillboardConnection(settings)) {
-    resolved = manualBillboards;
+    resolved = localBillboards;
   } else {
     try {
       const liveBillboards = excludePersistedLiveBillboards(
@@ -168,15 +170,15 @@ export async function resolveAdminBillboards(
         dbBillboards
       );
       resolved = [
-        ...manualBillboards,
+        ...localBillboards,
         ...liveBillboards.map((billboard, index) => ({
           ...billboard,
-          sortOrder: manualBillboards.length + index + 1,
+          sortOrder: localBillboards.length + index + 1,
         })),
       ];
     } catch (error) {
       console.error("Admin billboard API fetch failed:", error);
-      resolved = manualBillboards;
+      resolved = localBillboards;
     }
   }
 
@@ -193,12 +195,11 @@ export async function resolvePublicBillboards(
   dbBillboards: Billboard[],
   users: AdminUser[] = []
 ): Promise<Billboard[]> {
-  const manualBillboards = dbBillboards
-    .filter(isManualBillboard)
-    .sort((a, b) => a.sortOrder - b.sortOrder);
+  // Always keep every persisted row; only merge live items not already saved.
+  const localBillboards = sortLocalBillboards(dbBillboards);
 
   if (!hasExternalBillboardConnection(settings)) {
-    return manualBillboards;
+    return localBillboards;
   }
 
   try {
@@ -207,16 +208,16 @@ export async function resolvePublicBillboards(
       dbBillboards
     );
     return [
-      ...manualBillboards,
+      ...localBillboards,
       ...liveBillboards.map((billboard, index) => ({
         ...billboard,
-        sortOrder: manualBillboards.length + index + 1,
+        sortOrder: localBillboards.length + index + 1,
         published: true,
       })),
     ];
   } catch (error) {
     console.error("Live billboard fetch failed:", error);
-    return manualBillboards;
+    return localBillboards;
   }
 }
 
