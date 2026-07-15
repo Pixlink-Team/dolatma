@@ -294,9 +294,7 @@ export function AdminVideoEditor({
           {displayVersion ? (
             <>
               <Badge variant="outline">نسخه {formatPersianNumber(displayVersion.versionNumber)}</Badge>
-              <Badge status={displayVersion.isFinal ? "final" : "draft"}>
-                {displayVersion.isFinal ? "نسخه نهایی" : "پیش‌نویس"}
-              </Badge>
+              {displayVersion.isFinal && <Badge status="final">نسخه نهایی</Badge>}
             </>
           ) : (
             <Badge variant="secondary">بدون نسخه</Badge>
@@ -400,9 +398,11 @@ export function AdminVideoEditor({
                         ? `نسخه ${formatPersianNumber(draft.versionNumber ?? index + 1)}`
                         : `نسخه جدید ${formatPersianNumber(index + 1)}`}
                     </p>
-                    <Badge status={draft.isFinal ? "final" : "draft"} className="text-[10px]">
-                      {draft.isFinal ? "نسخه نهایی" : "پیش‌نویس"}
-                    </Badge>
+                    {draft.isFinal && (
+                      <Badge status="final" className="text-[10px]">
+                        نسخه نهایی
+                      </Badge>
+                    )}
                     {draft.id && draft.date && (
                       <span className="text-[10px] text-muted-foreground">{formatPersianDate(draft.date)}</span>
                     )}

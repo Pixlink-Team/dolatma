@@ -61,7 +61,6 @@ const schema = z.object({
   imageUrl: z.string().optional(),
   videoUrl: z.string().optional(),
   description: z.string().optional(),
-  published: z.boolean(),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -120,7 +119,6 @@ export function ActivitiesAdmin({
       imageUrl: "",
       videoUrl: "",
       description: "",
-      published: true,
     },
   });
 
@@ -136,7 +134,6 @@ export function ActivitiesAdmin({
       imageUrl: "",
       videoUrl: "",
       description: "",
-      published: true,
     });
     setOpen(true);
   };
@@ -153,7 +150,6 @@ export function ActivitiesAdmin({
       imageUrl: activity.imageUrl ?? "",
       videoUrl: activity.videoUrl ?? "",
       description: activity.description ?? "",
-      published: activity.published,
     });
     setOpen(true);
   };

@@ -34,7 +34,7 @@ import type { ContentTopic } from "@/lib/content-topics";
 import type { ActivityType, AdminUser, ItemStatus, MediaCategory } from "@/lib/types";
 import { cn, formatPersianNumber, getStatusLabel } from "@/lib/utils";
 
-const BILLBOARD_STATUSES: ItemStatus[] = ["draft", "published", "pending", "approved", "rejected"];
+const BILLBOARD_STATUSES: ItemStatus[] = ["pending", "approved", "rejected", "completed"];
 
 export function useSectionBulkEdit(visibleIds: string[]) {
   const [bulkMode, setBulkMode] = useState(false);
