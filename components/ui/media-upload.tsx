@@ -5,9 +5,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { MediaPlaceholder } from "@/components/ui/media-placeholder";
-import { isAparatVideoInput, isDirectVideoUrl, resolveVideoThumbnail } from "@/lib/media-utils";
+import {
+  isAparatVideoInput,
+  isDirectVideoUrl,
+  resolveVideoEmbedUrl,
+  resolveVideoThumbnail,
+} from "@/lib/media-utils";
 import { cn } from "@/lib/utils";
-import { Loader2, Upload } from "lucide-react";
+import { Loader2, Trash2, Upload } from "lucide-react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -46,6 +51,7 @@ export function MediaUpload({
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [showLinkEditor, setShowLinkEditor] = useState(false);
 
   const handleUpload = async (file: File) => {
     if (maxFileSizeBytes && file.size > maxFileSizeBytes) {
@@ -89,6 +95,7 @@ export function MediaUpload({
         fileSize: data.fileSize ?? file.size,
         mimeType: data.mimeType ?? file.type,
       });
+      setShowLinkEditor(false);
       toast.success("فایل با موفقیت آپلود شد");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "آپلود ناموفق بود");
@@ -114,7 +121,12 @@ export function MediaUpload({
         ? "فایل صوتی را آپلود کنید یا لینک مستقیم وارد کنید"
         : "تصویر را بکشید و رها کنید یا لینک وارد کنید";
 
+  const isDirectVideo = kind === "video" && Boolean(value) && isDirectVideoUrl(value);
+  const isAparat = kind === "video" && Boolean(value) && isAparatVideoInput(value);
   const videoPreviewUrl = kind === "video" ? resolveVideoThumbnail(value) : null;
+  const aparatEmbedUrl = isAparat ? resolveVideoEmbedUrl(value) : "";
+  // Hide raw /api/files URL once a playable uploaded video is set.
+  const hideVideoLinkField = isDirectVideo && !showLinkEditor && !fileOnly;
 
   return (
     <div className="space-y-2">
@@ -135,29 +147,34 @@ export function MediaUpload({
         )}
       >
         {kind === "video" && !fileOnly ? (
-          <Textarea
-            value={value}
-            onChange={(event) => onChange(event.target.value)}
-            onPaste={(event) => {
-              const pasted = event.clipboardData.getData("text");
-              if (!pasted.includes("aparat.com")) return;
-              event.preventDefault();
-              onChange(pasted.trim());
-            }}
-            dir="ltr"
-            placeholder={placeholder}
-            rows={4}
-            className="min-h-24 font-mono text-xs"
-          />
-        ) : (
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <Input
+          hideVideoLinkField ? null : (
+            <Textarea
               value={value}
               onChange={(event) => onChange(event.target.value)}
+              onPaste={(event) => {
+                const pasted = event.clipboardData.getData("text");
+                if (!pasted.includes("aparat.com")) return;
+                event.preventDefault();
+                onChange(pasted.trim());
+                setShowLinkEditor(false);
+              }}
               dir="ltr"
               placeholder={placeholder}
-              className="flex-1"
+              rows={4}
+              className="min-h-24 font-mono text-xs"
             />
+          )
+        ) : (
+          <div className="flex flex-col gap-2 sm:flex-row">
+            {!(kind === "video" && isDirectVideo && fileOnly) && (
+              <Input
+                value={value}
+                onChange={(event) => onChange(event.target.value)}
+                dir="ltr"
+                placeholder={placeholder}
+                className="flex-1"
+              />
+            )}
             <Button
               type="button"
               variant="outline"
@@ -187,7 +204,7 @@ export function MediaUpload({
         )}
 
         {kind === "video" && !fileOnly && (
-          <div className="mt-2 flex flex-wrap items-center gap-2">
+          <div className={cn("flex flex-wrap items-center gap-2", hideVideoLinkField ? "mt-0" : "mt-2")}>
             <Button
               type="button"
               variant="outline"
@@ -196,15 +213,40 @@ export function MediaUpload({
               onClick={() => inputRef.current?.click()}
             >
               {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-              آپلود فایل
+              {isDirectVideo ? "تعویض فایل" : "آپلود فایل"}
             </Button>
-            {isAparatVideoInput(value) && (
+            {isDirectVideo && (
+              <>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowLinkEditor((current) => !current)}
+                >
+                  {showLinkEditor ? "پنهان کردن لینک" : "نمایش لینک"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="text-destructive"
+                  onClick={() => {
+                    onChange("");
+                    setShowLinkEditor(false);
+                  }}
+                >
+                  <Trash2 className="h-4 w-4" />
+                  حذف ویدیو
+                </Button>
+              </>
+            )}
+            {isAparat && (
               <span className="text-xs text-muted-foreground">کاور از آپارات گرفته می‌شود</span>
             )}
           </div>
         )}
 
-        {dropzone && (kind !== "video" || fileOnly) && (
+        {dropzone && (kind !== "video" || fileOnly) && !(kind === "video" && isDirectVideo) && (
           <p className="mt-2 text-center text-xs text-muted-foreground">
             فایل را اینجا بکشید و رها کنید
           </p>
@@ -234,14 +276,24 @@ export function MediaUpload({
       )}
 
       {kind === "video" && (
-        <div className="relative aspect-video w-full overflow-hidden rounded-lg border bg-muted">
-          {value && isDirectVideoUrl(value) ? (
+        <div className="relative aspect-video w-full overflow-hidden rounded-lg border bg-black">
+          {isDirectVideo ? (
             <video
+              key={value}
               src={value}
-              className="h-full w-full object-cover"
+              className="h-full w-full object-contain"
               controls
               playsInline
               preload="metadata"
+            />
+          ) : isAparat ? (
+            <iframe
+              key={aparatEmbedUrl}
+              src={aparatEmbedUrl}
+              title="پیش‌نمایش آپارات"
+              className="h-full w-full"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+              allowFullScreen
             />
           ) : videoPreviewUrl ? (
             // eslint-disable-next-line @next/next/no-img-element

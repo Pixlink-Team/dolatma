@@ -28,7 +28,6 @@ import {
   extractAparatVideoHash,
   getAparatThumbnailUrl,
   isAparatVideoInput,
-  isDirectVideoUrl,
   resolveDisplayVersion,
   resolveVideoThumbnail,
 } from "@/lib/media-utils";
@@ -389,10 +388,6 @@ export function AdminVideoEditor({
 
           {versionDrafts.map((draft, index) => {
             const isAparat = isAparatVideoInput(draft.videoUrl);
-            const draftCover = draft.videoUrl
-              ? resolveVideoThumbnail(draft.videoUrl, draft.thumbnailUrl || null)
-              : null;
-            const isDirect = Boolean(draft.videoUrl && isDirectVideoUrl(draft.videoUrl));
 
             return (
               <div key={draft.localId} className="space-y-3 rounded-lg border p-3">
@@ -424,25 +419,8 @@ export function AdminVideoEditor({
                   </Button>
                 </div>
 
-                {(draftCover || isDirect) && (
-                  <div className="relative aspect-video max-h-40 overflow-hidden rounded-lg border bg-muted">
-                    {isDirect ? (
-                      <video
-                        src={draft.videoUrl}
-                        controls
-                        playsInline
-                        preload="metadata"
-                        className="h-full w-full object-contain bg-black"
-                      />
-                    ) : (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={draftCover!} alt="" className="h-full w-full object-contain" />
-                    )}
-                  </div>
-                )}
-
                 <MediaUpload
-                  label="کد embed آپارات یا ویدیو"
+                  label="ویدیو"
                   kind="video"
                   value={draft.videoUrl}
                   onChange={(url) => updateDraft(draft.localId, { videoUrl: url })}
