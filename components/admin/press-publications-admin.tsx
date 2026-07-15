@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AdminActivityCompactCard } from "@/components/admin/admin-activity-compact-card";
@@ -39,7 +38,6 @@ const schema = z.object({
   activityDate: z.string(),
   location: z.string().optional(),
   description: z.string().optional(),
-  published: z.boolean(),
 });
 
 interface PressPublicationsAdminProps {
@@ -78,7 +76,6 @@ export function PressPublicationsAdmin({
       activityDate: todayISO(),
       location: "",
       description: "",
-      published: false,
     },
   });
 
@@ -101,7 +98,6 @@ export function PressPublicationsAdmin({
       activityDate: todayISO(),
       location: "",
       description: "",
-      published: false,
     });
     setOpen(true);
   };
@@ -116,7 +112,6 @@ export function PressPublicationsAdmin({
       activityDate: activity.activityDate,
       location: activity.location,
       description: activity.description ?? "",
-      published: activity.published,
     });
     setOpen(true);
   };
@@ -143,7 +138,7 @@ export function PressPublicationsAdmin({
         videoUrl: filledMedia.find((item) => item.type === "video")?.url ?? null,
         mediaItems: filledMedia,
         description: data.description || null,
-        published: data.published,
+        published: true,
         planLabels,
         planLabel: planLabels[0] ?? null,
       });
@@ -165,7 +160,7 @@ export function PressPublicationsAdmin({
         videoUrl: primaryVideo,
         mediaItems: filledMedia,
         description: data.description || null,
-        published: data.published,
+        published: true,
         planLabels,
         planLabel: planLabels[0] ?? null,
         sortOrder: rows.length + 1,
@@ -325,10 +320,6 @@ export function PressPublicationsAdmin({
               values={planLabels}
               onChangeMultiple={setPlanLabels}
             />
-            <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-              <span>منتشر در صفحه عمومی</span>
-              <Switch checked={form.watch("published")} onCheckedChange={(value) => form.setValue("published", value)} />
-            </label>
             <Button type="submit" disabled={isPending} className="w-full">
               ذخیره
             </Button>

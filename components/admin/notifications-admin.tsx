@@ -115,11 +115,6 @@ function NotificationCard({
             <Badge variant="secondary" className="text-[10px]">
               {item.typeLabel}
             </Badge>
-            {!item.published && (
-              <Badge variant="outline" className="bg-background/90 text-[10px]">
-                پیش‌نویس
-              </Badge>
-            )}
             {item.score == null ? (
               <Badge variant="outline" className="bg-background/90 text-[10px]">
                 بدون امتیاز

@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AdminDataTable } from "@/components/admin/admin-data-table";
 import { adminOwnerTableColumn } from "@/components/admin/admin-owner-badge";
@@ -27,7 +26,6 @@ const schema = z.object({
   pdfUrl: z.string().min(1),
   fileName: z.string().min(1),
   notes: z.string().optional(),
-  published: z.boolean(),
 });
 
 interface BroadcastAdminProps {
@@ -49,7 +47,6 @@ export function BroadcastAdmin({ campaignId, initialReports }: BroadcastAdminPro
       pdfUrl: "",
       fileName: "",
       notes: "",
-      published: false,
     },
   });
 
@@ -61,7 +58,6 @@ export function BroadcastAdmin({ campaignId, initialReports }: BroadcastAdminPro
       pdfUrl: "",
       fileName: "",
       notes: "",
-      published: false,
     });
     setOpen(true);
   };
@@ -74,7 +70,6 @@ export function BroadcastAdmin({ campaignId, initialReports }: BroadcastAdminPro
       pdfUrl: report.pdfUrl,
       fileName: report.fileName,
       notes: report.summaryData.notes ?? "",
-      published: report.published,
     });
     setOpen(true);
   };
@@ -88,7 +83,7 @@ export function BroadcastAdmin({ campaignId, initialReports }: BroadcastAdminPro
         reportDate: data.reportDate,
         pdfUrl: data.pdfUrl,
         fileName: data.fileName,
-        published: data.published,
+        published: true,
         summaryData: { notes: data.notes },
       };
 
@@ -108,7 +103,7 @@ export function BroadcastAdmin({ campaignId, initialReports }: BroadcastAdminPro
         pdfUrl: data.pdfUrl,
         fileName: data.fileName,
         summaryData: payload.summaryData,
-        published: data.published,
+        published: true,
         sortOrder: 0,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -143,7 +138,6 @@ export function BroadcastAdmin({ campaignId, initialReports }: BroadcastAdminPro
           adminOwnerTableColumn<BroadcastReport>(),
           { key: "reportDate", label: "تاریخ", render: (item) => formatPersianDate(item.reportDate) },
           { key: "fileName", label: "فایل" },
-          { key: "published", label: "وضعیت", render: (item) => (item.published ? "منتشر" : "پیش‌نویس") },
         ]}
         onEdit={openEdit}
         onDelete={(item) => {
@@ -184,11 +178,6 @@ export function BroadcastAdmin({ campaignId, initialReports }: BroadcastAdminPro
             <div className="space-y-2">
               <Label>یادداشت (اختیاری)</Label>
               <Textarea {...form.register("notes")} placeholder="نکات تکمیلی برای نمایش در داشبورد" />
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Switch checked={form.watch("published")} onCheckedChange={(value) => form.setValue("published", value)} />
-              <Label>منتشر شود</Label>
             </div>
 
             <Button type="submit" disabled={isPending} className="w-full">

@@ -41,7 +41,6 @@ const schema = z.object({
   coverImageUrl: z.string().optional(),
   description: z.string().optional(),
   publishedDate: z.string(),
-  published: z.boolean(),
 });
 
 interface SitePublicationsAdminProps {
@@ -86,7 +85,6 @@ export function SitePublicationsAdmin({
       coverImageUrl: "",
       description: "",
       publishedDate: todayISO(),
-      published: true,
     },
   });
 
@@ -99,7 +97,6 @@ export function SitePublicationsAdmin({
       coverImageUrl: "",
       description: "",
       publishedDate: todayISO(),
-      published: true,
     });
     setOpen(true);
   };
@@ -113,7 +110,6 @@ export function SitePublicationsAdmin({
       coverImageUrl: post.coverImageUrl ?? "",
       description: post.description ?? "",
       publishedDate: post.publishedDate,
-      published: post.published,
     });
     setOpen(true);
   };

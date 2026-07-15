@@ -11,7 +11,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
@@ -28,7 +27,6 @@ const categorySchema = z.object({
   title: z.string().min(1),
   description: z.string().optional(),
   sortOrder: z.coerce.number(),
-  published: z.boolean(),
 });
 
 type CategoryFormData = z.infer<typeof categorySchema>;
@@ -53,7 +51,7 @@ export function AdminMediaCategories({
 
   const form = useForm<CategoryFormData>({
     resolver: zodResolver(categorySchema),
-    defaultValues: { title: "", description: "", sortOrder: 1, published: true },
+    defaultValues: { title: "", description: "", sortOrder: 1 },
   });
 
   const refresh = () => router.refresh();
@@ -64,7 +62,6 @@ export function AdminMediaCategories({
       title: "",
       description: "",
       sortOrder: categories.length + 1,
-      published: true,
     });
     setOpen(true);
   };
@@ -75,7 +72,6 @@ export function AdminMediaCategories({
       title: category.title,
       description: category.description ?? "",
       sortOrder: category.sortOrder,
-      published: category.published,
     });
     setOpen(true);
   };
@@ -84,6 +80,7 @@ export function AdminMediaCategories({
     startTransition(async () => {
       await saveCategoryAction({
         ...data,
+        published: true,
         id: editingCategory?.id,
         campaignId,
         type,
@@ -125,9 +122,6 @@ export function AdminMediaCategories({
                 <Badge variant="outline" className="text-[10px]">
                   {formatPersianNumber(category.sortOrder)}
                 </Badge>
-                <Badge variant={category.published ? "success" : "secondary"} className="text-[10px]">
-                  {category.published ? "منتشر" : "پیش‌نویس"}
-                </Badge>
                 <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
               </button>
             ))}
@@ -155,13 +149,6 @@ export function AdminMediaCategories({
             <div>
               <Label>ترتیب</Label>
               <Input type="number" {...form.register("sortOrder")} />
-            </div>
-            <div className="flex items-center gap-2">
-              <Switch
-                checked={form.watch("published")}
-                onCheckedChange={(value) => form.setValue("published", value)}
-              />
-              <Label>منتشر</Label>
             </div>
             <Button type="submit" disabled={isPending} className="w-full">
               {isPending ? "در حال ذخیره..." : "ذخیره دسته"}

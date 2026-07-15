@@ -179,7 +179,6 @@ export function SectionBulkEditBar({
 
   const [changeTopic, setChangeTopic] = useState(false);
   const [planLabels, setPlanLabels] = useState<string[]>([]);
-  const [publishedMode, setPublishedMode] = useState<"unchanged" | "true" | "false">("unchanged");
   const [billboardCategory, setBillboardCategory] = useState("unchanged");
   const [billboardStatus, setBillboardStatus] = useState("unchanged");
   const [mediaCategoryId, setMediaCategoryId] = useState("unchanged");
@@ -192,7 +191,6 @@ export function SectionBulkEditBar({
       setPanelOpen(false);
       setChangeTopic(false);
       setPlanLabels([]);
-      setPublishedMode("unchanged");
       setBillboardCategory("unchanged");
       setBillboardStatus("unchanged");
       setMediaCategoryId("unchanged");
@@ -229,8 +227,6 @@ export function SectionBulkEditBar({
   const buildPatch = (): BulkContentPatch | null => {
     const patch: BulkContentPatch = {};
     if (changeTopic) patch.planLabels = planLabels;
-    if (publishedMode === "true") patch.published = true;
-    if (publishedMode === "false") patch.published = false;
 
     if (contentType === "billboard") {
       if (billboardCategory !== "unchanged") {
@@ -255,7 +251,6 @@ export function SectionBulkEditBar({
 
     if (
       patch.planLabels === undefined &&
-      patch.published === undefined &&
       patch.category === undefined &&
       patch.status === undefined &&
       patch.categoryId === undefined &&
@@ -367,23 +362,6 @@ export function SectionBulkEditBar({
                   label="موضوع جدید"
                 />
               )}
-            </div>
-
-            <div className="space-y-1.5">
-              <Label>وضعیت انتشار</Label>
-              <Select
-                value={publishedMode}
-                onValueChange={(value: "unchanged" | "true" | "false") => setPublishedMode(value)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="unchanged">بدون تغییر</SelectItem>
-                  <SelectItem value="true">منتشر شده</SelectItem>
-                  <SelectItem value="false">پیش‌نویس</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
 
             {contentType === "billboard" && (

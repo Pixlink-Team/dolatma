@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AdminDataTable } from "@/components/admin/admin-data-table";
 import { adminOwnerTableColumn } from "@/components/admin/admin-owner-badge";
@@ -43,7 +42,6 @@ const schema = z.object({
   imageUrl: z.string().optional(),
   discussionSummary: z.string(),
   audioUrl: z.string().optional(),
-  published: z.boolean(),
 });
 
 interface MeetingsAdminProps {
@@ -88,7 +86,6 @@ export function MeetingsAdmin({ campaignId, initialMeetings, hasMeetingsPassword
       imageUrl: "",
       discussionSummary: "",
       audioUrl: "",
-      published: false,
     },
   });
 
@@ -131,7 +128,6 @@ export function MeetingsAdmin({ campaignId, initialMeetings, hasMeetingsPassword
       imageUrl: "",
       discussionSummary: "",
       audioUrl: "",
-      published: false,
     });
     setOpen(true);
   };
@@ -146,7 +142,6 @@ export function MeetingsAdmin({ campaignId, initialMeetings, hasMeetingsPassword
       imageUrl: meeting.imageUrl ?? "",
       discussionSummary: meeting.discussionSummary,
       audioUrl: meeting.audioUrl ?? "",
-      published: meeting.published,
     });
     setAttendees([...meeting.attendees]);
     setTasks(
@@ -259,7 +254,7 @@ export function MeetingsAdmin({ campaignId, initialMeetings, hasMeetingsPassword
           discussionSummary: data.discussionSummary,
           audioUrl: data.audioUrl || null,
           attendees,
-          published: data.published,
+          published: true,
         },
         normalizedTasks,
         normalizedDecisions
@@ -283,7 +278,7 @@ export function MeetingsAdmin({ campaignId, initialMeetings, hasMeetingsPassword
         discussionSummary: data.discussionSummary,
         audioUrl: data.audioUrl || null,
         attendees,
-        published: data.published,
+        published: true,
         sortOrder: existing?.sortOrder ?? 0,
         createdAt: existing?.createdAt ?? now,
         updatedAt: now,
@@ -390,7 +385,6 @@ export function MeetingsAdmin({ campaignId, initialMeetings, hasMeetingsPassword
             label: "تصمیم‌ها",
             render: (item) => decisionSummary(item.decisions),
           },
-          { key: "published", label: "وضعیت", render: (item) => (item.published ? "منتشر" : "پیش‌نویس") },
         ]}
         onEdit={openEdit}
         onDelete={(item) => {
@@ -631,14 +625,6 @@ export function MeetingsAdmin({ campaignId, initialMeetings, hasMeetingsPassword
               {decisions.length > 0 && (
                 <p className="text-xs text-muted-foreground">{decisionSummary(decisions)}</p>
               )}
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Switch
-                checked={form.watch("published")}
-                onCheckedChange={(value) => form.setValue("published", value)}
-              />
-              <Label>منتشر شود</Label>
             </div>
 
             <Button type="submit" disabled={isPending} className="w-full">

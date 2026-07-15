@@ -56,16 +56,9 @@ export function AdminPosterCompactCard({
               <Badge variant="outline" className="text-[10px] px-1.5 py-0">
                 v{formatPersianNumber(displayVersion.versionNumber)}
               </Badge>
-              {displayVersion.isFinal ? (
+              {displayVersion.isFinal && (
                 <Badge status="final" className="text-[10px] px-1.5 py-0">نهایی</Badge>
-              ) : (
-                <Badge status="draft" className="text-[10px] px-1.5 py-0">پیش‌نویس</Badge>
               )}
-            </div>
-          )}
-          {!poster.published && (
-            <div className="absolute top-1.5 left-1.5">
-              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">پیش‌نویس</Badge>
             </div>
           )}
         </div>

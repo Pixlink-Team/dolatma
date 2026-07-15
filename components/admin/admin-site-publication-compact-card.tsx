@@ -1,7 +1,6 @@
 "use client";
 
 import { Globe } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { AdminOwnerBadge } from "@/components/admin/admin-owner-badge";
 import { AdminPlanLabelsBadges } from "@/components/admin/admin-plan-labels-badges";
 import { MediaThumbnail } from "@/components/ui/media-thumbnail";
@@ -30,13 +29,6 @@ export function AdminSitePublicationCompactCard({ post, onClick }: AdminSitePubl
           <div className="flex h-full flex-col items-center justify-center gap-2 px-2 text-muted-foreground">
             <Globe className="h-8 w-8 opacity-50" />
             <span className="line-clamp-2 text-center text-xs">{post.title}</span>
-          </div>
-        )}
-        {!post.published && (
-          <div className="absolute top-1.5 left-1.5">
-            <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-              پیش‌نویس
-            </Badge>
           </div>
         )}
       </div>

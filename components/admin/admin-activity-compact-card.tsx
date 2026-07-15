@@ -56,13 +56,6 @@ export function AdminActivityCompactCard({
               {getActivityTypeLabel(activity.activityType)}
             </Badge>
           </div>
-          {!activity.published && (
-            <div className="absolute top-1.5 left-1.5">
-              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                پیش‌نویس
-              </Badge>
-            </div>
-          )}
         </div>
         <div className="space-y-1 p-2">
           <p className="truncate text-xs font-medium">{activity.title}</p>

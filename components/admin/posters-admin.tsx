@@ -124,7 +124,7 @@ export function PostersAdmin({
       categoryId,
       title: `پوستر ${posters.length + 1}`,
       description: "",
-      published: false,
+      published: true,
       sortOrder: posters.length + 1,
       planLabel: null,
       createdAt: now,

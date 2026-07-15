@@ -354,7 +354,12 @@ export function BillboardsAdmin({
             {
               key: "status",
               label: "وضعیت",
-              render: (item) => <Badge status={item.status}>{getStatusLabel(item.status)}</Badge>,
+              render: (item) =>
+                item.status === "draft" || item.status === "published" ? (
+                  <span className="text-xs text-muted-foreground">—</span>
+                ) : (
+                  <Badge status={item.status}>{getStatusLabel(item.status)}</Badge>
+                ),
             },
             ...(showExternalPeriodTools
               ? [
@@ -382,7 +387,6 @@ export function BillboardsAdmin({
           ]}
           onEdit={() => undefined}
           onDelete={handleDelete}
-          getPublished={(item) => item.published}
           isReadOnly={isApiBillboard}
         />
       )}

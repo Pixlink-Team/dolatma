@@ -124,7 +124,7 @@ export function VideosAdmin({
       categoryId,
       title: `ویدیو ${videos.length + 1}`,
       description: "",
-      published: false,
+      published: true,
       sortOrder: videos.length + 1,
       planLabel: null,
       createdAt: now,

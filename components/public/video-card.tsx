@@ -158,9 +158,11 @@ export function VideoCard({
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-2">
                           <span className="text-xs font-medium">نسخه {version.versionNumber}</span>
-                          <Badge status={version.isFinal ? "final" : "draft"} className="text-[10px] shrink-0">
-                            {version.isFinal ? "نسخه نهایی" : "پیش‌نویس"}
-                          </Badge>
+                          {version.isFinal && (
+                            <Badge status="final" className="text-[10px] shrink-0">
+                              نسخه نهایی
+                            </Badge>
+                          )}
                         </div>
                         <p className="text-[11px] text-muted-foreground mt-0.5">{formatPersianDate(version.date)}</p>
                       </div>

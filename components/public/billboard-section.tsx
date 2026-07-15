@@ -44,8 +44,6 @@ function getBillboardUploadDate(billboard: Billboard): string {
 
 function matchesBillboardStatusFilter(billboard: Billboard, statusFilter: string): boolean {
   if (statusFilter === "all") return true;
-  if (statusFilter === "published") return billboard.published || billboard.status === "published";
-  if (statusFilter === "draft") return !billboard.published && billboard.status !== "published";
   return billboard.status === statusFilter;
 }
 
@@ -180,11 +178,7 @@ export function BillboardSection({ billboards, adminOwnerLabel }: BillboardSecti
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">همه</SelectItem>
-          {["completed", "published", "draft"].map((status) => (
-            <SelectItem key={status} value={status}>
-              {getStatusLabel(status)}
-            </SelectItem>
-          ))}
+          <SelectItem value="completed">{getStatusLabel("completed")}</SelectItem>
         </SelectContent>
       </Select>
     </>
