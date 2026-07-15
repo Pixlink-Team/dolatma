@@ -106,6 +106,29 @@ export async function pgGetUserById(id: string) {
   return mapAccessToUser(rows[0], access);
 }
 
+/** Find a user id by display name (exact match preferred, then contains). */
+export async function pgFindUserIdByName(name: string): Promise<string | null> {
+  const trimmed = name.trim();
+  if (!trimmed) return null;
+
+  const sql = getSql();
+  const exact = await sql`
+    SELECT id FROM users
+    WHERE LOWER(TRIM(name)) = LOWER(${trimmed})
+    ORDER BY created_at ASC
+    LIMIT 1
+  `;
+  if (exact[0]?.id) return String(exact[0].id);
+
+  const fuzzy = await sql`
+    SELECT id FROM users
+    WHERE LOWER(name) LIKE ${`%${trimmed.toLowerCase()}%`}
+    ORDER BY created_at ASC
+    LIMIT 1
+  `;
+  return fuzzy[0]?.id ? String(fuzzy[0].id) : null;
+}
+
 export async function pgGetUserPermissionsForCampaign(userId: string, campaignId: string) {
   const sql = getSql();
   const rows = await sql`

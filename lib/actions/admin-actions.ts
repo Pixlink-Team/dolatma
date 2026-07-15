@@ -41,6 +41,7 @@ import type {
   VideoVersion,
 } from "@/lib/types";
 import { isPostgresConfigured } from "@/lib/utils";
+import { resolveSaveOwnerUserId } from "@/lib/admin-content-owner";
 
 async function revalidateAll(slug?: string) {
   revalidatePath("/");
@@ -60,16 +61,30 @@ async function revalidateAll(slug?: string) {
   if (slug) revalidatePath(`/campaign/${slug}`);
 }
 
-async function withOwnerScope<T extends { ownerUserId?: string | null; published?: boolean }>(
+async function withOwnerScope<T extends { id?: string; ownerUserId?: string | null; published?: boolean }>(
   data: T
 ): Promise<T> {
   const session = await getAuthSession();
-  if (!session || isFullAdmin(session)) return data;
+  if (!session) return data;
+
+  const ownerUserId = await resolveSaveOwnerUserId({
+    session,
+    explicitOwnerUserId: data.ownerUserId,
+    contentId: data.id,
+  });
+
+  if (!isFullAdmin(session)) {
+    return {
+      ...data,
+      ownerUserId,
+      // Contributor uploads must be public on the campaign page.
+      published: true,
+    };
+  }
+
   return {
     ...data,
-    ownerUserId: session.userId,
-    // Contributor uploads must be public on the campaign page.
-    published: true,
+    ownerUserId,
   };
 }
 

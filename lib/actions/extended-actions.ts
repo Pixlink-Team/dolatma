@@ -13,6 +13,7 @@ import * as pgExt from "@/lib/db/repository-extended";
 import type { MeetingDecisionPayload, MeetingTaskPayload } from "@/lib/db/repository-extended";
 import type { BroadcastReport, CampaignActivity, CampaignMeeting, SocialMediaPost, SocialPlatformStat } from "@/lib/types";
 import { isPostgresConfigured } from "@/lib/utils";
+import { resolveSaveOwnerUserId } from "@/lib/admin-content-owner";
 
 async function revalidateExtended(slug?: string) {
   revalidatePath("/admin/social-posts");
@@ -27,15 +28,27 @@ async function revalidateExtended(slug?: string) {
   if (slug) revalidatePath(`/campaign/${slug}`);
 }
 
-function withContributorPublish<T extends { ownerUserId?: string | null; published?: boolean }>(
+async function withSaveOwnerScope<T extends { id?: string; ownerUserId?: string | null; published?: boolean }>(
   session: NonNullable<Awaited<ReturnType<typeof getAuthSession>>>,
   data: T
-): T {
-  if (isFullAdmin(session)) return data;
+): Promise<T> {
+  const ownerUserId = await resolveSaveOwnerUserId({
+    session,
+    explicitOwnerUserId: data.ownerUserId,
+    contentId: data.id,
+  });
+
+  if (!isFullAdmin(session)) {
+    return {
+      ...data,
+      ownerUserId,
+      published: true,
+    };
+  }
+
   return {
     ...data,
-    ownerUserId: session.userId,
-    published: true,
+    ownerUserId,
   };
 }
 
@@ -50,10 +63,7 @@ export async function saveSocialPostAction(data: Partial<SocialMediaPost> & { id
     }
   }
 
-  const payload = withContributorPublish(session, {
-    ...data,
-    ownerUserId: isFullAdmin(session) ? (data.ownerUserId ?? null) : session.userId,
-  });
+  const payload = await withSaveOwnerScope(session, data);
 
   if (!isPostgresConfigured()) {
     return { success: false, error: "Database required" };
@@ -98,8 +108,7 @@ export async function saveSocialPlatformStatAction(data: Partial<SocialPlatformS
     }
   }
 
-  const ownerUserId = isFullAdmin(session) ? (data.ownerUserId ?? null) : session.userId;
-  const payload = { ...data, ownerUserId };
+  const payload = await withSaveOwnerScope(session, data);
 
   const result = await pgExt.pgSaveSocialPlatformStat(payload);
   await revalidateExtended();
@@ -137,8 +146,7 @@ export async function saveBroadcastReportAction(data: Partial<BroadcastReport> &
     }
   }
 
-  const ownerUserId = isFullAdmin(session) ? (data.ownerUserId ?? null) : session.userId;
-  const payload = withContributorPublish(session, { ...data, ownerUserId });
+  const payload = await withSaveOwnerScope(session, data);
 
   if (!isPostgresConfigured()) {
     return { success: false, error: "Database required" };
@@ -169,8 +177,7 @@ export async function saveCampaignActivityAction(data: Partial<CampaignActivity>
     }
   }
 
-  const ownerUserId = isFullAdmin(session) ? (data.ownerUserId ?? null) : session.userId;
-  const payload = withContributorPublish(session, { ...data, ownerUserId });
+  const payload = await withSaveOwnerScope(session, data);
 
   if (!isPostgresConfigured()) {
     return { success: false, error: "Database required" };
@@ -205,8 +212,7 @@ export async function saveMeetingAction(
     }
   }
 
-  const ownerUserId = isFullAdmin(session) ? (data.ownerUserId ?? null) : session.userId;
-  const payload = withContributorPublish(session, { ...data, ownerUserId });
+  const payload = await withSaveOwnerScope(session, data);
 
   if (!isPostgresConfigured()) {
     return { success: false, error: "Database required" };

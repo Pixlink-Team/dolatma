@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
+import { resolveDefaultAdminOwnerUserId } from "@/lib/admin-content-owner";
 import { pgGetCampaignById } from "@/lib/db/repository";
 import { pgGetUserById } from "@/lib/db/repository-extended";
 import type { BillboardDisplayPeriodInput } from "@/lib/services/billboard-assignment-api";
@@ -100,6 +101,8 @@ export async function POST(request: Request) {
     // Prefer explicit form selection; fall back to profile only when form left empty.
     province = province || user.province || null;
     city = city || user.city || null;
+  } else if (fullAdmin && !billboardId) {
+    ownerUserId = await resolveDefaultAdminOwnerUserId();
   }
 
   const address = String(formData.get("address") ?? "").trim() || undefined;

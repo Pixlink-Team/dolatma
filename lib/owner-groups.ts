@@ -4,7 +4,7 @@ import type { DataOwnerGroup, Ownable } from "@/lib/types";
 
 const ADMIN_KEY = "admin";
 
-export const DEFAULT_ADMIN_OWNER_LABEL = "مدیریت";
+export const DEFAULT_ADMIN_OWNER_LABEL = "توانیر";
 
 export function resolveAdminOwnerLabel(label?: string | null): string {
   const trimmed = label?.trim();

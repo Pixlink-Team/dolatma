@@ -133,7 +133,7 @@ export function mapSettingsFromDb(row: any): CampaignSettings {
       typeof row.billboard_config === "string"
         ? JSON.parse(row.billboard_config)
         : (row.billboard_config ?? {}),
-    adminOwnerLabel: row.admin_owner_label ?? "مدیریت",
+    adminOwnerLabel: row.admin_owner_label ?? "توانیر",
     contentTopics: normalizeContentTopics(row.content_plans),
     contentPlans: contentPlansFromTopics(normalizeContentTopics(row.content_plans)),
     meetingsViewPasswordHash: row.meetings_view_password_hash ?? null,

@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { getAdminSessionCookieName } from "@/lib/auth/admin-session";
 import { parseSessionTokenSync } from "@/lib/auth/session-node";
 import { isFullAdmin } from "@/lib/auth/get-session";
+import { resolveDefaultAdminOwnerUserId } from "@/lib/admin-content-owner";
 import { hasContributorPermission } from "@/lib/contributor-permissions";
 import { pgGetUserPermissionsForCampaign } from "@/lib/db/repository-extended";
 import { importSubmissionsFromExcel } from "@/lib/data-access/admin";
@@ -54,7 +55,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "هیچ ردیف معتبری در فایل Excel پیدا نشد" }, { status: 400 });
     }
 
-    const ownerUserId = isFullAdmin(session) ? null : session.userId ?? null;
+    const ownerUserId = isFullAdmin(session)
+      ? await resolveDefaultAdminOwnerUserId()
+      : session.userId ?? null;
     const result = await importSubmissionsFromExcel(campaignId, rows, ownerUserId);
 
     revalidatePath("/admin/submissions");

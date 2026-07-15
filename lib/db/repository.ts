@@ -267,7 +267,7 @@ export async function pgSaveCampaign(data: Partial<CampaignSettings> & { id?: st
       ${sql.json({ ...features })},
       ${sql.json(JSON.parse(JSON.stringify(serializeAnalyticsConfig(data.analyticsConfig ?? { site: { source: "manual" }, social: { source: "manual" } }))))},
       ${sql.json(JSON.parse(JSON.stringify(data.billboardConfig ?? {})))},
-      ${data.adminOwnerLabel?.trim() || "مدیریت"},
+      ${data.adminOwnerLabel?.trim() || "توانیر"},
       ${sql.json(JSON.parse(JSON.stringify(contentPlansPayload)))},
       ${now}
     )
