@@ -8,6 +8,7 @@ import { MediaPlaceholder } from "@/components/ui/media-placeholder";
 import {
   isAparatVideoInput,
   isDirectVideoUrl,
+  isLocalUploadedFileUrl,
   resolveVideoEmbedUrl,
   resolveVideoThumbnail,
 } from "@/lib/media-utils";
@@ -127,6 +128,9 @@ export function MediaUpload({
   const aparatEmbedUrl = isAparat ? resolveVideoEmbedUrl(value) : "";
   // Hide raw /api/files URL once a playable uploaded video is set.
   const hideVideoLinkField = isDirectVideo && !showLinkEditor && !fileOnly;
+  const isLocalUploadedImage =
+    kind === "image" && Boolean(value) && isLocalUploadedFileUrl(value);
+  const hideImageLinkField = isLocalUploadedImage && !showLinkEditor;
 
   return (
     <div className="space-y-2">
@@ -164,7 +168,7 @@ export function MediaUpload({
               className="min-h-24 font-mono text-xs"
             />
           )
-        ) : (
+        ) : hideImageLinkField ? null : (
           <div className="flex flex-col gap-2 sm:flex-row">
             {!(kind === "video" && isDirectVideo && fileOnly) && (
               <Input
@@ -199,6 +203,42 @@ export function MediaUpload({
             >
               {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
               آپلود فایل صوتی
+            </Button>
+          </div>
+        )}
+
+        {kind === "image" && isLocalUploadedImage && (
+          <div className={cn("flex flex-wrap items-center gap-2", hideImageLinkField ? "mt-0" : "mt-2")}>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={uploading}
+              onClick={() => inputRef.current?.click()}
+            >
+              {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+              تعویض تصویر
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowLinkEditor((current) => !current)}
+            >
+              {showLinkEditor ? "پنهان کردن لینک" : "نمایش لینک"}
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="text-destructive"
+              onClick={() => {
+                onChange("");
+                setShowLinkEditor(false);
+              }}
+            >
+              <Trash2 className="h-4 w-4" />
+              حذف تصویر
             </Button>
           </div>
         )}
@@ -246,7 +286,10 @@ export function MediaUpload({
           </div>
         )}
 
-        {dropzone && (kind !== "video" || fileOnly) && !(kind === "video" && isDirectVideo) && (
+        {dropzone &&
+          (kind !== "video" || fileOnly) &&
+          !(kind === "video" && isDirectVideo) &&
+          !hideImageLinkField && (
           <p className="mt-2 text-center text-xs text-muted-foreground">
             فایل را اینجا بکشید و رها کنید
           </p>

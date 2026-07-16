@@ -92,6 +92,18 @@ export function isDirectVideoUrl(url: string): boolean {
   }
 }
 
+/** True when media is served from the app upload endpoint (hide raw path in admin UI). */
+export function isLocalUploadedFileUrl(url: string): boolean {
+  const trimmed = url.trim();
+  if (!trimmed) return false;
+  if (/^\/api\/files\//i.test(trimmed)) return true;
+  try {
+    return new URL(trimmed, "https://local.invalid").pathname.startsWith("/api/files/");
+  } catch {
+    return false;
+  }
+}
+
 export function isDirectAudioUrl(url: string): boolean {
   const trimmed = url.trim();
   if (!trimmed) return false;
