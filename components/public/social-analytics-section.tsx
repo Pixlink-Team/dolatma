@@ -15,8 +15,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useCampaignExportMode } from "@/lib/context/campaign-export-context";
 import { useOwnerLocationFilter } from "@/lib/context/owner-location-filter-context";
 import { useCampaignSectionVisibility } from "@/lib/hooks/use-campaign-section-visibility";
+import { getOwnableUploadDate, sortCampaignContent } from "@/lib/campaign-content-filter";
 import { filterItemsByOwnerLocation } from "@/lib/owner-location-filter";
-import { groupByOwner } from "@/lib/owner-groups";
+import { groupByOwner, shouldRenderChronologically } from "@/lib/owner-groups";
 import { SOCIAL_ANALYTICS_PAGE_SIZE } from "@/lib/public-media-section";
 import type { SocialAnalyticsSummary, SocialPlatformStat } from "@/lib/types";
 import { formatPersianNumber } from "@/lib/utils";
@@ -87,12 +88,18 @@ export function SocialAnalyticsSection({
   const { filter } = useOwnerLocationFilter();
   const [visibleCount, setVisibleCount] = useState(SOCIAL_ANALYTICS_PAGE_SIZE);
 
-  const platforms = useMemo(
-    () => filterItemsByOwnerLocation(analytics.platforms, filter),
-    [analytics.platforms, filter]
-  );
+  const platforms = useMemo(() => {
+    const filtered = filterItemsByOwnerLocation(analytics.platforms, filter);
+    if (filter.sortOrder === "default") return filtered;
+    return sortCampaignContent(
+      filtered,
+      filter.sortOrder,
+      (item) => getOwnableUploadDate(item as SocialPlatformStat & Record<string, unknown>)
+    );
+  }, [analytics.platforms, filter]);
 
-  const filterKey = `${filter.province}:${filter.city}:${filter.userKey}`;
+  const chronological = shouldRenderChronologically(filter.sortOrder);
+  const filterKey = `${filter.province}:${filter.city}:${filter.userKey}:${filter.sortOrder}`;
 
   useEffect(() => {
     setVisibleCount(SOCIAL_ANALYTICS_PAGE_SIZE);
@@ -125,7 +132,10 @@ export function SocialAnalyticsSection({
       </div>
 
       <div className="space-y-4">
-        <OwnerGroupedSection groups={visibleGroups}>
+        <OwnerGroupedSection
+          groups={visibleGroups}
+          flatItems={chronological ? visiblePlatforms : null}
+        >
           {(groupPlatforms) => <PlatformStatGrid platforms={groupPlatforms} />}
         </OwnerGroupedSection>
 

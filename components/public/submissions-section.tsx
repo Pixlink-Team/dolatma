@@ -7,7 +7,7 @@ import { CollapsibleSection } from "@/components/public/collapsible-section";
 import { OwnerGroupedSection } from "@/components/public/owner-grouped-section";
 import { ParticipationChart } from "@/components/charts/participation-chart";
 import { useFilteredOwnerGroups } from "@/lib/hooks/use-filtered-owner-groups";
-import { flattenOwnerGroupsInSortOrder } from "@/lib/owner-groups";
+import { flattenOwnerGroupsInSortOrder, shouldRenderChronologically } from "@/lib/owner-groups";
 import { useOwnerLocationFilter } from "@/lib/context/owner-location-filter-context";
 import { ShowMoreButton } from "@/components/public/show-more-button";
 import { useSectionPagination } from "@/lib/hooks/use-section-pagination";
@@ -76,15 +76,20 @@ export function SubmissionsSection({ groups, summary }: SubmissionsSectionProps)
     `submissions:${filteredSubmissions.length}`
   );
 
+  const chronological = shouldRenderChronologically(filter.sortOrder);
+  const visibleItems = useMemo(
+    () => filteredSubmissions.slice(0, effectiveCount),
+    [filteredSubmissions, effectiveCount]
+  );
   const visibleGroups = useMemo(() => {
-    const ids = new Set(filteredSubmissions.slice(0, effectiveCount).map((submission) => submission.id));
+    const ids = new Set(visibleItems.map((submission) => submission.id));
     return filteredGroups
       .map((group) => ({
         ...group,
         items: group.items.filter((submission) => ids.has(submission.id)),
       }))
       .filter((group) => group.items.length > 0);
-  }, [filteredGroups, filteredSubmissions, effectiveCount]);
+  }, [filteredGroups, visibleItems]);
 
   return (
     <CollapsibleSection
@@ -111,7 +116,10 @@ export function SubmissionsSection({ groups, summary }: SubmissionsSectionProps)
         </div>
       ) : (
         <div className="space-y-4">
-          <OwnerGroupedSection groups={visibleGroups}>
+          <OwnerGroupedSection
+            groups={visibleGroups}
+            flatItems={chronological ? visibleItems : null}
+          >
             {(groupSubmissions) => <SubmissionCards submissions={groupSubmissions} />}
           </OwnerGroupedSection>
 

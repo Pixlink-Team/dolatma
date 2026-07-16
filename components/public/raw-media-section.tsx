@@ -8,7 +8,7 @@ import { OwnerGroupedSection } from "@/components/public/owner-grouped-section";
 import { SectionTopCompaniesBox } from "@/components/public/section-top-companies-box";
 import { useFilteredOwnerGroups } from "@/lib/hooks/use-filtered-owner-groups";
 import { useCampaignSectionVisibility } from "@/lib/hooks/use-campaign-section-visibility";
-import { flattenOwnerGroupsInSortOrder } from "@/lib/owner-groups";
+import { flattenOwnerGroupsInSortOrder, shouldRenderChronologically } from "@/lib/owner-groups";
 import { useOwnerLocationFilter } from "@/lib/context/owner-location-filter-context";
 import { ShowMoreButton } from "@/components/public/show-more-button";
 import { useSectionPagination } from "@/lib/hooks/use-section-pagination";
@@ -113,15 +113,20 @@ export function RawMediaSection({ items, groups, storage }: RawMediaSectionProps
     `raw-media:${filteredItems.length}`
   );
 
+  const chronological = shouldRenderChronologically(filter.sortOrder);
+  const visibleItems = useMemo(
+    () => filteredItems.slice(0, effectiveCount),
+    [filteredItems, effectiveCount]
+  );
   const visibleGroups = useMemo(() => {
-    const ids = new Set(filteredItems.slice(0, effectiveCount).map((item) => item.id));
+    const ids = new Set(visibleItems.map((item) => item.id));
     return filteredGroups
       .map((group) => ({
         ...group,
         items: group.items.filter((item) => ids.has(item.id)),
       }))
       .filter((group) => group.items.length > 0);
-  }, [filteredGroups, filteredItems, effectiveCount]);
+  }, [filteredGroups, visibleItems]);
 
   if (!sectionVisible) return null;
 
@@ -139,7 +144,10 @@ export function RawMediaSection({ items, groups, storage }: RawMediaSectionProps
         </div>
       ) : (
         <div className="space-y-4">
-          <OwnerGroupedSection groups={visibleGroups}>
+          <OwnerGroupedSection
+            groups={visibleGroups}
+            flatItems={chronological ? visibleItems : null}
+          >
             {(groupItems) => <RawMediaList items={groupItems} />}
           </OwnerGroupedSection>
 

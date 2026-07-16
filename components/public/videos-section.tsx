@@ -24,7 +24,7 @@ import { usePublicMediaPagination } from "@/lib/hooks/use-public-media-paginatio
 import { useFilteredOwnerGroups } from "@/lib/hooks/use-filtered-owner-groups";
 import { useCampaignSectionVisibility } from "@/lib/hooks/use-campaign-section-visibility";
 import { useOwnerLocationFilter } from "@/lib/context/owner-location-filter-context";
-import { flattenOwnerGroupsInSortOrder } from "@/lib/owner-groups";
+import { flattenOwnerGroupsInSortOrder, shouldRenderChronologically } from "@/lib/owner-groups";
 import type { DataOwnerGroup, MediaCategory, VideoWithVersions } from "@/lib/types";
 import { formatPersianNumber } from "@/lib/utils";
 
@@ -98,15 +98,20 @@ export function VideosSection({ categories: _categories, videos, groups }: Video
     `${categoryFilter}:${sort}`
   );
 
+  const chronological = shouldRenderChronologically(effectiveSort);
+  const visibleItems = useMemo(
+    () => filteredVideos.slice(0, visibleCount),
+    [filteredVideos, visibleCount]
+  );
   const visibleGroups = useMemo(() => {
-    const visibleIds = new Set(filteredVideos.slice(0, visibleCount).map((video) => video.id));
+    const visibleIds = new Set(visibleItems.map((video) => video.id));
     return filteredGroups
       .map((group) => ({
         ...group,
         items: group.items.filter((video) => visibleIds.has(video.id)),
       }))
       .filter((group) => group.items.length > 0);
-  }, [filteredGroups, filteredVideos, visibleCount]);
+  }, [filteredGroups, visibleItems]);
 
   if (!sectionVisible) return null;
 
@@ -138,7 +143,10 @@ export function VideosSection({ categories: _categories, videos, groups }: Video
         </div>
       ) : (
         <div className="space-y-4">
-          <OwnerGroupedSection groups={visibleGroups}>
+          <OwnerGroupedSection
+            groups={visibleGroups}
+            flatItems={chronological ? visibleItems : null}
+          >
             {(groupVideos) => (
               <div className={PUBLIC_MEDIA_GRID_CLASS}>
                 {groupVideos.map((video) => (

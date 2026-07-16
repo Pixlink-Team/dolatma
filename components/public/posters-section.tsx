@@ -24,7 +24,7 @@ import { usePublicMediaPagination } from "@/lib/hooks/use-public-media-paginatio
 import { useFilteredOwnerGroups } from "@/lib/hooks/use-filtered-owner-groups";
 import { useCampaignSectionVisibility } from "@/lib/hooks/use-campaign-section-visibility";
 import { useOwnerLocationFilter } from "@/lib/context/owner-location-filter-context";
-import { flattenOwnerGroupsInSortOrder } from "@/lib/owner-groups";
+import { flattenOwnerGroupsInSortOrder, shouldRenderChronologically } from "@/lib/owner-groups";
 import type { DataOwnerGroup, MediaCategory, PosterWithVersions } from "@/lib/types";
 import { formatPersianNumber } from "@/lib/utils";
 
@@ -97,15 +97,20 @@ export function PostersSection({ categories: _categories, posters, groups }: Pos
     `${categoryFilter}:${sort}`
   );
 
+  const chronological = shouldRenderChronologically(effectiveSort);
+  const visibleItems = useMemo(
+    () => filteredPosters.slice(0, visibleCount),
+    [filteredPosters, visibleCount]
+  );
   const visibleGroups = useMemo(() => {
-    const visibleIds = new Set(filteredPosters.slice(0, visibleCount).map((poster) => poster.id));
+    const visibleIds = new Set(visibleItems.map((poster) => poster.id));
     return filteredGroups
       .map((group) => ({
         ...group,
         items: group.items.filter((poster) => visibleIds.has(poster.id)),
       }))
       .filter((group) => group.items.length > 0);
-  }, [filteredGroups, filteredPosters, visibleCount]);
+  }, [filteredGroups, visibleItems]);
   if (!sectionVisible) return null;
 
   const controls = filter.sortOrder === "default" ? (
@@ -131,7 +136,10 @@ export function PostersSection({ categories: _categories, posters, groups }: Pos
     >
       <SectionTopCompaniesBox groups={filteredGroups} />
       <div className="space-y-4">
-          <OwnerGroupedSection groups={visibleGroups}>
+          <OwnerGroupedSection
+            groups={visibleGroups}
+            flatItems={chronological ? visibleItems : null}
+          >
             {(groupPosters) => (
               <div className={PUBLIC_MEDIA_GRID_CLASS}>
                 {groupPosters.map((poster) => (

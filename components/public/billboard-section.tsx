@@ -31,7 +31,7 @@ import { usePublicMediaPagination } from "@/lib/hooks/use-public-media-paginatio
 import { useFilteredOwnableItems } from "@/lib/hooks/use-filtered-owner-groups";
 import { useCampaignSectionVisibility } from "@/lib/hooks/use-campaign-section-visibility";
 import { useOwnerLocationFilter } from "@/lib/context/owner-location-filter-context";
-import { groupByOwnerPreservingOrder } from "@/lib/owner-groups";
+import { groupByOwnerPreservingOrder, shouldRenderChronologically } from "@/lib/owner-groups";
 import { hasBillboardCoordinates } from "@/lib/billboards";
 import type { Billboard } from "@/lib/types";
 import { formatPersianNumber, getStatusLabel } from "@/lib/utils";
@@ -102,6 +102,7 @@ export function BillboardSection({ billboards, adminOwnerLabel }: BillboardSecti
     `${cityFilter}:${categoryFilter}:${statusFilter}:${search}:${sort}`
   );
 
+  const chronological = shouldRenderChronologically(effectiveSort);
   const visibleBillboards = filtered.slice(0, visibleCount);
   const visibleGroups = useMemo(() => {
     return groupByOwnerPreservingOrder(visibleBillboards, adminOwnerLabel ?? undefined);
@@ -207,7 +208,10 @@ export function BillboardSection({ billboards, adminOwnerLabel }: BillboardSecti
           </div>
         ) : (
           <div className="space-y-4">
-            <OwnerGroupedSection groups={visibleGroups}>
+            <OwnerGroupedSection
+              groups={visibleGroups}
+              flatItems={chronological ? visibleBillboards : null}
+            >
               {(groupBillboards) => (
                 <div className={PUBLIC_MEDIA_GRID_CLASS}>
                   {groupBillboards.map((billboard) => (

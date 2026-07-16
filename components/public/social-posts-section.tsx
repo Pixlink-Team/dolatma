@@ -15,7 +15,7 @@ import { PUBLIC_MEDIA_GRID_CLASS } from "@/lib/public-media-section";
 import { usePublicMediaPagination } from "@/lib/hooks/use-public-media-pagination";
 import { useCampaignSectionVisibility } from "@/lib/hooks/use-campaign-section-visibility";
 import { useFilteredOwnerGroups } from "@/lib/hooks/use-filtered-owner-groups";
-import { flattenOwnerGroupsInSortOrder } from "@/lib/owner-groups";
+import { flattenOwnerGroupsInSortOrder, shouldRenderChronologically } from "@/lib/owner-groups";
 import { useOwnerLocationFilter } from "@/lib/context/owner-location-filter-context";
 import { isDirectAudioUrl, isDirectVideoUrl, resolveAbsoluteMediaUrl } from "@/lib/media-utils";
 import { ShowMoreButton } from "@/components/public/show-more-button";
@@ -150,15 +150,20 @@ export function SocialPostsSection({ posts, groups }: SocialPostsSectionProps) {
     `social-posts:${filteredPosts.length}`
   );
 
+  const chronological = shouldRenderChronologically(filter.sortOrder);
+  const visibleItems = useMemo(
+    () => filteredPosts.slice(0, visibleCount),
+    [filteredPosts, visibleCount]
+  );
   const visibleGroups = useMemo(() => {
-    const visibleIds = new Set(filteredPosts.slice(0, visibleCount).map((post) => post.id));
+    const visibleIds = new Set(visibleItems.map((post) => post.id));
     return filteredGroups
       .map((group) => ({
         ...group,
         items: group.items.filter((post) => visibleIds.has(post.id)),
       }))
       .filter((group) => group.items.length > 0);
-  }, [filteredGroups, filteredPosts, visibleCount]);
+  }, [filteredGroups, visibleItems]);
 
   if (!sectionVisible) return null;
 
@@ -170,7 +175,10 @@ export function SocialPostsSection({ posts, groups }: SocialPostsSectionProps) {
     >
       <SectionTopCompaniesBox groups={filteredGroups} />
       <div className="space-y-4">
-        <OwnerGroupedSection groups={visibleGroups}>
+        <OwnerGroupedSection
+          groups={visibleGroups}
+          flatItems={chronological ? visibleItems : null}
+        >
           {(groupPosts) => (
             <div className={PUBLIC_MEDIA_GRID_CLASS}>
               {groupPosts.map((post) => (

@@ -119,6 +119,11 @@ export function isGlobalContentSortActive(sort: CampaignContentSort): boolean {
   return sort === "newest" || sort === "oldest" || sort === "top_scored";
 }
 
+/** Newest / oldest / top-scored should render as a flat upload-time stream. */
+export function shouldRenderChronologically(sort: string): boolean {
+  return sort === "newest" || sort === "oldest" || sort === "top_scored";
+}
+
 export function flattenOwnerGroupsInSortOrder<T extends Ownable>(
   groups: DataOwnerGroup<T>[],
   sort: CampaignContentSort

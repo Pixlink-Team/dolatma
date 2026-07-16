@@ -50,8 +50,8 @@ export function getOwnerFilterLabel(
     parts.push(`موضوع: ${filter.planLabels.map((label) => formatPlanLabelDisplay(label)).join("، ")}`);
   }
 
-  if (filter.sortOrder === "newest") parts.push("جدیدترین");
-  if (filter.sortOrder === "oldest") parts.push("قدیمی‌ترین");
+  if (filter.sortOrder === "newest") parts.push("جدیدترین آپلود");
+  if (filter.sortOrder === "oldest") parts.push("قدیمی‌ترین آپلود");
   if (filter.sortOrder === "top_scored") parts.push("۵ برتر (امتیاز)");
 
   return parts.length > 0 ? parts.join(" · ") : null;

@@ -15,6 +15,11 @@ import { useCampaignSectionVisibility } from "@/lib/hooks/use-campaign-section-v
 import { ShowMoreButton } from "@/components/public/show-more-button";
 import { useSectionPagination } from "@/lib/hooks/use-section-pagination";
 import { useCampaignExportMode } from "@/lib/context/campaign-export-context";
+import { useOwnerLocationFilter } from "@/lib/context/owner-location-filter-context";
+import {
+  flattenOwnerGroupsInSortOrder,
+  shouldRenderChronologically,
+} from "@/lib/owner-groups";
 import {
   loadUnlockedMeetings,
   saveUnlockedMeetings,
@@ -200,12 +205,14 @@ export function MeetingsSection({
   groups,
 }: MeetingsSectionProps) {
   const exportMode = useCampaignExportMode();
+  const { filter } = useOwnerLocationFilter();
   const filteredGroups = useFilteredOwnerGroups(groups, (meeting) => meeting.meetingDate);
-  const filteredMeetingsCount = useMemo(
-    () => filteredGroups.reduce((sum, group) => sum + group.items.length, 0),
-    [filteredGroups]
+  const filteredMeetings = useMemo(
+    () => flattenOwnerGroupsInSortOrder(filteredGroups, filter.sortOrder),
+    [filteredGroups, filter.sortOrder]
   );
-  const sectionVisible = useCampaignSectionVisibility(meetings.length, filteredMeetingsCount);
+  const chronological = shouldRenderChronologically(filter.sortOrder);
+  const sectionVisible = useCampaignSectionVisibility(meetings.length, filteredMeetings.length);
   const [detailCache, setDetailCache] = useState<Record<string, MeetingPublicDetail>>({});
   const [isUnlocked, setIsUnlocked] = useState(!meetingsHasPassword);
 
@@ -239,7 +246,10 @@ export function MeetingsSection({
       {sectionLocked ? (
         <MeetingsUnlockBanner campaignSlug={campaignSlug} onUnlocked={applyUnlock} />
       ) : (
-        <OwnerGroupedSection groups={filteredGroups}>
+        <OwnerGroupedSection
+          groups={filteredGroups}
+          flatItems={chronological ? filteredMeetings : null}
+        >
           {(groupMeetings) => (
             <MeetingsGrid
               meetings={groupMeetings}

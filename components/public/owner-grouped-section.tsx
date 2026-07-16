@@ -5,6 +5,11 @@ import { Badge } from "@/components/ui/badge";
 interface OwnerGroupedSectionProps<T> {
   groups: DataOwnerGroup<T>[];
   children: (items: T[], group: DataOwnerGroup<T>) => React.ReactNode;
+  /**
+   * When set (newest/oldest/top-scored), render a single chronological stream
+   * so owner grouping does not break upload-time order.
+   */
+  flatItems?: T[] | null;
 }
 
 function GroupHeader({
@@ -47,7 +52,20 @@ function UserContentDivider() {
   );
 }
 
-export function OwnerGroupedSection<T>({ groups, children }: OwnerGroupedSectionProps<T>) {
+export function OwnerGroupedSection<T>({ groups, children, flatItems }: OwnerGroupedSectionProps<T>) {
+  if (flatItems) {
+    if (flatItems.length === 0) return null;
+    const flatGroup: DataOwnerGroup<T> = {
+      ownerKey: "chronological",
+      ownerLabel: "",
+      ownerUserId: null,
+      ownerProvince: null,
+      ownerCity: null,
+      items: flatItems,
+    };
+    return <>{children(flatItems, flatGroup)}</>;
+  }
+
   if (groups.length === 0) return null;
 
   const adminGroups = groups.filter((group) => group.ownerUserId === null);

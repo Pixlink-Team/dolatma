@@ -8,7 +8,7 @@ import { OwnerGroupedSection } from "@/components/public/owner-grouped-section";
 import { SectionTopCompaniesBox } from "@/components/public/section-top-companies-box";
 import { useFilteredOwnerGroups } from "@/lib/hooks/use-filtered-owner-groups";
 import { useCampaignSectionVisibility } from "@/lib/hooks/use-campaign-section-visibility";
-import { flattenOwnerGroupsInSortOrder } from "@/lib/owner-groups";
+import { flattenOwnerGroupsInSortOrder, shouldRenderChronologically } from "@/lib/owner-groups";
 import { useOwnerLocationFilter } from "@/lib/context/owner-location-filter-context";
 import { ShowMoreButton } from "@/components/public/show-more-button";
 import { useSectionPagination } from "@/lib/hooks/use-section-pagination";
@@ -63,15 +63,20 @@ export function BroadcastSection({ reports, groups }: BroadcastSectionProps) {
     `broadcast:${filteredReports.length}`
   );
 
+  const chronological = shouldRenderChronologically(filter.sortOrder);
+  const visibleItems = useMemo(
+    () => filteredReports.slice(0, effectiveCount),
+    [filteredReports, effectiveCount]
+  );
   const visibleGroups = useMemo(() => {
-    const ids = new Set(filteredReports.slice(0, effectiveCount).map((report) => report.id));
+    const ids = new Set(visibleItems.map((report) => report.id));
     return filteredGroups
       .map((group) => ({
         ...group,
         items: group.items.filter((report) => ids.has(report.id)),
       }))
       .filter((group) => group.items.length > 0);
-  }, [filteredGroups, filteredReports, effectiveCount]);
+  }, [filteredGroups, visibleItems]);
 
   if (!sectionVisible) return null;
 
@@ -88,7 +93,10 @@ export function BroadcastSection({ reports, groups }: BroadcastSectionProps) {
         </div>
       ) : (
         <div className="space-y-4">
-          <OwnerGroupedSection groups={visibleGroups}>
+          <OwnerGroupedSection
+            groups={visibleGroups}
+            flatItems={chronological ? visibleItems : null}
+          >
             {(groupReports) => (
               <div className="space-y-4">
                 {groupReports.map((report) => (

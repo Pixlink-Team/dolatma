@@ -6,7 +6,7 @@ import { MapPin, Music, Play } from "lucide-react";
 import { getActivityTypeLabel } from "@/lib/activity-types";
 import { useFilteredOwnerGroups } from "@/lib/hooks/use-filtered-owner-groups";
 import { useCampaignSectionVisibility } from "@/lib/hooks/use-campaign-section-visibility";
-import { flattenOwnerGroupsInSortOrder } from "@/lib/owner-groups";
+import { flattenOwnerGroupsInSortOrder, shouldRenderChronologically } from "@/lib/owner-groups";
 import { useOwnerLocationFilter } from "@/lib/context/owner-location-filter-context";
 import { ShowMoreButton } from "@/components/public/show-more-button";
 import { usePublicMediaPagination } from "@/lib/hooks/use-public-media-pagination";
@@ -168,17 +168,20 @@ export function ActivitiesSection({
     `activities:${filteredActivities.length}`
   );
 
+  const chronological = shouldRenderChronologically(filter.sortOrder);
+  const visibleItems = useMemo(
+    () => filteredActivities.slice(0, visibleCount),
+    [filteredActivities, visibleCount]
+  );
   const visibleGroups = useMemo(() => {
-    const visibleIds = new Set(
-      filteredActivities.slice(0, visibleCount).map((activity) => activity.id)
-    );
+    const visibleIds = new Set(visibleItems.map((activity) => activity.id));
     return filteredGroups
       .map((group) => ({
         ...group,
         items: group.items.filter((activity) => visibleIds.has(activity.id)),
       }))
       .filter((group) => group.items.length > 0);
-  }, [filteredGroups, filteredActivities, visibleCount]);
+  }, [filteredGroups, visibleItems]);
 
   if (!sectionVisible) return null;
 
@@ -190,7 +193,10 @@ export function ActivitiesSection({
     >
       <SectionTopCompaniesBox groups={filteredGroups} />
       <>
-          <OwnerGroupedSection groups={visibleGroups}>
+          <OwnerGroupedSection
+            groups={visibleGroups}
+            flatItems={chronological ? visibleItems : null}
+          >
             {(groupActivities) => <ActivityCards activities={groupActivities} />}
           </OwnerGroupedSection>
 

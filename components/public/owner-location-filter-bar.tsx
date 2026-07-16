@@ -1,7 +1,6 @@
 "use client";
 
-import { isCampaignContentFilterActive } from "@/lib/campaign-content-filter";
-import { Building2, CalendarRange, MapPin, RotateCcw, X } from "lucide-react";
+import { ArrowUpDown, Building2, CalendarRange, MapPin, RotateCcw, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PersianDateInput } from "@/components/ui/persian-date-input";
@@ -13,6 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { SearchableSelect } from "@/components/ui/searchable-select";
+import { isCampaignContentFilterActive } from "@/lib/campaign-content-filter";
 import { formatPlanLabelDisplay } from "@/lib/content-topics";
 import { useOwnerLocationFilter } from "@/lib/context/owner-location-filter-context";
 import {
@@ -46,7 +46,8 @@ export function OwnerLocationFilterBar() {
   const provinceLocked = userLocked && filter.province !== OWNER_LOCATION_ALL;
   const cityLocked = userLocked && filter.city !== OWNER_LOCATION_ALL;
 
-  const filterActive = isCampaignContentFilterActive(filter);
+  const filterActive =
+    isCampaignContentFilterActive(filter) || filter.sortOrder !== "default";
 
   const userOptions = [
     { value: OWNER_USER_ALL, label: "همه شرکت‌ها" },
@@ -148,12 +149,15 @@ export function OwnerLocationFilterBar() {
           onValueChange={(value) => setSortOrder(value as CampaignContentSort)}
         >
           <SelectTrigger className="w-full">
-            <SelectValue placeholder="مرتب‌سازی" />
+            <div className="flex items-center gap-2">
+              <ArrowUpDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <SelectValue placeholder="مرتب‌سازی بر اساس آپلود" />
+            </div>
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="default">ترتیب پیش‌فرض</SelectItem>
-            <SelectItem value="newest">جدیدترین</SelectItem>
-            <SelectItem value="oldest">قدیمی‌ترین</SelectItem>
+            <SelectItem value="default">ترتیب پیش‌فرض (گروه شرکت)</SelectItem>
+            <SelectItem value="newest">جدیدترین بر اساس زمان آپلود</SelectItem>
+            <SelectItem value="oldest">قدیمی‌ترین بر اساس زمان آپلود</SelectItem>
             <SelectItem value="top_scored">۵ برتر (امتیاز)</SelectItem>
           </SelectContent>
         </Select>
