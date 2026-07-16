@@ -1,10 +1,13 @@
 import { isFullAdmin } from "@/lib/auth/get-session";
-import { pgFindUserIdByName } from "@/lib/db/repository-extended";
+import { pgFindUserIdByName, pgGetUserByEmail } from "@/lib/db/repository-extended";
 import type { AuthSession } from "@/lib/types";
 import { isPostgresConfigured } from "@/lib/utils";
 
 /** Display / lookup name for the company account that owns admin uploads. */
 export const DEFAULT_ADMIN_CONTENT_OWNER_NAME = "توانیر";
+
+/** Fallback email for the company account that owns admin uploads. */
+export const DEFAULT_ADMIN_CONTENT_OWNER_EMAIL = "tavanir@example.com";
 
 let cachedOwnerUserId: string | null | undefined;
 let cachedAt = 0;
@@ -12,7 +15,8 @@ const CACHE_TTL_MS = 60_000;
 
 /**
  * Resolves the DB user that should own content created by full admins.
- * Priority: DEFAULT_ADMIN_OWNER_USER_ID env → user named توانیر.
+ * Priority: DEFAULT_ADMIN_OWNER_USER_ID → email (DEFAULT_ADMIN_OWNER_EMAIL / tavanir@example.com)
+ * → user named توانیر.
  */
 export async function resolveDefaultAdminOwnerUserId(): Promise<string | null> {
   const fromEnv = process.env.DEFAULT_ADMIN_OWNER_USER_ID?.trim();
@@ -30,6 +34,15 @@ export async function resolveDefaultAdminOwnerUserId(): Promise<string | null> {
   }
 
   try {
+    const emailHint =
+      process.env.DEFAULT_ADMIN_OWNER_EMAIL?.trim() || DEFAULT_ADMIN_CONTENT_OWNER_EMAIL;
+    const byEmail = await pgGetUserByEmail(emailHint);
+    if (byEmail?.id) {
+      cachedOwnerUserId = byEmail.id;
+      cachedAt = now;
+      return cachedOwnerUserId;
+    }
+
     const nameHint =
       process.env.DEFAULT_ADMIN_OWNER_NAME?.trim() || DEFAULT_ADMIN_CONTENT_OWNER_NAME;
     cachedOwnerUserId = await pgFindUserIdByName(nameHint);

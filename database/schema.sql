@@ -479,3 +479,26 @@ ALTER TABLE social_media_posts DROP CONSTRAINT IF EXISTS social_media_posts_cont
 ALTER TABLE social_media_posts ADD CONSTRAINT social_media_posts_content_type_check
   CHECK (content_type IN ('image', 'text', 'video', 'carousel', 'story', 'reel', 'audio'));
 
+-- Idempotent: attach orphan posters on the live campaign to tavanir@example.com
+DO $$
+DECLARE
+  target_user_id UUID;
+  target_campaign_id UUID := '4f686728-6dbc-4ff7-bfdf-e94b35a27e1a';
+BEGIN
+  SELECT id INTO target_user_id
+  FROM users
+  WHERE lower(trim(email)) = 'tavanir@example.com'
+  LIMIT 1;
+
+  IF target_user_id IS NULL THEN
+    RAISE NOTICE 'tavanir@example.com not found; skip orphan poster ownership assign';
+    RETURN;
+  END IF;
+
+  UPDATE posters
+  SET owner_user_id = target_user_id,
+      updated_at = now()
+  WHERE campaign_id = target_campaign_id
+    AND owner_user_id IS NULL;
+END $$;
+
