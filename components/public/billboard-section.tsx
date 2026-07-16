@@ -90,9 +90,8 @@ export function BillboardSection({ billboards, adminOwnerLabel }: BillboardSecti
       if (search && !billboard.title.includes(search) && !billboard.city.includes(search)) return false;
       return true;
     });
-    // Default view surfaces newest uploads so contributor content is not buried.
-    const sortForList: PublicMediaSort = effectiveSort === "default" ? "newest" : effectiveSort;
-    return sortByPublicMediaOrder(items, sortForList, getBillboardUploadDate);
+    // Keep admin/default order unless user picks a global or local sort.
+    return sortByPublicMediaOrder(items, effectiveSort, getBillboardUploadDate);
   }, [locationFilteredBillboards, cityFilter, categoryFilter, statusFilter, search, effectiveSort]);
 
   const sectionVisible = useCampaignSectionVisibility(billboards.length, filtered.length);

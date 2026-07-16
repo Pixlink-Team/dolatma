@@ -155,9 +155,9 @@ export function OwnerLocationFilterBar() {
             </div>
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="default">ترتیب پیش‌فرض (گروه شرکت)</SelectItem>
-            <SelectItem value="newest">جدیدترین بر اساس زمان آپلود</SelectItem>
-            <SelectItem value="oldest">قدیمی‌ترین بر اساس زمان آپلود</SelectItem>
+            <SelectItem value="default">ترتیب پیش‌فرض</SelectItem>
+            <SelectItem value="newest">جدیدترین آپلود</SelectItem>
+            <SelectItem value="oldest">قدیمی‌ترین آپلود</SelectItem>
             <SelectItem value="top_scored">۵ برتر (امتیاز)</SelectItem>
           </SelectContent>
         </Select>

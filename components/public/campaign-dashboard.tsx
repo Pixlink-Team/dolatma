@@ -6,6 +6,7 @@ import { ArrowRight, RefreshCw, Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { CampaignOverviewSection } from "@/components/public/campaign-overview-section";
+import { CampaignDashboardSortSelect } from "@/components/public/campaign-dashboard-sort-select";
 import { BillboardSection } from "@/components/public/billboard-section";
 import { PostersSection } from "@/components/public/posters-section";
 import { VideosSection } from "@/components/public/videos-section";
@@ -99,6 +100,7 @@ function CampaignDashboardBody({
             <p className="text-xs text-muted-foreground hidden sm:block">
               آخرین بروزرسانی: {formatPersianDateTime(lastRefresh.toISOString())}
             </p>
+            <CampaignDashboardSortSelect />
             <span data-export-hide>
               <ThemeToggle />
             </span>
