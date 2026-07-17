@@ -5,7 +5,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -341,10 +340,6 @@ export function SocialPostsAdmin({
         <div className="flex items-center gap-2">
           <GenerateMissingVideoCoversButton targets={missingCoverTargets} />
           <AdminViewModeToggle value={viewMode} onChange={setViewMode} />
-          <Button onClick={openCreate}>
-            <Plus className="h-4 w-4" />
-            افزودن پست
-          </Button>
         </div>
       </div>
 
@@ -392,7 +387,13 @@ export function SocialPostsAdmin({
           ))}
         </div>
       ) : (
-        <div className="overflow-hidden rounded-xl border">
+        <div className="space-y-3">
+          {!bulk.bulkMode && (
+            <div className="max-w-[10rem]">
+              <AdminCompactAddCard onClick={openCreate} label="پست جدید" />
+            </div>
+          )}
+          <div className="overflow-hidden rounded-xl border">
           {visibleRows.map((post) => (
             <div
               key={post.id}
@@ -426,6 +427,7 @@ export function SocialPostsAdmin({
           {filteredRows.length === 0 && (
             <div className="px-4 py-8 text-center text-sm text-muted-foreground">موردی یافت نشد.</div>
           )}
+          </div>
         </div>
       )}
 

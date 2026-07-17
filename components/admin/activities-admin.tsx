@@ -8,7 +8,7 @@ import {
   CONTENT_TITLE_MAX_LENGTH,
   CONTENT_TITLE_MAX_LENGTH_MESSAGE,
 } from "@/lib/content-constraints";
-import { Plus, Trash2, Upload } from "lucide-react";
+import { Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -373,10 +373,6 @@ export function ActivitiesAdmin({
         </div>
         <div className="flex items-center gap-2">
           <AdminViewModeToggle value={viewMode} onChange={setViewMode} />
-          <Button onClick={openCreate}>
-            <Plus className="h-4 w-4" />
-            اقدام جدید
-          </Button>
         </div>
       </div>
 
@@ -424,7 +420,13 @@ export function ActivitiesAdmin({
           ))}
         </div>
       ) : (
-        <div className="overflow-hidden rounded-xl border">
+        <div className="space-y-3">
+          {!bulk.bulkMode && (
+            <div className="max-w-[10rem]">
+              <AdminCompactAddCard onClick={openCreate} label="اقدام جدید" />
+            </div>
+          )}
+          <div className="overflow-hidden rounded-xl border">
           {visibleRows.map((activity) => (
             <div
               key={activity.id}
@@ -458,6 +460,7 @@ export function ActivitiesAdmin({
           {filteredRows.length === 0 && (
             <div className="px-4 py-8 text-center text-sm text-muted-foreground">موردی یافت نشد.</div>
           )}
+          </div>
         </div>
       )}
 

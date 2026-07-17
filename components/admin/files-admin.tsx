@@ -1,8 +1,9 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { FileSpreadsheet, FileText, Plus } from "lucide-react";
+import { FileSpreadsheet, FileText } from "lucide-react";
 import { toast } from "sonner";
+import { AdminCompactAddCard } from "@/components/admin/admin-compact-add-card";
 import { AdminOwnerBadge } from "@/components/admin/admin-owner-badge";
 import { AdminPlanLabelsBadges } from "@/components/admin/admin-plan-labels-badges";
 import { AdminViewModeToggle } from "@/components/admin/admin-view-mode-toggle";
@@ -268,15 +269,11 @@ export function FilesAdmin({
         <div>
           <h1 className="text-2xl font-bold">فایل‌های کمپین</h1>
           <p className="text-sm text-muted-foreground">
-            PDF، Word، Excel و سایر فایل‌های قابل دانلود
+            PDF، Word، Excel و سایر فایل‌های قابل دانلود — با + فایل جدید آپلود کنید
           </p>
         </div>
         <div className="flex items-center gap-2">
           <AdminViewModeToggle value={viewMode} onChange={setViewMode} />
-          <Button onClick={openCreate}>
-            <Plus className="h-4 w-4" />
-            فایل جدید
-          </Button>
         </div>
       </div>
 
@@ -304,11 +301,24 @@ export function FilesAdmin({
       />
 
       {filteredFiles.length === 0 ? (
-        <div className="rounded-xl border py-12 text-center text-muted-foreground">
+        <div className="rounded-xl border px-4 py-8 text-center text-sm text-muted-foreground">
           {files.length === 0 ? "هنوز فایلی آپلود نشده است." : "موردی با این فیلتر پیدا نشد."}
+          {files.length === 0 && !bulk.bulkMode && (
+            <div className="mt-3 flex justify-center">
+              <div className="w-full max-w-[10rem]">
+                <AdminCompactAddCard onClick={openCreate} label="فایل جدید" />
+              </div>
+            </div>
+          )}
         </div>
       ) : viewMode === "list" ? (
-        <div className="overflow-hidden rounded-xl border">
+        <div className="space-y-3">
+          {!bulk.bulkMode && (
+            <div className="max-w-[10rem]">
+              <AdminCompactAddCard onClick={openCreate} label="فایل جدید" />
+            </div>
+          )}
+          <div className="overflow-hidden rounded-xl border">
           {visibleFiles.map((file) => (
             <div
               key={file.id}
@@ -343,9 +353,15 @@ export function FilesAdmin({
               )}
             </div>
           ))}
+          </div>
         </div>
       ) : (
         <div className="space-y-3">
+          {!bulk.bulkMode && (
+            <div className="max-w-[10rem]">
+              <AdminCompactAddCard onClick={openCreate} label="فایل جدید" />
+            </div>
+          )}
           {visibleFiles.map((file) => {
             const Icon = fileIcon(file.mimeType);
             return (

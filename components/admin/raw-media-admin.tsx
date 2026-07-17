@@ -1,8 +1,9 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { FileArchive, Film, HardDrive, ImageIcon, Loader2, Plus } from "lucide-react";
+import { FileArchive, Film, HardDrive, ImageIcon, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { AdminCompactAddCard } from "@/components/admin/admin-compact-add-card";
 import {
   AdminContentFilterBar,
   collectAdminFilterUsers,
@@ -337,10 +338,6 @@ export function RawMediaAdmin({
               {isExporting ? "در حال آماده‌سازی…" : "دانلود همه (ZIP)"}
             </Button>
           )}
-          <Button onClick={openCreate}>
-            <Plus className="h-4 w-4" />
-            آپلود جدید
-          </Button>
         </div>
       </div>
 
@@ -401,11 +398,32 @@ export function RawMediaAdmin({
       />
 
       {filteredItems.length === 0 ? (
-        <div className="rounded-xl border py-12 text-center text-muted-foreground">
+        <div className="rounded-xl border px-4 py-8 text-center text-sm text-muted-foreground">
           هنوز موردی برای راش تصویر آپلود نشده است.
+          {!bulk.bulkMode && (
+            <div className="mt-3 flex justify-center">
+              <div className="w-full max-w-[10rem]">
+                <AdminCompactAddCard
+                  onClick={openCreate}
+                  label="آپلود جدید"
+                  aspectClass="aspect-video"
+                />
+              </div>
+            </div>
+          )}
         </div>
       ) : viewMode === "list" ? (
-        <div className="overflow-hidden rounded-xl border">
+        <div className="space-y-3">
+          {!bulk.bulkMode && (
+            <div className="max-w-[10rem]">
+              <AdminCompactAddCard
+                onClick={openCreate}
+                label="آپلود جدید"
+                aspectClass="aspect-video"
+              />
+            </div>
+          )}
+          <div className="overflow-hidden rounded-xl border">
           {visibleItems.map((item) => (
             <div
               key={item.id}
@@ -442,9 +460,17 @@ export function RawMediaAdmin({
               )}
             </div>
           ))}
+          </div>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+          {!bulk.bulkMode && (
+            <AdminCompactAddCard
+              onClick={openCreate}
+              label="آپلود جدید"
+              aspectClass="aspect-video"
+            />
+          )}
           {visibleItems.map((item) => (
             <BulkItemShell
               key={item.id}

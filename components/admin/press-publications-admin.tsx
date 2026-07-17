@@ -8,7 +8,7 @@ import {
   CONTENT_TITLE_MAX_LENGTH,
   CONTENT_TITLE_MAX_LENGTH_MESSAGE,
 } from "@/lib/content-constraints";
-import { Plus, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -219,10 +219,6 @@ export function PressPublicationsAdmin({
           <h1 className="text-2xl font-bold">مجله و روزنامه</h1>
           <p className="text-sm text-muted-foreground">ثبت آگهی‌های مجله و روزنامه با چند رسانه</p>
         </div>
-        <Button onClick={openCreate} disabled={bulk.bulkMode}>
-          <Plus className="h-4 w-4" />
-          ثبت جدید
-        </Button>
       </div>
 
       <SectionBulkEditBar

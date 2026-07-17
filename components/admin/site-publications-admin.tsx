@@ -8,7 +8,6 @@ import {
   CONTENT_TITLE_MAX_LENGTH,
   CONTENT_TITLE_MAX_LENGTH_MESSAGE,
 } from "@/lib/content-constraints";
-import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -256,10 +255,6 @@ export function SitePublicationsAdmin({
             ثبت مطالب منتشرشده در سایت با عنوان لینک‌دار، تاریخ و توضیح
           </p>
         </div>
-        <Button onClick={openCreate}>
-          <Plus className="h-4 w-4" />
-          انتشار جدید
-        </Button>
       </div>
 
       <AdminContentFilterBar

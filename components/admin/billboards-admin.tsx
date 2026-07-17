@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Plus, Wrench } from "lucide-react";
+import { Loader2, Wrench } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -208,10 +208,6 @@ export function BillboardsAdmin({
         </div>
         <div className="flex items-center gap-2">
           <AdminViewModeToggle value={viewMode} onChange={setViewMode} />
-          <Button onClick={openCreate}>
-            <Plus className="h-4 w-4" />
-            ثبت جدید
-          </Button>
         </div>
       </div>
 
@@ -300,8 +296,15 @@ export function BillboardsAdmin({
       )}
 
       {manualBillboards.length === 0 ? (
-        <div className="rounded-xl border py-12 text-center text-muted-foreground">
+        <div className="rounded-xl border px-4 py-8 text-center text-sm text-muted-foreground">
           هنوز تبلیغات محیطی ثبت نشده است.
+          {!bulk.bulkMode && (
+            <div className="mt-3 flex justify-center">
+              <div className="w-full max-w-[10rem]">
+                <AdminBillboardAddCard onClick={openCreate} />
+              </div>
+            </div>
+          )}
         </div>
       ) : viewMode === "grid" ? (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
