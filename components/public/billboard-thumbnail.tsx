@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { MediaPlaceholder } from "@/components/ui/media-placeholder";
-import { OptimizedMediaImage } from "@/components/ui/optimized-media-image";
 import { getBillboardDisplayImage, hasBillboardDisplayImage } from "@/lib/billboard-media";
 import type { Billboard } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -15,13 +14,18 @@ interface BillboardThumbnailProps {
   imageClassName?: string;
 }
 
+/**
+ * Use a plain img for billboards: next/image optimization often fails for
+ * signed /api/files URLs and for remote map-bilboard hosts the server cannot reach.
+ */
 export function BillboardThumbnail({
   billboard,
   alt,
-  sizes,
+  sizes: _sizes,
   className,
   imageClassName,
 }: BillboardThumbnailProps) {
+  void _sizes;
   const [imageFailed, setImageFailed] = useState(false);
   const hasImage = hasBillboardDisplayImage(billboard) && !imageFailed;
 
@@ -35,15 +39,13 @@ export function BillboardThumbnail({
   }
 
   return (
-    <OptimizedMediaImage
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
       src={getBillboardDisplayImage(billboard)}
       alt={alt}
-      fill
       loading="lazy"
       decoding="async"
-      quality={65}
-      className={cn("object-cover", imageClassName, className)}
-      sizes={sizes}
+      className={cn("absolute inset-0 h-full w-full object-cover", imageClassName, className)}
       onError={() => setImageFailed(true)}
     />
   );

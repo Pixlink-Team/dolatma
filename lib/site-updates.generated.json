@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "b72a4dbeef61d3a94e735cc90a56ed460877b97e",
+      "committedAt": "2026-07-17T20:29:12+03:30",
+      "title": "بروزرسانی خودکار روزانه آمار و محتوای لینک‌ها",
+      "subject": "Add daily cron job to refresh link metrics"
+    },
+    {
       "hash": "8e00b1760d10e0aeaa31031b0e63716ce88f34dd",
       "committedAt": "2026-07-17T20:24:56+03:30",
       "title": "خواندن خودکار عنوان و کاور از لینک انتشار سایت و مجله/روزنامه",

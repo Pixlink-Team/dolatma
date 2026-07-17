@@ -15,21 +15,34 @@ function isInvalidBillboardImageUrl(url: string): boolean {
   return INVALID_BILLBOARD_IMAGE_HINTS.some((hint) => lower.includes(hint));
 }
 
-export function hasBillboardDisplayImage(billboard: Billboard): boolean {
+function firstPeriodImageUrl(billboard: Billboard): string {
+  const periods = billboard.displayPeriods;
+  if (!periods?.length) return "";
+
+  const sorted = [...periods].sort((a, b) => a.sortOrder - b.sortOrder);
+  for (const period of sorted) {
+    const url = normalizeBillboardImageUrl(period.billboardImageUrl);
+    if (!isInvalidBillboardImageUrl(url)) return url;
+  }
+  return "";
+}
+
+function resolveBillboardImageCandidate(billboard: Billboard): string {
   const imageUrl = normalizeBillboardImageUrl(billboard.imageUrl);
   const thumbnailUrl = normalizeBillboardImageUrl(billboard.thumbnailUrl);
-  const candidate = imageUrl || thumbnailUrl;
-  return !isInvalidBillboardImageUrl(candidate);
+  const fromRow = imageUrl || thumbnailUrl;
+  if (!isInvalidBillboardImageUrl(fromRow)) return fromRow;
+  return firstPeriodImageUrl(billboard);
+}
+
+export function hasBillboardDisplayImage(billboard: Billboard): boolean {
+  return !isInvalidBillboardImageUrl(resolveBillboardImageCandidate(billboard));
 }
 
 export function getBillboardDisplayImage(billboard: Billboard): string {
-  const imageUrl = normalizeBillboardImageUrl(billboard.imageUrl);
-  const thumbnailUrl = normalizeBillboardImageUrl(billboard.thumbnailUrl);
-  const candidate = imageUrl || thumbnailUrl;
-
+  const candidate = resolveBillboardImageCandidate(billboard);
   if (isInvalidBillboardImageUrl(candidate)) {
     return BILLBOARD_PLACEHOLDER_IMAGE;
   }
-
   return candidate;
 }

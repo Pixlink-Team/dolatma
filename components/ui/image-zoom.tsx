@@ -4,11 +4,8 @@ import { useCallback, useRef, useState } from "react";
 import { Minus, Plus, X, ZoomIn } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { OptimizedMediaImage } from "@/components/ui/optimized-media-image";
 import { cn } from "@/lib/utils";
 
-const THUMB_QUALITY = 65;
-const FULL_QUALITY = 85;
 const DEFAULT_SIZES = "(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 280px";
 
 interface ImageZoomProps {
@@ -32,10 +29,12 @@ export function ImageZoom({
   className,
   imgClassName,
   showHint = true,
-  sizes = DEFAULT_SIZES,
-  quality = THUMB_QUALITY,
+  sizes: _sizes = DEFAULT_SIZES,
+  quality: _quality,
   onError,
 }: ImageZoomProps) {
+  void _sizes;
+  void _quality;
   const [open, setOpen] = useState(false);
   const [scale, setScale] = useState(1);
   const [imageFailed, setImageFailed] = useState(false);
@@ -69,15 +68,14 @@ export function ImageZoom({
         )}
         aria-label="بزرگ‌نمایی تصویر"
       >
-        <OptimizedMediaImage
+        {/* Plain img avoids next/image optimizer failures for signed/local and remote hosts */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
           src={src}
           alt={alt}
-          fill
           loading="lazy"
           decoding="async"
-          quality={quality}
-          sizes={sizes}
-          className={cn("object-cover", imgClassName)}
+          className={cn("absolute inset-0 h-full w-full object-cover", imgClassName)}
           onError={handleImageError}
         />
         {showHint && (
@@ -135,14 +133,10 @@ export function ImageZoom({
               setScale((s) => Math.min(4, Math.max(0.5, Number((s + delta).toFixed(2)))));
             }}
           >
-            <OptimizedMediaImage
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
               src={src}
               alt={alt}
-              width={1920}
-              height={1080}
-              quality={FULL_QUALITY}
-              sizes="95vw"
-              priority
               className="max-h-[90vh] max-w-full origin-center object-contain transition-transform"
               style={{ transform: `scale(${scale})` }}
               draggable={false}

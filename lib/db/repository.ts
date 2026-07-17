@@ -178,9 +178,30 @@ export async function pgGetAdminData(
       : emptyRows,
     want.has("billboards")
       ? sql`
-      SELECT b.*, u.name AS owner_name, u.province AS owner_province, u.city AS owner_city
+      SELECT
+        b.*,
+        u.name AS owner_name,
+        u.province AS owner_province,
+        u.city AS owner_city,
+        COALESCE(
+          NULLIF(TRIM(b.thumbnail_url), ''),
+          NULLIF(TRIM(period_img.billboard_image_url), '')
+        ) AS thumbnail_url,
+        COALESCE(
+          NULLIF(TRIM(b.image_url), ''),
+          NULLIF(TRIM(period_img.billboard_image_url), ''),
+          NULLIF(TRIM(b.thumbnail_url), '')
+        ) AS image_url
       FROM billboards b
       LEFT JOIN users u ON u.id = b.owner_user_id
+      LEFT JOIN LATERAL (
+        SELECT p.billboard_image_url
+        FROM billboard_display_periods p
+        WHERE p.billboard_id = b.id
+          AND NULLIF(TRIM(p.billboard_image_url), '') IS NOT NULL
+        ORDER BY p.sort_order ASC, p.created_at ASC
+        LIMIT 1
+      ) period_img ON true
       WHERE b.campaign_id = ${campaignId}
       ${ownerFilter}
       ORDER BY b.sort_order
@@ -473,9 +494,30 @@ export async function pgSaveBillboard(data: Partial<Billboard> & { id?: string }
 export async function pgGetBillboardById(id: string): Promise<Billboard | null> {
   const sql = getSql();
   const rows = await sql`
-    SELECT b.*, u.name AS owner_name, u.province AS owner_province, u.city AS owner_city
+    SELECT
+      b.*,
+      u.name AS owner_name,
+      u.province AS owner_province,
+      u.city AS owner_city,
+      COALESCE(
+        NULLIF(TRIM(b.thumbnail_url), ''),
+        NULLIF(TRIM(period_img.billboard_image_url), '')
+      ) AS thumbnail_url,
+      COALESCE(
+        NULLIF(TRIM(b.image_url), ''),
+        NULLIF(TRIM(period_img.billboard_image_url), ''),
+        NULLIF(TRIM(b.thumbnail_url), '')
+      ) AS image_url
     FROM billboards b
     LEFT JOIN users u ON u.id = b.owner_user_id
+    LEFT JOIN LATERAL (
+      SELECT p.billboard_image_url
+      FROM billboard_display_periods p
+      WHERE p.billboard_id = b.id
+        AND NULLIF(TRIM(p.billboard_image_url), '') IS NOT NULL
+      ORDER BY p.sort_order ASC, p.created_at ASC
+      LIMIT 1
+    ) period_img ON true
     WHERE b.id = ${id}
     LIMIT 1
   `;
@@ -975,9 +1017,30 @@ export async function pgGetPublicCampaignData(campaignId: string) {
     rawMedia,
   ] = await Promise.all([
     sql`
-      SELECT b.*, u.name AS owner_name, u.province AS owner_province, u.city AS owner_city
+      SELECT
+        b.*,
+        u.name AS owner_name,
+        u.province AS owner_province,
+        u.city AS owner_city,
+        COALESCE(
+          NULLIF(TRIM(b.thumbnail_url), ''),
+          NULLIF(TRIM(period_img.billboard_image_url), '')
+        ) AS thumbnail_url,
+        COALESCE(
+          NULLIF(TRIM(b.image_url), ''),
+          NULLIF(TRIM(period_img.billboard_image_url), ''),
+          NULLIF(TRIM(b.thumbnail_url), '')
+        ) AS image_url
       FROM billboards b
       LEFT JOIN users u ON u.id = b.owner_user_id
+      LEFT JOIN LATERAL (
+        SELECT p.billboard_image_url
+        FROM billboard_display_periods p
+        WHERE p.billboard_id = b.id
+          AND NULLIF(TRIM(p.billboard_image_url), '') IS NOT NULL
+        ORDER BY p.sort_order ASC, p.created_at ASC
+        LIMIT 1
+      ) period_img ON true
       WHERE b.campaign_id = ${campaignId}
       ORDER BY b.sort_order
     `,

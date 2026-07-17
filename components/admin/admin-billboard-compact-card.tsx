@@ -48,7 +48,7 @@ export function AdminBillboardCompactCard({
           <MediaThumbnail
             src={hasBillboardDisplayImage(billboard) ? getBillboardDisplayImage(billboard) : null}
             alt={billboard.title}
-            kind="poster"
+            kind="billboard"
             sizes="200px"
             objectFit="cover"
           />
