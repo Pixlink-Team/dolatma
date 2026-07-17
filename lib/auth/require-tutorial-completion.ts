@@ -3,12 +3,14 @@ import { pgIdExists } from "@/lib/db/pg-id-exists";
 import {
   pgGetTutorialCompletionStatus,
 } from "@/lib/db/repository-tutorials";
+import { pgAreSectionTutorialsEnabled } from "@/lib/db/tutorial-settings";
 import type { TutorialSectionKey } from "@/lib/section-tutorials";
 import { isPostgresConfigured } from "@/lib/utils";
 
 /**
  * Blocks contributor create flows until the current tutorial version is completed.
  * Admins and clients are not gated. Missing tutorial content also blocks contributors.
+ * When tutorials are globally disabled by an admin, the gate is skipped.
  */
 export async function assertContributorTutorialCompleted(
   sectionKey: TutorialSectionKey
@@ -31,6 +33,10 @@ export async function assertContributorTutorialCompleted(
   }
 
   if (!isPostgresConfigured()) {
+    return null;
+  }
+
+  if (!(await pgAreSectionTutorialsEnabled())) {
     return null;
   }
 

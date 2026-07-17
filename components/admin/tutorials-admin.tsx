@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -16,8 +17,10 @@ import {
 } from "@/components/ui/select";
 import { MediaUpload } from "@/components/ui/media-upload";
 import {
+  getSectionTutorialsEnabledAction,
   listTutorialsForAdminAction,
   saveSectionTutorialAction,
+  setSectionTutorialsEnabledAction,
 } from "@/lib/actions/tutorial-actions";
 import {
   TUTORIAL_SECTION_KEYS,
@@ -39,7 +42,10 @@ export function TutorialsAdmin() {
   const [steps, setSteps] = useState<TutorialStep[]>([emptyStep()]);
   const [version, setVersion] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [tutorialsEnabled, setTutorialsEnabled] = useState(true);
+  const [enabledLoaded, setEnabledLoaded] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [isTogglingEnabled, startToggleTransition] = useTransition();
 
   const tutorialMap = useMemo(() => {
     return new Map(tutorials.map((item) => [item.sectionKey, item]));
@@ -47,13 +53,20 @@ export function TutorialsAdmin() {
 
   const loadTutorials = async () => {
     setLoading(true);
-    const result = await listTutorialsForAdminAction();
-    if (!result.success) {
-      toast.error(result.error ?? "بارگذاری آموزش‌ها ناموفق بود");
+    const [listResult, enabledResult] = await Promise.all([
+      listTutorialsForAdminAction(),
+      getSectionTutorialsEnabledAction(),
+    ]);
+    if (!listResult.success) {
+      toast.error(listResult.error ?? "بارگذاری آموزش‌ها ناموفق بود");
       setLoading(false);
       return;
     }
-    setTutorials(result.tutorials);
+    setTutorials(listResult.tutorials);
+    if (enabledResult.success) {
+      setTutorialsEnabled(enabledResult.enabled);
+    }
+    setEnabledLoaded(true);
     setLoading(false);
   };
 
@@ -80,6 +93,24 @@ export function TutorialsAdmin() {
     );
   };
 
+  const handleToggleEnabled = (nextEnabled: boolean) => {
+    const previous = tutorialsEnabled;
+    setTutorialsEnabled(nextEnabled);
+    startToggleTransition(async () => {
+      const result = await setSectionTutorialsEnabledAction(nextEnabled);
+      if (!result.success) {
+        setTutorialsEnabled(previous);
+        toast.error(result.error ?? "ذخیره وضعیت آموزش ناموفق بود");
+        return;
+      }
+      toast.success(
+        nextEnabled
+          ? "آموزش بخش‌ها فعال شد"
+          : "آموزش بخش‌ها موقتاً غیرفعال شد — contributor بدون آموزش می‌تواند محتوا اضافه کند"
+      );
+    });
+  };
+
   const handleSave = () => {
     startTransition(async () => {
       const result = await saveSectionTutorialAction({
@@ -102,12 +133,38 @@ export function TutorialsAdmin() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">آموزش بخش‌ها</h1>
-        <p className="text-sm text-muted-foreground">
-          محتوای مودال آموزشی هر بخش را مدیریت کنید. تا وقتی آموزش نوشته نشود، contributor نمی‌تواند در آن بخش محتوا اضافه کند.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold">آموزش بخش‌ها</h1>
+          <p className="text-sm text-muted-foreground">
+            محتوای مودال آموزشی هر بخش را مدیریت کنید. تا وقتی آموزش نوشته نشود، contributor
+            نمی‌تواند در آن بخش محتوا اضافه کند.
+          </p>
+        </div>
+        <div className="flex items-center gap-3 rounded-xl border bg-card px-4 py-3">
+          <div className="min-w-0 text-right">
+            <p className="text-sm font-medium">اجبار آموزش برای contributor</p>
+            <p className="text-xs text-muted-foreground">
+              {tutorialsEnabled
+                ? "فعال — قبل از افزودن محتوا باید آموزش را ببینند"
+                : "غیرفعال — فعلاً بدون آموزش می‌توانند محتوا اضافه کنند"}
+            </p>
+          </div>
+          <Switch
+            checked={tutorialsEnabled}
+            disabled={!enabledLoaded || isTogglingEnabled}
+            onCheckedChange={handleToggleEnabled}
+            aria-label="فعال‌سازی آموزش بخش‌ها"
+          />
+        </div>
       </div>
+
+      {!tutorialsEnabled && (
+        <div className="rounded-xl border border-warning/40 bg-warning/10 px-4 py-3 text-sm text-warning">
+          آموزش‌ها موقتاً غیرفعال هستند. مودال آموزشی نشان داده نمی‌شود و گیت سرور هم رد
+          می‌شود.
+        </div>
+      )}
 
       <div className="grid gap-4 rounded-xl border bg-card p-4 md:grid-cols-[240px_1fr]">
         <div className="space-y-3">
@@ -172,9 +229,7 @@ export function TutorialsAdmin() {
                     variant="ghost"
                     size="sm"
                     disabled={steps.length <= 1}
-                    onClick={() =>
-                      setSteps((prev) => prev.filter((_, i) => i !== index))
-                    }
+                    onClick={() => setSteps((prev) => prev.filter((_, i) => i !== index))}
                   >
                     <Trash2 className="h-4 w-4" />
                     حذف
@@ -184,9 +239,7 @@ export function TutorialsAdmin() {
                   <Label>عنوان مرحله</Label>
                   <Input
                     value={step.title}
-                    onChange={(event) =>
-                      updateStep(index, { title: event.target.value })
-                    }
+                    onChange={(event) => updateStep(index, { title: event.target.value })}
                     placeholder="مثلاً عنوان را وارد کنید"
                   />
                 </div>
@@ -194,9 +247,7 @@ export function TutorialsAdmin() {
                   <Label>توضیح</Label>
                   <Textarea
                     value={step.body}
-                    onChange={(event) =>
-                      updateStep(index, { body: event.target.value })
-                    }
+                    onChange={(event) => updateStep(index, { body: event.target.value })}
                     rows={4}
                     placeholder="توضیح دهید کاربر چه چیزی را باید پر کند…"
                   />

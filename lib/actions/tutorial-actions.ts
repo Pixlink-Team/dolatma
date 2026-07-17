@@ -11,6 +11,10 @@ import {
   pgSaveSectionTutorial,
 } from "@/lib/db/repository-tutorials";
 import {
+  pgAreSectionTutorialsEnabled,
+  pgSetSectionTutorialsEnabled,
+} from "@/lib/db/tutorial-settings";
+import {
   isTutorialSectionKey,
   normalizeTutorialSteps,
   type TutorialSectionKey,
@@ -35,7 +39,8 @@ export async function getTutorialStatusAction(sectionKey: string) {
   const dbError = requirePostgres();
   if (dbError) return dbError;
 
-  if (isFullAdmin(session) || session.role === "client" || !session.userId) {
+  const tutorialsEnabled = await pgAreSectionTutorialsEnabled();
+  if (!tutorialsEnabled || isFullAdmin(session) || session.role === "client" || !session.userId) {
     const tutorial = await pgGetSectionTutorial(sectionKey);
     return {
       success: true as const,
@@ -54,6 +59,35 @@ export async function getTutorialStatusAction(sectionKey: string) {
 
   const status = await pgGetTutorialCompletionStatus(session.userId, sectionKey);
   return { success: true as const, bypass: false as const, status };
+}
+
+export async function getSectionTutorialsEnabledAction() {
+  const session = await getAuthSession();
+  if (!session || !isFullAdmin(session)) {
+    return { success: false as const, error: "Unauthorized" };
+  }
+
+  const dbError = requirePostgres();
+  if (dbError) return dbError;
+
+  const enabled = await pgAreSectionTutorialsEnabled();
+  return { success: true as const, enabled };
+}
+
+export async function setSectionTutorialsEnabledAction(enabled: boolean) {
+  const session = await getAuthSession();
+  if (!session || !isFullAdmin(session)) {
+    return { success: false as const, error: "Unauthorized" };
+  }
+
+  const dbError = requirePostgres();
+  if (dbError) return dbError;
+
+  const result = await pgSetSectionTutorialsEnabled(enabled);
+  if (result.success) {
+    revalidatePath("/admin/tutorials");
+  }
+  return result;
 }
 
 export async function completeTutorialAction(sectionKey: string) {
