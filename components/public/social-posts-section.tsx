@@ -10,7 +10,7 @@ import { VideoThumbnail } from "@/components/media/video-thumbnail";
 import { ImageZoom } from "@/components/ui/image-zoom";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { ExternalLink, Music } from "lucide-react";
+import { Music } from "lucide-react";
 import { PUBLIC_MEDIA_GRID_CLASS, filterGroupsByDisplayContent, socialPostHasDisplayContent } from "@/lib/public-media-section";
 import { usePublicMediaPagination } from "@/lib/hooks/use-public-media-pagination";
 import { useCampaignSectionVisibility } from "@/lib/hooks/use-campaign-section-visibility";
@@ -87,19 +87,6 @@ function SocialPostCover({ post }: { post: SocialMediaPost }) {
 }
 
 function SocialPostCard({ post }: { post: SocialMediaPost }) {
-  const titleContent = post.link ? (
-    <a
-      href={post.link}
-      target="_blank"
-      rel="noreferrer"
-      className="hover:text-primary hover:underline"
-    >
-      {post.title}
-    </a>
-  ) : (
-    post.title
-  );
-
   return (
     <Card className="h-full w-full overflow-hidden py-0 gap-0">
       <div className="group relative aspect-video overflow-hidden bg-muted">
@@ -114,22 +101,11 @@ function SocialPostCard({ post }: { post: SocialMediaPost }) {
             </Badge>
           </div>
         </div>
-        {post.link && (
-          <a
-            href={post.link}
-            target="_blank"
-            rel="noreferrer"
-            className="absolute top-2 left-2 rounded-md bg-black/50 p-1.5 text-white opacity-0 transition-opacity group-hover:opacity-100"
-            aria-label="مشاهده پست"
-          >
-            <ExternalLink className="h-3.5 w-3.5" />
-          </a>
-        )}
       </div>
 
       <CardContent className="space-y-1 p-2.5">
         <div className="flex flex-wrap items-start gap-1">
-          <h3 className="line-clamp-2 text-xs font-semibold leading-snug">{titleContent}</h3>
+          <h3 className="line-clamp-2 text-xs font-semibold leading-snug">{post.title}</h3>
           <PublicOwnerTag ownerUserId={post.ownerUserId} ownerName={post.ownerName} />
         </div>
         <p className="text-[10px] text-muted-foreground">{formatPersianDate(post.publishedDate)}</p>
