@@ -52,6 +52,53 @@ const AUDIO_TYPES = new Set([
   "audio/aac",
 ]);
 
+const RAW_IMAGE_EXTENSIONS = new Set([
+  ".jpg",
+  ".jpeg",
+  ".png",
+  ".webp",
+  ".gif",
+  ".bmp",
+  ".tif",
+  ".tiff",
+  ".heic",
+  ".heif",
+  ".avif",
+  ".svg",
+  ".ico",
+  ".raw",
+  ".cr2",
+  ".nef",
+  ".dng",
+  ".orf",
+  ".arw",
+  ".rw2",
+]);
+
+const RAW_VIDEO_EXTENSIONS = new Set([
+  ".mp4",
+  ".webm",
+  ".mov",
+  ".m4v",
+  ".mkv",
+  ".avi",
+  ".mpeg",
+  ".mpg",
+  ".wmv",
+  ".flv",
+  ".3gp",
+  ".ts",
+  ".mts",
+  ".m2ts",
+  ".ogv",
+  ".vob",
+]);
+
+function extensionFromFileName(fileName: string): string {
+  const match = fileName.match(/(\.[a-z0-9]+)$/i);
+  return match ? match[1].toLowerCase() : "";
+}
+
 function extensionForMime(mime: string): string {
   switch (mime) {
     case "image/jpeg":
@@ -62,12 +109,38 @@ function extensionForMime(mime: string): string {
       return ".webp";
     case "image/gif":
       return ".gif";
+    case "image/bmp":
+      return ".bmp";
+    case "image/tiff":
+      return ".tiff";
+    case "image/heic":
+      return ".heic";
+    case "image/heif":
+      return ".heif";
+    case "image/avif":
+      return ".avif";
+    case "image/svg+xml":
+      return ".svg";
     case "video/mp4":
       return ".mp4";
     case "video/webm":
       return ".webm";
     case "video/quicktime":
       return ".mov";
+    case "video/x-matroska":
+      return ".mkv";
+    case "video/x-msvideo":
+      return ".avi";
+    case "video/mpeg":
+      return ".mpeg";
+    case "video/x-ms-wmv":
+      return ".wmv";
+    case "video/x-flv":
+      return ".flv";
+    case "video/3gpp":
+      return ".3gp";
+    case "video/mp2t":
+      return ".ts";
     case "application/pdf":
       return ".pdf";
     case "application/msword":
@@ -99,6 +172,24 @@ function extensionForMime(mime: string): string {
   }
 }
 
+function resolveUploadExtension(file: File): string {
+  const fromName = extensionFromFileName(file.name);
+  if (fromName) return fromName;
+  return extensionForMime(file.type);
+}
+
+function isAllowedRawImage(file: File): boolean {
+  if (file.type.startsWith("image/")) return true;
+  const ext = extensionFromFileName(file.name);
+  return RAW_IMAGE_EXTENSIONS.has(ext);
+}
+
+function isAllowedRawVideo(file: File): boolean {
+  if (file.type.startsWith("video/")) return true;
+  const ext = extensionFromFileName(file.name);
+  return RAW_VIDEO_EXTENSIONS.has(ext);
+}
+
 export async function POST(request: Request) {
   const cookieStore = await cookies();
   const session = cookieStore.get(getAdminSessionCookieName())?.value;
@@ -116,14 +207,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "فایلی ارسال نشده است" }, { status: 400 });
   }
 
-  const allowedTypes =
-    kind === "video" || kind === "activity-video" || kind === "raw-video"
-      ? VIDEO_TYPES
-      : kind === "audio"
-        ? AUDIO_TYPES
-        : kind === "document"
-          ? DOCUMENT_TYPES
-          : IMAGE_TYPES;
   const maxBytes =
     kind === "raw-video"
       ? MAX_RAW_VIDEO_BYTES
@@ -139,7 +222,21 @@ export async function POST(request: Request) {
                 ? MAX_DOCUMENT_BYTES
                 : MAX_IMAGE_BYTES;
 
-  if (!allowedTypes.has(file.type)) {
+  const isRawKind = kind === "raw-video" || kind === "raw-image";
+  const allowed =
+    kind === "raw-video"
+      ? isAllowedRawVideo(file)
+      : kind === "raw-image"
+        ? isAllowedRawImage(file)
+        : kind === "video" || kind === "activity-video"
+          ? VIDEO_TYPES.has(file.type)
+          : kind === "audio"
+            ? AUDIO_TYPES.has(file.type)
+            : kind === "document"
+              ? DOCUMENT_TYPES.has(file.type)
+              : IMAGE_TYPES.has(file.type);
+
+  if (!allowed) {
     return NextResponse.json({ error: "نوع فایل مجاز نیست" }, { status: 400 });
   }
 
@@ -147,7 +244,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "حجم فایل بیش از حد مجاز است" }, { status: 400 });
   }
 
-  const extension = extensionForMime(file.type);
+  const extension = isRawKind ? resolveUploadExtension(file) : extensionForMime(file.type);
   const filename = `${randomUUID()}${extension}`;
   const uploadsDir = getUploadsDir();
 

@@ -464,7 +464,8 @@ export function RawMediaAdmin({
           <DialogHeader>
             <DialogTitle>{editingId ? "ویرایش راش تصویر" : "آپلود راش تصویر"}</DialogTitle>
             <DialogDescription>
-              عکس یا فیلم خام با حجم بالا — حداکثر هر فایل {formatStorageBytes(RAW_MEDIA_MAX_FILE_BYTES)}
+              همه فرمت‌های تصویر و ویدیو با حجم بالا — حداکثر هر فایل{" "}
+              {formatStorageBytes(RAW_MEDIA_MAX_FILE_BYTES)}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -513,6 +514,7 @@ export function RawMediaAdmin({
               uploadKind={mediaKind === "video" ? "raw-video" : "raw-image"}
               value={upload.url}
               fileOnly
+              accept={mediaKind === "video" ? "video/*,.mkv,.avi,.wmv,.flv,.mts,.m2ts,.ts,.mpg,.mpeg,.3gp,.ogv" : "image/*,.heic,.heif,.tif,.tiff,.bmp,.avif,.raw,.cr2,.nef,.dng,.orf,.arw,.rw2"}
               maxFileSizeBytes={RAW_MEDIA_MAX_FILE_BYTES}
               onChange={(url) => setUpload((prev) => ({ ...prev, url }))}
               onUploadedMeta={(meta) =>
