@@ -4,20 +4,6 @@ declare global {
   var __postgresClient: ReturnType<typeof postgres> | undefined;
 }
 
-/** Require app.rls_bypass=on so stolen DB URLs without this GUC cannot read forced-RLS tables. */
-function withRlsBypassOption(databaseUrl: string): string {
-  try {
-    const url = new URL(databaseUrl);
-    const existing = url.searchParams.get("options") ?? "";
-    if (existing.includes("app.rls_bypass")) return databaseUrl;
-    const flag = "-c app.rls_bypass=on";
-    url.searchParams.set("options", existing ? `${existing} ${flag}` : flag);
-    return url.toString();
-  } catch {
-    return databaseUrl;
-  }
-}
-
 export function getSql() {
   const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) {
@@ -25,7 +11,9 @@ export function getSql() {
   }
 
   if (!global.__postgresClient) {
-    global.__postgresClient = postgres(withRlsBypassOption(databaseUrl), {
+    // Do not append libpq "options" to DATABASE_URL — malformed options can hang connects.
+    // RLS policies allow the table-owning app role; FORCE RLS was removed for that reason.
+    global.__postgresClient = postgres(databaseUrl, {
       max: 10,
       idle_timeout: 20,
       connect_timeout: 10,

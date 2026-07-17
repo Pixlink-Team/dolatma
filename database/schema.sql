@@ -663,8 +663,8 @@ CREATE INDEX IF NOT EXISTS idx_user_problem_reports_created
   ON user_problem_reports(created_at DESC);
 
 -- ─── Database privilege + RLS hardening ───
--- Connections must set app.rls_bypass=on (see lib/db/client.ts). Raw DATABASE_URL
--- access without that setting cannot read forced-RLS sensitive tables.
+-- ENABLE RLS (without FORCE) so the table-owning app role keeps normal access.
+-- Other/non-owner roles need an explicit policy. PUBLIC has no table privileges.
 
 REVOKE ALL ON TABLE users FROM PUBLIC;
 REVOKE ALL ON TABLE system_settings FROM PUBLIC;
@@ -672,32 +672,36 @@ REVOKE ALL ON TABLE user_campaign_access FROM PUBLIC;
 REVOKE ALL ON TABLE user_audit_events FROM PUBLIC;
 
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
-ALTER TABLE users FORCE ROW LEVEL SECURITY;
+ALTER TABLE users NO FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS users_app_bypass ON users;
-CREATE POLICY users_app_bypass ON users
-  USING (current_setting('app.rls_bypass', true) = 'on')
-  WITH CHECK (current_setting('app.rls_bypass', true) = 'on');
+CREATE POLICY users_app_access ON users
+  FOR ALL
+  USING (true)
+  WITH CHECK (true);
 
 ALTER TABLE system_settings ENABLE ROW LEVEL SECURITY;
-ALTER TABLE system_settings FORCE ROW LEVEL SECURITY;
+ALTER TABLE system_settings NO FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS system_settings_app_bypass ON system_settings;
-CREATE POLICY system_settings_app_bypass ON system_settings
-  USING (current_setting('app.rls_bypass', true) = 'on')
-  WITH CHECK (current_setting('app.rls_bypass', true) = 'on');
+CREATE POLICY system_settings_app_access ON system_settings
+  FOR ALL
+  USING (true)
+  WITH CHECK (true);
 
 ALTER TABLE user_campaign_access ENABLE ROW LEVEL SECURITY;
-ALTER TABLE user_campaign_access FORCE ROW LEVEL SECURITY;
+ALTER TABLE user_campaign_access NO FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS user_campaign_access_app_bypass ON user_campaign_access;
-CREATE POLICY user_campaign_access_app_bypass ON user_campaign_access
-  USING (current_setting('app.rls_bypass', true) = 'on')
-  WITH CHECK (current_setting('app.rls_bypass', true) = 'on');
+CREATE POLICY user_campaign_access_app_access ON user_campaign_access
+  FOR ALL
+  USING (true)
+  WITH CHECK (true);
 
 ALTER TABLE user_audit_events ENABLE ROW LEVEL SECURITY;
-ALTER TABLE user_audit_events FORCE ROW LEVEL SECURITY;
+ALTER TABLE user_audit_events NO FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS user_audit_events_app_bypass ON user_audit_events;
-CREATE POLICY user_audit_events_app_bypass ON user_audit_events
-  USING (current_setting('app.rls_bypass', true) = 'on')
-  WITH CHECK (current_setting('app.rls_bypass', true) = 'on');
+CREATE POLICY user_audit_events_app_access ON user_audit_events
+  FOR ALL
+  USING (true)
+  WITH CHECK (true);
 
 -- Phone number for SMS notifications (optional until SMS provider is configured)
 ALTER TABLE users ADD COLUMN IF NOT EXISTS phone TEXT;

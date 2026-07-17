@@ -89,12 +89,14 @@ export async function parseSessionToken(token: string | undefined | null): Promi
   return parsePayload(payload);
 }
 
+/**
+ * Cookie signature + expiry only.
+ * Do NOT query the database here — this runs from Edge middleware.
+ * Session revocation is enforced in getAuthSession() on the Node server.
+ */
 export async function verifyAdminSessionToken(token: string | undefined | null): Promise<boolean> {
   const session = await parseSessionToken(token);
-  if (!session) return false;
-
-  const { isSessionVersionCurrent } = await import("@/lib/auth/session-versions");
-  return isSessionVersionCurrent(session.userId, session.sessionVersion);
+  return session !== null;
 }
 
 export function getSessionTtlMs() {

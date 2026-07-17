@@ -46,15 +46,19 @@ async function writeVersions(next: SessionVersions): Promise<void> {
 
   if (!isPostgresConfigured()) return;
 
-  const sql = getSql();
-  const now = new Date().toISOString();
-  await sql`
-    INSERT INTO system_settings (key, value, updated_at)
-    VALUES (${SESSION_VERSIONS_KEY}, ${sql.json(JSON.parse(JSON.stringify(next)))}, ${now})
-    ON CONFLICT (key) DO UPDATE SET
-      value = EXCLUDED.value,
-      updated_at = EXCLUDED.updated_at
-  `;
+  try {
+    const sql = getSql();
+    const now = new Date().toISOString();
+    await sql`
+      INSERT INTO system_settings (key, value, updated_at)
+      VALUES (${SESSION_VERSIONS_KEY}, ${sql.json(JSON.parse(JSON.stringify(next)))}, ${now})
+      ON CONFLICT (key) DO UPDATE SET
+        value = EXCLUDED.value,
+        updated_at = EXCLUDED.updated_at
+    `;
+  } catch (error) {
+    console.error("[auth] failed to persist session versions", error);
+  }
 }
 
 function versionKey(userId: string | null | undefined): string {

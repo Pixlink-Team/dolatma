@@ -43,15 +43,19 @@ async function readStore(): Promise<AlertStore> {
 
 async function writeStore(store: AlertStore): Promise<void> {
   if (!isPostgresConfigured()) return;
-  const sql = getSql();
-  const now = new Date().toISOString();
-  await sql`
-    INSERT INTO system_settings (key, value, updated_at)
-    VALUES (${ALERT_KEY}, ${sql.json(JSON.parse(JSON.stringify(store)))}, ${now})
-    ON CONFLICT (key) DO UPDATE SET
-      value = EXCLUDED.value,
-      updated_at = EXCLUDED.updated_at
-  `;
+  try {
+    const sql = getSql();
+    const now = new Date().toISOString();
+    await sql`
+      INSERT INTO system_settings (key, value, updated_at)
+      VALUES (${ALERT_KEY}, ${sql.json(JSON.parse(JSON.stringify(store)))}, ${now})
+      ON CONFLICT (key) DO UPDATE SET
+        value = EXCLUDED.value,
+        updated_at = EXCLUDED.updated_at
+    `;
+  } catch (error) {
+    console.error("[security] failed to persist login alerts", error);
+  }
 }
 
 export async function recordLoginSecurityAlert(input: {

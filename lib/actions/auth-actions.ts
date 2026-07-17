@@ -97,103 +97,122 @@ export async function loginAdminAction(email: string, password: string) {
   const loginEmail = email.trim();
   const { rateKey, ip } = await resolveLoginClient(loginEmail);
 
-  const blocked = getRateLimitBlock(rateKey);
-  if (!blocked.ok) {
-    await recordLoginSecurityAlert({
-      email: loginEmail || null,
-      ipAddress: ip,
-      reason: "rate_limited",
-      failureCount: LOGIN_LIMIT,
-    });
-    return {
-      success: false as const,
-      error: `تلاش‌های ورود بیش از حد مجاز است. ${blocked.retryAfterSec} ثانیه دیگر دوباره تلاش کنید`,
-    };
-  }
-
-  // Prefer DB user sessions so profile and ownership work.
-  if (isPostgresConfigured()) {
-    const user = await pgGetUserAuthByLogin(email);
-    if (user && (await verifyPassword(password, user.passwordHash))) {
-      const cookieStore = await cookies();
-      const sessionVersion = await getSessionVersion(user.id);
-      const token = createUserSessionTokenSync(user.id, user.role, sessionVersion);
-      const cookieOptions = getAdminSessionCookieOptions();
-
-      cookieStore.set(getAdminSessionCookieName(), token, cookieOptions);
-      cookieStore.set(getLegacyMockCookieName(), "", { ...cookieOptions, maxAge: 0 });
-      resetRateLimit(rateKey);
-      resetRateLimit(`login-soft:${rateKey}`);
-
-      await logAuditEvent({
-        actorUserId: user.id,
-        actorType: "db_user",
-        actorEmail: user.email,
-        actorName: user.name,
-        actorRole: user.role,
-        category: "auth",
-        action: "auth.login",
-        label: "ورود کاربر",
-        metadata: { method: "db_user" },
-      });
-
-      redirect("/admin");
+  try {
+    const blocked = getRateLimitBlock(rateKey);
+    if (!blocked.ok) {
+      await recordLoginSecurityAlert({
+        email: loginEmail || null,
+        ipAddress: ip,
+        reason: "rate_limited",
+        failureCount: LOGIN_LIMIT,
+      }).catch(() => {});
+      return {
+        success: false as const,
+        error: `تلاش‌های ورود بیش از حد مجاز است. ${blocked.retryAfterSec} ثانیه دیگر دوباره تلاش کنید`,
+      };
     }
-  }
 
-  if (await verifyEffectiveAdminCredentials(email, password)) {
-    const cookieStore = await cookies();
-    const cookieOptions = getAdminSessionCookieOptions();
-
-    // If env admin email matches a DB user, attach that profile to the session.
+    // Prefer DB user sessions so profile and ownership work.
     if (isPostgresConfigured()) {
-      const linkedUser = await pgGetUserAuthByLogin(email);
-      if (linkedUser) {
-        const sessionVersion = await getSessionVersion(linkedUser.id);
-        const token = createUserSessionTokenSync(linkedUser.id, linkedUser.role, sessionVersion);
+      const user = await pgGetUserAuthByLogin(email);
+      if (user && (await verifyPassword(password, user.passwordHash))) {
+        const cookieStore = await cookies();
+        const sessionVersion = await getSessionVersion(user.id);
+        const token = createUserSessionTokenSync(user.id, user.role, sessionVersion);
+        const cookieOptions = getAdminSessionCookieOptions();
+
         cookieStore.set(getAdminSessionCookieName(), token, cookieOptions);
         cookieStore.set(getLegacyMockCookieName(), "", { ...cookieOptions, maxAge: 0 });
         resetRateLimit(rateKey);
         resetRateLimit(`login-soft:${rateKey}`);
 
         await logAuditEvent({
-          actorUserId: linkedUser.id,
+          actorUserId: user.id,
           actorType: "db_user",
-          actorEmail: linkedUser.email,
-          actorName: linkedUser.name,
-          actorRole: linkedUser.role,
+          actorEmail: user.email,
+          actorName: user.name,
+          actorRole: user.role,
           category: "auth",
           action: "auth.login",
-          label: "ورود مدیر سیستم (پروفایل کاربری)",
-          metadata: { method: "env_admin_linked_db_user" },
+          label: "ورود کاربر",
+          metadata: { method: "db_user" },
         });
 
         redirect("/admin");
       }
     }
 
-    const sessionVersion = await getSessionVersion(null);
-    const token = createAdminSessionTokenSync(sessionVersion);
-    cookieStore.set(getAdminSessionCookieName(), token, cookieOptions);
-    cookieStore.set(getLegacyMockCookieName(), "", { ...cookieOptions, maxAge: 0 });
-    resetRateLimit(rateKey);
-    resetRateLimit(`login-soft:${rateKey}`);
+    if (await verifyEffectiveAdminCredentials(email, password)) {
+      const cookieStore = await cookies();
+      const cookieOptions = getAdminSessionCookieOptions();
 
-    await logAuditEvent({
-      actorType: "env_admin",
-      actorEmail: loginEmail || null,
-      actorName: "مدیر سیستم",
-      actorRole: "admin",
-      category: "auth",
-      action: "auth.login",
-      label: "ورود مدیر سیستم",
-      metadata: { method: "env_admin" },
-    });
+      // If env admin email matches a DB user, attach that profile to the session.
+      if (isPostgresConfigured()) {
+        const linkedUser = await pgGetUserAuthByLogin(email);
+        if (linkedUser) {
+          const sessionVersion = await getSessionVersion(linkedUser.id);
+          const token = createUserSessionTokenSync(linkedUser.id, linkedUser.role, sessionVersion);
+          cookieStore.set(getAdminSessionCookieName(), token, cookieOptions);
+          cookieStore.set(getLegacyMockCookieName(), "", { ...cookieOptions, maxAge: 0 });
+          resetRateLimit(rateKey);
+          resetRateLimit(`login-soft:${rateKey}`);
 
-    redirect("/admin");
+          await logAuditEvent({
+            actorUserId: linkedUser.id,
+            actorType: "db_user",
+            actorEmail: linkedUser.email,
+            actorName: linkedUser.name,
+            actorRole: linkedUser.role,
+            category: "auth",
+            action: "auth.login",
+            label: "ورود مدیر سیستم (پروفایل کاربری)",
+            metadata: { method: "env_admin_linked_db_user" },
+          });
+
+          redirect("/admin");
+        }
+      }
+
+      const sessionVersion = await getSessionVersion(null);
+      const token = createAdminSessionTokenSync(sessionVersion);
+      cookieStore.set(getAdminSessionCookieName(), token, cookieOptions);
+      cookieStore.set(getLegacyMockCookieName(), "", { ...cookieOptions, maxAge: 0 });
+      resetRateLimit(rateKey);
+      resetRateLimit(`login-soft:${rateKey}`);
+
+      await logAuditEvent({
+        actorType: "env_admin",
+        actorEmail: loginEmail || null,
+        actorName: "مدیر سیستم",
+        actorRole: "admin",
+        category: "auth",
+        action: "auth.login",
+        label: "ورود مدیر سیستم",
+        metadata: { method: "env_admin" },
+      });
+
+      redirect("/admin");
+    }
+
+    return registerFailedLogin(rateKey, loginEmail, ip);
+  } catch (error) {
+    // next/navigation redirect() throws; must not be swallowed.
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "digest" in error &&
+      typeof (error as { digest?: unknown }).digest === "string" &&
+      (error as { digest: string }).digest.startsWith("NEXT_REDIRECT")
+    ) {
+      throw error;
+    }
+    console.error("[auth] loginAdminAction failed:", error);
+    const message =
+      error instanceof Error && error.message.includes("AUTH_SECRET")
+        ? "تنظیم AUTH_SECRET در سرور ناقص است"
+        : "ورود با خطا مواجه شد. دوباره تلاش کنید";
+    return { success: false as const, error: message };
   }
-
-  return registerFailedLogin(rateKey, loginEmail, ip);
 }
 
 export async function logoutAdminAction() {
