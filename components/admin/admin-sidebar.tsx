@@ -95,6 +95,8 @@ const managementNavHrefs = new Set([
   "/admin/updates",
 ]);
 
+const DIRECTIVES_HREF = "/admin/directives";
+
 export function AdminSidebar() {
   const pathname = usePathname();
   const router = useRouter();
@@ -123,7 +125,14 @@ export function AdminSidebar() {
     return hasContributorPermission(permissions, item.permissionKey);
   });
 
-  const contentNavItems = navItems.filter((item) => !managementNavHrefs.has(item.href));
+  /** Admin/client: pin directives as a red alert CTA at the top of the right panel. */
+  const showDirectivesAlert = isFullAdminUser || isClientRole;
+  const directivesNavItem = navItems.find((item) => item.href === DIRECTIVES_HREF);
+  const contentNavItems = navItems.filter((item) => {
+    if (managementNavHrefs.has(item.href)) return false;
+    if (showDirectivesAlert && item.href === DIRECTIVES_HREF) return false;
+    return true;
+  });
   const managementNavItems = navItems.filter((item) => managementNavHrefs.has(item.href));
 
   const handleLogout = async () => {
@@ -158,6 +167,26 @@ export function AdminSidebar() {
         )}
       </div>
       <nav className="flex-1 overflow-y-auto p-3">
+        {showDirectivesAlert && directivesNavItem && (
+          <div className="mb-3">
+            <Link
+              href={adminHref(DIRECTIVES_HREF, campaignId)}
+              prefetch={false}
+              onClick={() => setMobileOpen(false)}
+              className={cn(
+                "flex items-center justify-center gap-2 rounded-xl px-3 py-3 text-sm font-extrabold tracking-wide",
+                "bg-red-600 text-white shadow-lg shadow-red-600/40",
+                "ring-2 ring-red-400/70 hover:bg-red-700 hover:shadow-red-700/50",
+                "transition-colors",
+                pathname === DIRECTIVES_HREF && "ring-4 ring-white/70"
+              )}
+            >
+              <ClipboardCheck className="h-5 w-5 shrink-0" />
+              <span>دستورکارها</span>
+            </Link>
+          </div>
+        )}
+
         <div className="space-y-1">
           {contentNavItems.map((item) => {
             const Icon = item.icon;

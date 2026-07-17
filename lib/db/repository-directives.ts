@@ -23,11 +23,14 @@ function toIsoString(value: unknown): string | null {
 }
 
 function mapAttachment(row: Record<string, unknown>): DirectiveAttachment {
+  const fileName = String(row.file_name ?? "");
+  const titleRaw = String(row.title ?? "").trim();
   return {
     id: String(row.id),
     directiveId: String(row.directive_id),
+    title: titleRaw || fileName,
     fileUrl: String(row.file_url ?? ""),
-    fileName: String(row.file_name ?? ""),
+    fileName,
     mimeType: String(row.mime_type ?? "application/octet-stream"),
     fileSize: Number(row.file_size ?? 0),
     sortOrder: Number(row.sort_order ?? 0),
@@ -308,6 +311,7 @@ export interface SaveDirectiveInput {
   published?: boolean;
   attachments: Array<{
     id?: string;
+    title: string;
     fileUrl: string;
     fileName: string;
     mimeType: string;
@@ -372,12 +376,15 @@ export async function pgSaveDirective(input: SaveDirectiveInput): Promise<{ id: 
   for (let index = 0; index < input.attachments.length; index += 1) {
     const attachment = input.attachments[index];
     const attachmentId = attachment.id ?? generateId();
+    const attachmentTitle =
+      attachment.title?.trim() || attachment.fileName?.trim() || `پیوست ${index + 1}`;
     await sql`
       INSERT INTO directive_attachments (
-        id, directive_id, file_url, file_name, mime_type, file_size, sort_order, created_at
+        id, directive_id, title, file_url, file_name, mime_type, file_size, sort_order, created_at
       ) VALUES (
         ${attachmentId},
         ${id},
+        ${attachmentTitle},
         ${attachment.fileUrl},
         ${attachment.fileName},
         ${attachment.mimeType || "application/octet-stream"},

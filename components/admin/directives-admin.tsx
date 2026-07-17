@@ -97,21 +97,35 @@ function AttachmentList({ attachments }: { attachments: DirectiveAttachment[] })
   return (
     <ul className="space-y-2">
       {attachments.map((file) => (
-        <li key={file.id}>
+        <li key={file.id} className="rounded-lg border px-3 py-2">
           <a
             href={file.fileUrl}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
+            className="inline-flex items-start gap-2 text-sm text-primary hover:underline"
           >
-            <Download className="h-4 w-4" />
-            {file.fileName}
+            <Download className="mt-0.5 h-4 w-4 shrink-0" />
+            <span className="min-w-0">
+              <span className="block font-medium text-foreground">{file.title || file.fileName}</span>
+              {file.title && file.title !== file.fileName && (
+                <span className="block text-xs text-muted-foreground">{file.fileName}</span>
+              )}
+            </span>
           </a>
         </li>
       ))}
     </ul>
   );
 }
+
+type DraftAttachment = {
+  id?: string;
+  title: string;
+  fileUrl: string;
+  fileName: string;
+  mimeType: string;
+  fileSize: number;
+};
 
 export function DirectivesAdmin({
   campaignId,
@@ -127,15 +141,16 @@ export function DirectivesAdmin({
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
-  const [attachments, setAttachments] = useState<
-    Array<{
-      id?: string;
-      fileUrl: string;
-      fileName: string;
-      mimeType: string;
-      fileSize: number;
-    }>
-  >([]);
+  const [attachments, setAttachments] = useState<DraftAttachment[]>([]);
+  const [attachmentDialogOpen, setAttachmentDialogOpen] = useState(false);
+  const [editingAttachmentIndex, setEditingAttachmentIndex] = useState<number | null>(null);
+  const [attachmentTitle, setAttachmentTitle] = useState("");
+  const [attachmentUpload, setAttachmentUpload] = useState({
+    url: "",
+    fileName: "",
+    fileSize: 0,
+    mimeType: "",
+  });
   const [detailItem, setDetailItem] = useState<CampaignDirective | null>(null);
   const [trackingItem, setTrackingItem] = useState<CampaignDirective | null>(null);
   const [recipients, setRecipients] = useState<DirectiveRecipient[]>([]);
@@ -185,6 +200,7 @@ export function DirectivesAdmin({
     setAttachments(
       item.attachments.map((file) => ({
         id: file.id,
+        title: file.title || file.fileName,
         fileUrl: file.fileUrl,
         fileName: file.fileName,
         mimeType: file.mimeType,
@@ -216,6 +232,63 @@ export function DirectivesAdmin({
   const closeDialog = () => {
     setOpen(false);
     setEditingId(null);
+    setAttachmentDialogOpen(false);
+    setEditingAttachmentIndex(null);
+  };
+
+  const openAddAttachment = () => {
+    setEditingAttachmentIndex(null);
+    setAttachmentTitle("");
+    setAttachmentUpload({ url: "", fileName: "", fileSize: 0, mimeType: "" });
+    setAttachmentDialogOpen(true);
+  };
+
+  const openEditAttachment = (index: number) => {
+    const current = attachments[index];
+    if (!current) return;
+    setEditingAttachmentIndex(index);
+    setAttachmentTitle(current.title);
+    setAttachmentUpload({
+      url: current.fileUrl,
+      fileName: current.fileName,
+      fileSize: current.fileSize,
+      mimeType: current.mimeType,
+    });
+    setAttachmentDialogOpen(true);
+  };
+
+  const closeAttachmentDialog = () => {
+    setAttachmentDialogOpen(false);
+    setEditingAttachmentIndex(null);
+    setAttachmentTitle("");
+    setAttachmentUpload({ url: "", fileName: "", fileSize: 0, mimeType: "" });
+  };
+
+  const saveAttachmentDraft = () => {
+    const title = attachmentTitle.trim();
+    if (!title) {
+      toast.error("عنوان فایل الزامی است");
+      return;
+    }
+    if (!attachmentUpload.url) {
+      toast.error("فایل را آپلود کنید");
+      return;
+    }
+
+    const next: DraftAttachment = {
+      id: editingAttachmentIndex != null ? attachments[editingAttachmentIndex]?.id : undefined,
+      title,
+      fileUrl: attachmentUpload.url,
+      fileName: attachmentUpload.fileName || title,
+      mimeType: attachmentUpload.mimeType || "application/octet-stream",
+      fileSize: attachmentUpload.fileSize || 0,
+    };
+
+    setAttachments((prev) => {
+      if (editingAttachmentIndex == null) return [...prev, next];
+      return prev.map((item, index) => (index === editingAttachmentIndex ? next : item));
+    });
+    closeAttachmentDialog();
   };
 
   const toggleUser = (userId: string) => {
@@ -552,40 +625,48 @@ export function DirectivesAdmin({
             )}
 
             <div className="space-y-3">
-              <Label>پیوست‌ها</Label>
-              <DocumentUpload
-                value=""
-                onChange={(payload) => {
-                  setAttachments((prev) => [
-                    ...prev,
-                    {
-                      fileUrl: payload.url,
-                      fileName: payload.fileName,
-                      mimeType: payload.mimeType,
-                      fileSize: payload.fileSize,
-                    },
-                  ]);
-                }}
-                label="افزودن فایل"
-              />
-              {attachments.length > 0 && (
+              <div className="flex items-center justify-between gap-2">
+                <Label>پیوست‌ها</Label>
+                <Button type="button" variant="outline" size="sm" onClick={openAddAttachment}>
+                  <Plus className="h-4 w-4" />
+                  افزودن فایل
+                </Button>
+              </div>
+              {attachments.length === 0 ? (
+                <p className="rounded-lg border border-dashed px-3 py-6 text-center text-sm text-muted-foreground">
+                  هنوز فایلی اضافه نشده — با «افزودن فایل» پیوست بگذارید
+                </p>
+              ) : (
                 <ul className="space-y-2">
                   {attachments.map((file, index) => (
                     <li
                       key={`${file.fileUrl}-${index}`}
                       className="flex items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm"
                     >
-                      <span className="truncate">{file.fileName}</span>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() =>
-                          setAttachments((prev) => prev.filter((_, i) => i !== index))
-                        }
-                      >
-                        حذف
-                      </Button>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-medium">{file.title}</p>
+                        <p className="truncate text-xs text-muted-foreground">{file.fileName}</p>
+                      </div>
+                      <div className="flex shrink-0 gap-1">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openEditAttachment(index)}
+                        >
+                          ویرایش
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() =>
+                            setAttachments((prev) => prev.filter((_, i) => i !== index))
+                          }
+                        >
+                          حذف
+                        </Button>
+                      </div>
                     </li>
                   ))}
                 </ul>
@@ -605,6 +686,52 @@ export function DirectivesAdmin({
               </Button>
             </div>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add / edit attachment */}
+      <Dialog
+        open={attachmentDialogOpen}
+        onOpenChange={(next) => (next ? setAttachmentDialogOpen(true) : closeAttachmentDialog())}
+      >
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {editingAttachmentIndex != null ? "ویرایش فایل" : "افزودن فایل"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>عنوان فایل</Label>
+              <Input
+                value={attachmentTitle}
+                maxLength={CONTENT_TITLE_MAX_LENGTH}
+                onChange={(event) => setAttachmentTitle(event.target.value)}
+                placeholder="مثلاً پوستر اینستاگرام / متن پیامک / فایل چاپ"
+              />
+            </div>
+            <DocumentUpload
+              label="فایل"
+              value={attachmentUpload.url}
+              fileName={attachmentUpload.fileName}
+              fileSize={attachmentUpload.fileSize}
+              mimeType={attachmentUpload.mimeType}
+              onChange={(payload) => {
+                setAttachmentUpload(payload);
+                if (!attachmentTitle.trim() && payload.fileName) {
+                  setAttachmentTitle(payload.fileName.replace(/\.[^.]+$/, ""));
+                }
+              }}
+            />
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={closeAttachmentDialog}>
+                انصراف
+              </Button>
+              <Button type="button" onClick={saveAttachmentDraft}>
+                {editingAttachmentIndex != null ? "ذخیره فایل" : "افزودن به دستورکار"}
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
 

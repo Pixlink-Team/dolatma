@@ -730,6 +730,7 @@ CREATE INDEX IF NOT EXISTS idx_campaign_directives_campaign
 CREATE TABLE IF NOT EXISTS directive_attachments (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   directive_id UUID NOT NULL REFERENCES campaign_directives(id) ON DELETE CASCADE,
+  title TEXT NOT NULL DEFAULT '',
   file_url TEXT NOT NULL,
   file_name TEXT NOT NULL,
   mime_type TEXT NOT NULL DEFAULT 'application/octet-stream',
@@ -737,6 +738,8 @@ CREATE TABLE IF NOT EXISTS directive_attachments (
   sort_order INT NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+ALTER TABLE directive_attachments ADD COLUMN IF NOT EXISTS title TEXT NOT NULL DEFAULT '';
 
 CREATE INDEX IF NOT EXISTS idx_directive_attachments_directive
   ON directive_attachments(directive_id, sort_order);

@@ -1,6 +1,18 @@
 {
   "entries": [
     {
+      "hash": "a7b4393608145c20135f44f7056d98d9d6cd488c",
+      "committedAt": "2026-07-17T18:51:00+03:30",
+      "title": "رفع مشکل گیر کردن ورود به پنل",
+      "subject": "Fix login hang from middleware DB and FORCE RLS"
+    },
+    {
+      "hash": "c215cf04039ec7bad0cde0cee32978f279c16003",
+      "committedAt": "2026-07-17T18:50:19+03:30",
+      "title": "افزودن بخش دستورکارها با کارتابل، تأیید مشاهده و آماده‌سازی پیامک",
+      "subject": "Add directives (دستورکارها) with inbox, tracking, and SMS stub"
+    },
+    {
       "hash": "491fd053efc4228a43cc01e8ed58014714b067af",
       "committedAt": "2026-07-17T18:32:50+03:30",
       "title": "حذف فایل‌های موقت بررسی امنیتی",

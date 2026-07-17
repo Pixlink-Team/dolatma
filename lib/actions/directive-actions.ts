@@ -137,6 +137,7 @@ export async function saveDirectiveAction(input: {
   selectedUserIds?: string[];
   attachments: Array<{
     id?: string;
+    title: string;
     fileUrl: string;
     fileName: string;
     mimeType: string;
@@ -146,6 +147,19 @@ export async function saveDirectiveAction(input: {
 }) {
   const titleError = getContentTitleValidationError(input.title);
   if (titleError) return { success: false as const, error: titleError };
+
+  for (const attachment of input.attachments ?? []) {
+    const attachmentTitleError = getContentTitleValidationError(attachment.title);
+    if (attachmentTitleError) {
+      return {
+        success: false as const,
+        error: `عنوان پیوست: ${attachmentTitleError}`,
+      };
+    }
+    if (!attachment.fileUrl?.trim()) {
+      return { success: false as const, error: "برای هر پیوست باید فایل آپلود شود" };
+    }
+  }
 
   const access = await assertDirectivesAccess(input.campaignId);
   if (access.error || !access.session) {

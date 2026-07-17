@@ -355,6 +355,8 @@ export type DirectiveSmsStatus = "pending" | "sent" | "failed" | "no_phone" | "s
 export interface DirectiveAttachment {
   id: string;
   directiveId: string;
+  /** Display title for this attachment (required for clarity in broad directives). */
+  title: string;
   fileUrl: string;
   fileName: string;
   mimeType: string;
