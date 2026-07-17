@@ -13,7 +13,7 @@ export default async function MeetingsPage({ searchParams }: PageProps) {
   const { campaignId } = await resolveAdminCampaignId(params.campaign);
   if (!campaignId) redirect("/admin/campaigns");
   await requireContributorAccess(campaignId, "meetings");
-  const data = await getAdminData(campaignId);
+  const data = await getAdminData(campaignId, ["meetings"]);
   return <MeetingsAdmin
     campaignId={campaignId}
     initialMeetings={data.meetings ?? []}

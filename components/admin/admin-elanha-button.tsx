@@ -27,7 +27,7 @@ export function AdminElanhaButton() {
       asChild
       variant="outline"
       size="icon"
-      className="fixed top-4 left-4 z-40 shadow-sm lg:left-auto lg:right-[17rem]"
+      className="fixed top-4 left-4 z-[80] shadow-sm lg:left-auto lg:right-[17rem]"
       title="اعلان‌ها"
     >
       <Link href={adminHref("/admin/elanha", campaignId)}>

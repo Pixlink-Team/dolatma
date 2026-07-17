@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useMemo } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import type { CampaignSettings } from "@/lib/types";
 
 interface AdminCampaignContextValue {
@@ -13,17 +13,12 @@ interface AdminCampaignContextValue {
 
 const AdminCampaignContext = createContext<AdminCampaignContextValue | null>(null);
 
-export function AdminCampaignProvider({
-  campaigns,
-  children,
-}: {
-  campaigns: CampaignSettings[];
-  children: React.ReactNode;
-}) {
+function useCampaignContextValue(
+  campaigns: CampaignSettings[],
+  campaignId: string
+): AdminCampaignContextValue {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const defaultId = campaigns[0]?.id ?? "";
-  const campaignId = searchParams.get("campaign") ?? defaultId;
+  const pathname = usePathname();
 
   const currentCampaign = useMemo(
     () => campaigns.find((c) => c.id === campaignId) ?? campaigns[0],
@@ -31,22 +26,50 @@ export function AdminCampaignProvider({
   );
 
   const setCampaignId = (id: string) => {
-    const params = new URLSearchParams(searchParams.toString());
+    const params = new URLSearchParams(
+      typeof window !== "undefined" ? window.location.search : ""
+    );
     params.set("campaign", id);
-    router.push(`?${params.toString()}`);
+    router.push(`${pathname}?${params.toString()}`);
   };
 
+  return {
+    campaignId: currentCampaign?.id ?? campaignId,
+    campaigns,
+    currentCampaign,
+    setCampaignId,
+  };
+}
+
+/** Provider that receives campaignId from the parent (searchParams-aware shell). */
+export function AdminCampaignProvider({
+  campaigns,
+  campaignId,
+  children,
+}: {
+  campaigns: CampaignSettings[];
+  campaignId: string;
+  children: React.ReactNode;
+}) {
+  const value = useCampaignContextValue(campaigns, campaignId);
   return (
-    <AdminCampaignContext.Provider
-      value={{
-        campaignId: currentCampaign?.id ?? campaignId,
-        campaigns,
-        currentCampaign,
-        setCampaignId,
-      }}
-    >
-      {children}
-    </AdminCampaignContext.Provider>
+    <AdminCampaignContext.Provider value={value}>{children}</AdminCampaignContext.Provider>
+  );
+}
+
+/** Static fallback provider used while searchParams are suspending. */
+export function AdminCampaignProviderStatic({
+  campaigns,
+  campaignId,
+  children,
+}: {
+  campaigns: CampaignSettings[];
+  campaignId: string;
+  children: React.ReactNode;
+}) {
+  const value = useCampaignContextValue(campaigns, campaignId);
+  return (
+    <AdminCampaignContext.Provider value={value}>{children}</AdminCampaignContext.Provider>
   );
 }
 

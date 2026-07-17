@@ -39,6 +39,7 @@ import { useAdminViewMode } from "@/lib/hooks/use-admin-view-mode";
 import { todayISO } from "@/lib/jalali";
 import { videoNeedsAutoCover } from "@/lib/client/video-cover";
 import { isSitePublication } from "@/lib/social-posts";
+import { SocialPlatformIcon, getSocialPlatformLabel } from "@/components/public/social-platform-icon";
 import type { AdminUser, SocialContentType, SocialMediaPost, SocialPlatform } from "@/lib/types";
 import { getStatusLabel } from "@/lib/utils";
 import { GenerateMissingVideoCoversButton } from "@/components/admin/generate-missing-video-covers-button";
@@ -398,10 +399,26 @@ export function SocialPostsAdmin({
               <div className="space-y-2">
                 <Label>کانال</Label>
                 <Select value={form.watch("platform")} onValueChange={(value) => form.setValue("platform", value as SocialPlatform)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger>
+                    <SelectValue>
+                      <span className="flex items-center gap-2">
+                        <SocialPlatformIcon
+                          platform={form.watch("platform")}
+                          size="sm"
+                          className="h-5 w-5 rounded-md"
+                        />
+                        {getSocialPlatformLabel(form.watch("platform"))}
+                      </span>
+                    </SelectValue>
+                  </SelectTrigger>
                   <SelectContent>
                     {platformOptions.map((platform) => (
-                      <SelectItem key={platform} value={platform}>{getStatusLabel(platform)}</SelectItem>
+                      <SelectItem key={platform} value={platform}>
+                        <span className="flex items-center gap-2">
+                          <SocialPlatformIcon platform={platform} size="sm" className="h-5 w-5 rounded-md" />
+                          {getSocialPlatformLabel(platform)}
+                        </span>
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>

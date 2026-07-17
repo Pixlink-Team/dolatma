@@ -1,13 +1,14 @@
 import { cookies } from "next/headers";
+import { cache } from "react";
 import { getAdminSessionCookieName } from "@/lib/auth/admin-session";
 import { parseSessionTokenSync } from "@/lib/auth/session-node";
 import type { AuthSession } from "@/lib/types";
 
-export async function getAuthSession(): Promise<AuthSession | null> {
+export const getAuthSession = cache(async (): Promise<AuthSession | null> => {
   const cookieStore = await cookies();
   const token = cookieStore.get(getAdminSessionCookieName())?.value;
   return parseSessionTokenSync(token);
-}
+});
 
 export async function requireAuthSession(): Promise<AuthSession> {
   const session = await getAuthSession();

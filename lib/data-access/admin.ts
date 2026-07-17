@@ -1,6 +1,8 @@
+import { cache } from "react";
 import { getMockStore, getMockStoreForCampaign, updateMockStore } from "@/lib/mock-data";
 import { getAuthSession, getOwnerFilter } from "@/lib/auth/get-session";
 import * as pg from "@/lib/db/repository";
+import type { AdminDataSection } from "@/lib/db/repository";
 import type { ParsedSubmissionRow } from "@/lib/services/submissions-excel-parser";
 import * as pgExt from "@/lib/db/repository-extended";
 import type {
@@ -20,12 +22,14 @@ import { generateId, isPostgresConfigured, isSupabaseConfigured, slugify } from 
 import { compareMeetingsByDateDesc } from "@/lib/meeting-tasks";
 import { createClient } from "@/lib/supabase/server";
 
+export type { AdminDataSection };
+
 export async function getAllUsers() {
   if (!isPostgresConfigured()) return [];
   return pgExt.pgGetAllUsers();
 }
 
-export async function getAllCampaigns(): Promise<CampaignSettings[]> {
+export const getAllCampaigns = cache(async (): Promise<CampaignSettings[]> => {
   if (isPostgresConfigured()) {
     return pg.pgGetAllCampaigns();
   }
@@ -40,9 +44,9 @@ export async function getAllCampaigns(): Promise<CampaignSettings[]> {
   } catch {
     return getMockStore().campaigns;
   }
-}
+});
 
-export async function getAdminData(campaignId: string) {
+export async function getAdminData(campaignId: string, sections?: AdminDataSection[]) {
   const session = await getAuthSession();
   const ownerFilter = session ? getOwnerFilter(session) : undefined;
 
@@ -52,7 +56,7 @@ export async function getAdminData(campaignId: string) {
       : items.filter((item) => (item.ownerUserId ?? null) === ownerFilter);
 
   if (isPostgresConfigured()) {
-    return pg.pgGetAdminData(campaignId, ownerFilter);
+    return pg.pgGetAdminData(campaignId, ownerFilter, sections);
   }
   if (!isSupabaseConfigured()) {
     const store = getMockStoreForCampaign(campaignId);

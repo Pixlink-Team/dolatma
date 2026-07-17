@@ -41,7 +41,7 @@ export default async function BillboardsPage({ searchParams }: PageProps) {
     }
   }
 
-  const data = await getAdminData(campaignId);
+  const data = await getAdminData(campaignId, ["billboards", "campaigns"]);
   const users = await getAllUsers();
   const dbBillboards = (data.billboards ?? []) as Billboard[];
   const settings = data.settings as CampaignSettings | null;

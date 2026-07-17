@@ -212,12 +212,24 @@ export function SocialAnalyticsAdmin({
                 onValueChange={(value) => form.setValue("platform", value as SocialPlatform)}
               >
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue>
+                    <span className="flex items-center gap-2">
+                      <SocialPlatformIcon
+                        platform={form.watch("platform")}
+                        size="sm"
+                        className="h-5 w-5 rounded-md"
+                      />
+                      {getSocialPlatformLabel(form.watch("platform"))}
+                    </span>
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {platformOptions.map((platform) => (
                     <SelectItem key={platform} value={platform}>
-                      {getSocialPlatformLabel(platform)}
+                      <span className="flex items-center gap-2">
+                        <SocialPlatformIcon platform={platform} size="sm" className="h-5 w-5 rounded-md" />
+                        {getSocialPlatformLabel(platform)}
+                      </span>
                     </SelectItem>
                   ))}
                 </SelectContent>

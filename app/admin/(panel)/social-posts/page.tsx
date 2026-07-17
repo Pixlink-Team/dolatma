@@ -19,7 +19,7 @@ export default async function SocialPostsPage({ searchParams }: PageProps) {
   const session = await getAuthSession();
   const canScore = Boolean(session && canScoreContent(session));
   const [data, bulkProps] = await Promise.all([
-    getAdminData(campaignId),
+    getAdminData(campaignId, ["socialPosts", "socialPlatformStats"]),
     getAdminBulkEditProps(),
   ]);
   return (

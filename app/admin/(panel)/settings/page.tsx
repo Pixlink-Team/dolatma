@@ -18,7 +18,7 @@ export default async function SettingsPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const { campaignId } = await resolveAdminCampaignId(params.campaign);
   if (!campaignId) redirect("/admin/campaigns");
-  const data = await getAdminData(campaignId);
+  const data = await getAdminData(campaignId, ["settings", "campaigns"]);
   if (!data.settings) redirect("/admin/campaigns");
 
   return (

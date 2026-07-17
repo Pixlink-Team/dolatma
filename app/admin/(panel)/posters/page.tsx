@@ -17,7 +17,7 @@ export default async function PostersPage({ searchParams }: PageProps) {
   const session = await getAuthSession();
   const canScore = Boolean(session && canScoreContent(session));
   const [data, bulkProps] = await Promise.all([
-    getAdminData(campaignId),
+    getAdminData(campaignId, ["posters", "posterCategories", "posterVersions"]),
     getAdminBulkEditProps(),
   ]);
   return (

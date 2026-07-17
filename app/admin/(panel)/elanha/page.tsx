@@ -18,7 +18,15 @@ export default async function ElanhaPage({ searchParams }: PageProps) {
   const { campaignId } = await resolveAdminCampaignId(params.campaign);
   if (!campaignId) redirect("/admin/campaigns");
 
-  const data = await getAdminData(campaignId);
+  const data = await getAdminData(campaignId, [
+    "posters",
+    "videos",
+    "billboards",
+    "activities",
+    "socialPosts",
+    "posterVersions",
+    "videoVersions",
+  ]);
   const isAdmin = isFullAdmin(session);
   const canScore = canScoreContent(session);
 

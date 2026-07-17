@@ -5,8 +5,9 @@ import { AdminItemActions } from "@/components/admin/admin-item-actions";
 import { AdminOwnerBadge } from "@/components/admin/admin-owner-badge";
 import { AdminPlanLabelsBadges } from "@/components/admin/admin-plan-labels-badges";
 import { ContentScoreControl } from "@/components/admin/content-score-control";
+import { SocialPlatformIcon, getSocialPlatformLabel } from "@/components/public/social-platform-icon";
 import { MediaThumbnail } from "@/components/ui/media-thumbnail";
-import type { SocialMediaPost } from "@/lib/types";
+import type { SocialMediaPost, SocialPlatform } from "@/lib/types";
 import { cn, formatPersianDate, formatPersianNumber, getStatusLabel } from "@/lib/utils";
 
 interface AdminSocialPostCompactCardProps {
@@ -48,8 +49,17 @@ export function AdminSocialPostCompactCard({
             </div>
           )}
           <div className="absolute top-1.5 right-1.5 flex flex-wrap gap-1 justify-end">
-            <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-              {getStatusLabel(post.platform)}
+            <Badge variant="outline" className="gap-1 text-[10px] px-1.5 py-0 bg-background/90">
+              {post.platform !== "site" ? (
+                <SocialPlatformIcon
+                  platform={post.platform as SocialPlatform}
+                  size="sm"
+                  className="h-3.5 w-3.5 rounded"
+                />
+              ) : null}
+              {post.platform === "site"
+                ? getStatusLabel(post.platform)
+                : getSocialPlatformLabel(post.platform as SocialPlatform)}
             </Badge>
           </div>
         </div>

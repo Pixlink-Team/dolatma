@@ -158,7 +158,7 @@ export function AdminSidebar() {
               <Link
                 key={item.href}
                 href={href}
-                prefetch={item.href === "/admin" ? false : undefined}
+                prefetch={false}
                 onClick={() => setMobileOpen(false)}
                 className={cn(
                   "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
@@ -167,8 +167,8 @@ export function AdminSidebar() {
                     : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                 )}
               >
-                <Icon className="h-4 w-4" />
-                {item.label}
+                <Icon className="h-4 w-4 shrink-0" />
+                <span className="truncate">{item.label}</span>
               </Link>
             );
           })}
@@ -187,6 +187,7 @@ export function AdminSidebar() {
                   <Link
                     key={item.href}
                     href={href}
+                    prefetch={false}
                     onClick={() => setMobileOpen(false)}
                     className={cn(
                       "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
@@ -195,8 +196,8 @@ export function AdminSidebar() {
                         : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                     )}
                   >
-                    <Icon className="h-4 w-4" />
-                    {item.label}
+                    <Icon className="h-4 w-4 shrink-0" />
+                    <span className="truncate">{item.label}</span>
                   </Link>
                 );
               })}
@@ -229,16 +230,16 @@ export function AdminSidebar() {
       <Button
         variant="outline"
         size="icon"
-        className="fixed top-4 right-4 z-50 lg:hidden"
+        className="fixed right-4 top-4 z-[80] lg:hidden"
         onClick={() => setMobileOpen(true)}
       >
         <Menu className="h-4 w-4" />
       </Button>
 
       {mobileOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden">
+        <div className="fixed inset-0 z-[80] lg:hidden">
           <div className="absolute inset-0 bg-black/50" onClick={() => setMobileOpen(false)} />
-          <aside className="absolute right-0 top-0 h-full w-64 bg-card border-l flex flex-col">
+          <aside className="absolute right-0 top-0 flex h-full w-64 flex-col border-l bg-card">
             <Button
               variant="ghost"
               size="icon"
@@ -252,7 +253,7 @@ export function AdminSidebar() {
         </div>
       )}
 
-      <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 lg:right-0 bg-card border-l">
+      <aside className="hidden lg:fixed lg:inset-y-0 lg:right-0 lg:z-[80] lg:flex lg:w-64 lg:flex-col border-l bg-card">
         <NavContent />
       </aside>
     </>

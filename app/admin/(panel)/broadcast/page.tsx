@@ -13,6 +13,6 @@ export default async function BroadcastPage({ searchParams }: PageProps) {
   const { campaignId } = await resolveAdminCampaignId(params.campaign);
   if (!campaignId) redirect("/admin/campaigns");
   await requireContributorAccess(campaignId, "broadcast");
-  const data = await getAdminData(campaignId);
+  const data = await getAdminData(campaignId, ["broadcastReports"]);
   return <BroadcastAdmin campaignId={campaignId} initialReports={data.broadcastReports ?? []} />;
 }

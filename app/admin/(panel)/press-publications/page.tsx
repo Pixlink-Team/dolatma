@@ -15,7 +15,7 @@ export default async function PressPublicationsPage({ searchParams }: PageProps)
   if (!campaignId) redirect("/admin/campaigns");
   await requireContributorAccess(campaignId, "activities");
   const [data, bulkProps] = await Promise.all([
-    getAdminData(campaignId),
+    getAdminData(campaignId, ["activities"]),
     getAdminBulkEditProps(),
   ]);
   return (

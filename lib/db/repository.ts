@@ -89,13 +89,66 @@ export async function pgGetCampaignById(id: string): Promise<CampaignSettings | 
   return rows[0] ? mapSettingsFromDb(rows[0]) : null;
 }
 
-export async function pgGetAdminData(campaignId: string, ownerUserId?: string | null) {
+export type AdminDataSection =
+  | "settings"
+  | "campaigns"
+  | "billboards"
+  | "posterCategories"
+  | "posters"
+  | "posterVersions"
+  | "videoCategories"
+  | "videos"
+  | "videoVersions"
+  | "analytics"
+  | "submissions"
+  | "files"
+  | "socialPosts"
+  | "broadcastReports"
+  | "socialPlatformStats"
+  | "meetings"
+  | "activities"
+  | "rawMedia";
+
+const ALL_ADMIN_DATA_SECTIONS: AdminDataSection[] = [
+  "settings",
+  "campaigns",
+  "billboards",
+  "posterCategories",
+  "posters",
+  "posterVersions",
+  "videoCategories",
+  "videos",
+  "videoVersions",
+  "analytics",
+  "submissions",
+  "files",
+  "socialPosts",
+  "broadcastReports",
+  "socialPlatformStats",
+  "meetings",
+  "activities",
+  "rawMedia",
+];
+
+export async function pgGetAdminData(
+  campaignId: string,
+  ownerUserId?: string | null,
+  sections?: AdminDataSection[]
+) {
   const sql = getSql();
+  const want = new Set(sections?.length ? sections : ALL_ADMIN_DATA_SECTIONS);
+  // Settings are required for almost every admin page (plans/topics/features).
+  want.add("settings");
+
   // Qualify column so JOIN aliases never leak other owners' rows.
   const ownerFilter =
     ownerUserId === undefined
       ? sql``
       : sql`AND owner_user_id IS NOT DISTINCT FROM ${ownerUserId}`;
+
+  const emptyRows = Promise.resolve([] as Record<string, unknown>[]);
+  const emptyMeetings = Promise.resolve([] as Awaited<ReturnType<typeof pgGetMeetingsWithTasks>>);
+  const emptyActivities = Promise.resolve([] as Awaited<ReturnType<typeof pgGetCampaignActivities>>);
 
   const [
     campaigns,
@@ -117,104 +170,136 @@ export async function pgGetAdminData(campaignId: string, ownerUserId?: string | 
     activities,
     rawMedia,
   ] = await Promise.all([
-    sql`SELECT * FROM campaign_settings ORDER BY updated_at DESC`,
-    sql`SELECT * FROM campaign_settings WHERE id = ${campaignId} LIMIT 1`,
-    sql`
+    want.has("campaigns")
+      ? sql`SELECT * FROM campaign_settings ORDER BY updated_at DESC`
+      : emptyRows,
+    want.has("settings")
+      ? sql`SELECT * FROM campaign_settings WHERE id = ${campaignId} LIMIT 1`
+      : emptyRows,
+    want.has("billboards")
+      ? sql`
       SELECT b.*, u.name AS owner_name, u.province AS owner_province, u.city AS owner_city
       FROM billboards b
       LEFT JOIN users u ON u.id = b.owner_user_id
       WHERE b.campaign_id = ${campaignId}
       ${ownerFilter}
       ORDER BY b.sort_order
-    `,
-    sql`SELECT * FROM media_categories WHERE campaign_id = ${campaignId} AND type = 'poster' ORDER BY sort_order`,
-    sql`
+    `
+      : emptyRows,
+    want.has("posterCategories")
+      ? sql`SELECT * FROM media_categories WHERE campaign_id = ${campaignId} AND type = 'poster' ORDER BY sort_order`
+      : emptyRows,
+    want.has("posters")
+      ? sql`
       SELECT p.*, u.name AS owner_name, u.province AS owner_province, u.city AS owner_city
       FROM posters p
       LEFT JOIN users u ON u.id = p.owner_user_id
       WHERE p.campaign_id = ${campaignId}
       ${ownerFilter}
       ORDER BY p.sort_order
-    `,
-    sql`
+    `
+      : emptyRows,
+    want.has("posterVersions")
+      ? sql`
       SELECT pv.* FROM poster_versions pv
       INNER JOIN posters p ON p.id = pv.poster_id
       WHERE p.campaign_id = ${campaignId}
       ${ownerUserId === undefined ? sql`` : sql`AND p.owner_user_id IS NOT DISTINCT FROM ${ownerUserId}`}
-    `,
-    sql`SELECT * FROM media_categories WHERE campaign_id = ${campaignId} AND type = 'video' ORDER BY sort_order`,
-    sql`
+    `
+      : emptyRows,
+    want.has("videoCategories")
+      ? sql`SELECT * FROM media_categories WHERE campaign_id = ${campaignId} AND type = 'video' ORDER BY sort_order`
+      : emptyRows,
+    want.has("videos")
+      ? sql`
       SELECT v.*, u.name AS owner_name, u.province AS owner_province, u.city AS owner_city
       FROM videos v
       LEFT JOIN users u ON u.id = v.owner_user_id
       WHERE v.campaign_id = ${campaignId}
       ${ownerFilter}
       ORDER BY v.sort_order
-    `,
-    sql`
+    `
+      : emptyRows,
+    want.has("videoVersions")
+      ? sql`
       SELECT vv.* FROM video_versions vv
       INNER JOIN videos v ON v.id = vv.video_id
       WHERE v.campaign_id = ${campaignId}
       ${ownerUserId === undefined ? sql`` : sql`AND v.owner_user_id IS NOT DISTINCT FROM ${ownerUserId}`}
-    `,
-    sql`
+    `
+      : emptyRows,
+    want.has("analytics")
+      ? sql`
       SELECT a.*, u.name AS owner_name, u.province AS owner_province, u.city AS owner_city
       FROM analytics_metrics a
       LEFT JOIN users u ON u.id = a.owner_user_id
       WHERE a.campaign_id = ${campaignId}
       ${ownerFilter}
       ORDER BY a.date DESC
-    `,
-    sql`
+    `
+      : emptyRows,
+    want.has("submissions")
+      ? sql`
       SELECT s.*, u.name AS owner_name, u.province AS owner_province, u.city AS owner_city
       FROM campaign_submissions s
       LEFT JOIN users u ON u.id = s.owner_user_id
       WHERE s.campaign_id = ${campaignId}
       ${ownerFilter}
       ORDER BY s.created_at DESC
-    `,
-    sql`
+    `
+      : emptyRows,
+    want.has("files")
+      ? sql`
       SELECT f.*, u.name AS owner_name, u.province AS owner_province, u.city AS owner_city
       FROM campaign_files f
       LEFT JOIN users u ON u.id = f.owner_user_id
       WHERE f.campaign_id = ${campaignId}
       ${ownerFilter}
       ORDER BY f.sort_order
-    `,
-    sql`
+    `
+      : emptyRows,
+    want.has("socialPosts")
+      ? sql`
       SELECT sp.*, u.name AS owner_name, u.province AS owner_province, u.city AS owner_city
       FROM social_media_posts sp
       LEFT JOIN users u ON u.id = sp.owner_user_id
       WHERE sp.campaign_id = ${campaignId}
       ${ownerUserId === undefined ? sql`` : sql`AND sp.owner_user_id IS NOT DISTINCT FROM ${ownerUserId}`}
       ORDER BY sp.sort_order
-    `,
-    sql`
+    `
+      : emptyRows,
+    want.has("broadcastReports")
+      ? sql`
       SELECT br.*, u.name AS owner_name, u.province AS owner_province, u.city AS owner_city
       FROM broadcast_reports br
       LEFT JOIN users u ON u.id = br.owner_user_id
       WHERE br.campaign_id = ${campaignId}
       ${ownerUserId === undefined ? sql`` : sql`AND br.owner_user_id IS NOT DISTINCT FROM ${ownerUserId}`}
       ORDER BY br.sort_order
-    `,
-    sql`
+    `
+      : emptyRows,
+    want.has("socialPlatformStats")
+      ? sql`
       SELECT sps.*, u.name AS owner_name, u.province AS owner_province, u.city AS owner_city
       FROM social_platform_stats sps
       LEFT JOIN users u ON u.id = sps.owner_user_id
       WHERE sps.campaign_id = ${campaignId}
       ${ownerUserId === undefined ? sql`` : sql`AND sps.owner_user_id IS NOT DISTINCT FROM ${ownerUserId}`}
       ORDER BY sps.sort_order, sps.platform
-    `,
-    pgGetMeetingsWithTasks(campaignId, { ownerUserId }),
-    pgGetCampaignActivities(campaignId, ownerUserId),
-    sql`
+    `
+      : emptyRows,
+    want.has("meetings") ? pgGetMeetingsWithTasks(campaignId, { ownerUserId }) : emptyMeetings,
+    want.has("activities") ? pgGetCampaignActivities(campaignId, ownerUserId) : emptyActivities,
+    want.has("rawMedia")
+      ? sql`
       SELECT r.*, u.name AS owner_name, u.province AS owner_province, u.city AS owner_city
       FROM raw_media_uploads r
       LEFT JOIN users u ON u.id = r.owner_user_id
       WHERE r.campaign_id = ${campaignId}
       ${ownerFilter}
       ORDER BY r.sort_order, r.created_at DESC
-    `,
+    `
+      : emptyRows,
   ]);
 
   return {

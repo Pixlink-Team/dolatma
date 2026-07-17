@@ -1,7 +1,11 @@
 "use client";
 
 import { useMemo } from "react";
-import type { DataOwnerGroup, SocialMediaPost } from "@/lib/types";
+import {
+  SocialPlatformIcon,
+  getSocialPlatformLabel,
+} from "@/components/public/social-platform-icon";
+import type { DataOwnerGroup, SocialMediaPost, SocialPlatform } from "@/lib/types";
 import { formatPersianDate, formatPersianNumber, getStatusLabel } from "@/lib/utils";
 import { OwnerGroupedSection } from "@/components/public/owner-grouped-section";
 import { CollapsibleSection } from "@/components/public/collapsible-section";
@@ -106,8 +110,17 @@ function SocialPostCard({ post }: { post: SocialMediaPost }) {
         <SocialPostCover post={post} />
         <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-2 pt-6">
           <div className="flex flex-wrap items-center gap-1">
-            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 text-white bg-white/20 border-0">
-              {getStatusLabel(post.platform)}
+            <Badge variant="secondary" className="gap-1 text-[10px] px-1.5 py-0 text-white bg-white/20 border-0">
+              {post.platform !== "site" ? (
+                <SocialPlatformIcon
+                  platform={post.platform as SocialPlatform}
+                  size="sm"
+                  className="h-3.5 w-3.5 rounded"
+                />
+              ) : null}
+              {post.platform === "site"
+                ? getStatusLabel(post.platform)
+                : getSocialPlatformLabel(post.platform as SocialPlatform)}
             </Badge>
             <Badge variant="secondary" className="text-[10px] px-1.5 py-0 text-white bg-white/20 border-0">
               {getStatusLabel(post.contentType)}

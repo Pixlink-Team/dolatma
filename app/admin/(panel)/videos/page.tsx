@@ -17,14 +17,15 @@ export default async function VideosPage({ searchParams }: PageProps) {
   if (!campaignId) redirect("/admin/campaigns");
   const session = await getAuthSession();
   const canScore = Boolean(session && canScoreContent(session));
+  const videoSections = ["videos", "videoCategories", "videoVersions"] as const;
   const [initialData, bulkProps] = await Promise.all([
-    getAdminData(campaignId),
+    getAdminData(campaignId, [...videoSections]),
     getAdminBulkEditProps(),
   ]);
   let data = initialData;
   const seeded = await ensureVideoTypeCategories(campaignId, data.videoCategories);
   if (seeded) {
-    data = await getAdminData(campaignId);
+    data = await getAdminData(campaignId, [...videoSections]);
   }
   return (
     <VideosAdmin

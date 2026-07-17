@@ -11,6 +11,6 @@ export default async function AnalyticsPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const { campaignId } = await resolveAdminCampaignId(params.campaign);
   if (!campaignId) redirect("/admin/campaigns");
-  const data = await getAdminData(campaignId);
+  const data = await getAdminData(campaignId, ["analytics"]);
   return <AnalyticsAdmin campaignId={campaignId} initialMetrics={data.analytics} />;
 }

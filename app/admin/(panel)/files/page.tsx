@@ -20,7 +20,7 @@ export default async function FilesPage({ searchParams }: FilesPageProps) {
   const session = await getAuthSession();
   const canScore = Boolean(session && canScoreContent(session));
   const [data, bulkProps] = await Promise.all([
-    getAdminData(campaignId),
+    getAdminData(campaignId, ["files"]),
     getAdminBulkEditProps(),
   ]);
   if (!data.settings) redirect("/admin/campaigns");

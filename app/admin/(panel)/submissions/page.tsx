@@ -13,6 +13,6 @@ export default async function SubmissionsPage({ searchParams }: PageProps) {
   const { campaignId } = await resolveAdminCampaignId(params.campaign);
   if (!campaignId) redirect("/admin/campaigns");
   await requireContributorAccess(campaignId, "submissions");
-  const data = await getAdminData(campaignId);
+  const data = await getAdminData(campaignId, ["submissions"]);
   return <SubmissionsAdmin campaignId={campaignId} initialSubmissions={data.submissions} />;
 }

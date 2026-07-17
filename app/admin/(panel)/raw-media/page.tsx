@@ -20,7 +20,7 @@ export default async function RawMediaPage({ searchParams }: RawMediaPageProps) 
   const session = await getAuthSession();
   const canScore = Boolean(session && canScoreContent(session));
   const [data, bulkProps] = await Promise.all([
-    getAdminData(campaignId),
+    getAdminData(campaignId, ["rawMedia"]),
     getAdminBulkEditProps(),
   ]);
   if (!data.settings) redirect("/admin/campaigns");
