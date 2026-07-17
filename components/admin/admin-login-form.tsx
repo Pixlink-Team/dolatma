@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { createClient } from "@/lib/supabase/client";
 import { loginAdminAction } from "@/lib/actions/auth-actions";
 import { isSupabaseConfigured } from "@/lib/utils";
-import { Loader2 } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 
 type CardTiltState = {
   rotateX: number;
@@ -39,6 +39,7 @@ function isNextRedirectError(error: unknown): boolean {
 export function AdminLoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [motionEnabled, setMotionEnabled] = useState(false);
@@ -167,17 +168,27 @@ export function AdminLoginForm() {
                 >
                   رمز عبور
                 </Label>
-                <input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  minLength={4}
-                  placeholder="رمز عبور خود را وارد کنید"
-                  autoComplete="current-password"
-                  className="h-[52px] w-full rounded-2xl border border-white/30 bg-white/10 px-4 py-3 text-right text-base text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18)] outline-none backdrop-blur-sm transition placeholder:text-white/45 focus:border-white/50 focus:bg-white/14 focus:ring-4 focus:ring-[#0A84FF]/20"
-                />
+                <div className="relative">
+                  <input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    minLength={4}
+                    placeholder="رمز عبور خود را وارد کنید"
+                    autoComplete="current-password"
+                    className="h-[52px] w-full rounded-2xl border border-white/30 bg-white/10 py-3 pl-12 pr-4 text-right text-base text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18)] outline-none backdrop-blur-sm transition placeholder:text-white/45 focus:border-white/50 focus:bg-white/14 focus:ring-4 focus:ring-[#0A84FF]/20"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((current) => !current)}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-white/70 transition hover:bg-white/10 hover:text-white"
+                    aria-label={showPassword ? "مخفی کردن رمز عبور" : "نمایش رمز عبور"}
+                  >
+                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  </button>
+                </div>
               </div>
 
               {errorMessage ? (
