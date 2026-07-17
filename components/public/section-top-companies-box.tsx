@@ -61,9 +61,9 @@ export function SectionTopCompaniesBox({
         {companies.map((company, index) => (
           <div
             key={company.key}
-            className="flex items-start gap-2 rounded-lg border bg-card px-3 py-2"
+            className="flex items-center gap-2 rounded-lg border bg-card px-3 py-2"
           >
-            <Badge variant="secondary" className="mt-0.5 shrink-0 tabular-nums">
+            <Badge variant="secondary" className="shrink-0 tabular-nums">
               {formatPersianNumber(index + 1)}
             </Badge>
             <div className="min-w-0 flex-1">
