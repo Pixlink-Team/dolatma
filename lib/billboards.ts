@@ -6,14 +6,12 @@ import {
   mapIntegrationBillboardToBillboard,
 } from "@/lib/services/billboard-api";
 import { matchOwnerToUser } from "@/lib/services/owner-user-match";
-import { isoFromGregorian } from "@/lib/jalali";
-import { getSafeUploadTimestamp, isSameDay } from "@/lib/safe-dates";
+import {
+  getSafeCreatedTimestamp,
+  getTehranCalendarDateIso,
+  isSameDay,
+} from "@/lib/safe-dates";
 import type { AdminUser, Billboard, CampaignSettings } from "@/lib/types";
-
-function todayIso(): string {
-  const date = new Date();
-  return isoFromGregorian(date.getFullYear(), date.getMonth() + 1, date.getDate());
-}
 
 export {
   BILLBOARD_PLACEHOLDER_IMAGE,
@@ -66,12 +64,12 @@ export function isApiBillboard(billboard: Billboard): boolean {
 /** Live API billboards are re-mapped with createdAt=now on every fetch. */
 export function countsAsTodayBillboardUpload(billboard: Billboard): boolean {
   if (isLiveApiBillboard(billboard)) return false;
-  return isSameDay(getSafeUploadTimestamp(billboard), todayIso());
+  return isSameDay(getSafeCreatedTimestamp(billboard), getTehranCalendarDateIso());
 }
 
 export function getBillboardUploadActivityDate(billboard: Billboard): string {
   if (isLiveApiBillboard(billboard)) return "";
-  return getSafeUploadTimestamp(billboard);
+  return getSafeCreatedTimestamp(billboard);
 }
 
 export function billboardBelongsToUser(

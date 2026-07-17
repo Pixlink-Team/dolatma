@@ -1,7 +1,10 @@
-import { isoFromGregorian } from "@/lib/jalali";
 import { normalizeImportedProvince } from "@/lib/iran-locations";
 import { countsAsTodayBillboardUpload } from "@/lib/billboards";
-import { getSafeUploadTimestamp, isSameDay } from "@/lib/safe-dates";
+import {
+  getSafeCreatedTimestamp,
+  getTehranCalendarDateIso,
+  isSameDay,
+} from "@/lib/safe-dates";
 import type { Billboard, Ownable, PublicCampaignData } from "@/lib/types";
 
 export interface ProvinceLeaderboardMetrics {
@@ -57,8 +60,7 @@ const SCORE_WEIGHTS = {
 type MetricField = keyof typeof SCORE_WEIGHTS;
 
 function todayIso(): string {
-  const date = new Date();
-  return isoFromGregorian(date.getFullYear(), date.getMonth() + 1, date.getDate());
+  return getTehranCalendarDateIso();
 }
 
 function resolveProvince(item: Ownable & { province?: string | null }): string {
@@ -110,7 +112,7 @@ function countsAsTodayUpload<T extends Ownable & { createdAt?: string | null }>(
   if (field === "billboards" && "id" in item) {
     return countsAsTodayBillboardUpload(item as unknown as Billboard);
   }
-  return isSameDay(getSafeUploadTimestamp(item), todayIso());
+  return isSameDay(getSafeCreatedTimestamp(item), todayIso());
 }
 
 function addItem<T extends Ownable & { createdAt?: string | null; province?: string | null }>(

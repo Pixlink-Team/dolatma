@@ -1,6 +1,9 @@
-import { isoFromGregorian } from "@/lib/jalali";
 import { getBillboardUploadActivityDate } from "@/lib/billboards";
-import { safeDatePrefix } from "@/lib/safe-dates";
+import {
+  getSafeCreatedTimestamp,
+  getTehranOffsetDateIso,
+  timestampToTehranDateIso,
+} from "@/lib/safe-dates";
 import type { PublicCampaignData } from "@/lib/types";
 
 export interface UploadActivityPoint {
@@ -40,14 +43,8 @@ function emptyPoint(date: string): UploadActivityPoint {
   };
 }
 
-function offsetDate(days: number): string {
-  const date = new Date();
-  date.setDate(date.getDate() + days);
-  return isoFromGregorian(date.getFullYear(), date.getMonth() + 1, date.getDate());
-}
-
 function dateKey(value?: string | null): string {
-  return safeDatePrefix(value);
+  return timestampToTehranDateIso(value);
 }
 
 type UploadField = Exclude<keyof UploadActivityPoint, "date" | "total">;
@@ -64,26 +61,26 @@ export function buildUploadActivityStats(data: PublicCampaignData, days = 14): U
     buckets.set(date, point);
   };
 
-  for (const poster of data.posters) add(poster.createdAt, "posters");
-  for (const video of data.videos) add(video.createdAt, "videos");
+  for (const poster of data.posters) add(getSafeCreatedTimestamp(poster), "posters");
+  for (const video of data.videos) add(getSafeCreatedTimestamp(video), "videos");
   for (const billboard of data.billboards) {
     const activityDate = getBillboardUploadActivityDate(billboard);
     if (activityDate) add(activityDate, "billboards");
   }
-  for (const post of data.socialPosts) add(post.createdAt, "socialPosts");
-  for (const post of data.sitePublications) add(post.createdAt, "sitePublications");
-  for (const activity of data.activities) add(activity.createdAt, "activities");
-  for (const activity of data.pressPublications) add(activity.createdAt, "activities");
-  for (const report of data.broadcastReports) add(report.createdAt, "broadcastReports");
+  for (const post of data.socialPosts) add(getSafeCreatedTimestamp(post), "socialPosts");
+  for (const post of data.sitePublications) add(getSafeCreatedTimestamp(post), "sitePublications");
+  for (const activity of data.activities) add(getSafeCreatedTimestamp(activity), "activities");
+  for (const activity of data.pressPublications) add(getSafeCreatedTimestamp(activity), "activities");
+  for (const report of data.broadcastReports) add(getSafeCreatedTimestamp(report), "broadcastReports");
   for (const meeting of data.meetings) add(meeting.meetingDate, "meetings");
-  for (const file of data.files) add(file.createdAt, "files");
+  for (const file of data.files) add(getSafeCreatedTimestamp(file), "files");
 
-  const today = offsetDate(0);
-  const yesterday = offsetDate(-1);
+  const today = getTehranOffsetDateIso(0);
+  const yesterday = getTehranOffsetDateIso(-1);
 
   const series: UploadActivityPoint[] = [];
   for (let index = days - 1; index >= 0; index -= 1) {
-    const date = offsetDate(-index);
+    const date = getTehranOffsetDateIso(-index);
     series.push(buckets.get(date) ?? emptyPoint(date));
   }
 

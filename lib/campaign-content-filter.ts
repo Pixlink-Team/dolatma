@@ -1,4 +1,3 @@
-import { isoFromGregorian } from "@/lib/jalali";
 import type { Ownable } from "@/lib/types";
 import {
   isOwnerFilterActive,
@@ -7,6 +6,7 @@ import {
   type CampaignContentSort,
   type OwnerLocationFilter,
 } from "@/lib/owner-location-filter";
+import { getTehranOffsetDateIso } from "@/lib/safe-dates";
 
 export function isDateFilterActive(filter: OwnerLocationFilter): boolean {
   return filter.datePreset !== OWNER_DATE_ALL;
@@ -17,12 +17,9 @@ export function isCampaignContentFilterActive(filter: OwnerLocationFilter): bool
 }
 
 function rollingDayRange(dayCountInclusive: number): { from: string; to: string } {
-  const end = new Date();
-  const start = new Date(end);
-  start.setDate(end.getDate() - (dayCountInclusive - 1));
   return {
-    from: isoFromGregorian(start.getFullYear(), start.getMonth() + 1, start.getDate()),
-    to: isoFromGregorian(end.getFullYear(), end.getMonth() + 1, end.getDate()),
+    from: getTehranOffsetDateIso(-(dayCountInclusive - 1)),
+    to: getTehranOffsetDateIso(0),
   };
 }
 

@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "3af0cdb227872718318210d8850cfba34773d0d1",
+      "committedAt": "2026-07-17T18:11:01+03:30",
+      "title": "محدود کردن دسترسی عمومی به فایل‌های آپلود شده",
+      "subject": "Require signed tokens or session for uploaded files"
+    },
+    {
       "hash": "1e34354fe4755dc432adb58ee9a862b5d06b9fa6",
       "committedAt": "2026-07-17T18:04:25+03:30",
       "title": "امن‌سازی کلید مخفی ورود سیستم",
