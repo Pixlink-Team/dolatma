@@ -48,7 +48,7 @@ function mapAudienceType(value: unknown): DirectiveAudienceType {
   return "all";
 }
 
-function mapAudienceCities(value: unknown): string[] {
+function mapAudienceProvinces(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
   return value
     .map((item) => String(item ?? "").trim())
@@ -121,7 +121,7 @@ function mapDirectiveRow(
     audienceMinistryName: row.audience_ministry_name
       ? String(row.audience_ministry_name)
       : null,
-    audienceCities: mapAudienceCities(row.audience_cities),
+    audienceProvinces: mapAudienceProvinces(row.audience_cities),
     published: Boolean(row.published),
     publishedAt: toIsoString(row.published_at),
     sortOrder: Number(row.sort_order ?? 0),
@@ -204,7 +204,7 @@ export async function pgResolveDirectiveAudienceUserIds(input: {
   audienceType: DirectiveAudienceType;
   audienceRegion?: UserRegion | null;
   audienceMinistryId?: string | null;
-  audienceCities?: string[];
+  audienceProvinces?: string[];
   selectedUserIds?: string[];
 }): Promise<string[]> {
   const users = await pgListCampaignUsersForDirectives(input.campaignId);
@@ -222,18 +222,18 @@ export async function pgResolveDirectiveAudienceUserIds(input: {
 
   if (input.audienceType === "ministry_city") {
     const ministryId = input.audienceMinistryId?.trim();
-    const cities = (input.audienceCities ?? [])
-      .map((city) => city.trim())
+    const provinces = (input.audienceProvinces ?? [])
+      .map((province) => province.trim())
       .filter(Boolean);
-    if (!ministryId || cities.length === 0) return [];
+    if (!ministryId || provinces.length === 0) return [];
 
-    const citySet = new Set(cities.map((city) => city.toLowerCase()));
+    const provinceSet = new Set(provinces.map((province) => province.toLowerCase()));
     return users
       .filter((user) => {
         if (user.ministryId !== ministryId) return false;
         // Parent of the ministry always receives ministry-scoped directives.
         if (user.role === "ministry_parent") return true;
-        return Boolean(user.city && citySet.has(user.city.toLowerCase()));
+        return Boolean(user.province && provinceSet.has(user.province.toLowerCase()));
       })
       .map((user) => user.id);
   }
@@ -391,7 +391,7 @@ export interface SaveDirectiveInput {
   audienceType: DirectiveAudienceType;
   audienceRegion?: UserRegion | null;
   audienceMinistryId?: string | null;
-  audienceCities?: string[];
+  audienceProvinces?: string[];
   published?: boolean;
   attachments?: Array<{
     id?: string;
@@ -419,9 +419,9 @@ export async function pgSaveDirective(input: SaveDirectiveInput): Promise<{ id: 
     input.audienceType === "region" ? (input.audienceRegion ?? null) : null;
   const audienceMinistryId =
     input.audienceType === "ministry_city" ? (input.audienceMinistryId?.trim() || null) : null;
-  const audienceCities =
+  const audienceProvinces =
     input.audienceType === "ministry_city"
-      ? (input.audienceCities ?? []).map((city) => city.trim()).filter(Boolean)
+      ? (input.audienceProvinces ?? []).map((province) => province.trim()).filter(Boolean)
       : [];
 
   const existing = input.id
@@ -458,7 +458,7 @@ export async function pgSaveDirective(input: SaveDirectiveInput): Promise<{ id: 
       ${input.audienceType},
       ${audienceRegion},
       ${audienceMinistryId},
-      ${audienceCities},
+      ${audienceProvinces},
       ${published},
       ${publishedAt},
       0,
@@ -523,7 +523,7 @@ export async function pgSaveDirective(input: SaveDirectiveInput): Promise<{ id: 
         audienceType: input.audienceType,
         audienceRegion,
         audienceMinistryId,
-        audienceCities,
+        audienceProvinces,
         selectedUserIds: input.selectedUserIds,
       })
     : [];

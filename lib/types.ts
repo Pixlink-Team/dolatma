@@ -423,8 +423,11 @@ export interface CampaignDirective {
   /** Target ministry when audienceType is ministry_city. */
   audienceMinistryId?: string | null;
   audienceMinistryName?: string | null;
-  /** Target cities when audienceType is ministry_city. */
-  audienceCities?: string[];
+  /**
+   * Target provinces when audienceType is ministry_city.
+   * Stored in DB column `audience_cities` (legacy name).
+   */
+  audienceProvinces?: string[];
   published: boolean;
   publishedAt?: string | null;
   sortOrder: number;

@@ -150,6 +150,7 @@ export async function saveDirectiveAction(input: {
   audienceType: DirectiveAudienceType;
   audienceRegion?: UserRegion | null;
   audienceMinistryId?: string | null;
+  audienceProvinces?: string[];
   audienceCities?: string[];
   selectedUserIds?: string[];
   sendSmsOnPublish?: boolean;
@@ -192,8 +193,9 @@ export async function saveDirectiveAction(input: {
     if (!input.audienceMinistryId?.trim()) {
       return { success: false as const, error: "وزارتخانه مخاطب را انتخاب کنید" };
     }
-    if (!(input.audienceCities?.length)) {
-      return { success: false as const, error: "حداقل یک شهر را انتخاب کنید" };
+    const provinces = input.audienceProvinces ?? input.audienceCities ?? [];
+    if (!provinces.length) {
+      return { success: false as const, error: "حداقل یک استان را انتخاب کنید" };
     }
   }
 
@@ -254,7 +256,7 @@ export async function saveDirectiveAction(input: {
     audienceType: cleaned.audienceType,
     audienceRegion: cleaned.audienceRegion,
     audienceMinistryId: cleaned.audienceMinistryId,
-    audienceCities: cleaned.audienceCities,
+    audienceProvinces: cleaned.audienceProvinces ?? cleaned.audienceCities,
     published: true,
     selectedUserIds: cleaned.selectedUserIds,
   });
