@@ -267,7 +267,7 @@ export function MediaUpload({
         className={cn(
           "rounded-xl border-2 border-dashed transition-colors",
           isCardDropzone
-            ? "relative mx-auto w-fit max-w-full cursor-pointer overflow-hidden p-0"
+            ? "relative w-full cursor-pointer overflow-hidden p-0"
             : "p-3",
           dropzone && isDragging && "border-primary bg-primary/5",
           !dropzone && "border-transparent p-0"

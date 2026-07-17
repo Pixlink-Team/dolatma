@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "d736ecb0ce4fe5cdc105dbb88fc0e2844e2a4e78",
+      "committedAt": "2026-07-17T17:37:02+03:30",
+      "title": "بازگرداندن مودال کامل ثبت پوستر و ویدیو با فرم داده‌ها",
+      "subject": "Restore full poster/video editor modal on create"
+    },
+    {
       "hash": "ab5e00004ef6099fea88b6895a7be98a30fb874f",
       "committedAt": "2026-07-17T17:30:08+03:30",
       "title": "بازگرداندن مودال آپلود پوستر و ویدیو با کشیدن و رها کردن",

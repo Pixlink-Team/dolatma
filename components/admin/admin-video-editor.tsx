@@ -252,7 +252,7 @@ export function AdminVideoEditor({
           dropzoneContent={
             <div
               className={cn(
-                "relative aspect-video w-full min-w-[min(100%,28rem)] overflow-hidden rounded-[10px] bg-muted",
+                "relative aspect-video w-full overflow-hidden rounded-[10px] bg-muted",
                 highlightMedia && "ring-2 ring-destructive ring-offset-2"
               )}
             >
@@ -270,8 +270,8 @@ export function AdminVideoEditor({
                 )
               ) : (
                 <div className="flex h-full flex-col items-center justify-center gap-2 px-3 text-center text-sm text-muted-foreground">
-                  <VideoIcon className="h-8 w-8" />
-                  <span className="text-xs">ویدیو را بکشید و رها کنید یا انتخاب کنید</span>
+                  <VideoIcon className="h-10 w-10" />
+                  <span className="text-sm">ویدیو را بکشید و رها کنید یا انتخاب کنید</span>
                   <span className="inline-flex items-center gap-1.5 rounded-md border bg-background px-3 py-1.5 text-xs font-medium text-foreground shadow-sm">
                     <Upload className="h-3.5 w-3.5" />
                     انتخاب ویدیو

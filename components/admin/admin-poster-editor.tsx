@@ -168,7 +168,7 @@ export function AdminPosterEditor({
           dropzoneContent={
             <div
               className={cn(
-                "relative aspect-[3/4] h-80 max-h-80 w-auto max-w-full overflow-hidden rounded-[10px] bg-muted sm:w-60",
+                "relative h-72 w-full overflow-hidden rounded-[10px] bg-muted sm:h-80",
                 highlightMedia && "ring-2 ring-destructive ring-offset-2"
               )}
             >
@@ -182,8 +182,8 @@ export function AdminPosterEditor({
                 />
               ) : (
                 <div className="flex h-full flex-col items-center justify-center gap-2 px-3 text-center text-sm text-muted-foreground">
-                  <ImageIcon className="h-8 w-8" />
-                  <span className="text-xs">تصویر را بکشید و رها کنید یا انتخاب کنید</span>
+                  <ImageIcon className="h-10 w-10" />
+                  <span className="text-sm">تصویر را بکشید و رها کنید یا انتخاب کنید</span>
                   <span className="inline-flex items-center gap-1.5 rounded-md border bg-background px-3 py-1.5 text-xs font-medium text-foreground shadow-sm">
                     <Upload className="h-3.5 w-3.5" />
                     انتخاب تصویر
