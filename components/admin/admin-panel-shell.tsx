@@ -87,7 +87,7 @@ function PanelChrome({
       <main className="min-h-screen lg:mr-64">
         <div className="container mx-auto px-4 py-8 pt-16 lg:pt-8">{children}</div>
       </main>
-      <ScrollToTopButton />
+      <ScrollToTopButton clearProblemReport />
     </div>
   );
 }

@@ -9,9 +9,18 @@ interface ScrollToTopButtonProps {
   /** Pixels scrolled before the button appears */
   threshold?: number;
   className?: string;
+  /**
+   * Lift the button above the fixed "گزارش مشکل" control
+   * so the two never overlap on admin pages.
+   */
+  clearProblemReport?: boolean;
 }
 
-export function ScrollToTopButton({ threshold = 480, className }: ScrollToTopButtonProps) {
+export function ScrollToTopButton({
+  threshold = 400,
+  className,
+  clearProblemReport = false,
+}: ScrollToTopButtonProps) {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
@@ -32,12 +41,17 @@ export function ScrollToTopButton({ threshold = 480, className }: ScrollToTopBut
       size="icon"
       variant="secondary"
       className={cn(
-        "apple-soft-pop fixed bottom-6 left-6 z-50 h-11 w-11 rounded-full border shadow-lg hover:-translate-y-1 hover:shadow-xl",
+        "apple-soft-pop fixed z-[70] h-11 w-11 rounded-full border shadow-lg hover:-translate-y-1 hover:shadow-xl",
+        clearProblemReport
+          ? "bottom-[4.75rem] left-5 lg:left-6"
+          : "bottom-6 left-6",
         className
       )}
       onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
       aria-label="بازگشت به بالای صفحه"
+      title="بازگشت به بالا"
       data-export-hide
+      data-audit-label="بازگشت به بالا"
     >
       <ArrowUp className="h-5 w-5" />
     </Button>

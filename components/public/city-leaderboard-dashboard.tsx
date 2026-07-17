@@ -11,6 +11,7 @@ import { SectionHeader } from "@/components/public/section-header";
 import { LeaderboardBillboardsModal } from "@/components/public/leaderboard-billboards-modal";
 import { UserContentScoreModal } from "@/components/public/user-content-score-modal";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { ScrollToTopButton } from "@/components/ui/scroll-to-top-button";
 import {
   buildProvinceContributorLeaderboard,
   buildProvinceLeaderboard,
@@ -504,6 +505,8 @@ export function CityLeaderboardDashboard({ data, slug }: CityLeaderboardDashboar
         title={billboardScope?.title ?? ""}
         billboards={scopedBillboards}
       />
+
+      <ScrollToTopButton />
     </div>
   );
 }

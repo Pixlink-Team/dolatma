@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "5557896533daac1c18da3a637d18dd22379eb95a",
+      "committedAt": "2026-07-17T17:07:21+03:30",
+      "title": "اصلاح نمایش مودال اعلان‌ها مثل بخش ویرایش محتوا",
+      "subject": "Fix notification preview modal layout to match content dialogs."
+    },
+    {
       "hash": "c49ebd3cd8bcf6f7718cc6ce636efd445f70a523",
       "committedAt": "2026-07-17T17:04:44+03:30",
       "title": "افزودن نمایش و مخفی کردن رمز عبور در فرم ورود",
