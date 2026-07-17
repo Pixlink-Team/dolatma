@@ -230,12 +230,33 @@ export function MediaUpload({
     kind === "image" && Boolean(value) && isLocalUploadedFileUrl(value);
   const hideImageLinkField = isLocalUploadedImage && !showLinkEditor;
   const showInlineInput = showLinkInput && !dropzoneContent;
+  const isCardDropzone = Boolean(dropzoneContent);
 
   return (
     <div className="space-y-2">
       {label && <Label>{label}</Label>}
 
       <div
+        role={isCardDropzone ? "button" : undefined}
+        tabIndex={isCardDropzone ? 0 : undefined}
+        onClick={
+          isCardDropzone
+            ? () => {
+                if (uploading || generatingCover) return;
+                inputRef.current?.click();
+              }
+            : undefined
+        }
+        onKeyDown={
+          isCardDropzone
+            ? (event) => {
+                if (event.key !== "Enter" && event.key !== " ") return;
+                event.preventDefault();
+                if (uploading || generatingCover) return;
+                inputRef.current?.click();
+              }
+            : undefined
+        }
         onDragOver={(event) => {
           if (!dropzone) return;
           event.preventDefault();
@@ -244,14 +265,26 @@ export function MediaUpload({
         onDragLeave={() => setIsDragging(false)}
         onDrop={dropzone ? handleDrop : undefined}
         className={cn(
-          "rounded-xl border-2 border-dashed p-3 transition-colors",
+          "rounded-xl border-2 border-dashed transition-colors",
+          isCardDropzone
+            ? "relative mx-auto w-fit max-w-full cursor-pointer overflow-hidden p-0"
+            : "p-3",
           dropzone && isDragging && "border-primary bg-primary/5",
           !dropzone && "border-transparent p-0"
         )}
       >
-        {dropzoneContent ? <div className="mb-3">{dropzoneContent}</div> : null}
+        {dropzoneContent ? (
+          <div className="relative w-full">
+            {dropzoneContent}
+            {(uploading || generatingCover) && (
+              <div className="absolute inset-0 flex items-center justify-center bg-background/60">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            )}
+          </div>
+        ) : null}
 
-        {showInlineInput && kind === "video" && !fileOnly ? (
+        {!isCardDropzone && showInlineInput && kind === "video" && !fileOnly ? (
           hideVideoLinkField ? null : (
             <Textarea
               value={value}
@@ -269,7 +302,7 @@ export function MediaUpload({
               className="min-h-24 font-mono text-xs"
             />
           )
-        ) : showInlineInput && hideImageLinkField ? null : showInlineInput ? (
+        ) : !isCardDropzone && showInlineInput && hideImageLinkField ? null : !isCardDropzone && showInlineInput ? (
           <div className="flex flex-col gap-2 sm:flex-row">
             {!(kind === "video" && isDirectVideo && fileOnly) && (
               <Input
@@ -293,7 +326,7 @@ export function MediaUpload({
           </div>
         ) : null}
 
-        {kind === "audio" && (
+        {!isCardDropzone && kind === "audio" && (
           <div className="mt-2">
             <Button
               type="button"
@@ -308,7 +341,7 @@ export function MediaUpload({
           </div>
         )}
 
-        {kind === "video" && fileOnly && !showInlineInput && (
+        {!isCardDropzone && kind === "video" && fileOnly && !showInlineInput && (
           <div className="flex flex-wrap items-center gap-2">
             <Button
               type="button"
@@ -341,7 +374,7 @@ export function MediaUpload({
           </div>
         )}
 
-        {kind === "image" && (isLocalUploadedImage || !showInlineInput) && (
+        {!isCardDropzone && kind === "image" && (isLocalUploadedImage || !showInlineInput) && (
           <div className={cn("flex flex-wrap items-center gap-2", hideImageLinkField ? "mt-0" : "mt-2")}>
             <Button
               type="button"
@@ -381,7 +414,7 @@ export function MediaUpload({
           </div>
         )}
 
-        {kind === "video" && !fileOnly && (
+        {!isCardDropzone && kind === "video" && !fileOnly && (
           <div className={cn("flex flex-wrap items-center gap-2", hideVideoLinkField ? "mt-0" : "mt-2")}>
             <Button
               type="button"
@@ -429,7 +462,8 @@ export function MediaUpload({
           </div>
         )}
 
-        {dropzone &&
+        {!isCardDropzone &&
+          dropzone &&
           (kind !== "video" || fileOnly) &&
           !(kind === "video" && isDirectVideo) &&
           !hideImageLinkField && (

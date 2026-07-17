@@ -168,7 +168,7 @@ export function AdminPosterEditor({
           dropzoneContent={
             <div
               className={cn(
-                "relative mx-auto aspect-[3/4] max-h-80 w-full max-w-xs overflow-hidden rounded-xl bg-muted",
+                "relative aspect-[3/4] h-80 max-h-80 w-auto max-w-full overflow-hidden rounded-[10px] bg-muted sm:w-60",
                 highlightMedia && "ring-2 ring-destructive ring-offset-2"
               )}
             >
@@ -177,14 +177,13 @@ export function AdminPosterEditor({
                   src={imageUrl}
                   alt={editTitle}
                   kind="poster"
-                  sizes="320px"
+                  sizes="100vw"
                   objectFit="contain"
                 />
               ) : (
                 <div className="flex h-full flex-col items-center justify-center gap-2 text-sm text-muted-foreground">
                   <ImageIcon className="h-8 w-8" />
                   <span>بدون تصویر</span>
-                  <span className="text-xs">تصویر پوستر را اینجا بکشید و رها کنید</span>
                 </div>
               )}
             </div>
