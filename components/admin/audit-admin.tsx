@@ -11,7 +11,6 @@ import {
   Radio,
   ShieldAlert,
   TriangleAlert,
-  Users,
 } from "lucide-react";
 import {
   Area,
@@ -212,33 +211,6 @@ function StatCard({
     </Card>
   );
 }
-
-const ACTIVE_TODAY_COLUMNS: AuditColumnDef<AuditActorSummary>[] = [
-  {
-    key: "user",
-    label: "کاربر",
-    render: (actor) => (
-      <UserCell name={actor.actorName} email={actor.actorEmail} online={actor.isOnline} />
-    ),
-  },
-  {
-    key: "role",
-    label: "نقش",
-    render: (actor) => <Badge variant="outline">{getAuditRoleLabel(actor.actorRole)}</Badge>,
-  },
-  {
-    key: "events",
-    label: "رویداد امروز",
-    className: "font-semibold",
-    render: (actor) => formatPersianNumber(actor.eventCount),
-  },
-  {
-    key: "last",
-    label: "آخرین فعالیت",
-    className: "text-xs text-muted-foreground",
-    render: (actor) => (actor.lastSeenAt ? formatPersianDateTime(actor.lastSeenAt) : "—"),
-  },
-];
 
 const USERS_COLUMNS: AuditColumnDef<AuditActorSummary>[] = [
   {
@@ -560,7 +532,6 @@ export function AuditAdmin({ data, databaseReady }: AuditAdminProps) {
           icon={TriangleAlert}
           hint="احتمال گیر کردن کاربر"
         />
-        <StatCard label="کاربران فعال امروز" value={summary.activeUsersToday} icon={Users} />
         <StatCard label="ورود امروز" value={summary.loginsToday} icon={LogIn} />
         <StatCard label="تغییرات محتوا امروز" value={summary.contentChangesToday} icon={FileStack} />
         <StatCard label="بازدید صفحه امروز" value={summary.pageViewsToday} icon={Navigation} />
@@ -593,9 +564,6 @@ export function AuditAdmin({ data, databaseReady }: AuditAdminProps) {
             {data.loginsTodayList.length === 0 ? (
               <p className="px-4 py-8 text-center text-sm text-muted-foreground">
                 امروز هنوز ورود جدیدی ثبت نشده است.
-                {data.activeUsersTodayList.length > 0
-                  ? " کاربران فعال احتمالاً با نشست قبلی وارد شده‌اند."
-                  : ""}
               </p>
             ) : (
               <div className="max-h-[360px] overflow-y-auto">
@@ -639,27 +607,6 @@ export function AuditAdmin({ data, databaseReady }: AuditAdminProps) {
                 </div>
               </div>
             )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Users className="h-4 w-4 text-primary" />
-              کاربران فعال امروز
-              <Badge variant="outline" className="mr-1">
-                {formatPersianNumber(summary.activeUsersToday)}
-              </Badge>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            <AuditDataTable
-              columns={ACTIVE_TODAY_COLUMNS}
-              rows={data.activeUsersTodayList}
-              getRowKey={(actor) => actor.actorKey}
-              emptyMessage="امروز هنوز فعالیتی ثبت نشده است."
-              minWidth="520px"
-            />
           </CardContent>
         </Card>
       </div>

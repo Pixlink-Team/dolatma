@@ -132,7 +132,6 @@ export interface AuditDashboardData {
     eventsToday: number;
     loginsToday: number;
     failedLoginsToday: number;
-    activeUsersToday: number;
     onlineUsers: number;
     openProblemReports: number;
     stuckSignals: number;
@@ -142,7 +141,6 @@ export interface AuditDashboardData {
   };
   dailySeries: AuditDailyPoint[];
   topActors: AuditActorSummary[];
-  activeUsersTodayList: AuditActorSummary[];
   loginsTodayList: AuditEvent[];
   onlineUsers: OnlineUser[];
   topActions: AuditActionSummary[];

@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "f3a536a49f27082b31a83c697bce08c9e3ce14ab",
+      "committedAt": "2026-07-17T19:35:27+03:30",
+      "title": "جمع‌وجور شدن ساعت و خوش‌آمدگویی در گوشه صفحه ورود",
+      "subject": "Refine login clock into a compact corner display"
+    },
+    {
       "hash": "8508cf789a67b82d731af093511e8e75dbe2ac7a",
       "committedAt": "2026-07-17T19:33:23+03:30",
       "title": "رفع قفل شدن بخش‌های داشبورد برای مدیر سیستم بعد از ورود",

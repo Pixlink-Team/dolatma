@@ -137,7 +137,6 @@ export async function pgGetAuditSummaryCounts() {
       eventsToday: 0,
       loginsToday: 0,
       failedLoginsToday: 0,
-      activeUsersToday: 0,
       onlineUsers: 0,
       contentChangesToday: 0,
       pageViewsToday: 0,
@@ -157,10 +156,6 @@ export async function pgGetAuditSummaryCounts() {
       COUNT(*) FILTER (
         WHERE action = 'auth.login_failed' AND created_at >= ${todayStart}
       )::int AS failed_logins_today,
-      COUNT(DISTINCT COALESCE(actor_user_id::text, NULLIF(actor_email, ''), NULLIF(actor_name, ''))) FILTER (
-        WHERE created_at >= ${todayStart}
-          AND action <> 'auth.login_failed'
-      )::int AS active_users_today,
       COUNT(DISTINCT COALESCE(actor_user_id::text, NULLIF(actor_email, ''), NULLIF(actor_name, ''))) FILTER (
         WHERE created_at >= now() - interval '5 minutes'
           AND action <> 'auth.login_failed'
@@ -183,7 +178,6 @@ export async function pgGetAuditSummaryCounts() {
     eventsToday: Number(row.events_today ?? 0),
     loginsToday: Number(row.logins_today ?? 0),
     failedLoginsToday: Number(row.failed_logins_today ?? 0),
-    activeUsersToday: Number(row.active_users_today ?? 0),
     onlineUsers: Number(row.online_users ?? 0),
     contentChangesToday: Number(row.content_changes_today ?? 0),
     pageViewsToday: Number(row.page_views_today ?? 0),
@@ -268,16 +262,11 @@ function mapAuditActorRow(row: Record<string, unknown>): AuditActorSummary {
   };
 }
 
-async function pgGetAuditActorSummaries(
-  limit: number,
-  options: { todayOnly?: boolean } = {}
-): Promise<AuditActorSummary[]> {
+async function pgGetAuditActorSummaries(limit: number): Promise<AuditActorSummary[]> {
   if (!isPostgresConfigured()) return [];
 
   const sql = getSql();
   const safeLimit = Math.min(Math.max(limit, 1), 50);
-  const todayOnly = options.todayOnly ?? false;
-  const todayStart = getTehranTodayStart();
   const rows = await sql`
     WITH ranked AS (
       SELECT
@@ -300,10 +289,6 @@ async function pgGetAuditActorSummaries(
       FROM user_audit_events e
       LEFT JOIN users u ON u.id = e.actor_user_id
       WHERE e.action NOT IN ('auth.login_failed', 'presence.heartbeat')
-        AND (
-          ${todayOnly}::boolean = false
-          OR e.created_at >= ${todayStart}
-        )
       GROUP BY
         COALESCE(e.actor_user_id::text, NULLIF(e.actor_email, ''), NULLIF(e.actor_name, ''), 'unknown'),
         e.actor_user_id
@@ -319,10 +304,6 @@ async function pgGetAuditActorSummaries(
 
 export async function pgGetAuditTopActors(limit = 10): Promise<AuditActorSummary[]> {
   return pgGetAuditActorSummaries(limit);
-}
-
-export async function pgGetActiveUsersToday(limit = 50): Promise<AuditActorSummary[]> {
-  return pgGetAuditActorSummaries(limit, { todayOnly: true });
 }
 
 export async function pgGetLoginsToday(limit = 50): Promise<AuditEvent[]> {
