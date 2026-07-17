@@ -21,8 +21,8 @@ export function AdminCompactAddCard({
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        "group w-full overflow-hidden rounded-xl border-2 border-dashed bg-muted/30 text-muted-foreground transition-all",
-        "hover:border-primary hover:bg-primary/5 hover:text-primary",
+        "apple-press group w-full overflow-hidden rounded-xl border-2 border-dashed bg-muted/30 text-muted-foreground",
+        "hover:border-primary hover:bg-primary/5 hover:text-primary hover:shadow-sm",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         "disabled:pointer-events-none disabled:opacity-50"
       )}

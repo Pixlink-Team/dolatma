@@ -6,7 +6,7 @@ import {
   getAdminSessionCookieName,
   getAdminSessionCookieOptions,
   getLegacyMockCookieName,
-  verifyAdminCredentials,
+  verifyEffectiveAdminCredentials,
 } from "@/lib/auth/admin-session";
 import {
   createAdminSessionTokenSync,
@@ -48,7 +48,7 @@ export async function loginAdminAction(email: string, password: string) {
     }
   }
 
-  if (verifyAdminCredentials(email, password)) {
+  if (await verifyEffectiveAdminCredentials(email, password)) {
     const cookieStore = await cookies();
     const cookieOptions = getAdminSessionCookieOptions();
 

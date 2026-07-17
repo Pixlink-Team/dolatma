@@ -57,7 +57,7 @@ export function UserContentScoreModal({
                 <li key={`${item.contentType}-${item.id}`}>
                   <button
                     type="button"
-                    className="flex w-full max-w-full items-center gap-3 rounded-lg border p-3 text-right transition-colors hover:border-primary hover:bg-muted/40"
+                    className="apple-press flex w-full max-w-full items-center gap-3 rounded-lg border p-3 text-right hover:border-primary/50 hover:bg-muted/40 hover:shadow-sm"
                     onClick={() => setSelected(item)}
                   >
                     {item.thumbnailUrl ? (

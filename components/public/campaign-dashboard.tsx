@@ -89,10 +89,10 @@ function CampaignDashboardBody({
           <div>
             <Link
               href="/"
-              className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 mb-1 transition-colors"
+              className="group text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 mb-1 transition-colors duration-[var(--duration-apple-fast)] ease-[var(--ease-apple-soft)]"
               data-export-hide
             >
-              <ArrowRight className="h-3 w-3" />
+              <ArrowRight className="h-3 w-3 transition-transform duration-[var(--duration-apple)] ease-[var(--ease-apple)] group-hover:translate-x-0.5" />
               همه کمپین‌ها
             </Link>
             <h1 className="text-lg font-bold">{settings.title}</h1>

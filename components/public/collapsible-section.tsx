@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { useCampaignExportMode } from "@/lib/context/campaign-export-context";
 import { cn } from "@/lib/utils";
 
@@ -45,18 +45,23 @@ export function CollapsibleSection({
   const isOpen = exportMode || open;
 
   return (
-    <section id={id} className={cn("rounded-xl border bg-card/40", id && "scroll-mt-24")}>
+    <section id={id} className={cn("rounded-xl border bg-card/40 transition-[border-color,box-shadow] duration-[var(--duration-apple)] ease-[var(--ease-apple)] hover:border-primary/20 hover:shadow-[var(--shadow-apple)]", id && "scroll-mt-24")}>
       <div className="flex flex-col gap-3 border-b p-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-1 items-start gap-3 text-right">
           {!exportMode ? (
           <button
             type="button"
             onClick={() => setOpen((value) => !value)}
-            className="mt-0.5 shrink-0 rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            className="apple-press mt-0.5 shrink-0 rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
             aria-expanded={open}
             aria-label={open ? "بستن بخش" : "باز کردن بخش"}
           >
-            {open ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+            <ChevronDown
+              className={cn(
+                "h-5 w-5 transition-transform duration-[var(--duration-apple)] ease-[var(--ease-apple)]",
+                open && "rotate-180"
+              )}
+            />
           </button>
           ) : (
             <span className="mt-0.5 shrink-0 w-5" aria-hidden />
@@ -82,7 +87,7 @@ export function CollapsibleSection({
         {controls && <div className="flex flex-wrap items-center gap-2" data-export-hide>{controls}</div>}
       </div>
 
-      <div className={cn("p-4 transition-all", isOpen ? "block" : "hidden")}>
+      <div className={cn("p-4", isOpen ? "apple-fade-up block" : "hidden")}>
         {shouldRenderChildren ? children : null}
       </div>
     </section>

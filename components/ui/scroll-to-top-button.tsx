@@ -32,7 +32,7 @@ export function ScrollToTopButton({ threshold = 480, className }: ScrollToTopBut
       size="icon"
       variant="secondary"
       className={cn(
-        "fixed bottom-6 left-6 z-50 h-11 w-11 rounded-full border shadow-lg",
+        "apple-soft-pop fixed bottom-6 left-6 z-50 h-11 w-11 rounded-full border shadow-lg hover:-translate-y-1 hover:shadow-xl",
         className
       )}
       onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}

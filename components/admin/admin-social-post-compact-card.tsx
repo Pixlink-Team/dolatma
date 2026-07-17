@@ -32,7 +32,7 @@ export function AdminSocialPostCompactCard({
   const coverUrl = post.coverImageUrl ?? post.mediaUrl ?? null;
 
   return (
-    <div className="group relative w-full overflow-hidden rounded-xl border bg-card text-right transition-all hover:border-primary hover:shadow-md">
+    <div className="apple-lift group relative w-full overflow-hidden rounded-xl border bg-card text-right hover:border-primary/50">
       <button
         type="button"
         onClick={onClick}

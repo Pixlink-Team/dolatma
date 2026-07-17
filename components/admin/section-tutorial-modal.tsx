@@ -50,8 +50,8 @@ export function SectionTutorialModal({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-h-[92vh] max-w-lg overflow-y-auto sm:max-w-xl">
-        <DialogHeader>
+      <DialogContent className="flex max-h-[92vh] max-w-lg flex-col gap-4 overflow-hidden sm:max-w-xl">
+        <DialogHeader className="shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <BookOpen className="h-5 w-5 shrink-0" />
             {title || "آموزش بخش"}
@@ -63,32 +63,34 @@ export function SectionTutorialModal({
           </DialogDescription>
         </DialogHeader>
 
-        {unavailable ? (
-          <p className="text-sm leading-7 text-muted-foreground">{unavailableMessage}</p>
-        ) : currentStep ? (
-          <div className="space-y-4">
-            {currentStep.imageUrl ? (
-              <ImageZoom
-                src={currentStep.imageUrl}
-                alt={currentStep.title}
-                className="aspect-square w-full rounded-xl border bg-muted/30"
-                imgClassName="object-cover object-center"
-                sizes="(max-width: 640px) 90vw, 36rem"
-                quality={80}
-              />
-            ) : null}
-            <div>
-              <h3 className="text-base font-semibold">{currentStep.title}</h3>
-              {currentStep.body ? (
-                <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-muted-foreground">
-                  {currentStep.body}
-                </p>
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          {unavailable ? (
+            <p className="text-sm leading-7 text-muted-foreground">{unavailableMessage}</p>
+          ) : currentStep ? (
+            <div className="space-y-4">
+              {currentStep.imageUrl ? (
+                <ImageZoom
+                  src={currentStep.imageUrl}
+                  alt={currentStep.title}
+                  className="aspect-square w-full rounded-xl border bg-muted/30"
+                  imgClassName="object-cover object-center"
+                  sizes="(max-width: 640px) 90vw, 36rem"
+                  quality={80}
+                />
               ) : null}
+              <div>
+                <h3 className="text-base font-semibold">{currentStep.title}</h3>
+                {currentStep.body ? (
+                  <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-muted-foreground">
+                    {currentStep.body}
+                  </p>
+                ) : null}
+              </div>
             </div>
-          </div>
-        ) : null}
+          ) : null}
+        </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t pt-4">
           {unavailable ? (
             <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
               بستن

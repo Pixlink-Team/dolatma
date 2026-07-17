@@ -67,10 +67,10 @@ export function VideoCard({
               videoUrl={displayVersion.videoUrl}
               thumbnailUrl={displayVersion.thumbnailUrl}
               alt={title}
-              className="object-cover transition-transform group-hover:scale-105"
+              className="apple-media-zoom object-cover"
             />
-            <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/20 transition-colors group-hover:bg-black/30">
-              <Play className="h-12 w-12 text-white" />
+            <div className="apple-overlay pointer-events-none absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/35">
+              <Play className="h-12 w-12 text-white drop-shadow-lg transition-transform duration-[var(--duration-apple)] ease-[var(--ease-apple-spring)] group-hover:scale-110" />
             </div>
           </div>
         }

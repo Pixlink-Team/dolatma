@@ -61,7 +61,7 @@ export function LeaderboardBillboardsModal({
                   <li key={billboard.id}>
                     <button
                       type="button"
-                      className="flex w-full max-w-full items-center gap-3 rounded-lg border p-3 text-right transition-colors hover:border-primary hover:bg-muted/40"
+                      className="apple-press flex w-full max-w-full items-center gap-3 rounded-lg border p-3 text-right hover:border-primary/50 hover:bg-muted/40 hover:shadow-sm"
                       onClick={() => setSelected(billboard)}
                     >
                       <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-md bg-muted">

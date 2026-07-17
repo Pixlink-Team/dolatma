@@ -66,7 +66,7 @@ export function PosterCard({
               src={displayVersion.imageUrl}
               alt={title}
               className="absolute inset-0 h-full w-full"
-              imgClassName="object-cover object-center transition-transform group-hover:scale-105"
+              imgClassName="apple-media-zoom object-cover object-center"
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 280px"
             />
           </div>

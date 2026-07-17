@@ -29,7 +29,7 @@ export function KPICard({
   return (
     <Card
       className={cn(
-        "@container/kpi relative hover:shadow-md transition-shadow",
+        "@container/kpi group relative",
         onClick && "cursor-pointer hover:border-primary/40",
         showTodayDelta && "pb-2",
         className
@@ -64,8 +64,8 @@ export function KPICard({
             </p>
             {description && <p className="text-xs text-muted-foreground">{description}</p>}
           </div>
-          <div className="shrink-0 rounded-lg bg-primary/10 p-3">
-            <Icon className="h-5 w-5 text-primary" />
+          <div className="shrink-0 rounded-lg bg-primary/10 p-3 transition-transform duration-[var(--duration-apple)] ease-[var(--ease-apple)] group-hover:scale-110">
+            <Icon className="h-5 w-5 text-primary transition-transform duration-[var(--duration-apple)] ease-[var(--ease-apple-spring)] group-hover:scale-110" />
           </div>
         </div>
       </CardContent>

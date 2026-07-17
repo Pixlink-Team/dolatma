@@ -60,6 +60,18 @@
     --ring: #2563eb;
     --success: #16a34a;
     --warning: #d97706;
+    --ease-apple: cubic-bezier(0.22, 1, 0.36, 1);
+    --ease-apple-soft: cubic-bezier(0.25, 0.1, 0.25, 1);
+    --ease-apple-spring: cubic-bezier(0.34, 1.3, 0.64, 1);
+    --duration-apple-fast: 200ms;
+    --duration-apple: 380ms;
+    --duration-apple-slow: 620ms;
+    --shadow-apple:
+      0 1px 2px rgba(15, 23, 42, 0.04),
+      0 4px 12px rgba(15, 23, 42, 0.05);
+    --shadow-apple-hover:
+      0 4px 10px rgba(15, 23, 42, 0.06),
+      0 18px 40px rgba(15, 23, 42, 0.1);
     color-scheme: light;
   }
 
@@ -85,6 +97,12 @@
     --ring: #60a5fa;
     --success: #34d399;
     --warning: #fbbf24;
+    --shadow-apple:
+      0 1px 2px rgba(0, 0, 0, 0.28),
+      0 6px 18px rgba(0, 0, 0, 0.32);
+    --shadow-apple-hover:
+      0 6px 14px rgba(0, 0, 0, 0.35),
+      0 22px 48px rgba(0, 0, 0, 0.45);
     color-scheme: dark;
   }
 
@@ -108,10 +126,134 @@
   100% { background-position: 200% 0; }
 }
 
+@keyframes apple-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes apple-soft-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 .skeleton {
   background: linear-gradient(90deg, var(--muted) 25%, var(--border) 50%, var(--muted) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
+}
+
+/* Apple-style motion utilities */
+.apple-lift {
+  box-shadow: var(--shadow-apple);
+  transition:
+    transform var(--duration-apple) var(--ease-apple),
+    box-shadow var(--duration-apple) var(--ease-apple),
+    border-color var(--duration-apple-fast) var(--ease-apple-soft),
+    background-color var(--duration-apple-fast) var(--ease-apple-soft);
+  will-change: transform;
+}
+
+.apple-lift:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-apple-hover);
+}
+
+.apple-lift:active {
+  transform: translateY(-1px) scale(0.99);
+  transition-duration: var(--duration-apple-fast);
+}
+
+.apple-press {
+  transition:
+    transform var(--duration-apple-fast) var(--ease-apple),
+    box-shadow var(--duration-apple) var(--ease-apple),
+    background-color var(--duration-apple-fast) var(--ease-apple-soft),
+    border-color var(--duration-apple-fast) var(--ease-apple-soft),
+    color var(--duration-apple-fast) var(--ease-apple-soft),
+    opacity var(--duration-apple-fast) var(--ease-apple-soft);
+}
+
+.apple-press:hover {
+  transform: translateY(-1px);
+}
+
+.apple-press:active {
+  transform: scale(0.97);
+}
+
+.apple-media-zoom {
+  transition: transform var(--duration-apple-slow) var(--ease-apple);
+  will-change: transform;
+}
+
+.group:hover .apple-media-zoom {
+  transform: scale(1.06);
+}
+
+.apple-overlay {
+  transition:
+    background-color var(--duration-apple) var(--ease-apple-soft),
+    opacity var(--duration-apple) var(--ease-apple-soft);
+}
+
+.apple-nav-item {
+  transition:
+    transform var(--duration-apple-fast) var(--ease-apple),
+    background-color var(--duration-apple-fast) var(--ease-apple-soft),
+    color var(--duration-apple-fast) var(--ease-apple-soft),
+    box-shadow var(--duration-apple) var(--ease-apple);
+}
+
+.apple-nav-item:hover {
+  transform: translateX(-2px);
+}
+
+.apple-fade-up {
+  animation: apple-fade-up var(--duration-apple-slow) var(--ease-apple) both;
+}
+
+.apple-soft-pop {
+  animation: apple-soft-pop var(--duration-apple) var(--ease-apple-spring) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .apple-lift,
+  .apple-press,
+  .apple-media-zoom,
+  .apple-overlay,
+  .apple-nav-item,
+  .apple-fade-up,
+  .apple-soft-pop {
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
+    will-change: auto !important;
+  }
+
+  .apple-lift:hover,
+  .apple-lift:active,
+  .apple-press:hover,
+  .apple-press:active,
+  .apple-nav-item:hover,
+  .group:hover .apple-media-zoom {
+    transform: none !important;
+  }
 }
 
 .leaflet-container {
@@ -192,4 +334,18 @@ html[data-campaign-export="true"] .sticky {
 
 html[data-campaign-export="true"] {
   scroll-behavior: auto;
+}
+
+html[data-campaign-export="true"] .apple-lift,
+html[data-campaign-export="true"] .apple-press,
+html[data-campaign-export="true"] .apple-media-zoom,
+html[data-campaign-export="true"] .apple-overlay,
+html[data-campaign-export="true"] .apple-nav-item,
+html[data-campaign-export="true"] .apple-fade-up,
+html[data-campaign-export="true"] .apple-soft-pop {
+  animation: none !important;
+  transition: none !important;
+  transform: none !important;
+  will-change: auto !important;
+  box-shadow: none !important;
 }

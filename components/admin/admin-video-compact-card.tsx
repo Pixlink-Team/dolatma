@@ -34,7 +34,7 @@ export function AdminVideoCompactCard({
   const displayVersion = resolveDisplayVersion(versions);
 
   return (
-    <div className="group relative w-full overflow-hidden rounded-xl border bg-card text-right transition-all hover:border-primary hover:shadow-md">
+    <div className="apple-lift group relative w-full overflow-hidden rounded-xl border bg-card text-right hover:border-primary/50">
       <button
         type="button"
         onClick={onClick}
@@ -53,7 +53,7 @@ export function AdminVideoCompactCard({
           ) : (
             <div className="flex h-full items-center justify-center text-[10px] text-muted-foreground">بدون ویدیو</div>
           )}
-          <div className="absolute inset-0 flex items-center justify-center bg-black/20 transition-colors group-hover:bg-black/30">
+          <div className="apple-overlay absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/35">
             <Play className="h-8 w-8 text-white" />
           </div>
         </div>

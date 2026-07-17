@@ -44,7 +44,7 @@ function SocialPostCover({ post }: { post: SocialMediaPost }) {
         src={post.coverImageUrl}
         alt={post.title}
         className="h-full w-full"
-        imgClassName="object-cover transition-transform group-hover:scale-105"
+        imgClassName="object-cover apple-media-zoom"
         sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 220px"
       />
     );
@@ -73,7 +73,7 @@ function SocialPostCover({ post }: { post: SocialMediaPost }) {
       <VideoThumbnail
         videoUrl={post.mediaUrl}
         alt={post.title}
-        className="object-cover transition-transform group-hover:scale-105"
+        className="object-cover apple-media-zoom"
       />
     );
   }
@@ -84,7 +84,7 @@ function SocialPostCover({ post }: { post: SocialMediaPost }) {
         src={post.mediaUrl}
         alt={post.title}
         className="h-full w-full"
-        imgClassName="object-cover transition-transform group-hover:scale-105"
+        imgClassName="object-cover apple-media-zoom"
         sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 220px"
       />
     );

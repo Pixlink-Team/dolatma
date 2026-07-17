@@ -55,7 +55,11 @@ export function ThemeToggle({ className }: { className?: string }) {
       onClick={toggle}
       title={theme === "dark" ? "حالت روشن" : "حالت تیره"}
     >
-      {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+      {theme === "dark" ? (
+        <Sun className="apple-soft-pop h-4 w-4" key="sun" />
+      ) : (
+        <Moon className="apple-soft-pop h-4 w-4" key="moon" />
+      )}
       <span className="sr-only">{theme === "dark" ? "حالت روشن" : "حالت تیره"}</span>
     </Button>
   );

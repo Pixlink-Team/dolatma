@@ -132,18 +132,18 @@ function AuditTable({
 }) {
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-sm border-collapse" style={{ minWidth }}>
-        <colgroup>
-          {columns.map((column) => (
-            <col key={column.key} style={column.width ? { width: column.width } : undefined} />
-          ))}
-        </colgroup>
+      <table
+        className="w-full text-sm border-collapse table-fixed"
+        dir="rtl"
+        style={{ minWidth }}
+      >
         <thead className="bg-muted/50 text-muted-foreground">
           <tr>
             {columns.map((column) => (
               <th
                 key={column.key}
                 className="text-right font-medium px-3 py-3 whitespace-nowrap border-b"
+                style={column.width ? { width: column.width } : undefined}
               >
                 {column.label}
               </th>
@@ -195,6 +195,13 @@ function StatCard({
     </Card>
   );
 }
+
+const ACTIVE_TODAY_COLUMNS = [
+  { key: "user", label: "کاربر", width: "35%" },
+  { key: "role", label: "نقش", width: "15%" },
+  { key: "events", label: "رویداد امروز", width: "15%" },
+  { key: "last", label: "آخرین فعالیت", width: "35%" },
+];
 
 const USERS_COLUMNS = [
   { key: "user", label: "کاربر", width: "22%" },
@@ -355,6 +362,112 @@ export function AuditAdmin({ data, databaseReady }: AuditAdminProps) {
           icon={ShieldAlert}
           hint={summary.failedLoginsToday > 0 ? "بررسی امنیتی توصیه می‌شود" : undefined}
         />
+      </div>
+
+      <div className="grid grid-cols-1 gap-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <LogIn className="h-4 w-4 text-primary" />
+              چه کسانی امروز وارد شده‌اند
+              <Badge variant="outline" className="mr-1">
+                {formatPersianNumber(
+                  data.loginsTodayList.length > 0
+                    ? data.loginsTodayList.length
+                    : summary.loginsToday
+                )}
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            {data.loginsTodayList.length === 0 ? (
+              <p className="px-4 py-8 text-center text-sm text-muted-foreground">
+                امروز هنوز ورود جدیدی ثبت نشده است.
+                {data.activeUsersTodayList.length > 0
+                  ? " کاربران فعال احتمالاً با نشست قبلی وارد شده‌اند."
+                  : ""}
+              </p>
+            ) : (
+              <div className="max-h-[360px] overflow-y-auto">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 p-4">
+                  {data.loginsTodayList.map((event) => (
+                    <div
+                      key={event.id}
+                      className="rounded-lg border bg-card px-3 py-3 flex items-start gap-3"
+                    >
+                      <LogIn className="mt-1 h-4 w-4 shrink-0 text-primary" />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="font-medium truncate">
+                            {resolveUserDisplay(event.actorName, event.actorEmail).displayName}
+                          </p>
+                          <Badge variant="outline" className="shrink-0">
+                            {getAuditRoleLabel(event.actorRole)}
+                          </Badge>
+                        </div>
+                        {event.actorEmail && (
+                          <p className="text-xs text-muted-foreground truncate mt-0.5" dir="ltr">
+                            {event.actorEmail}
+                          </p>
+                        )}
+                        <p className="text-xs text-muted-foreground mt-1.5">
+                          {formatPersianDateTime(event.createdAt)}
+                        </p>
+                        {event.ipAddress && (
+                          <p className="text-xs text-muted-foreground font-mono mt-0.5" dir="ltr">
+                            {event.ipAddress}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Users className="h-4 w-4 text-primary" />
+              کاربران فعال امروز
+              <Badge variant="outline" className="mr-1">
+                {formatPersianNumber(summary.activeUsersToday)}
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <AuditTable
+              columns={ACTIVE_TODAY_COLUMNS}
+              emptyColSpan={4}
+              emptyMessage="امروز هنوز فعالیتی ثبت نشده است."
+              isEmpty={data.activeUsersTodayList.length === 0}
+              minWidth="520px"
+            >
+              {data.activeUsersTodayList.map((actor) => (
+                <tr key={actor.actorKey} className="border-b last:border-0">
+                  <td className="px-3 py-3 align-middle">
+                    <UserCell
+                      name={actor.actorName}
+                      email={actor.actorEmail}
+                      online={actor.isOnline}
+                    />
+                  </td>
+                  <td className="px-3 py-3 align-middle whitespace-nowrap">
+                    <Badge variant="outline">{getAuditRoleLabel(actor.actorRole)}</Badge>
+                  </td>
+                  <td className="px-3 py-3 align-middle whitespace-nowrap font-semibold">
+                    {formatPersianNumber(actor.eventCount)}
+                  </td>
+                  <td className="px-3 py-3 align-middle whitespace-nowrap text-xs text-muted-foreground">
+                    {actor.lastSeenAt ? formatPersianDateTime(actor.lastSeenAt) : "—"}
+                  </td>
+                </tr>
+              ))}
+            </AuditTable>
+          </CardContent>
+        </Card>
       </div>
 
       <Card>
@@ -721,6 +834,43 @@ export function AuditAdmin({ data, databaseReady }: AuditAdminProps) {
 
         <TabsContent value="logins">
           <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                ورودهای امروز
+                <Badge variant="outline">
+                  {formatPersianNumber(data.loginsTodayList.length)}
+                </Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <AuditTable
+                columns={LOGIN_COLUMNS}
+                emptyColSpan={4}
+                emptyMessage="امروز هنوز ورودی ثبت نشده است."
+                isEmpty={data.loginsTodayList.length === 0}
+                minWidth="640px"
+              >
+                {data.loginsTodayList.map((event) => (
+                  <tr key={event.id} className="border-b last:border-0">
+                    <td className="px-3 py-3 align-middle">
+                      <UserCell name={event.actorName} email={event.actorEmail} />
+                    </td>
+                    <td className="px-3 py-3 align-middle whitespace-nowrap">
+                      <Badge variant="outline">{getAuditRoleLabel(event.actorRole)}</Badge>
+                    </td>
+                    <td className="px-3 py-3 align-middle whitespace-nowrap text-xs text-muted-foreground">
+                      {formatPersianDateTime(event.createdAt)}
+                    </td>
+                    <td className="px-3 py-3 align-middle font-mono text-xs whitespace-nowrap" dir="ltr">
+                      {event.ipAddress ?? "—"}
+                    </td>
+                  </tr>
+                ))}
+              </AuditTable>
+            </CardContent>
+          </Card>
+
+          <Card className="mt-4">
             <CardHeader className="pb-2">
               <CardTitle className="text-base">تاریخچه ورود کاربران</CardTitle>
             </CardHeader>

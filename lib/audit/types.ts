@@ -142,6 +142,8 @@ export interface AuditDashboardData {
   };
   dailySeries: AuditDailyPoint[];
   topActors: AuditActorSummary[];
+  activeUsersTodayList: AuditActorSummary[];
+  loginsTodayList: AuditEvent[];
   onlineUsers: OnlineUser[];
   topActions: AuditActionSummary[];
   topPaths: AuditPathSummary[];

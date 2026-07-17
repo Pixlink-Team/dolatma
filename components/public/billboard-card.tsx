@@ -53,7 +53,7 @@ export function BillboardCard({ billboard, onView }: BillboardCardProps) {
               src={displayImage}
               alt={billboard.title}
               className="absolute inset-0 h-full w-full"
-              imgClassName="object-cover transition-transform group-hover:scale-105"
+              imgClassName="apple-media-zoom object-cover"
               sizes="(max-width: 768px) 100vw, 320px"
             />
           ) : (
@@ -61,7 +61,7 @@ export function BillboardCard({ billboard, onView }: BillboardCardProps) {
               billboard={billboard}
               alt={billboard.title}
               sizes="(max-width: 768px) 100vw, 320px"
-              imageClassName="transition-transform group-hover:scale-105"
+              imageClassName="apple-media-zoom"
             />
           )}
           {showCity && (

@@ -12,6 +12,17 @@ import type {
   UserContentContribution,
 } from "@/lib/audit/types";
 
+/** Midnight today in Asia/Tehran, as a UTC Date (Iran has no DST). */
+function getTehranTodayStart(): Date {
+  const tehranDate = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Tehran",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+  return new Date(`${tehranDate}T00:00:00+03:30`);
+}
+
 function mapAuditRow(row: Record<string, unknown>): AuditEvent {
   const metadata =
     row.metadata && typeof row.metadata === "object" && !Array.isArray(row.metadata)
@@ -135,18 +146,19 @@ export async function pgGetAuditSummaryCounts() {
   }
 
   const sql = getSql();
+  const todayStart = getTehranTodayStart();
   const rows = await sql`
     SELECT
       COUNT(*)::int AS total_events,
-      COUNT(*) FILTER (WHERE created_at >= date_trunc('day', now()))::int AS events_today,
+      COUNT(*) FILTER (WHERE created_at >= ${todayStart})::int AS events_today,
       COUNT(*) FILTER (
-        WHERE action = 'auth.login' AND created_at >= date_trunc('day', now())
+        WHERE action = 'auth.login' AND created_at >= ${todayStart}
       )::int AS logins_today,
       COUNT(*) FILTER (
-        WHERE action = 'auth.login_failed' AND created_at >= date_trunc('day', now())
+        WHERE action = 'auth.login_failed' AND created_at >= ${todayStart}
       )::int AS failed_logins_today,
       COUNT(DISTINCT COALESCE(actor_user_id::text, NULLIF(actor_email, ''), NULLIF(actor_name, ''))) FILTER (
-        WHERE created_at >= date_trunc('day', now())
+        WHERE created_at >= ${todayStart}
           AND action <> 'auth.login_failed'
       )::int AS active_users_today,
       COUNT(DISTINCT COALESCE(actor_user_id::text, NULLIF(actor_email, ''), NULLIF(actor_name, ''))) FILTER (
@@ -154,13 +166,13 @@ export async function pgGetAuditSummaryCounts() {
           AND action <> 'auth.login_failed'
       )::int AS online_users,
       COUNT(*) FILTER (
-        WHERE category = 'content' AND created_at >= date_trunc('day', now())
+        WHERE category = 'content' AND created_at >= ${todayStart}
       )::int AS content_changes_today,
       COUNT(*) FILTER (
-        WHERE action = 'navigation.page_view' AND created_at >= date_trunc('day', now())
+        WHERE action = 'navigation.page_view' AND created_at >= ${todayStart}
       )::int AS page_views_today,
       COUNT(*) FILTER (
-        WHERE action = 'ui.click' AND created_at >= date_trunc('day', now())
+        WHERE action = 'ui.click' AND created_at >= ${todayStart}
       )::int AS clicks_today
     FROM user_audit_events
   `;
@@ -216,11 +228,56 @@ export async function pgGetAuditDailySeries(days = 14): Promise<AuditDailyPoint[
   }));
 }
 
-export async function pgGetAuditTopActors(limit = 10): Promise<AuditActorSummary[]> {
+function mapAuditActorRow(row: Record<string, unknown>): AuditActorSummary {
+  const actorName =
+    String(row.user_name ?? "").trim() ||
+    String(row.event_name ?? "").trim() ||
+    String(row.user_email ?? "").trim() ||
+    String(row.event_email ?? "").trim() ||
+    "ناشناس";
+  const actorEmail =
+    String(row.user_email ?? "").trim() ||
+    String(row.event_email ?? "").trim() ||
+    null;
+  const actorRole =
+    String(row.user_role ?? "").trim() ||
+    String(row.event_role ?? "").trim() ||
+    null;
+  const lastSeenAt = row.last_seen_at
+    ? new Date(String(row.last_seen_at)).toISOString()
+    : null;
+  const isOnline = lastSeenAt
+    ? Date.now() - new Date(lastSeenAt).getTime() <= 5 * 60 * 1000
+    : false;
+
+  return {
+    actorKey: String(row.actor_key),
+    actorUserId: row.actor_user_id ? String(row.actor_user_id) : null,
+    actorName,
+    actorEmail,
+    actorRole,
+    eventCount: Number(row.event_count ?? 0),
+    loginCount: Number(row.login_count ?? 0),
+    contentCreateCount: Number(row.content_create_count ?? 0),
+    contentUpdateCount: Number(row.content_update_count ?? 0),
+    contentDeleteCount: Number(row.content_delete_count ?? 0),
+    pageViewCount: Number(row.page_view_count ?? 0),
+    clickCount: Number(row.click_count ?? 0),
+    lastSeenAt,
+    isOnline,
+  };
+}
+
+async function pgGetAuditActorSummaries(
+  limit: number,
+  options: { todayOnly?: boolean } = {}
+): Promise<AuditActorSummary[]> {
   if (!isPostgresConfigured()) return [];
 
   const sql = getSql();
   const safeLimit = Math.min(Math.max(limit, 1), 50);
+  const todayOnly = options.todayOnly ?? false;
+  const todayStart = getTehranTodayStart();
   const rows = await sql`
     WITH ranked AS (
       SELECT
@@ -243,6 +300,10 @@ export async function pgGetAuditTopActors(limit = 10): Promise<AuditActorSummary
       FROM user_audit_events e
       LEFT JOIN users u ON u.id = e.actor_user_id
       WHERE e.action NOT IN ('auth.login_failed', 'presence.heartbeat')
+        AND (
+          ${todayOnly}::boolean = false
+          OR e.created_at >= ${todayStart}
+        )
       GROUP BY
         COALESCE(e.actor_user_id::text, NULLIF(e.actor_email, ''), NULLIF(e.actor_name, ''), 'unknown'),
         e.actor_user_id
@@ -253,45 +314,52 @@ export async function pgGetAuditTopActors(limit = 10): Promise<AuditActorSummary
     LIMIT ${safeLimit}
   `;
 
-  return rows.map((row) => {
-    const actorName =
-      String(row.user_name ?? "").trim() ||
-      String(row.event_name ?? "").trim() ||
-      String(row.user_email ?? "").trim() ||
-      String(row.event_email ?? "").trim() ||
-      "ناشناس";
-    const actorEmail =
-      String(row.user_email ?? "").trim() ||
-      String(row.event_email ?? "").trim() ||
-      null;
-    const actorRole =
-      String(row.user_role ?? "").trim() ||
-      String(row.event_role ?? "").trim() ||
-      null;
-    const lastSeenAt = row.last_seen_at
-      ? new Date(String(row.last_seen_at)).toISOString()
-      : null;
-    const isOnline = lastSeenAt
-      ? Date.now() - new Date(lastSeenAt).getTime() <= 5 * 60 * 1000
-      : false;
+  return rows.map((row) => mapAuditActorRow(row as Record<string, unknown>));
+}
 
-    return {
-      actorKey: String(row.actor_key),
-      actorUserId: row.actor_user_id ? String(row.actor_user_id) : null,
-      actorName,
-      actorEmail,
-      actorRole,
-      eventCount: Number(row.event_count ?? 0),
-      loginCount: Number(row.login_count ?? 0),
-      contentCreateCount: Number(row.content_create_count ?? 0),
-      contentUpdateCount: Number(row.content_update_count ?? 0),
-      contentDeleteCount: Number(row.content_delete_count ?? 0),
-      pageViewCount: Number(row.page_view_count ?? 0),
-      clickCount: Number(row.click_count ?? 0),
-      lastSeenAt,
-      isOnline,
-    };
-  });
+export async function pgGetAuditTopActors(limit = 10): Promise<AuditActorSummary[]> {
+  return pgGetAuditActorSummaries(limit);
+}
+
+export async function pgGetActiveUsersToday(limit = 50): Promise<AuditActorSummary[]> {
+  return pgGetAuditActorSummaries(limit, { todayOnly: true });
+}
+
+export async function pgGetLoginsToday(limit = 50): Promise<AuditEvent[]> {
+  if (!isPostgresConfigured()) return [];
+
+  const sql = getSql();
+  const safeLimit = Math.min(Math.max(limit, 1), 100);
+  const todayStart = getTehranTodayStart();
+  const rows = await sql`
+    SELECT
+      e.id,
+      e.actor_user_id,
+      e.actor_type,
+      COALESCE(u.email, e.actor_email) AS actor_email,
+      COALESCE(u.name, e.actor_name) AS actor_name,
+      COALESCE(u.role, e.actor_role) AS actor_role,
+      e.category,
+      e.action,
+      e.entity_type,
+      e.entity_id,
+      e.campaign_id,
+      e.label,
+      e.path,
+      e.method,
+      e.metadata,
+      e.ip_address,
+      e.user_agent,
+      e.created_at
+    FROM user_audit_events e
+    LEFT JOIN users u ON u.id = e.actor_user_id
+    WHERE e.action = 'auth.login'
+      AND e.created_at >= ${todayStart}
+    ORDER BY e.created_at DESC
+    LIMIT ${safeLimit}
+  `;
+
+  return rows.map((row) => mapAuditRow(row as Record<string, unknown>));
 }
 
 export async function pgGetOnlineUsers(withinMinutes = 5): Promise<

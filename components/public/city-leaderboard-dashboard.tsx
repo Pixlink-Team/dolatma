@@ -88,7 +88,7 @@ function MetricsBreakdown({
             >
               <Badge
                 variant="outline"
-                className="cursor-pointer text-[11px] transition-colors hover:border-primary hover:bg-primary/10 hover:text-primary"
+                className="cursor-pointer text-[11px] hover:-translate-y-0.5 hover:border-primary hover:bg-primary/10 hover:text-primary hover:shadow-sm"
               >
                 {label}
               </Badge>
@@ -114,7 +114,7 @@ function MetricsBreakdown({
           >
             <Badge
               variant="outline"
-              className="cursor-pointer text-[11px] transition-colors hover:border-primary hover:bg-primary/10 hover:text-primary"
+              className="cursor-pointer text-[11px] hover:-translate-y-0.5 hover:border-primary hover:bg-primary/10 hover:text-primary hover:shadow-sm"
             >
               {label}
             </Badge>
@@ -272,9 +272,9 @@ export function CityLeaderboardDashboard({ data, slug }: CityLeaderboardDashboar
           <div>
             <Link
               href={`/campaign/${slug}`}
-              className="mb-1 flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+              className="group mb-1 flex items-center gap-1 text-xs text-muted-foreground transition-colors duration-[var(--duration-apple-fast)] ease-[var(--ease-apple-soft)] hover:text-foreground"
             >
-              <ArrowRight className="h-3 w-3" />
+              <ArrowRight className="h-3 w-3 transition-transform duration-[var(--duration-apple)] ease-[var(--ease-apple)] group-hover:translate-x-0.5" />
               بازگشت به گزارش کمپین
             </Link>
             <h1 className="text-lg font-bold">
@@ -394,7 +394,7 @@ export function CityLeaderboardDashboard({ data, slug }: CityLeaderboardDashboar
                           ? (entry as ProvinceLeaderboardEntry).provinceKey
                           : userEntry.userKey
                       }
-                      className={clickable ? "cursor-pointer transition-colors hover:border-primary" : undefined}
+                      className={clickable ? "cursor-pointer hover:border-primary/60" : undefined}
                       onClick={
                         clickable
                           ? () => setSelectedUser(userEntry)

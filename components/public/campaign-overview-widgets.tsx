@@ -144,7 +144,7 @@ export function RecentActivityFeed({
                       <button
                         type="button"
                         onClick={() => scrollToSection(sectionId)}
-                        className="flex w-full items-start justify-between gap-3 rounded-md text-right transition-colors hover:bg-muted/50"
+                        className="apple-press flex w-full items-start justify-between gap-3 rounded-md text-right hover:bg-muted/50"
                       >
                         {content}
                       </button>

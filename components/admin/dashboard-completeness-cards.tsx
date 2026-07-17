@@ -39,7 +39,7 @@ export function DashboardCompletenessCards({ cards }: DashboardCompletenessCards
           <Link key={card.href} href={card.href}>
             <Card
               className={cn(
-                "h-full cursor-pointer border transition-shadow hover:shadow-md",
+                "h-full cursor-pointer border hover:border-primary/40",
                 getCompletenessCardClass(status)
               )}
             >

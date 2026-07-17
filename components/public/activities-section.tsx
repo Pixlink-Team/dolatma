@@ -82,14 +82,14 @@ function ActivityCard({
           <VideoThumbnail
             videoUrl={activity.videoUrl!}
             alt={activity.title}
-            className="object-cover transition-transform group-hover:scale-105"
+            className="object-cover apple-media-zoom"
           />
         ) : activity.imageUrl ? (
           <Image
             src={activity.imageUrl}
             alt={activity.title}
             fill
-            className="object-cover transition-transform group-hover:scale-105"
+            className="object-cover apple-media-zoom"
             sizes="(max-width: 1280px) 16vw, 200px"
           />
         ) : audioOnly ? (
@@ -104,7 +104,7 @@ function ActivityCard({
         )}
 
         {(hasVideo || audioOnly) && hasMedia && (
-          <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 transition-opacity group-hover:opacity-100">
+          <div className="apple-overlay pointer-events-none absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 group-hover:opacity-100">
             {hasVideo ? (
               <Play className="h-10 w-10 text-white drop-shadow" />
             ) : (

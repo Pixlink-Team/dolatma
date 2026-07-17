@@ -33,7 +33,7 @@ export function AdminPosterCompactCard({
   const displayVersion = resolveDisplayVersion(versions);
 
   return (
-    <div className="group relative w-full overflow-hidden rounded-xl border bg-card text-right transition-all hover:border-primary hover:shadow-md">
+    <div className="apple-lift group relative w-full overflow-hidden rounded-xl border bg-card text-right hover:border-primary/50">
       <button
         type="button"
         onClick={onClick}
@@ -49,7 +49,7 @@ export function AdminPosterCompactCard({
             sizes="160px"
             objectFit="contain"
           />
-          <div className="absolute inset-0 bg-black/0 transition-colors group-hover:bg-black/10" />
+          <div className="apple-overlay absolute inset-0 bg-black/0 group-hover:bg-black/10" />
         </div>
         <div className="space-y-1 p-2">
           <p className="truncate text-xs font-medium">{poster.title}</p>

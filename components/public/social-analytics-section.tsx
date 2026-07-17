@@ -30,7 +30,7 @@ interface SocialAnalyticsSectionProps {
 
 function PlatformStatCard({ platform }: { platform: SocialPlatformStat }) {
   return (
-    <Card className="overflow-hidden hover:shadow-md transition-shadow">
+    <Card className="overflow-hidden">
       <CardContent className="p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3">

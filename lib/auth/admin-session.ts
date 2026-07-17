@@ -12,8 +12,11 @@ export function getLegacyMockCookieName() {
 export function verifyAdminCredentials(email: string, password: string): boolean {
   const adminEmail = process.env.ADMIN_EMAIL ?? "admin@example.com";
   const adminPassword = process.env.ADMIN_PASSWORD ?? "password";
-  return email === adminEmail && password === adminPassword;
+  return email.trim().toLowerCase() === adminEmail.trim().toLowerCase() && password === adminPassword;
 }
+
+/** Prefer database override, then fall back to ADMIN_EMAIL / ADMIN_PASSWORD. */
+export { verifyEffectiveAdminCredentials } from "@/lib/auth/admin-credentials";
 
 export {
   buildEnvAdminPayload as buildAdminSessionToken,
