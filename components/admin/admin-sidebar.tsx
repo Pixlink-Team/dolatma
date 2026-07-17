@@ -18,6 +18,7 @@ import {
   LogOut,
   Menu,
   Radio,
+  Rocket,
   ScrollText,
   Settings,
   Share2,
@@ -78,6 +79,7 @@ const allNavItems: {
   { href: "/admin/meetings", label: "جلسات و مصوبات", icon: ClipboardList, permissionKey: "meetings" },
   { href: "/admin/submissions", label: "مشارکت‌ها", icon: FileText, permissionKey: "submissions" },
   { href: "/admin/users", label: "کاربران", icon: Users, adminOrClientOnly: true },
+  { href: "/admin/updates", label: "آپدیت‌های سایت", icon: Rocket, adminOrClientOnly: true },
   { href: "/admin/audit", label: "رصد کاربران", icon: ScrollText, adminOnly: true },
 ];
 
@@ -88,6 +90,7 @@ const managementNavHrefs = new Set([
   "/admin/settings",
   "/admin/tutorials",
   "/admin/elanha",
+  "/admin/updates",
 ]);
 
 export function AdminSidebar() {

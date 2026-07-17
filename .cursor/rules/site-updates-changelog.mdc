@@ -1,0 +1,29 @@
+---
+description: Every commit must include a Persian changelog title (FA line) for the site updates section.
+alwaysApply: true
+---
+
+# Persian Changelog Title in Commits
+
+The dashboard has a "آپدیت‌های سایت" section (`/admin/updates`) for admin and client users.
+It is generated automatically from git history by `scripts/generate-site-updates.mjs` (runs on `prebuild`), which reads a `FA:` line from each commit body.
+
+When creating any git commit in this project:
+
+1. Keep the commit subject in English as usual.
+2. Always add a body line starting with `FA:` followed by a short, user-friendly Persian title describing what changed from the user's point of view (not technical jargon).
+3. The Persian title should be one sentence, e.g.:
+   - `FA: افزودن فیلتر تاریخ به بخش تبلیغات محیطی`
+   - `FA: رفع مشکل نمایش ویدیوها در موبایل`
+4. Skip the `FA:` line only for pure chore commits with no user-visible effect (e.g. regenerating `lib/site-updates.generated.json` alone).
+
+Example commit:
+
+```
+git commit -m "Add date filter to billboards list" -m "FA: افزودن فیلتر تاریخ به بخش تبلیغات محیطی"
+```
+
+Notes:
+
+- `lib/site-updates.generated.json` is regenerated on every build; commit it when it changes.
+- Commits without an `FA:` line and without a mostly-Persian subject are hidden from the updates page.
