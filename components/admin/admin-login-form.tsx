@@ -154,9 +154,9 @@ export function AdminLoginForm() {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="نام کاربری خود را وارد کنید"
                   required
-                  dir="ltr"
+                  dir="rtl"
                   autoComplete="username"
-                  className="h-[52px] w-full rounded-2xl border border-white/30 bg-white/10 px-4 py-3 text-left text-base text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18)] outline-none backdrop-blur-sm transition placeholder:text-white/45 focus:border-white/50 focus:bg-white/14 focus:ring-4 focus:ring-[#0A84FF]/20"
+                  className="h-[52px] w-full rounded-2xl border border-white/30 bg-white/10 px-4 py-3 text-right text-base text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18)] outline-none backdrop-blur-sm transition placeholder:text-right placeholder:text-white/45 focus:border-white/50 focus:bg-white/14 focus:ring-4 focus:ring-[#0A84FF]/20"
                 />
               </div>
 
