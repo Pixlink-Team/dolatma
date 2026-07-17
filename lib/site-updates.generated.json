@@ -1,6 +1,18 @@
 {
   "entries": [
     {
+      "hash": "ab5e00004ef6099fea88b6895a7be98a30fb874f",
+      "committedAt": "2026-07-17T17:30:08+03:30",
+      "title": "بازگرداندن مودال آپلود پوستر و ویدیو با کشیدن و رها کردن",
+      "subject": "Restore poster/video create modal with drag-and-drop upload"
+    },
+    {
+      "hash": "019bad628a5b88f9bdb5de0b921e529ac8155bbd",
+      "committedAt": "2026-07-17T17:29:58+03:30",
+      "title": "افزودن دکمه بازگشت به بالا بدون تداخل با گزارش مشکل",
+      "subject": "Keep scroll-to-top above problem report button."
+    },
+    {
       "hash": "5557896533daac1c18da3a637d18dd22379eb95a",
       "committedAt": "2026-07-17T17:07:21+03:30",
       "title": "اصلاح نمایش مودال اعلان‌ها مثل بخش ویرایش محتوا",

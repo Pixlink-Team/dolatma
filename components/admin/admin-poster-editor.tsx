@@ -38,8 +38,6 @@ interface AdminPosterEditorProps {
   canScore?: boolean;
   isNew?: boolean;
   highlightFields?: EditSuggestionMissingField[];
-  /** Prefill media when creating from the grid dropzone. */
-  initialImageUrl?: string;
   onClose: () => void;
   onSaved?: (poster: Poster) => void;
 }
@@ -52,7 +50,6 @@ export function AdminPosterEditor({
   canScore = false,
   isNew = false,
   highlightFields = [],
-  initialImageUrl,
   onClose,
   onSaved,
 }: AdminPosterEditorProps) {
@@ -62,9 +59,7 @@ export function AdminPosterEditor({
 
   const displayVersion = useMemo(() => resolveDisplayVersion(versions), [versions]);
 
-  const [imageUrl, setImageUrl] = useState(
-    displayVersion?.imageUrl || initialImageUrl || ""
-  );
+  const [imageUrl, setImageUrl] = useState(displayVersion?.imageUrl || "");
   const [notes, setNotes] = useState(displayVersion?.notes ?? "");
   const [editTitle, setEditTitle] = useState(poster.title);
   const [editDescription, setEditDescription] = useState(poster.description ?? "");
@@ -81,7 +76,7 @@ export function AdminPosterEditor({
     setEditCategoryId(poster.categoryId);
     setEditPlanLabels(normalizePlanLabels(poster.planLabels, poster.planLabel));
     setEditScore(poster.score);
-    setImageUrl(current?.imageUrl || (isNew ? initialImageUrl ?? "" : ""));
+    setImageUrl(current?.imageUrl || "");
     setNotes(current?.notes ?? "");
   }, [
     poster.id,
@@ -92,8 +87,6 @@ export function AdminPosterEditor({
     poster.planLabels,
     poster.score,
     versions,
-    isNew,
-    initialImageUrl,
   ]);
 
   const refresh = () => router.refresh();

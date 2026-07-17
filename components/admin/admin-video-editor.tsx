@@ -44,10 +44,6 @@ interface AdminVideoEditorProps {
   canScore?: boolean;
   isNew?: boolean;
   highlightFields?: EditSuggestionMissingField[];
-  /** Prefill media when creating from the grid dropzone. */
-  initialVideoUrl?: string;
-  /** File uploaded from the grid dropzone, used for duration detection. */
-  initialVideoFile?: File | null;
   onClose: () => void;
   onSaved?: (video: Video) => void;
 }
@@ -99,8 +95,6 @@ export function AdminVideoEditor({
   canScore = false,
   isNew = false,
   highlightFields = [],
-  initialVideoUrl,
-  initialVideoFile = null,
   onClose,
   onSaved,
 }: AdminVideoEditorProps) {
@@ -110,7 +104,7 @@ export function AdminVideoEditor({
 
   const displayVersion = useMemo(() => resolveDisplayVersion(versions), [versions]);
 
-  const [videoUrl, setVideoUrl] = useState(displayVersion?.videoUrl || initialVideoUrl || "");
+  const [videoUrl, setVideoUrl] = useState(displayVersion?.videoUrl || "");
   const [thumbnailUrl, setThumbnailUrl] = useState(
     displayVersion ? draftCoverFromVersion(displayVersion) : ""
   );
@@ -141,7 +135,7 @@ export function AdminVideoEditor({
     setEditCategoryId(video.categoryId || pickDefaultVideoCategoryId(categories));
     setEditPlanLabels(normalizePlanLabels(video.planLabels, video.planLabel));
     setEditScore(video.score);
-    setVideoUrl(current?.videoUrl || (isNew ? initialVideoUrl ?? "" : ""));
+    setVideoUrl(current?.videoUrl || "");
     setThumbnailUrl(current ? draftCoverFromVersion(current) : "");
     setDuration(current?.duration ?? "");
     setNotes(current?.notes ?? "");
@@ -155,23 +149,7 @@ export function AdminVideoEditor({
     video.score,
     versions,
     categories,
-    isNew,
-    initialVideoUrl,
   ]);
-
-  // Detect duration for a file uploaded from the grid dropzone.
-  useEffect(() => {
-    if (!isNew || !initialVideoFile) return;
-    let cancelled = false;
-    void readVideoDuration(initialVideoFile).then((nextDuration) => {
-      if (!cancelled && nextDuration) {
-        setDuration((current) => current || nextDuration);
-      }
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [isNew, initialVideoFile]);
 
   const previewCover = videoUrl
     ? resolveVideoThumbnail(videoUrl, thumbnailUrl || undefined)
