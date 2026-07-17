@@ -23,7 +23,8 @@ function normalizeVersions(value: unknown): SessionVersions {
   return { versions };
 }
 
-async function readVersions(): Promise<SessionVersions> {
+/** Returns null when the DB store is unreadable (caller decides how to degrade). */
+async function readVersionsStrict(): Promise<SessionVersions | null> {
   if (!isPostgresConfigured()) {
     return memoryVersions;
   }
@@ -36,9 +37,14 @@ async function readVersions(): Promise<SessionVersions> {
     const parsed = normalizeVersions(rows[0]?.value);
     memoryVersions.versions = { ...parsed.versions };
     return parsed;
-  } catch {
-    return memoryVersions;
+  } catch (error) {
+    console.error("[auth] failed to read session versions", error);
+    return null;
   }
+}
+
+async function readVersions(): Promise<SessionVersions> {
+  return (await readVersionsStrict()) ?? memoryVersions;
 }
 
 async function writeVersions(next: SessionVersions): Promise<void> {
@@ -84,6 +90,23 @@ export async function isSessionVersionCurrent(
   sessionVersion: number | undefined
 ): Promise<boolean> {
   if (sessionVersion === undefined || !Number.isFinite(sessionVersion)) return false;
-  const current = await getSessionVersion(userId);
-  return sessionVersion === current;
+
+  // Fail open on DB errors: revocation is best-effort and a transient DB
+  // failure must not silently invalidate every session (the middleware only
+  // checks the cookie signature, so a rejected session here would bounce the
+  // user between pages and the dashboard instead of logging them out).
+  const versions = await readVersionsStrict();
+  if (versions === null) {
+    console.warn("[auth] session version store unreadable; skipping revocation check");
+    return true;
+  }
+
+  const current = versions.versions[versionKey(userId)] ?? 0;
+  if (sessionVersion !== current) {
+    console.warn(
+      `[auth] session version mismatch for ${versionKey(userId)}: token=${sessionVersion} current=${current}`
+    );
+    return false;
+  }
+  return true;
 }

@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "35a1d5130d358eaa6526478c8472bf2dc817d3a3",
+      "committedAt": "2026-07-17T19:22:49+03:30",
+      "title": "رفع خطای ری‌استارت مکرر سرور پس از به‌روزرسانی امنیت دیتابیس",
+      "subject": "Make RLS policy apply idempotent on container restart"
+    },
+    {
       "hash": "e307fb7160cd0abd0cef5040964a7dc6880d2e95",
       "committedAt": "2026-07-17T19:05:13+03:30",
       "title": "پس‌زمینه پویا و نمایش ساعت و تاریخ در صفحه ورود",

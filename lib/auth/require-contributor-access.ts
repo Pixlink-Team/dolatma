@@ -16,11 +16,17 @@ export async function requireContributorAccess(
   if (isFullAdmin(session)) return;
 
   if (!isPostgresConfigured() || !session.userId) {
+    console.warn(
+      `[access] denied "${permission}" (campaign=${campaignId}): non-admin session without user id`
+    );
     redirect("/admin");
   }
 
   const permissions = await pgGetUserPermissionsForCampaign(session.userId, campaignId);
   if (!permissions || !hasContributorPermission(permissions, permission)) {
+    console.warn(
+      `[access] denied "${permission}" (campaign=${campaignId}) for user=${session.userId} role=${session.role}`
+    );
     redirect("/admin");
   }
 }

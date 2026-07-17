@@ -147,9 +147,12 @@ export async function loginAdminAction(email: string, password: string) {
       const cookieOptions = getAdminSessionCookieOptions();
 
       // If env admin email matches a DB user, attach that profile to the session.
+      // Only when that profile is also an admin: env admin credentials must
+      // never produce a session with fewer privileges (a contributor/client
+      // profile with the same email would lock the owner out of admin pages).
       if (isPostgresConfigured()) {
         const linkedUser = await pgGetUserAuthByLogin(email);
-        if (linkedUser) {
+        if (linkedUser && linkedUser.role === "admin") {
           const sessionVersion = await getSessionVersion(linkedUser.id);
           const token = createUserSessionTokenSync(linkedUser.id, linkedUser.role, sessionVersion);
           cookieStore.set(getAdminSessionCookieName(), token, cookieOptions);
