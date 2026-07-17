@@ -680,14 +680,9 @@ export async function saveUserAction(data: {
     }
     ministryId = parent.ministryId ?? ministryId;
   } else {
-    // admin / client / contributor — no ministry hierarchy required
-    if (role === "admin" || role === "client") {
-      ministryId = null;
-      parentUserId = null;
-    } else if (role === "contributor") {
-      ministryId = ministryId ?? null;
-      parentUserId = null;
-    }
+    // admin / client / contributor — ministry is optional categorization
+    parentUserId = null;
+    ministryId = ministryId ?? null;
   }
 
   let accountManagerName = data.accountManagerName;
@@ -736,6 +731,21 @@ export async function saveUserRegionAction(data: {
   if (!isPostgresConfigured()) return { success: false, error: "Database required" };
 
   const result = await pgExt.pgUpdateUserRegion(data.userId, data.region);
+  await revalidateExtended();
+  return result;
+}
+
+export async function saveUserMinistryAction(data: {
+  userId: string;
+  ministryId: string | null;
+}) {
+  const session = await getAuthSession();
+  if (!session || (!isFullAdmin(session) && !isClientUser(session))) {
+    return { success: false, error: "Unauthorized" };
+  }
+  if (!isPostgresConfigured()) return { success: false, error: "Database required" };
+
+  const result = await pgExt.pgUpdateUserMinistry(data.userId, data.ministryId);
   await revalidateExtended();
   return result;
 }

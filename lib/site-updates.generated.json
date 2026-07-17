@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "d7b6fce79a582ebca6f3a8872fa8b3f817bd8f36",
+      "committedAt": "2026-07-17T22:58:38+03:30",
+      "title": "امکان ارسال دستورکار بر اساس وزارتخانه و شهر",
+      "subject": "Add ministry and city audience targeting for directives"
+    },
+    {
       "hash": "185a4c1dc8c4cad11b6580c57a3a2943b39202fb",
       "committedAt": "2026-07-17T22:48:48+03:30",
       "title": "افزودن وزارتخانه و یوزر مادر با دسترسی سلسله‌مراتبی محتوا",

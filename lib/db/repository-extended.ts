@@ -326,6 +326,13 @@ export async function pgUpdateUserRegion(userId: string, region: string | null) 
   return { success: true as const };
 }
 
+export async function pgUpdateUserMinistry(userId: string, ministryId: string | null) {
+  const sql = getSql();
+  const normalized = ministryId?.trim() || null;
+  await sql`UPDATE users SET ministry_id = ${normalized} WHERE id = ${userId}`;
+  return { success: true as const };
+}
+
 export async function pgImportUsersFromExcel(params: {
   rows: ParsedUserImportRow[];
   campaignIds: string[];

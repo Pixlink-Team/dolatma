@@ -28,7 +28,12 @@ export type SessionRole = AdminRole;
 
 export interface Ministry {
   id: string;
+  /** Short display title, e.g. بهداشت و درمان */
   name: string;
+  /** Formal organization name */
+  fullName?: string | null;
+  description?: string | null;
+  isActive?: boolean;
   createdAt: string;
 }
 

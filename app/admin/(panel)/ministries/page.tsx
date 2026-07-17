@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { MinistriesAdmin } from "@/components/admin/ministries-admin";
 import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
-import { pgListMinistries } from "@/lib/db/repository-ministries";
+import { pgEnsureDefaultMinistries, pgListMinistries } from "@/lib/db/repository-ministries";
 import { isPostgresConfigured } from "@/lib/utils";
 
 export default async function MinistriesPage() {
@@ -9,6 +9,11 @@ export default async function MinistriesPage() {
   if (!session) redirect("/admin/login");
   if (!isFullAdmin(session)) redirect("/admin");
 
-  const ministries = isPostgresConfigured() ? await pgListMinistries() : [];
+  let ministries: Awaited<ReturnType<typeof pgListMinistries>> = [];
+  if (isPostgresConfigured()) {
+    await pgEnsureDefaultMinistries();
+    ministries = await pgListMinistries();
+  }
+
   return <MinistriesAdmin initialMinistries={ministries} />;
 }

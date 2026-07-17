@@ -785,12 +785,15 @@ CREATE INDEX IF NOT EXISTS idx_directive_recipients_user
 CREATE INDEX IF NOT EXISTS idx_directive_recipients_directive
   ON directive_recipients(directive_id, confirmed);
 
--- Government ministries + parent/sub-user hierarchy
 CREATE TABLE IF NOT EXISTS ministries (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL UNIQUE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+ALTER TABLE ministries ADD COLUMN IF NOT EXISTS full_name TEXT;
+ALTER TABLE ministries ADD COLUMN IF NOT EXISTS description TEXT;
+ALTER TABLE ministries ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT true;
 
 ALTER TABLE users ADD COLUMN IF NOT EXISTS ministry_id UUID REFERENCES ministries(id) ON DELETE SET NULL;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS parent_user_id UUID REFERENCES users(id) ON DELETE SET NULL;
@@ -823,4 +826,20 @@ CREATE POLICY ministries_app_access ON ministries
   FOR ALL
   USING (true)
   WITH CHECK (true);
+
+-- Seed default ministries (idempotent by unique name)
+INSERT INTO ministries (id, name, full_name, description, is_active, created_at)
+VALUES
+  (gen_random_uuid(), 'بهداشت و درمان', 'وزارت بهداشت، درمان و آموزش پزشکی', 'رصد تهدیدات زیستی/درمانی دشمن و ثبت اقدامات دفاعی، امدادی و مستقل حوزه سلامت.', true, now()),
+  (gen_random_uuid(), 'دفاع و نیروهای مسلح', 'ستاد کل نیروهای مسلح / وزارت دفاع', 'اقدامات نظامی دشمن، پدافند، پاسخ عملیاتی و آماده‌باش نیروهای مسلح.', true, now()),
+  (gen_random_uuid(), 'امور خارجه', 'وزارت امور خارجه', 'دیپلماسی، محکومیت‌ها، مذاکرات و رایزنی‌های منطقه‌ای و بین‌المللی.', true, now()),
+  (gen_random_uuid(), 'نفت و انرژی', 'وزارت نفت', 'تهدیدات انرژی، حفاظت تأسیسات نفتی و مدیریت مسیرهای صادرات.', true, now()),
+  (gen_random_uuid(), 'ارتباطات و فناوری', 'وزارت ارتباطات و فناوری اطلاعات', 'حملات سایبری دشمن و اقدامات دفاع سایبری و بازیابی سرویس‌ها.', true, now()),
+  (gen_random_uuid(), 'کشور', 'وزارت کشور', 'امنیت داخلی، مدیریت بحران استانی و هماهنگی استانداری‌ها.', true, now()),
+  (gen_random_uuid(), 'اطلاعات', 'وزارت اطلاعات', 'عملیات اطلاعاتی دشمن و اقدامات مقابله‌ای و رصد امنیتی.', true, now()),
+  (gen_random_uuid(), 'راه و شهرسازی', 'وزارت راه و شهرسازی', 'تهدید زیرساخت حمل‌ونقل و اقدامات ایمن‌سازی مسیرها و بنادر.', true, now())
+ON CONFLICT (name) DO UPDATE SET
+  full_name = EXCLUDED.full_name,
+  description = EXCLUDED.description,
+  is_active = EXCLUDED.is_active;
 

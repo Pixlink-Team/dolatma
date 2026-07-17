@@ -4,7 +4,7 @@ import { isClientUser } from "@/lib/auth/access";
 import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
 import { UsersAdmin } from "@/components/admin/users-admin";
 import { pgGetSubUsersForParent } from "@/lib/db/repository-extended";
-import { pgListMinistries } from "@/lib/db/repository-ministries";
+import { pgEnsureDefaultMinistries, pgListMinistries } from "@/lib/db/repository-ministries";
 import { isMinistryParentRole } from "@/lib/user-roles";
 import { isPostgresConfigured } from "@/lib/utils";
 
@@ -16,6 +16,10 @@ export default async function UsersPage() {
   const isClient = isClientUser(session);
   const isParent = isMinistryParentRole(session.role);
   if (!isAdmin && !isClient && !isParent) redirect("/admin");
+
+  if (isPostgresConfigured()) {
+    await pgEnsureDefaultMinistries();
+  }
 
   const [campaigns, ministries] = await Promise.all([
     getAllCampaigns(),
@@ -41,7 +45,7 @@ export default async function UsersPage() {
       initialUsers={users}
       campaigns={campaigns}
       ministries={ministries}
-      mode={isAdmin ? "full" : "region"}
+      mode={isAdmin ? "full" : "ministry"}
     />
   );
 }

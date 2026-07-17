@@ -1,4 +1,5 @@
 import { getSql } from "@/lib/db/client";
+import { DEFAULT_MINISTRIES } from "@/lib/ministry-seed";
 import type { Ministry } from "@/lib/types";
 import { generateId } from "@/lib/utils";
 
@@ -6,6 +7,15 @@ function mapMinistry(row: Record<string, unknown>): Ministry {
   return {
     id: String(row.id),
     name: String(row.name ?? ""),
+    fullName:
+      typeof row.full_name === "string" && row.full_name.trim()
+        ? row.full_name.trim()
+        : null,
+    description:
+      typeof row.description === "string" && row.description.trim()
+        ? row.description.trim()
+        : null,
+    isActive: row.is_active !== false,
     createdAt:
       row.created_at instanceof Date
         ? row.created_at.toISOString()
@@ -15,7 +25,10 @@ function mapMinistry(row: Record<string, unknown>): Ministry {
 
 export async function pgListMinistries(): Promise<Ministry[]> {
   const sql = getSql();
-  const rows = await sql`SELECT * FROM ministries ORDER BY name ASC`;
+  const rows = await sql`
+    SELECT * FROM ministries
+    ORDER BY name ASC
+  `;
   return rows.map((row) => mapMinistry(row as Record<string, unknown>));
 }
 
@@ -26,25 +39,60 @@ export async function pgGetMinistryById(id: string): Promise<Ministry | null> {
   return mapMinistry(rows[0] as Record<string, unknown>);
 }
 
+export async function pgEnsureDefaultMinistries(): Promise<void> {
+  const sql = getSql();
+  const now = new Date().toISOString();
+  for (const item of DEFAULT_MINISTRIES) {
+    await sql`
+      INSERT INTO ministries (id, name, full_name, description, is_active, created_at)
+      VALUES (
+        ${generateId()},
+        ${item.name},
+        ${item.fullName},
+        ${item.description},
+        ${true},
+        ${now}
+      )
+      ON CONFLICT (name) DO UPDATE SET
+        full_name = EXCLUDED.full_name,
+        description = EXCLUDED.description,
+        is_active = EXCLUDED.is_active
+    `;
+  }
+}
+
 export async function pgSaveMinistry(data: {
   id?: string;
   name: string;
+  fullName?: string | null;
+  description?: string | null;
+  isActive?: boolean;
 }): Promise<{ success: true; id: string } | { success: false; error: string }> {
   const sql = getSql();
   const id = data.id ?? generateId();
   const name = data.name.trim();
+  const fullName = data.fullName?.trim() || null;
+  const description = data.description?.trim() || null;
+  const isActive = data.isActive !== false;
   if (!name) {
     return { success: false, error: "نام وزارتخانه الزامی است" };
   }
 
   try {
     if (data.id) {
-      await sql`UPDATE ministries SET name = ${name} WHERE id = ${id}`;
+      await sql`
+        UPDATE ministries SET
+          name = ${name},
+          full_name = ${fullName},
+          description = ${description},
+          is_active = ${isActive}
+        WHERE id = ${id}
+      `;
     } else {
       const now = new Date().toISOString();
       await sql`
-        INSERT INTO ministries (id, name, created_at)
-        VALUES (${id}, ${name}, ${now})
+        INSERT INTO ministries (id, name, full_name, description, is_active, created_at)
+        VALUES (${id}, ${name}, ${fullName}, ${description}, ${isActive}, ${now})
       `;
     }
     return { success: true, id };

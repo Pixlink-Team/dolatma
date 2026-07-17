@@ -22,7 +22,7 @@ import {
   deleteUserAction,
   deleteUsersAction,
   saveUserAction,
-  saveUserRegionAction,
+  saveUserMinistryAction,
 } from "@/lib/actions/extended-actions";
 import {
   contributorPermissionLabels,
@@ -31,17 +31,9 @@ import {
   type ContributorPermissionKey,
   type ContributorPermissions,
 } from "@/lib/contributor-permissions";
-import {
-  USER_REGIONS,
-  getUserRegionLabel,
-  normalizeUserRegion,
-  userRegionLabels,
-  type UserRegion,
-} from "@/lib/user-regions";
 import { getRoleLabel } from "@/lib/user-roles";
 import type { AdminRole, AdminUser, CampaignSettings, Ministry } from "@/lib/types";
 
-const NO_REGION = "__none__";
 const NO_MINISTRY = "__none__";
 const NO_PARENT = "__none__";
 
@@ -52,7 +44,6 @@ const schema = z.object({
   password: z.string().optional(),
   province: z.string().optional(),
   city: z.string().optional(),
-  region: z.enum(["north", "south", "east", "west"]).nullable().optional(),
   phone: z.string().optional(),
   ministryId: z.string().nullable().optional(),
   parentUserId: z.string().nullable().optional(),
@@ -72,8 +63,8 @@ interface UsersAdminProps {
   initialUsers: AdminUser[];
   campaigns: CampaignSettings[];
   ministries?: Ministry[];
-  /** full = admin; region = client region only; sub_users = ministry parent manages children */
-  mode?: "full" | "region" | "sub_users";
+  /** full = admin; ministry = client can only set ministry; sub_users = ministry parent manages children */
+  mode?: "full" | "ministry" | "sub_users";
   parentUserId?: string;
 }
 
@@ -86,6 +77,7 @@ export function UsersAdmin({
 }: UsersAdminProps) {
   const isFullMode = mode === "full";
   const isSubUsersMode = mode === "sub_users";
+  const isMinistryOnlyMode = mode === "ministry";
   const canManageUsers = isFullMode || isSubUsersMode;
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -107,7 +99,6 @@ export function UsersAdmin({
       password: "",
       province: "",
       city: "",
-      region: null as UserRegion | null,
       phone: "",
       ministryId: null as string | null,
       parentUserId: parentUserId ?? null,
@@ -119,7 +110,6 @@ export function UsersAdmin({
   const selectedRole = form.watch("role");
   const selectedProvince = form.watch("province");
   const selectedCity = form.watch("city");
-  const selectedRegion = form.watch("region");
   const selectedMinistryId = form.watch("ministryId");
   const selectedParentUserId = form.watch("parentUserId");
 
@@ -151,23 +141,27 @@ export function UsersAdmin({
   };
 
   const onSubmit = form.handleSubmit((data) => {
-    if (mode === "region") {
+    if (isMinistryOnlyMode) {
       if (!editingId) return;
       startTransition(async () => {
-        const result = await saveUserRegionAction({
+        const result = await saveUserMinistryAction({
           userId: editingId,
-          region: data.region ?? null,
+          ministryId: data.ministryId ?? null,
         });
         if (!result.success) {
           toast.error("error" in result ? result.error : "ذخیره نشد");
           return;
         }
+        const ministryName =
+          ministries.find((item) => item.id === data.ministryId)?.name ?? null;
         setRows((prev) =>
           prev.map((row) =>
-            row.id === editingId ? { ...row, region: normalizeUserRegion(data.region) } : row
+            row.id === editingId
+              ? { ...row, ministryId: data.ministryId ?? null, ministryName }
+              : row
           )
         );
-        toast.success("دسته‌بندی ذخیره شد");
+        toast.success("وزارتخانه ذخیره شد");
         setOpen(false);
       });
       return;
@@ -179,8 +173,7 @@ export function UsersAdmin({
     }
 
     const role: AdminRole = isSubUsersMode ? "sub_user" : data.role;
-    const ministryId =
-      role === "ministry_parent" || role === "sub_user" ? data.ministryId ?? null : null;
+    const ministryId = data.ministryId ?? null;
     const nextParentUserId = isSubUsersMode
       ? parentUserId ?? null
       : role === "sub_user"
@@ -204,7 +197,6 @@ export function UsersAdmin({
         id: editingId ?? undefined,
         province: data.province?.trim() || null,
         city: data.city?.trim() || null,
-        region: data.region ?? null,
         phone: data.phone?.trim() || null,
         ministryId,
         parentUserId: nextParentUserId,
@@ -231,7 +223,6 @@ export function UsersAdmin({
         role,
         province: data.province?.trim() || null,
         city: data.city?.trim() || null,
-        region: normalizeUserRegion(data.region),
         phone: data.phone?.trim() || null,
         accountManagerName: existing?.accountManagerName ?? null,
         ministryId,
@@ -262,7 +253,6 @@ export function UsersAdmin({
       password: "",
       province: "",
       city: "",
-      region: null,
       phone: "",
       ministryId: null,
       parentUserId: parentUserId ?? null,
@@ -294,7 +284,6 @@ export function UsersAdmin({
       password: "",
       province: normalizedProvince,
       city: normalizedCity,
-      region: normalizeUserRegion(user.region),
       phone: user.phone ?? "",
       ministryId: user.ministryId ?? null,
       parentUserId: user.parentUserId ?? parentUserId ?? null,
@@ -314,7 +303,7 @@ export function UsersAdmin({
             ? "تعریف وزارتخانه، یوزر مادر، کاربر زیرمجموعه، دسترسی کمپین و بخش‌های پنل"
             : isSubUsersMode
               ? "ایجاد و مدیریت کاربران زیرمجموعه با استان، شهر و شماره موبایل"
-              : "تعیین دسته‌بندی منطقه‌ای کاربران (شمال / جنوب / شرق / غرب)"}
+              : "تعیین وزارتخانه کاربران"}
         </p>
       </div>
 
@@ -337,7 +326,7 @@ export function UsersAdmin({
           <AdminDataTable
             data={rows}
             selectable={isFullMode}
-            searchKeys={["name", "email", "role", "province", "city", "region", "accountManagerName"]}
+            searchKeys={["name", "email", "role", "province", "city", "accountManagerName"]}
             columns={[
               { key: "name", label: "نام" },
               {
@@ -351,11 +340,6 @@ export function UsersAdmin({
                 key: "ministryName",
                 label: "وزارتخانه",
                 render: (item) => item.ministryName || "—",
-              },
-              {
-                key: "region",
-                label: "دسته منطقه‌ای",
-                render: (item) => getUserRegionLabel(item.region),
               },
               {
                 key: "accountManagerName",
@@ -432,8 +416,8 @@ export function UsersAdmin({
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {mode === "region"
-                ? "دسته‌بندی منطقه‌ای کاربر"
+              {isMinistryOnlyMode
+                ? "وزارتخانه کاربر"
                 : editingId
                   ? isSubUsersMode
                     ? "ویرایش کاربر زیرمجموعه"
@@ -486,21 +470,22 @@ export function UsersAdmin({
 
             {!isSubUsersMode && (
               <div className="space-y-2">
-                <Label>دسته‌بندی منطقه‌ای</Label>
+                <Label>وزارتخانه</Label>
                 <Select
-                  value={selectedRegion ?? NO_REGION}
+                  value={selectedMinistryId ?? NO_MINISTRY}
                   onValueChange={(value) =>
-                    form.setValue("region", value === NO_REGION ? null : (value as UserRegion))
+                    form.setValue("ministryId", value === NO_MINISTRY ? null : value)
                   }
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="انتخاب دسته" />
+                    <SelectValue placeholder="انتخاب وزارتخانه" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={NO_REGION}>بدون دسته</SelectItem>
-                    {USER_REGIONS.map((region) => (
-                      <SelectItem key={region} value={region}>
-                        {userRegionLabels[region]}
+                    <SelectItem value={NO_MINISTRY}>بدون وزارتخانه</SelectItem>
+                    {ministries.map((ministry) => (
+                      <SelectItem key={ministry.id} value={ministry.id}>
+                        {ministry.name}
+                        {ministry.fullName ? ` — ${ministry.fullName}` : ""}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -545,30 +530,6 @@ export function UsersAdmin({
                         </SelectContent>
                       </Select>
                     </div>
-
-                    {(selectedRole === "ministry_parent" || selectedRole === "sub_user") && (
-                      <div className="space-y-2">
-                        <Label>وزارتخانه</Label>
-                        <Select
-                          value={selectedMinistryId ?? NO_MINISTRY}
-                          onValueChange={(value) =>
-                            form.setValue("ministryId", value === NO_MINISTRY ? null : value)
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="انتخاب وزارتخانه" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value={NO_MINISTRY}>انتخاب کنید</SelectItem>
-                            {ministries.map((ministry) => (
-                              <SelectItem key={ministry.id} value={ministry.id}>
-                                {ministry.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
 
                     {selectedRole === "sub_user" && (
                       <div className="space-y-2">
