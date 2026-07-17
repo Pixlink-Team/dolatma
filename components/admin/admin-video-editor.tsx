@@ -259,12 +259,20 @@ export function AdminVideoEditor({
                 onScoreSaved={setEditScore}
               />
             )}
-            <MediaUpload label="ویدیو" kind="video" value={videoUrl} onChange={setVideoUrl} />
+            <MediaUpload
+              label="ویدیو"
+              kind="video"
+              value={videoUrl}
+              onChange={setVideoUrl}
+              onAutoCoverGenerated={(coverUrl) => {
+                setThumbnailUrl((current) => (current.trim() ? current : coverUrl));
+              }}
+            />
             <MediaUpload
               label={
                 isAparat
                   ? "کاور سفارشی (اختیاری — بدون کاور از آپارات)"
-                  : "کاور (اختیاری)"
+                  : "کاور (اختیاری — بدون کاور از ثانیه ۳ ویدیو ساخته می‌شود)"
               }
               value={thumbnailUrl}
               onChange={setThumbnailUrl}

@@ -13,6 +13,7 @@ import {
   resolveVideoThumbnail,
 } from "@/lib/media-utils";
 import { cn } from "@/lib/utils";
+import { captureAndUploadVideoCover } from "@/lib/client/video-cover";
 import { Loader2, Trash2, Upload } from "lucide-react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
@@ -27,6 +28,8 @@ interface MediaUploadProps {
     fileSize: number;
     mimeType: string;
   }) => void;
+  /** Fired after a video file upload when an auto WebP cover was generated from second ~3. */
+  onAutoCoverGenerated?: (coverUrl: string) => void;
   label?: string;
   kind?: "image" | "video" | "audio";
   uploadKind?: "image" | "video" | "audio" | "activity-video" | "raw-image" | "raw-video";
@@ -41,6 +44,7 @@ export function MediaUpload({
   onChange,
   onUploaded,
   onUploadedMeta,
+  onAutoCoverGenerated,
   label,
   kind = "image",
   uploadKind,
@@ -51,6 +55,7 @@ export function MediaUpload({
 }: MediaUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const [generatingCover, setGeneratingCover] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [showLinkEditor, setShowLinkEditor] = useState(false);
 
@@ -98,6 +103,18 @@ export function MediaUpload({
       });
       setShowLinkEditor(false);
       toast.success("فایل با موفقیت آپلود شد");
+
+      if (kind === "video" && onAutoCoverGenerated && file.type.startsWith("video/")) {
+        setGeneratingCover(true);
+        try {
+          const coverUrl = await captureAndUploadVideoCover(file);
+          onAutoCoverGenerated(coverUrl);
+        } catch (error) {
+          console.warn("Auto video cover failed:", error);
+        } finally {
+          setGeneratingCover(false);
+        }
+      }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "آپلود ناموفق بود");
     } finally {
@@ -182,11 +199,11 @@ export function MediaUpload({
             <Button
               type="button"
               variant="outline"
-              disabled={uploading}
+              disabled={uploading || generatingCover}
               onClick={() => inputRef.current?.click()}
               className="shrink-0"
             >
-              {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+              {uploading || generatingCover ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
               {kind === "video" && fileOnly ? "آپلود ویدیو" : dropzone ? "انتخاب فایل" : "آپلود"}
             </Button>
           </div>
@@ -249,12 +266,15 @@ export function MediaUpload({
               type="button"
               variant="outline"
               size="sm"
-              disabled={uploading}
+              disabled={uploading || generatingCover}
               onClick={() => inputRef.current?.click()}
             >
-              {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+              {uploading || generatingCover ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
               {isDirectVideo ? "تعویض فایل" : "آپلود فایل"}
             </Button>
+            {generatingCover && (
+              <span className="text-xs text-muted-foreground">در حال ساخت کاور از ثانیه ۳…</span>
+            )}
             {isDirectVideo && (
               <>
                 <Button
