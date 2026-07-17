@@ -52,7 +52,7 @@ export function AdminActivityCompactCard({
             <div className="flex h-full items-center justify-center text-xs text-muted-foreground">بدون تصویر</div>
           )}
           <div className="absolute top-1.5 right-1.5">
-            <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+            <Badge variant="overlay" className="text-[10px] px-1.5 py-0">
               {getActivityTypeLabel(activity.activityType)}
             </Badge>
           </div>

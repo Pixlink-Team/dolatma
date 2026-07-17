@@ -54,7 +54,11 @@ export function PublicContentCard({
             </Badge>
           )}
           {normalizedTopics.map((topic) => (
-            <Badge key={topic} variant="outline" className="max-w-full gap-1 text-[10px] font-normal">
+            <Badge
+              key={topic}
+              variant="secondary"
+              className="max-w-full gap-1 text-[10px] font-normal"
+            >
               <Tags className="h-3 w-3 shrink-0" />
               <span className="break-words">{topic.replace("|", " / ")}</span>
             </Badge>

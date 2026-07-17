@@ -58,7 +58,7 @@ export function MediaVersionTimeline({
                 />
                 {version.isFinal && (
                   <div className="absolute top-2 right-2">
-                    <Badge status="final" className="gap-1">
+                    <Badge variant="overlay" className="gap-1">
                       <CheckCircle2 className="h-3 w-3" />
                       نسخه نهایی
                     </Badge>

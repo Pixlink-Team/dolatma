@@ -33,7 +33,7 @@ export function PublicContentDetailFields({
           </Badge>
         )}
         {normalizedTopics.map((topic) => (
-          <Badge key={topic} variant="outline" className="gap-1 font-normal">
+          <Badge key={topic} variant="secondary" className="gap-1 font-normal">
             <Tags className="h-3.5 w-3.5 shrink-0" />
             {topic.replace("|", " / ")}
           </Badge>

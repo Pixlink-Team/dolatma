@@ -112,15 +112,15 @@ function NotificationCard({
             <MediaPlaceholder kind="poster" className="h-full w-full" />
           )}
           <div className="absolute top-2 right-2 flex flex-wrap justify-end gap-1">
-            <Badge variant="secondary" className="text-[10px]">
+            <Badge variant="overlay" className="text-[10px]">
               {item.typeLabel}
             </Badge>
             {item.score == null ? (
-              <Badge variant="outline" className="bg-background/90 text-[10px]">
+              <Badge variant="overlay" className="text-[10px]">
                 بدون امتیاز
               </Badge>
             ) : (
-              <Badge variant="secondary" className="text-[10px]">
+              <Badge variant="overlay" className="text-[10px]">
                 امتیاز {formatPersianNumber(item.score)}
               </Badge>
             )}

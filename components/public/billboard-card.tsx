@@ -65,10 +65,7 @@ export function BillboardCard({ billboard, onView }: BillboardCardProps) {
             />
           )}
           {showCity && (
-            <Badge
-              variant="outline"
-              className="absolute right-2 top-2 bg-background/90 text-[10px] shadow-sm"
-            >
+            <Badge variant="overlay" className="absolute right-2 top-2 text-[10px]">
               <MapPin className="h-3 w-3" />
               {city}
             </Badge>

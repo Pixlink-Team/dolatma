@@ -49,7 +49,7 @@ export function AdminSocialPostCompactCard({
             </div>
           )}
           <div className="absolute top-1.5 right-1.5 flex flex-wrap gap-1 justify-end">
-            <Badge variant="outline" className="gap-1 text-[10px] px-1.5 py-0 bg-background/90">
+            <Badge variant="overlay" className="gap-1 text-[10px] px-1.5 py-0">
               {post.platform !== "site" ? (
                 <SocialPlatformIcon
                   platform={post.platform as SocialPlatform}

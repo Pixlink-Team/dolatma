@@ -53,12 +53,12 @@ export function AdminBillboardCompactCard({
           />
           <div className="absolute top-1.5 right-1.5 flex max-w-[calc(100%-0.75rem)] flex-wrap gap-1 justify-end">
             {categoryLabel && (
-              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 shadow-sm">
+              <Badge variant="overlay" className="text-[10px] px-1.5 py-0">
                 {categoryLabel}
               </Badge>
             )}
             {city && (
-              <Badge variant="outline" className="bg-background/90 text-[10px] px-1.5 py-0 shadow-sm">
+              <Badge variant="overlay" className="text-[10px] px-1.5 py-0">
                 {city}
               </Badge>
             )}
