@@ -81,6 +81,23 @@ export interface MapBilboardApiSettingsPublic {
   configured: boolean;
 }
 
+export type SmsProviderId = "none" | "kavenegar" | "melipayamak" | "custom";
+
+export interface SmsProviderSettings {
+  enabled: boolean;
+  provider: SmsProviderId;
+  apiKey?: string | null;
+  sender?: string | null;
+}
+
+export interface SmsProviderSettingsPublic {
+  enabled: boolean;
+  provider: SmsProviderId;
+  sender: string;
+  hasApiKey: boolean;
+  configured: boolean;
+}
+
 export interface CampaignSettings {
   id: string;
   slug: string;

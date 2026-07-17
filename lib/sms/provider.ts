@@ -1,18 +1,15 @@
 /**
  * SMS provider placeholder.
- * Wire a real provider (Kavenegar, Melipayamak, …) here later via system_settings.
+ * Credentials live in system_settings (key: sms_provider) and are edited from campaign settings UI.
  */
+
+import type { SmsProviderSettings } from "@/lib/types";
 
 export type SmsSendResult =
   | { ok: true; providerMessageId?: string }
   | { ok: false; error: string; skipped?: boolean };
 
-export interface SmsProviderSettings {
-  enabled: boolean;
-  provider: "none" | "kavenegar" | "melipayamak" | "custom";
-  apiKey?: string | null;
-  sender?: string | null;
-}
+export type { SmsProviderSettings };
 
 export const DEFAULT_SMS_SETTINGS: SmsProviderSettings = {
   enabled: false,
@@ -42,6 +39,10 @@ export async function sendSms(
 
   if (!settings.enabled || settings.provider === "none") {
     return { ok: false, error: "سرویس پیامک هنوز پیکربندی نشده است", skipped: true };
+  }
+
+  if (!settings.apiKey?.trim()) {
+    return { ok: false, error: "کلید API پیامک تنظیم نشده است", skipped: true };
   }
 
   // Provider integrations will be added when credentials are available.

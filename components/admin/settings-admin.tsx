@@ -19,6 +19,7 @@ import { PersianDateField } from "@/components/ui/persian-date-input";
 import { updateSettingsAction } from "@/lib/actions/admin-actions";
 import { saveCampaignPagePasswordAction } from "@/lib/actions/extended-actions";
 import { fetchExternalCampaignsAction } from "@/lib/actions/billboard-import-actions";
+import { SmsSettingsCard } from "@/components/admin/sms-settings-card";
 import {
   contentPlansFromTopics,
   normalizeContentTopics,
@@ -357,7 +358,7 @@ export function SettingsAdmin({
         <h1 className="text-2xl font-bold">تنظیمات کمپین</h1>
         <p className="text-sm text-muted-foreground">
           {canEditFullSettings
-            ? "اطلاعات، بیلبورد زنده، آمار سایت و شبکه‌های اجتماعی"
+            ? "اطلاعات، پیامک، بیلبورد زنده، آمار سایت و شبکه‌های اجتماعی"
             : "رمز دسترسی به صفحه نمایش کمپین"}
         </p>
         {canEditFullSettings && (
@@ -409,6 +410,8 @@ export function SettingsAdmin({
           )}
         </CardContent>
       </Card>
+
+      {canEditFullSettings && <SmsSettingsCard />}
 
       {canEditFullSettings && (
       <Card>
