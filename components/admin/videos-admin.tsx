@@ -78,6 +78,8 @@ export function VideosAdmin({
   const [editorOpen, setEditorOpen] = useState(false);
   const [activeVideoId, setActiveVideoId] = useState<string | null>(null);
   const [draftVideo, setDraftVideo] = useState<Video | null>(null);
+  const [draftVideoUrl, setDraftVideoUrl] = useState("");
+  const [draftVideoFile, setDraftVideoFile] = useState<File | null>(null);
   const [previewVideo, setPreviewVideo] = useState<Video | null>(null);
   const [highlightFields, setHighlightFields] = useState<EditSuggestionMissingField[]>([]);
   const [contentFilter, setContentFilter] = useState<AdminContentFilterState>(DEFAULT_ADMIN_CONTENT_FILTER);
@@ -186,12 +188,14 @@ export function VideosAdmin({
     setEditorOpen(false);
     setActiveVideoId(null);
     setDraftVideo(null);
+    setDraftVideoUrl("");
+    setDraftVideoFile(null);
     setHighlightFields([]);
     openedFromQueryRef.current = null;
     clearEditQuery();
   };
 
-  const handleCreateVideo = () => {
+  const handleCreateVideo = (videoUrl?: string, videoFile?: File) => {
     void requestCreate(() => {
       const videoId = crypto.randomUUID();
       const categoryId = pickDefaultVideoCategoryId(initialCategories);
@@ -210,6 +214,8 @@ export function VideosAdmin({
       };
 
       setDraftVideo(newVideo);
+      setDraftVideoUrl(videoUrl ?? "");
+      setDraftVideoFile(videoFile ?? null);
       openEditor(videoId);
     });
   };
@@ -271,12 +277,14 @@ export function VideosAdmin({
         <div className="rounded-xl border px-4 py-8 text-center text-sm text-muted-foreground">
           هنوز ویدیویی ثبت نشده است.
           <div className="mt-3 flex justify-center">
-            <AdminVideoAddCard compact onClick={handleCreateVideo} />
+            <AdminVideoAddCard compact onUploaded={(url, file) => handleCreateVideo(url, file)} />
           </div>
         </div>
       ) : viewMode === "grid" ? (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-          {!bulk.bulkMode && <AdminVideoAddCard onClick={handleCreateVideo} />}
+          {!bulk.bulkMode && (
+            <AdminVideoAddCard onUploaded={(url, file) => handleCreateVideo(url, file)} />
+          )}
           {visibleVideos.map((video) => (
             <BulkItemShell
               key={video.id}
@@ -368,6 +376,8 @@ export function VideosAdmin({
                 contentTopics={contentTopics}
                 canScore={canScore}
                 isNew={isDraftVideo}
+                initialVideoUrl={isDraftVideo ? draftVideoUrl : undefined}
+                initialVideoFile={isDraftVideo ? draftVideoFile : null}
                 highlightFields={highlightFields}
                 onClose={closeEditor}
                 onSaved={(savedVideo) => {

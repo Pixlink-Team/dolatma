@@ -1,6 +1,7 @@
 "use client";
 
 import { AdminItemActions } from "@/components/admin/admin-item-actions";
+import { AdminMediaCreateDropzone } from "@/components/admin/admin-media-create-dropzone";
 import { AdminOwnerBadge } from "@/components/admin/admin-owner-badge";
 import { AdminPlanLabelsBadges } from "@/components/admin/admin-plan-labels-badges";
 import { ContentScoreControl } from "@/components/admin/content-score-control";
@@ -90,45 +91,22 @@ export function AdminPosterCompactCard({
 }
 
 interface AdminPosterAddCardProps {
-  onClick: () => void;
+  onUploaded: (imageUrl: string) => void;
   disabled?: boolean;
   compact?: boolean;
 }
 
 export function AdminPosterAddCard({
-  onClick,
+  onUploaded,
   disabled,
   compact = false,
 }: AdminPosterAddCardProps) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
+    <AdminMediaCreateDropzone
+      kind="image"
+      compact={compact}
       disabled={disabled}
-      className={cn(
-        "group overflow-hidden rounded-xl border-2 border-dashed bg-muted/30 text-muted-foreground transition-all",
-        "hover:border-primary hover:bg-primary/5 hover:text-primary",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-        "disabled:pointer-events-none disabled:opacity-50",
-        compact ? "h-28 w-24" : "w-full"
-      )}
-    >
-      <div
-        className={cn(
-          "flex w-full flex-col items-center justify-center gap-2",
-          compact ? "h-full p-2" : "aspect-[3/4]"
-        )}
-      >
-        <span
-          className={cn(
-            "flex items-center justify-center rounded-full border-2 border-current leading-none",
-            compact ? "h-7 w-7 text-lg" : "h-10 w-10 text-2xl"
-          )}
-        >
-          +
-        </span>
-        <p className="truncate text-center text-xs font-medium">پوستر جدید</p>
-      </div>
-    </button>
+      onUploaded={(url) => onUploaded(url)}
+    />
   );
 }

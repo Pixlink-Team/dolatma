@@ -76,6 +76,7 @@ export function PostersAdmin({
   const [editorOpen, setEditorOpen] = useState(false);
   const [activePosterId, setActivePosterId] = useState<string | null>(null);
   const [draftPoster, setDraftPoster] = useState<Poster | null>(null);
+  const [draftImageUrl, setDraftImageUrl] = useState("");
   const [previewPoster, setPreviewPoster] = useState<Poster | null>(null);
   const [highlightFields, setHighlightFields] = useState<EditSuggestionMissingField[]>([]);
   const [contentFilter, setContentFilter] = useState<AdminContentFilterState>(DEFAULT_ADMIN_CONTENT_FILTER);
@@ -155,12 +156,13 @@ export function PostersAdmin({
     setEditorOpen(false);
     setActivePosterId(null);
     setDraftPoster(null);
+    setDraftImageUrl("");
     setHighlightFields([]);
     openedFromQueryRef.current = null;
     clearEditQuery();
   };
 
-  const handleCreatePoster = () => {
+  const handleCreatePoster = (imageUrl?: string) => {
     void requestCreate(() => {
       const posterId = crypto.randomUUID();
       const categoryId = initialCategories[0]?.id ?? "";
@@ -179,6 +181,7 @@ export function PostersAdmin({
       };
 
       setDraftPoster(newPoster);
+      setDraftImageUrl(imageUrl ?? "");
       openEditor(posterId);
     });
   };
@@ -236,12 +239,12 @@ export function PostersAdmin({
         <div className="rounded-xl border px-4 py-8 text-center text-sm text-muted-foreground">
           هنوز پوستری ثبت نشده است.
           <div className="mt-3 flex justify-center">
-            <AdminPosterAddCard compact onClick={handleCreatePoster} />
+            <AdminPosterAddCard compact onUploaded={(url) => handleCreatePoster(url)} />
           </div>
         </div>
       ) : viewMode === "grid" ? (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-          {!bulk.bulkMode && <AdminPosterAddCard onClick={handleCreatePoster} />}
+          {!bulk.bulkMode && <AdminPosterAddCard onUploaded={(url) => handleCreatePoster(url)} />}
           {visiblePosters.map((poster) => (
             <BulkItemShell
               key={poster.id}
@@ -333,6 +336,7 @@ export function PostersAdmin({
                 contentTopics={contentTopics}
                 canScore={canScore}
                 isNew={isDraftPoster}
+                initialImageUrl={isDraftPoster ? draftImageUrl : undefined}
                 highlightFields={highlightFields}
                 onClose={closeEditor}
                 onSaved={(savedPoster) => {

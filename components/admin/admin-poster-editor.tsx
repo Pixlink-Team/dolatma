@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ImageIcon, Trash2 } from "lucide-react";
+import { ImageIcon, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,6 +38,8 @@ interface AdminPosterEditorProps {
   canScore?: boolean;
   isNew?: boolean;
   highlightFields?: EditSuggestionMissingField[];
+  /** Prefill media when creating from the grid dropzone. */
+  initialImageUrl?: string;
   onClose: () => void;
   onSaved?: (poster: Poster) => void;
 }
@@ -50,6 +52,7 @@ export function AdminPosterEditor({
   canScore = false,
   isNew = false,
   highlightFields = [],
+  initialImageUrl,
   onClose,
   onSaved,
 }: AdminPosterEditorProps) {
@@ -59,7 +62,9 @@ export function AdminPosterEditor({
 
   const displayVersion = useMemo(() => resolveDisplayVersion(versions), [versions]);
 
-  const [imageUrl, setImageUrl] = useState(displayVersion?.imageUrl ?? "");
+  const [imageUrl, setImageUrl] = useState(
+    displayVersion?.imageUrl || initialImageUrl || ""
+  );
   const [notes, setNotes] = useState(displayVersion?.notes ?? "");
   const [editTitle, setEditTitle] = useState(poster.title);
   const [editDescription, setEditDescription] = useState(poster.description ?? "");
@@ -76,7 +81,7 @@ export function AdminPosterEditor({
     setEditCategoryId(poster.categoryId);
     setEditPlanLabels(normalizePlanLabels(poster.planLabels, poster.planLabel));
     setEditScore(poster.score);
-    setImageUrl(current?.imageUrl ?? "");
+    setImageUrl(current?.imageUrl || (isNew ? initialImageUrl ?? "" : ""));
     setNotes(current?.notes ?? "");
   }, [
     poster.id,
@@ -87,6 +92,8 @@ export function AdminPosterEditor({
     poster.planLabels,
     poster.score,
     versions,
+    isNew,
+    initialImageUrl,
   ]);
 
   const refresh = () => router.refresh();
@@ -181,9 +188,13 @@ export function AdminPosterEditor({
                   objectFit="contain"
                 />
               ) : (
-                <div className="flex h-full flex-col items-center justify-center gap-2 text-sm text-muted-foreground">
+                <div className="flex h-full flex-col items-center justify-center gap-2 px-3 text-center text-sm text-muted-foreground">
                   <ImageIcon className="h-8 w-8" />
-                  <span>بدون تصویر</span>
+                  <span className="text-xs">تصویر را بکشید و رها کنید یا انتخاب کنید</span>
+                  <span className="inline-flex items-center gap-1.5 rounded-md border bg-background px-3 py-1.5 text-xs font-medium text-foreground shadow-sm">
+                    <Upload className="h-3.5 w-3.5" />
+                    انتخاب تصویر
+                  </span>
                 </div>
               )}
             </div>

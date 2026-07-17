@@ -2,6 +2,7 @@
 
 import { Play } from "lucide-react";
 import { AdminItemActions } from "@/components/admin/admin-item-actions";
+import { AdminMediaCreateDropzone } from "@/components/admin/admin-media-create-dropzone";
 import { AdminOwnerBadge } from "@/components/admin/admin-owner-badge";
 import { AdminPlanLabelsBadges } from "@/components/admin/admin-plan-labels-badges";
 import { ContentScoreControl } from "@/components/admin/content-score-control";
@@ -91,38 +92,22 @@ export function AdminVideoCompactCard({
 }
 
 interface AdminVideoAddCardProps {
-  onClick: () => void;
+  onUploaded: (videoUrl: string, file: File) => void;
   disabled?: boolean;
   compact?: boolean;
 }
 
 export function AdminVideoAddCard({
-  onClick,
+  onUploaded,
   disabled,
   compact = false,
 }: AdminVideoAddCardProps) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
+    <AdminMediaCreateDropzone
+      kind="video"
+      compact={compact}
       disabled={disabled}
-      className={cn(
-        "flex flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed bg-muted/30 text-muted-foreground transition-colors",
-        "hover:border-primary hover:bg-primary/5 hover:text-primary",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-        "disabled:pointer-events-none disabled:opacity-50",
-        compact ? "h-24 w-28" : "aspect-video w-full"
-      )}
-    >
-      <span
-        className={cn(
-          "flex items-center justify-center rounded-full border-2 border-current leading-none",
-          compact ? "h-7 w-7 text-lg" : "h-10 w-10 text-2xl"
-        )}
-      >
-        +
-      </span>
-      <span className="text-xs font-medium">ویدیو جدید</span>
-    </button>
+      onUploaded={(url, file) => onUploaded(url, file)}
+    />
   );
 }

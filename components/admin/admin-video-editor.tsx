@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Play, Trash2, VideoIcon } from "lucide-react";
+import { Play, Trash2, Upload, VideoIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,6 +44,10 @@ interface AdminVideoEditorProps {
   canScore?: boolean;
   isNew?: boolean;
   highlightFields?: EditSuggestionMissingField[];
+  /** Prefill media when creating from the grid dropzone. */
+  initialVideoUrl?: string;
+  /** File uploaded from the grid dropzone, used for duration detection. */
+  initialVideoFile?: File | null;
   onClose: () => void;
   onSaved?: (video: Video) => void;
 }
@@ -95,6 +99,8 @@ export function AdminVideoEditor({
   canScore = false,
   isNew = false,
   highlightFields = [],
+  initialVideoUrl,
+  initialVideoFile = null,
   onClose,
   onSaved,
 }: AdminVideoEditorProps) {
@@ -104,7 +110,7 @@ export function AdminVideoEditor({
 
   const displayVersion = useMemo(() => resolveDisplayVersion(versions), [versions]);
 
-  const [videoUrl, setVideoUrl] = useState(displayVersion?.videoUrl ?? "");
+  const [videoUrl, setVideoUrl] = useState(displayVersion?.videoUrl || initialVideoUrl || "");
   const [thumbnailUrl, setThumbnailUrl] = useState(
     displayVersion ? draftCoverFromVersion(displayVersion) : ""
   );
@@ -135,7 +141,7 @@ export function AdminVideoEditor({
     setEditCategoryId(video.categoryId || pickDefaultVideoCategoryId(categories));
     setEditPlanLabels(normalizePlanLabels(video.planLabels, video.planLabel));
     setEditScore(video.score);
-    setVideoUrl(current?.videoUrl ?? "");
+    setVideoUrl(current?.videoUrl || (isNew ? initialVideoUrl ?? "" : ""));
     setThumbnailUrl(current ? draftCoverFromVersion(current) : "");
     setDuration(current?.duration ?? "");
     setNotes(current?.notes ?? "");
@@ -149,7 +155,23 @@ export function AdminVideoEditor({
     video.score,
     versions,
     categories,
+    isNew,
+    initialVideoUrl,
   ]);
+
+  // Detect duration for a file uploaded from the grid dropzone.
+  useEffect(() => {
+    if (!isNew || !initialVideoFile) return;
+    let cancelled = false;
+    void readVideoDuration(initialVideoFile).then((nextDuration) => {
+      if (!cancelled && nextDuration) {
+        setDuration((current) => current || nextDuration);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [isNew, initialVideoFile]);
 
   const previewCover = videoUrl
     ? resolveVideoThumbnail(videoUrl, thumbnailUrl || undefined)
@@ -269,9 +291,13 @@ export function AdminVideoEditor({
                   />
                 )
               ) : (
-                <div className="flex h-full flex-col items-center justify-center gap-2 text-sm text-muted-foreground">
+                <div className="flex h-full flex-col items-center justify-center gap-2 px-3 text-center text-sm text-muted-foreground">
                   <VideoIcon className="h-8 w-8" />
-                  <span>بدون ویدیو</span>
+                  <span className="text-xs">ویدیو را بکشید و رها کنید یا انتخاب کنید</span>
+                  <span className="inline-flex items-center gap-1.5 rounded-md border bg-background px-3 py-1.5 text-xs font-medium text-foreground shadow-sm">
+                    <Upload className="h-3.5 w-3.5" />
+                    انتخاب ویدیو
+                  </span>
                 </div>
               )}
               {videoUrl ? (
