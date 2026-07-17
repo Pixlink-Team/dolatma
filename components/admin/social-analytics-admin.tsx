@@ -180,6 +180,10 @@ export function SocialAnalyticsAdmin({
             render: (item) => formatPersianNumber(item.posts),
           },
         ]}
+        onView={(item) => {
+          if (item.profileUrl?.trim()) window.open(item.profileUrl, "_blank");
+          else openEdit(item);
+        }}
         onEdit={openEdit}
         onDelete={(item) => {
           startTransition(async () => {

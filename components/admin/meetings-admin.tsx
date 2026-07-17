@@ -386,6 +386,7 @@ export function MeetingsAdmin({ campaignId, initialMeetings, hasMeetingsPassword
             render: (item) => decisionSummary(item.decisions),
           },
         ]}
+        onView={openEdit}
         onEdit={openEdit}
         onDelete={(item) => {
           startTransition(async () => {

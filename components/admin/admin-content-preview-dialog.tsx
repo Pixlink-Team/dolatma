@@ -18,6 +18,8 @@ interface AdminContentPreviewDialogProps {
   imageUrl?: string | null;
   meta?: React.ReactNode;
   onEdit?: () => void;
+  onDelete?: () => void;
+  deleteLabel?: string;
 }
 
 export function AdminContentPreviewDialog({
@@ -28,6 +30,8 @@ export function AdminContentPreviewDialog({
   imageUrl,
   meta,
   onEdit,
+  onDelete,
+  deleteLabel,
 }: AdminContentPreviewDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -61,12 +65,25 @@ export function AdminContentPreviewDialog({
 
           {meta}
 
-          {onEdit && (
+          {(onEdit || onDelete) && (
             <AdminItemActions
-              onEdit={() => {
-                onOpenChange(false);
-                onEdit();
-              }}
+              onEdit={
+                onEdit
+                  ? () => {
+                      onOpenChange(false);
+                      onEdit();
+                    }
+                  : undefined
+              }
+              onDelete={
+                onDelete
+                  ? () => {
+                      onOpenChange(false);
+                      onDelete();
+                    }
+                  : undefined
+              }
+              deleteLabel={deleteLabel}
             />
           )}
         </div>

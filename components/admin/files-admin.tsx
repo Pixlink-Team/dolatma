@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { Download, FileSpreadsheet, FileText, Plus, Trash2 } from "lucide-react";
+import { FileSpreadsheet, FileText, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { AdminOwnerBadge } from "@/components/admin/admin-owner-badge";
 import { AdminPlanLabelsBadges } from "@/components/admin/admin-plan-labels-badges";
@@ -73,6 +73,7 @@ export function FilesAdmin({
 }: FilesAdminProps) {
   const [files, setFiles] = useState(initialFiles);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [planLabels, setPlanLabels] = useState<string[]>([]);
@@ -95,13 +96,33 @@ export function FilesAdmin({
   const bulk = useSectionBulkEdit(filteredIds);
 
   const resetForm = () => {
+    setEditingId(null);
     setTitle("");
     setDescription("");
     setPlanLabels([]);
     setUpload({ url: "", fileName: "", fileSize: 0, mimeType: "" });
   };
 
-  const handleCreate = () => {
+  const openCreate = () => {
+    resetForm();
+    setDialogOpen(true);
+  };
+
+  const openEdit = (file: CampaignFile) => {
+    setEditingId(file.id);
+    setTitle(file.title);
+    setDescription(file.description ?? "");
+    setPlanLabels(file.planLabels?.length ? file.planLabels : file.planLabel ? [file.planLabel] : []);
+    setUpload({
+      url: file.fileUrl,
+      fileName: file.fileName,
+      fileSize: file.fileSize,
+      mimeType: file.mimeType,
+    });
+    setDialogOpen(true);
+  };
+
+  const handleSave = () => {
     if (!title.trim()) {
       toast.error("عنوان فایل الزامی است");
       return;
@@ -113,6 +134,7 @@ export function FilesAdmin({
 
     startTransition(async () => {
       const result = await saveCampaignFileAction({
+        id: editingId ?? undefined,
         campaignId,
         title: title.trim(),
         description: description.trim() || undefined,
@@ -121,7 +143,9 @@ export function FilesAdmin({
         fileSize: upload.fileSize,
         mimeType: upload.mimeType,
         published: true,
-        sortOrder: files.length + 1,
+        sortOrder: editingId
+          ? files.find((item) => item.id === editingId)?.sortOrder ?? files.length + 1
+          : files.length + 1,
         planLabels,
         planLabel: planLabels[0] ?? null,
       });
@@ -132,26 +156,36 @@ export function FilesAdmin({
       }
 
       const now = new Date().toISOString();
-      setFiles((prev) => [
-        ...prev,
-        {
-          id: result.id ?? crypto.randomUUID(),
-          campaignId,
-          title: title.trim(),
-          description: description.trim() || null,
-          fileUrl: upload.url,
-          fileName: upload.fileName,
-          fileSize: upload.fileSize,
-          mimeType: upload.mimeType,
-          published: true,
-          sortOrder: prev.length + 1,
-          planLabels,
-          planLabel: planLabels[0] ?? null,
-          createdAt: now,
-          updatedAt: now,
-        },
-      ]);
-      toast.success("فایل اضافه شد");
+      const nextFile: CampaignFile = {
+        id: result.id,
+        campaignId,
+        title: title.trim(),
+        description: description.trim() || null,
+        fileUrl: upload.url,
+        fileName: upload.fileName,
+        fileSize: upload.fileSize,
+        mimeType: upload.mimeType,
+        published: true,
+        sortOrder: editingId
+          ? files.find((item) => item.id === editingId)?.sortOrder ?? files.length + 1
+          : files.length + 1,
+        planLabels,
+        planLabel: planLabels[0] ?? null,
+        score: editingId ? files.find((item) => item.id === editingId)?.score : undefined,
+        ownerUserId: editingId ? files.find((item) => item.id === editingId)?.ownerUserId : undefined,
+        ownerName: editingId ? files.find((item) => item.id === editingId)?.ownerName : undefined,
+        createdAt: editingId
+          ? files.find((item) => item.id === editingId)?.createdAt ?? now
+          : now,
+        updatedAt: now,
+      };
+
+      setFiles((prev) =>
+        editingId
+          ? prev.map((item) => (item.id === editingId ? { ...item, ...nextFile } : item))
+          : [...prev, nextFile]
+      );
+      toast.success(editingId ? "فایل به‌روزرسانی شد" : "فایل اضافه شد");
       setDialogOpen(false);
       resetForm();
     });
@@ -162,6 +196,8 @@ export function FilesAdmin({
       await deleteCampaignFileAction(file.id);
       setFiles((prev) => prev.filter((item) => item.id !== file.id));
       toast.success("فایل حذف شد");
+      setDialogOpen(false);
+      resetForm();
     });
   };
 
@@ -176,7 +212,7 @@ export function FilesAdmin({
         </div>
         <div className="flex items-center gap-2">
           <AdminViewModeToggle value={viewMode} onChange={setViewMode} />
-          <Button onClick={() => setDialogOpen(true)}>
+          <Button onClick={openCreate}>
             <Plus className="h-4 w-4" />
             فایل جدید
           </Button>
@@ -239,7 +275,9 @@ export function FilesAdmin({
               {!bulk.bulkMode && (
                 <AdminItemActions
                   onView={() => window.open(file.fileUrl, "_blank")}
+                  onEdit={() => openEdit(file)}
                   onDelete={() => handleDelete(file)}
+                  deleteLabel="این فایل"
                 />
               )}
             </div>
@@ -297,22 +335,12 @@ export function FilesAdmin({
                   </div>
 
                   {!bulk.bulkMode && (
-                    <div className="flex items-center gap-2">
-                      <Button variant="outline" size="sm" asChild>
-                        <a href={file.fileUrl} target="_blank" rel="noopener noreferrer">
-                          <Download className="h-4 w-4" />
-                          دانلود
-                        </a>
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDelete(file)}
-                        disabled={isPending}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
+                    <AdminItemActions
+                      onView={() => window.open(file.fileUrl, "_blank")}
+                      onEdit={() => openEdit(file)}
+                      onDelete={() => handleDelete(file)}
+                      deleteLabel="این فایل"
+                    />
                   )}
                 </div>
               </BulkItemShell>
@@ -321,10 +349,16 @@ export function FilesAdmin({
         </div>
       )}
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <Dialog
+        open={dialogOpen}
+        onOpenChange={(open) => {
+          setDialogOpen(open);
+          if (!open) resetForm();
+        }}
+      >
         <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>افزودن فایل</DialogTitle>
+            <DialogTitle>{editingId ? "ویرایش فایل" : "افزودن فایل"}</DialogTitle>
             <DialogDescription className="sr-only">
               آپلود فایل PDF، Word، Excel یا متنی برای کمپین
             </DialogDescription>
@@ -358,9 +392,23 @@ export function FilesAdmin({
               onChange={setUpload}
               disabled={isPending}
             />
-            <Button onClick={handleCreate} disabled={isPending} className="w-full">
+            <Button onClick={handleSave} disabled={isPending} className="w-full">
               {isPending ? "در حال ذخیره..." : "ذخیره فایل"}
             </Button>
+            {editingId && (
+              <Button
+                type="button"
+                variant="destructive"
+                className="w-full"
+                disabled={isPending}
+                onClick={() => {
+                  const current = files.find((item) => item.id === editingId);
+                  if (current) handleDelete(current);
+                }}
+              >
+                حذف فایل
+              </Button>
+            )}
           </div>
         </DialogContent>
       </Dialog>

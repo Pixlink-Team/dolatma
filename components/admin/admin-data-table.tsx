@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { AdminItemActions } from "@/components/admin/admin-item-actions";
 
 interface AdminDataTableProps<T> {
   data: T[];
@@ -24,6 +25,7 @@ interface AdminDataTableProps<T> {
     render?: (item: T) => React.ReactNode;
   }[];
   searchKeys?: (keyof T)[];
+  onView?: (item: T) => void;
   onEdit?: (item: T) => void;
   onDelete?: (item: T) => void;
   onBulkDelete?: (items: T[]) => void;
@@ -38,6 +40,7 @@ export function AdminDataTable<T extends { id: string }>({
   data,
   columns,
   searchKeys = [],
+  onView,
   onEdit,
   onDelete,
   onBulkDelete,
@@ -49,7 +52,7 @@ export function AdminDataTable<T extends { id: string }>({
 }: AdminDataTableProps<T>) {
   const [search, setSearch] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const hasActions = Boolean(onEdit || onDelete || onTogglePublish);
+  const hasActions = Boolean(onView || onEdit || onDelete || onTogglePublish);
   const showSelection = selectable && Boolean(onBulkDelete);
 
   const filtered = data.filter((item) => {
@@ -217,11 +220,11 @@ export function AdminDataTable<T extends { id: string }>({
                           <span className="text-xs text-muted-foreground">از API — فقط مشاهده</span>
                         ) : (
                         <div className="flex flex-wrap items-center justify-start gap-1">
-                          {onEdit && (
-                            <Button variant="ghost" size="sm" onClick={() => onEdit(item)}>
-                              ویرایش
-                            </Button>
-                          )}
+                          <AdminItemActions
+                            onView={onView ? () => onView(item) : undefined}
+                            onEdit={onEdit ? () => onEdit(item) : undefined}
+                            onDelete={onDelete ? () => onDelete(item) : undefined}
+                          />
                           {onTogglePublish && getPublished && (
                             <Button
                               variant="ghost"
@@ -230,29 +233,6 @@ export function AdminDataTable<T extends { id: string }>({
                             >
                               {getPublished(item) ? "عدم انتشار" : "انتشار"}
                             </Button>
-                          )}
-                          {onDelete && (
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button variant="ghost" size="sm" className="text-destructive">
-                                  حذف
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>حذف مورد</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    آیا از حذف این مورد اطمینان دارید؟ این عمل قابل بازگشت نیست.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter className="flex-row-reverse gap-2">
-                                  <AlertDialogAction onClick={() => onDelete(item)}>
-                                    حذف
-                                  </AlertDialogAction>
-                                  <AlertDialogCancel>انصراف</AlertDialogCancel>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
                           )}
                         </div>
                         )}

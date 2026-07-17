@@ -139,6 +139,9 @@ export function BroadcastAdmin({ campaignId, initialReports }: BroadcastAdminPro
           { key: "reportDate", label: "تاریخ", render: (item) => formatPersianDate(item.reportDate) },
           { key: "fileName", label: "فایل" },
         ]}
+        onView={(item) => {
+          if (item.pdfUrl) window.open(item.pdfUrl, "_blank");
+        }}
         onEdit={openEdit}
         onDelete={(item) => {
           startTransition(async () => {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { Download, FileArchive, Film, HardDrive, ImageIcon, Loader2, Plus, Trash2 } from "lucide-react";
+import { FileArchive, Film, HardDrive, ImageIcon, Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import {
   AdminContentFilterBar,
@@ -78,6 +78,7 @@ export function RawMediaAdmin({
 }: RawMediaAdminProps) {
   const [items, setItems] = useState(initialItems);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [mediaKind, setMediaKind] = useState<RawMediaKind>("image");
@@ -94,6 +95,10 @@ export function RawMediaAdmin({
   const [isExporting, setIsExporting] = useState(false);
 
   const storage = useMemo(() => buildRawMediaStorageSummary(items), [items]);
+  const storageForQuota = useMemo(() => {
+    if (!editingId) return storage;
+    return buildRawMediaStorageSummary(items.filter((item) => item.id !== editingId));
+  }, [editingId, items, storage]);
   const filterUsers = useMemo(() => collectAdminFilterUsers(items), [items]);
   const filteredItems = useMemo(
     () => items.filter((item) => matchesAdminContentFilter(item, contentFilter)),
@@ -134,6 +139,7 @@ export function RawMediaAdmin({
   const bulk = useSectionBulkEdit(filteredIds);
 
   const resetForm = () => {
+    setEditingId(null);
     setTitle("");
     setDescription("");
     setMediaKind("image");
@@ -141,7 +147,27 @@ export function RawMediaAdmin({
     setUpload({ url: "", fileName: "", fileSize: 0, mimeType: "" });
   };
 
-  const handleCreate = () => {
+  const openCreate = () => {
+    resetForm();
+    setDialogOpen(true);
+  };
+
+  const openEdit = (item: RawMediaUpload) => {
+    setEditingId(item.id);
+    setTitle(item.title);
+    setDescription(item.description ?? "");
+    setMediaKind(item.mediaKind);
+    setPlanLabels(item.planLabels?.length ? item.planLabels : item.planLabel ? [item.planLabel] : []);
+    setUpload({
+      url: item.fileUrl,
+      fileName: item.fileName,
+      fileSize: item.fileSize,
+      mimeType: item.mimeType,
+    });
+    setDialogOpen(true);
+  };
+
+  const handleSave = () => {
     if (!title.trim()) {
       toast.error("عنوان الزامی است");
       return;
@@ -151,14 +177,16 @@ export function RawMediaAdmin({
       return;
     }
 
-    const quota = canAcceptRawMediaUpload(storage, upload.fileSize);
+    const quota = canAcceptRawMediaUpload(storageForQuota, upload.fileSize);
     if (!quota.ok) {
       toast.error(quota.error);
       return;
     }
 
     startTransition(async () => {
+      const existing = editingId ? items.find((item) => item.id === editingId) : undefined;
       const result = await saveRawMediaUploadAction({
+        id: editingId ?? undefined,
         campaignId,
         title: title.trim(),
         description: description.trim() || undefined,
@@ -168,7 +196,7 @@ export function RawMediaAdmin({
         fileSize: upload.fileSize,
         mimeType: upload.mimeType,
         published: true,
-        sortOrder: items.length + 1,
+        sortOrder: existing?.sortOrder ?? items.length + 1,
         planLabels,
         planLabel: planLabels[0] ?? null,
       });
@@ -179,27 +207,33 @@ export function RawMediaAdmin({
       }
 
       const now = new Date().toISOString();
-      setItems((prev) => [
-        {
-          id: result.id!,
-          campaignId,
-          title: title.trim(),
-          description: description.trim() || null,
-          mediaKind,
-          fileUrl: upload.url,
-          fileName: upload.fileName,
-          fileSize: upload.fileSize,
-          mimeType: upload.mimeType,
-          published: true,
-          sortOrder: prev.length + 1,
-          planLabels,
+      const nextItem: RawMediaUpload = {
+        id: result.id,
+        campaignId,
+        title: title.trim(),
+        description: description.trim() || null,
+        mediaKind,
+        fileUrl: upload.url,
+        fileName: upload.fileName,
+        fileSize: upload.fileSize,
+        mimeType: upload.mimeType,
+        published: true,
+        sortOrder: existing?.sortOrder ?? items.length + 1,
+        planLabels,
         planLabel: planLabels[0] ?? null,
-          createdAt: now,
-          updatedAt: now,
-        },
-        ...prev,
-      ]);
-      toast.success("راش تصویر ذخیره شد");
+        score: existing?.score,
+        ownerUserId: existing?.ownerUserId,
+        ownerName: existing?.ownerName,
+        createdAt: existing?.createdAt ?? now,
+        updatedAt: now,
+      };
+
+      setItems((prev) =>
+        editingId
+          ? prev.map((row) => (row.id === editingId ? { ...row, ...nextItem } : row))
+          : [nextItem, ...prev]
+      );
+      toast.success(editingId ? "راش به‌روزرسانی شد" : "راش تصویر ذخیره شد");
       setDialogOpen(false);
       resetForm();
     });
@@ -210,6 +244,8 @@ export function RawMediaAdmin({
       await deleteRawMediaUploadAction(item.id);
       setItems((prev) => prev.filter((row) => row.id !== item.id));
       toast.success("حذف شد — فضای ذخیره‌سازی آزاد شد");
+      setDialogOpen(false);
+      resetForm();
     });
   };
 
@@ -238,7 +274,7 @@ export function RawMediaAdmin({
               {isExporting ? "در حال آماده‌سازی…" : "دانلود همه (ZIP)"}
             </Button>
           )}
-          <Button onClick={() => setDialogOpen(true)}>
+          <Button onClick={openCreate}>
             <Plus className="h-4 w-4" />
             آپلود جدید
           </Button>
@@ -336,7 +372,9 @@ export function RawMediaAdmin({
               {!bulk.bulkMode && (
                 <AdminItemActions
                   onView={() => window.open(item.fileUrl, "_blank")}
+                  onEdit={() => openEdit(item)}
                   onDelete={() => handleDelete(item)}
+                  deleteLabel="این راش"
                 />
               )}
             </div>
@@ -391,22 +429,12 @@ export function RawMediaAdmin({
                     />
                   </div>
                   {!bulk.bulkMode && (
-                    <div className="flex shrink-0 flex-col gap-2">
-                      <Button variant="outline" size="sm" asChild>
-                        <a href={item.fileUrl} download={item.fileName} target="_blank" rel="noreferrer">
-                          <Download className="h-4 w-4" />
-                          دانلود
-                        </a>
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        disabled={isPending}
-                        onClick={() => handleDelete(item)}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
+                    <AdminItemActions
+                      onView={() => window.open(item.fileUrl, "_blank")}
+                      onEdit={() => openEdit(item)}
+                      onDelete={() => handleDelete(item)}
+                      deleteLabel="این راش"
+                    />
                   )}
                 </CardContent>
               </Card>
@@ -424,7 +452,7 @@ export function RawMediaAdmin({
       >
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>آپلود راش تصویر</DialogTitle>
+            <DialogTitle>{editingId ? "ویرایش راش تصویر" : "آپلود راش تصویر"}</DialogTitle>
             <DialogDescription>
               عکس یا فیلم خام با حجم بالا — حداکثر هر فایل {formatStorageBytes(RAW_MEDIA_MAX_FILE_BYTES)}
             </DialogDescription>
@@ -449,7 +477,9 @@ export function RawMediaAdmin({
                 value={mediaKind}
                 onValueChange={(value) => {
                   setMediaKind(value as RawMediaKind);
-                  setUpload({ url: "", fileName: "", fileSize: 0, mimeType: "" });
+                  if (!editingId) {
+                    setUpload({ url: "", fileName: "", fileSize: 0, mimeType: "" });
+                  }
                 }}
               >
                 <SelectTrigger>
@@ -479,9 +509,23 @@ export function RawMediaAdmin({
                 })
               }
             />
-            <Button className="w-full" disabled={isPending} onClick={handleCreate}>
+            <Button className="w-full" disabled={isPending} onClick={handleSave}>
               ذخیره
             </Button>
+            {editingId && (
+              <Button
+                type="button"
+                variant="destructive"
+                className="w-full"
+                disabled={isPending}
+                onClick={() => {
+                  const current = items.find((item) => item.id === editingId);
+                  if (current) handleDelete(current);
+                }}
+              >
+                حذف راش
+              </Button>
+            )}
           </div>
         </DialogContent>
       </Dialog>

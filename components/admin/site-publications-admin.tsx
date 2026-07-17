@@ -19,6 +19,7 @@ import {
   type AdminContentFilterState,
 } from "@/components/admin/admin-content-filter-bar";
 import { AdminCompactAddCard } from "@/components/admin/admin-compact-add-card";
+import { AdminContentPreviewDialog } from "@/components/admin/admin-content-preview-dialog";
 import { AdminSitePublicationCompactCard } from "@/components/admin/admin-site-publication-compact-card";
 import { PlanLabelSelect } from "@/components/admin/plan-label-select";
 import { ContentScoreControl } from "@/components/admin/content-score-control";
@@ -34,6 +35,7 @@ import { normalizePlanLabels, type ContentTopic } from "@/lib/content-topics";
 import { todayISO } from "@/lib/jalali";
 import { isSitePublication } from "@/lib/social-posts";
 import type { AdminUser, SocialMediaPost } from "@/lib/types";
+import { formatPersianDate } from "@/lib/utils";
 
 const schema = z.object({
   title: z.string().min(1, "عنوان الزامی است"),
@@ -67,6 +69,7 @@ export function SitePublicationsAdmin({
   const [planLabels, setPlanLabels] = useState<string[]>([]);
   const [contentFilter, setContentFilter] = useState<AdminContentFilterState>(DEFAULT_ADMIN_CONTENT_FILTER);
   const [rows, setRows] = useState(initialPosts.filter(isSitePublication));
+  const [previewPost, setPreviewPost] = useState<SocialMediaPost | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const filterUsers = useMemo(() => collectAdminFilterUsers(rows), [rows]);
@@ -112,6 +115,16 @@ export function SitePublicationsAdmin({
       publishedDate: post.publishedDate,
     });
     setOpen(true);
+  };
+
+  const handleDelete = (post: SocialMediaPost) => {
+    startTransition(async () => {
+      await deleteSocialPostAction(post.id);
+      setRows((prev) => prev.filter((row) => row.id !== post.id));
+      toast.success("حذف شد");
+      setOpen(false);
+      setPreviewPost(null);
+    });
   };
 
   const onSubmit = form.handleSubmit((data) => {
@@ -218,10 +231,52 @@ export function SitePublicationsAdmin({
             selected={bulk.isSelected(post.id)}
             onToggle={() => bulk.toggle(post.id)}
           >
-            <AdminSitePublicationCompactCard post={post} onClick={() => openEdit(post)} />
+            <AdminSitePublicationCompactCard
+              post={post}
+              onClick={() => openEdit(post)}
+              onView={() => setPreviewPost(post)}
+              onEdit={() => openEdit(post)}
+              onDelete={() => handleDelete(post)}
+            />
           </BulkItemShell>
         ))}
       </div>
+
+      <AdminContentPreviewDialog
+        open={Boolean(previewPost)}
+        onOpenChange={(nextOpen) => !nextOpen && setPreviewPost(null)}
+        title={previewPost?.title ?? "نمایش انتشار"}
+        description={previewPost?.description}
+        imageUrl={previewPost?.coverImageUrl}
+        meta={
+          previewPost ? (
+            <div className="space-y-1 text-xs text-muted-foreground">
+              <p>{formatPersianDate(previewPost.publishedDate)}</p>
+              {previewPost.link ? (
+                <a
+                  href={previewPost.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="break-all text-primary underline"
+                  dir="ltr"
+                >
+                  {previewPost.link}
+                </a>
+              ) : null}
+            </div>
+          ) : null
+        }
+        onEdit={
+          previewPost
+            ? () => {
+                setPreviewPost(null);
+                openEdit(previewPost);
+              }
+            : undefined
+        }
+        onDelete={previewPost ? () => handleDelete(previewPost) : undefined}
+        deleteLabel="این انتشار"
+      />
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
@@ -280,12 +335,8 @@ export function SitePublicationsAdmin({
                 className="w-full"
                 disabled={isPending}
                 onClick={() => {
-                  startTransition(async () => {
-                    await deleteSocialPostAction(editingId);
-                    setRows((prev) => prev.filter((row) => row.id !== editingId));
-                    toast.success("حذف شد");
-                    setOpen(false);
-                  });
+                  const current = rows.find((row) => row.id === editingId);
+                  if (current) handleDelete(current);
                 }}
               >
                 حذف انتشار

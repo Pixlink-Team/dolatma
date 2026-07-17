@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AdminActivityCompactCard } from "@/components/admin/admin-activity-compact-card";
 import { AdminCompactAddCard } from "@/components/admin/admin-compact-add-card";
+import { AdminContentPreviewDialog } from "@/components/admin/admin-content-preview-dialog";
 import { PlanLabelSelect } from "@/components/admin/plan-label-select";
 import {
   BulkItemShell,
@@ -64,6 +65,7 @@ export function PressPublicationsAdmin({
   const [rows, setRows] = useState(
     initialActivities.filter((activity) => isPressPublication(activity))
   );
+  const [previewActivity, setPreviewActivity] = useState<CampaignActivity | null>(null);
   const [isPending, startTransition] = useTransition();
   const filteredIds = useMemo(() => rows.map((item) => item.id), [rows]);
   const bulk = useSectionBulkEdit(filteredIds);
@@ -114,6 +116,16 @@ export function PressPublicationsAdmin({
       description: activity.description ?? "",
     });
     setOpen(true);
+  };
+
+  const handleDelete = (activity: CampaignActivity) => {
+    startTransition(async () => {
+      await deleteCampaignActivityAction(activity.id);
+      setRows((prev) => prev.filter((row) => row.id !== activity.id));
+      toast.success("حذف شد");
+      setOpen(false);
+      setPreviewActivity(null);
+    });
   };
 
   const addMediaItem = (type: ActivityMediaItem["type"]) => {
@@ -219,10 +231,43 @@ export function PressPublicationsAdmin({
             <AdminActivityCompactCard
               activity={activity}
               onClick={() => openEdit(activity)}
+              onView={() => setPreviewActivity(activity)}
+              onEdit={() => openEdit(activity)}
+              onDelete={() => handleDelete(activity)}
             />
           </BulkItemShell>
         ))}
       </div>
+
+      <AdminContentPreviewDialog
+        open={Boolean(previewActivity)}
+        onOpenChange={(nextOpen) => !nextOpen && setPreviewActivity(null)}
+        title={previewActivity?.title ?? "نمایش انتشار مطبوعاتی"}
+        description={previewActivity?.description}
+        imageUrl={
+          previewActivity?.imageUrl ||
+          previewActivity?.mediaItems?.find((item) => item.url)?.url ||
+          null
+        }
+        meta={
+          previewActivity ? (
+            <p className="text-xs text-muted-foreground">
+              {getActivityTypeLabel(previewActivity.activityType)}
+              {previewActivity.location ? ` · ${previewActivity.location}` : ""}
+            </p>
+          ) : null
+        }
+        onEdit={
+          previewActivity
+            ? () => {
+                setPreviewActivity(null);
+                openEdit(previewActivity);
+              }
+            : undefined
+        }
+        onDelete={previewActivity ? () => handleDelete(previewActivity) : undefined}
+        deleteLabel="این انتشار"
+      />
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
@@ -330,12 +375,8 @@ export function PressPublicationsAdmin({
                 className="w-full"
                 disabled={isPending}
                 onClick={() => {
-                  startTransition(async () => {
-                    await deleteCampaignActivityAction(editingId);
-                    setRows((prev) => prev.filter((row) => row.id !== editingId));
-                    toast.success("حذف شد");
-                    setOpen(false);
-                  });
+                  const current = rows.find((row) => row.id === editingId);
+                  if (current) handleDelete(current);
                 }}
               >
                 حذف

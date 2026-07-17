@@ -116,6 +116,25 @@ export function AnalyticsAdmin({ campaignId, initialMetrics }: AnalyticsAdminPro
           { key: "device", label: "دستگاه", render: (item) => (item.device ? getStatusLabel(item.device) : "—") },
           { key: "city", label: "شهر" },
         ]}
+        onView={(item) => {
+          const siteSource =
+            item.source && ["direct", "google", "referral", "other"].includes(item.source)
+              ? (item.source as "direct" | "google" | "referral" | "other")
+              : undefined;
+          setEditingId(item.id);
+          form.reset({
+            date: item.date,
+            visitors: item.visitors,
+            uniqueVisitors: item.uniqueVisitors,
+            pageViews: item.pageViews,
+            avgSessionDuration: item.avgSessionDuration,
+            source: siteSource,
+            device: item.device ?? undefined,
+            page: item.page ?? undefined,
+            city: item.city ?? undefined,
+          });
+          setOpen(true);
+        }}
         onEdit={(item) => {
           const siteSource =
             item.source && ["direct", "google", "referral", "other"].includes(item.source)

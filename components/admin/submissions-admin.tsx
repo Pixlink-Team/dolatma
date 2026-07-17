@@ -148,6 +148,7 @@ export function SubmissionsAdmin({ campaignId, initialSubmissions }: Submissions
             render: (i) => formatPersianDate(i.createdAt),
           },
         ]}
+        onView={(item) => setSelected(item)}
         onEdit={(item) => setSelected(item)}
         onDelete={(item) => {
           startTransition(async () => {

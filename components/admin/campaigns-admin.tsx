@@ -249,6 +249,7 @@ export function CampaignsAdmin({ initialCampaigns }: CampaignsAdminProps) {
               ),
             },
           ]}
+          onView={openEdit}
           onEdit={openEdit}
           onDelete={(c) => {
             startTransition(async () => {
