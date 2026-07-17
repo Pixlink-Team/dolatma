@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { Globe } from "lucide-react";
+import { ExternalLink, Globe } from "lucide-react";
 import type { DataOwnerGroup, SocialMediaPost } from "@/lib/types";
 import { formatPersianDate } from "@/lib/utils";
 import { CollapsibleSection } from "@/components/public/collapsible-section";
@@ -56,7 +56,19 @@ function PublicationList({ items }: { items: SocialMediaPost[] }) {
               <span className="text-sm text-muted-foreground">{formatPersianDate(item.publishedDate)}</span>
             </div>
 
-            <h3 className="font-semibold">{item.title}</h3>
+            {item.link ? (
+              <a
+                href={item.link}
+                target="_blank"
+                rel="noreferrer"
+                className="font-semibold text-primary hover:underline inline-flex items-center gap-1.5 break-words"
+              >
+                {item.title}
+                <ExternalLink className="h-4 w-4 shrink-0" />
+              </a>
+            ) : (
+              <h3 className="font-semibold">{item.title}</h3>
+            )}
 
             {item.description && (
               <p className="text-sm text-muted-foreground leading-relaxed">{item.description}</p>
@@ -109,7 +121,7 @@ export function SitePublicationsSection({ publications, groups }: SitePublicatio
     <CollapsibleSection
       id="site-publications"
       title="انتشار در سایت"
-      description="مطالب منتشرشده در سایت کمپین"
+      description="مطالب منتشرشده در سایت کمپین — عنوان هر مورد لینک مستقیم به صفحه است"
     >
       <SectionTopCompaniesBox groups={filteredGroups} />
       {filteredPublications.length === 0 ? (
