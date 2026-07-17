@@ -46,7 +46,7 @@ import type {
   DirectiveRecipient,
   Ministry,
 } from "@/lib/types";
-import { getCitiesForProvince, IRAN_PROVINCES } from "@/lib/iran-locations";
+import { IRAN_PROVINCES } from "@/lib/iran-locations";
 import { USER_REGIONS, getUserRegionLabel, type UserRegion } from "@/lib/user-regions";
 import { cn, formatPersianDate, formatPersianDateTime, formatPersianNumber } from "@/lib/utils";
 
@@ -140,8 +140,8 @@ function formatAudienceLabel(item: CampaignDirective): string {
   if (item.audienceType === "users") return "افراد انتخابی";
   if (item.audienceType === "ministry_city") {
     const ministry = item.audienceMinistryName || "وزارتخانه";
-    const cities = (item.audienceCities ?? []).join("، ");
-    return cities ? `${ministry} — ${cities}` : ministry;
+    const provinces = (item.audienceProvinces ?? []).join("، ");
+    return provinces ? `${ministry} — ${provinces}` : ministry;
   }
   return "همه کاربران";
 }
@@ -258,8 +258,7 @@ export function DirectivesAdmin({
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
-  const [selectedCities, setSelectedCities] = useState<string[]>([]);
-  const [cityProvince, setCityProvince] = useState("");
+  const [selectedProvinces, setSelectedProvinces] = useState<string[]>([]);
   const [letterUpload, setLetterUpload] = useState({
     url: "",
     fileName: "",
@@ -290,17 +289,12 @@ export function DirectivesAdmin({
   const audienceType = form.watch("audienceType");
   const audienceMinistryId = form.watch("audienceMinistryId");
 
-  const provinceCities = useMemo(
-    () => (cityProvince ? getCitiesForProvince(cityProvince) : []),
-    [cityProvince]
-  );
-
-  const ministryUserCities = useMemo(() => {
+  const ministryUserProvinces = useMemo(() => {
     if (!audienceMinistryId) return [] as string[];
     const set = new Set<string>();
     for (const user of campaignUsers) {
-      if (user.ministryId === audienceMinistryId && user.city?.trim()) {
-        set.add(user.city.trim());
+      if (user.ministryId === audienceMinistryId && user.province?.trim()) {
+        set.add(user.province.trim());
       }
     }
     return [...set].sort((a, b) => a.localeCompare(b, "fa"));
@@ -318,8 +312,7 @@ export function DirectivesAdmin({
   const openCreate = () => {
     setEditingId(null);
     setSelectedUserIds([]);
-    setSelectedCities([]);
-    setCityProvince("");
+    setSelectedProvinces([]);
     setLetterUpload({ url: "", fileName: "", fileSize: 0, mimeType: "" });
     setAttachmentDrafts([]);
     form.reset({
@@ -345,8 +338,7 @@ export function DirectivesAdmin({
     });
     setAttachmentDrafts(toAttachmentDrafts(item));
     setSelectedUserIds([]);
-    setSelectedCities(item.audienceCities ?? []);
-    setCityProvince("");
+    setSelectedProvinces(item.audienceProvinces ?? []);
     form.reset({
       title: item.title,
       body: item.body,
@@ -381,9 +373,9 @@ export function DirectivesAdmin({
     );
   };
 
-  const toggleCity = (city: string) => {
-    setSelectedCities((prev) =>
-      prev.includes(city) ? prev.filter((item) => item !== city) : [...prev, city]
+  const toggleProvince = (province: string) => {
+    setSelectedProvinces((prev) =>
+      prev.includes(province) ? prev.filter((item) => item !== province) : [...prev, province]
     );
   };
 
@@ -429,7 +421,7 @@ export function DirectivesAdmin({
         audienceRegion: data.audienceType === "region" ? data.audienceRegion ?? null : null,
         audienceMinistryId:
           data.audienceType === "ministry_city" ? data.audienceMinistryId ?? null : null,
-        audienceCities: data.audienceType === "ministry_city" ? selectedCities : undefined,
+        audienceProvinces: data.audienceType === "ministry_city" ? selectedProvinces : undefined,
         selectedUserIds: data.audienceType === "users" ? selectedUserIds : undefined,
         sendSmsOnPublish: true,
       });
@@ -805,7 +797,7 @@ export function DirectivesAdmin({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">همه کاربران این کمپین</SelectItem>
-                  <SelectItem value="ministry_city">وزارتخانه و شهر</SelectItem>
+                  <SelectItem value="ministry_city">وزارتخانه و استان</SelectItem>
                   <SelectItem value="region">منطقه جغرافیایی</SelectItem>
                   <SelectItem value="users">افراد انتخابی</SelectItem>
                 </SelectContent>
@@ -843,7 +835,7 @@ export function DirectivesAdmin({
                     value={audienceMinistryId ?? ""}
                     onValueChange={(value) => {
                       form.setValue("audienceMinistryId", value);
-                      setSelectedCities([]);
+                      setSelectedProvinces([]);
                     }}
                   >
                     <SelectTrigger>
@@ -865,18 +857,18 @@ export function DirectivesAdmin({
                   </Select>
                 </div>
 
-                {ministryUserCities.length > 0 && (
+                {ministryUserProvinces.length > 0 && (
                   <div className="space-y-2">
-                    <Label>شهرهای کاربران این وزارتخانه</Label>
+                    <Label>استان‌های کاربران این وزارتخانه</Label>
                     <div className="max-h-36 space-y-2 overflow-y-auto rounded-md border p-2">
-                      {ministryUserCities.map((city) => (
-                        <label key={city} className="flex items-center gap-2 text-sm">
+                      {ministryUserProvinces.map((province) => (
+                        <label key={province} className="flex items-center gap-2 text-sm">
                           <input
                             type="checkbox"
-                            checked={selectedCities.includes(city)}
-                            onChange={() => toggleCity(city)}
+                            checked={selectedProvinces.includes(province)}
+                            onChange={() => toggleProvince(province)}
                           />
-                          {city}
+                          {province}
                         </label>
                       ))}
                     </div>
@@ -884,42 +876,28 @@ export function DirectivesAdmin({
                 )}
 
                 <div className="space-y-2">
-                  <Label>افزودن شهر از فهرست استان‌ها</Label>
-                  <Select value={cityProvince || undefined} onValueChange={setCityProvince}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="انتخاب استان" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {IRAN_PROVINCES.map((province) => (
-                        <SelectItem key={province} value={province}>
-                          {province}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {provinceCities.length > 0 && (
-                    <div className="max-h-36 space-y-2 overflow-y-auto rounded-md border p-2">
-                      {provinceCities.map((city) => (
-                        <label key={city} className="flex items-center gap-2 text-sm">
-                          <input
-                            type="checkbox"
-                            checked={selectedCities.includes(city)}
-                            onChange={() => toggleCity(city)}
-                          />
-                          {city}
-                        </label>
-                      ))}
-                    </div>
-                  )}
+                  <Label>انتخاب استان مخاطب</Label>
+                  <div className="max-h-48 space-y-2 overflow-y-auto rounded-md border p-2">
+                    {IRAN_PROVINCES.map((province) => (
+                      <label key={province} className="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={selectedProvinces.includes(province)}
+                          onChange={() => toggleProvince(province)}
+                        />
+                        {province}
+                      </label>
+                    ))}
+                  </div>
                 </div>
 
-                {selectedCities.length > 0 && (
+                {selectedProvinces.length > 0 && (
                   <p className="text-xs text-muted-foreground">
-                    شهرهای انتخاب‌شده: {selectedCities.join("، ")}
+                    استان‌های انتخاب‌شده: {selectedProvinces.join("، ")}
                   </p>
                 )}
                 <p className="text-xs text-muted-foreground">
-                  یوزر مادر همان وزارتخانه و کاربران زیرمجموعه در شهرهای انتخاب‌شده مخاطب می‌شوند.
+                  یوزر مادر همان وزارتخانه و کاربران زیرمجموعه در استان‌های انتخاب‌شده مخاطب می‌شوند.
                 </p>
               </div>
             )}

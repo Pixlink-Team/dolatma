@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "5529aaab0b4cedd3e917c3902ab7b7534035c2bf",
+      "committedAt": "2026-07-17T23:06:10+03:30",
+      "title": "امکان افزودن چند فایل اقدام با عنوان در دستورکارها",
+      "subject": "Add titled action file attachments to directives"
+    },
+    {
       "hash": "6e78dd97e7ff5fde34f89ed94e7b51273289a4d2",
       "committedAt": "2026-07-17T23:03:54+03:30",
       "title": "افزودن وزارتخانه‌ها و جایگزینی دسته‌بندی منطقه‌ای کاربر با وزارتخانه",
