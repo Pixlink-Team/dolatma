@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "185a4c1dc8c4cad11b6580c57a3a2943b39202fb",
+      "committedAt": "2026-07-17T22:48:48+03:30",
+      "title": "افزودن وزارتخانه و یوزر مادر با دسترسی سلسله‌مراتبی محتوا",
+      "subject": "Add ministry hierarchy with parent and sub-user roles"
+    },
+    {
       "hash": "913b0e747e26a754a761378ec447dd44b82090eb",
       "committedAt": "2026-07-17T22:09:35+03:30",
       "title": "حذف کامل اتصال Map-Bilboard از پنل و سایت",

@@ -366,7 +366,7 @@ export interface AdminUser {
 }
 
 export type DirectivePriority = "normal" | "urgent";
-export type DirectiveAudienceType = "all" | "region" | "users";
+export type DirectiveAudienceType = "all" | "region" | "users" | "ministry_city";
 export type DirectiveSmsStatus = "pending" | "sent" | "failed" | "no_phone" | "skipped";
 
 export interface DirectiveAttachment {
@@ -415,6 +415,11 @@ export interface CampaignDirective {
   letterFileSize?: number;
   audienceType: DirectiveAudienceType;
   audienceRegion?: import("./user-regions").UserRegion | null;
+  /** Target ministry when audienceType is ministry_city. */
+  audienceMinistryId?: string | null;
+  audienceMinistryName?: string | null;
+  /** Target cities when audienceType is ministry_city. */
+  audienceCities?: string[];
   published: boolean;
   publishedAt?: string | null;
   sortOrder: number;

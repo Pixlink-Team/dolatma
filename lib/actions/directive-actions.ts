@@ -141,6 +141,8 @@ export async function saveDirectiveAction(input: {
   letterFileSize?: number;
   audienceType: DirectiveAudienceType;
   audienceRegion?: UserRegion | null;
+  audienceMinistryId?: string | null;
+  audienceCities?: string[];
   selectedUserIds?: string[];
   sendSmsOnPublish?: boolean;
 }) {
@@ -178,6 +180,14 @@ export async function saveDirectiveAction(input: {
   if (input.audienceType === "users" && !(input.selectedUserIds?.length)) {
     return { success: false as const, error: "حداقل یک کاربر را انتخاب کنید" };
   }
+  if (input.audienceType === "ministry_city") {
+    if (!input.audienceMinistryId?.trim()) {
+      return { success: false as const, error: "وزارتخانه مخاطب را انتخاب کنید" };
+    }
+    if (!(input.audienceCities?.length)) {
+      return { success: false as const, error: "حداقل یک شهر را انتخاب کنید" };
+    }
+  }
 
   const cleaned = stripFileAccessTokensDeep({
     ...input,
@@ -203,6 +213,8 @@ export async function saveDirectiveAction(input: {
     letterFileSize: cleaned.letterFileSize,
     audienceType: cleaned.audienceType,
     audienceRegion: cleaned.audienceRegion,
+    audienceMinistryId: cleaned.audienceMinistryId,
+    audienceCities: cleaned.audienceCities,
     published: true,
     selectedUserIds: cleaned.selectedUserIds,
   });

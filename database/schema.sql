@@ -802,6 +802,20 @@ ALTER TABLE users ADD CONSTRAINT users_role_check
 CREATE INDEX IF NOT EXISTS idx_users_ministry ON users(ministry_id);
 CREATE INDEX IF NOT EXISTS idx_users_parent ON users(parent_user_id);
 
+ALTER TABLE campaign_directives
+  DROP CONSTRAINT IF EXISTS campaign_directives_audience_type_check;
+ALTER TABLE campaign_directives
+  ADD CONSTRAINT campaign_directives_audience_type_check
+  CHECK (audience_type IN ('all', 'region', 'users', 'ministry_city'));
+
+ALTER TABLE campaign_directives
+  ADD COLUMN IF NOT EXISTS audience_ministry_id UUID REFERENCES ministries(id) ON DELETE SET NULL;
+ALTER TABLE campaign_directives
+  ADD COLUMN IF NOT EXISTS audience_cities TEXT[] NOT NULL DEFAULT '{}';
+
+CREATE INDEX IF NOT EXISTS idx_campaign_directives_audience_ministry
+  ON campaign_directives(audience_ministry_id);
+
 ALTER TABLE ministries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ministries NO FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS ministries_app_access ON ministries;

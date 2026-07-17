@@ -9,6 +9,7 @@ import {
   pgListDirectivesForCampaign,
   pgListDirectivesForUserInbox,
 } from "@/lib/db/repository-directives";
+import { pgListMinistries } from "@/lib/db/repository-ministries";
 import { isPostgresConfigured } from "@/lib/utils";
 import { withFileAccessTokensDeep } from "@/lib/uploads";
 
@@ -40,16 +41,18 @@ export default async function DirectivesPage({ searchParams }: PageProps) {
         initialDirectives={[]}
         inboxDirectives={[]}
         campaignUsers={[]}
+        ministries={[]}
       />
     );
   }
 
-  const [manageDirectives, inboxDirectives, campaignUsers] = await Promise.all([
+  const [manageDirectives, inboxDirectives, campaignUsers, ministries] = await Promise.all([
     canManage ? pgListDirectivesForCampaign(campaignId) : Promise.resolve([]),
     session.userId
       ? pgListDirectivesForUserInbox(campaignId, session.userId)
       : Promise.resolve([]),
     canManage ? pgListCampaignUsersForDirectives(campaignId) : Promise.resolve([]),
+    canManage ? pgListMinistries() : Promise.resolve([]),
   ]);
 
   const initialDirectives = canManage ? manageDirectives : inboxDirectives;
@@ -61,6 +64,7 @@ export default async function DirectivesPage({ searchParams }: PageProps) {
       initialDirectives={withFileAccessTokensDeep(initialDirectives)}
       inboxDirectives={withFileAccessTokensDeep(inboxDirectives)}
       campaignUsers={campaignUsers}
+      ministries={ministries}
     />
   );
 }
