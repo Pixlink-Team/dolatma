@@ -1,14 +1,13 @@
 export const PUBLIC_MEDIA_GRID_CLASS =
-  "grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6";
+  "grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6";
 
 export const PUBLIC_MEDIA_MAX_ROWS = 2;
 
-/** Initial / load-more page size for all public campaign sections. */
-export const PUBLIC_MEDIA_PAGE_SIZE = 9;
+/** Initial / load-more page size: 2 rows × 6 cards on desktop. */
+export const PUBLIC_MEDIA_PAGE_SIZE = 12;
 
 export function getPublicMediaColumnCount(width: number): number {
-  if (width >= 1280) return 6;
-  if (width >= 1024) return 5;
+  if (width >= 1024) return 6;
   if (width >= 768) return 4;
   if (width >= 640) return 3;
   return 2;
