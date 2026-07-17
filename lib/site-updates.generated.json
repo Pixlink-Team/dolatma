@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "c22255e409622926adfe73230dd5a1080a8fb59b",
+      "committedAt": "2026-07-17T17:51:21+03:30",
+      "title": "بزرگ‌تر شدن بخش آپلود پوستر و ویدیو در عرض مودال",
+      "subject": "Make poster and video upload areas fill modal width"
+    },
+    {
       "hash": "d736ecb0ce4fe5cdc105dbb88fc0e2844e2a4e78",
       "committedAt": "2026-07-17T17:37:02+03:30",
       "title": "بازگرداندن مودال کامل ثبت پوستر و ویدیو با فرم داده‌ها",

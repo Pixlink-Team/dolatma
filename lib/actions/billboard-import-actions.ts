@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
 import { saveBillboard } from "@/lib/data-access/admin";
 import {
   fetchAllExternalBillboards,
@@ -11,11 +12,22 @@ import { getExternalBillboardTag } from "@/lib/models/billboard-api";
 import type { ExternalBillboard, ExternalCampaign } from "@/lib/models/billboard-api";
 import type { Billboard } from "@/lib/types";
 
+async function requireFullAdmin(): Promise<{ success: false; error: string } | null> {
+  const session = await getAuthSession();
+  if (!session || !isFullAdmin(session)) {
+    return { success: false, error: "Unauthorized" };
+  }
+  return null;
+}
+
 export async function fetchExternalCampaignsAction(): Promise<{
   success: boolean;
   campaigns?: ExternalCampaign[];
   error?: string;
 }> {
+  const denied = await requireFullAdmin();
+  if (denied) return denied;
+
   try {
     const campaigns = await fetchExternalCampaigns();
     return { success: true, campaigns };
@@ -30,6 +42,9 @@ export async function fetchExternalBillboardsAction(externalCampaignId: string):
   billboards?: ExternalBillboard[];
   error?: string;
 }> {
+  const denied = await requireFullAdmin();
+  if (denied) return denied;
+
   try {
     const billboards = await fetchAllExternalBillboards(externalCampaignId);
     return { success: true, billboards };
@@ -56,6 +71,9 @@ export async function importExternalBillboardsAction(input: {
   skipped: number;
   error?: string;
 }> {
+  const denied = await requireFullAdmin();
+  if (denied) return { ...denied, imported: 0, skipped: 0 };
+
   const { campaignId, externalCampaignId, externalBillboardIds, existingBillboards, campaignEndDate } =
     input;
 
