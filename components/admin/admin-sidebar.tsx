@@ -210,7 +210,7 @@ export function AdminSidebar() {
           <span className="text-xs text-muted-foreground">تم</span>
           <ThemeToggle />
         </div>
-        {currentCampaign && (
+        {isFullAdminUser && currentCampaign && (
           <Link href={`/campaign/${currentCampaign.slug}`} target="_blank">
             <Button variant="outline" size="sm" className="w-full">
               مشاهده صفحه عمومی
