@@ -3,15 +3,14 @@
 import { revalidatePath } from "next/cache";
 import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
 import { canManageDirectives } from "@/lib/auth/access";
-import { hasContributorPermission } from "@/lib/contributor-permissions";
 import * as pgExt from "@/lib/db/repository-extended";
 import * as pgDirectives from "@/lib/db/repository-directives";
 import { getContentTitleValidationError } from "@/lib/content-constraints";
 import {
   buildDirectiveSmsText,
-  DEFAULT_SMS_SETTINGS,
   sendSms,
 } from "@/lib/sms/provider";
+import { pgGetSmsProviderSettings } from "@/lib/db/system-settings";
 import type {
   CampaignDirective,
   DirectiveAudienceType,
@@ -34,8 +33,9 @@ async function assertDirectivesAccess(campaignId: string) {
     return { session: null, error: "Unauthorized" as const };
   }
 
+  // Any campaign membership is enough to view/confirm directives.
   const permissions = await pgExt.pgGetUserPermissionsForCampaign(session.userId, campaignId);
-  if (!hasContributorPermission(permissions, "directives")) {
+  if (!permissions) {
     return { session: null, error: "دسترسی ندارید" as const };
   }
 
@@ -43,8 +43,10 @@ async function assertDirectivesAccess(campaignId: string) {
 }
 
 function revalidateDirectives(campaignId?: string) {
+  revalidatePath("/admin");
   revalidatePath("/admin/directives");
   if (campaignId) {
+    revalidatePath(`/admin?campaign=${campaignId}`);
     revalidatePath(`/admin/directives?campaign=${campaignId}`);
   }
 }
@@ -221,13 +223,14 @@ async function dispatchDirectiveSms(
   campaignId: string
 ) {
   const pending = await pgDirectives.pgGetPendingSmsRecipients(directiveId);
+  const smsSettings = await pgGetSmsProviderSettings();
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") || "";
   const path = `/admin/directives?campaign=${encodeURIComponent(campaignId)}`;
   const link = baseUrl ? `${baseUrl}${path}` : path;
   const message = buildDirectiveSmsText(title, link);
 
   for (const recipient of pending) {
-    const smsResult = await sendSms(recipient.phone, message, DEFAULT_SMS_SETTINGS);
+    const smsResult = await sendSms(recipient.phone, message, smsSettings);
 
     if (!recipient.phone) {
       await pgDirectives.pgUpdateRecipientSmsStatus({

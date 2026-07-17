@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { DashboardCompletenessCards } from "@/components/admin/dashboard-completeness-cards";
+import { DashboardDirectivesPanel } from "@/components/admin/dashboard-directives-panel";
 import { EditSuggestionsPanel } from "@/components/admin/edit-suggestions-panel";
 import { getAdminData, getAllUsers } from "@/lib/data-access/admin";
 import { resolveAdminCampaignId } from "@/lib/admin-campaign";
@@ -12,6 +13,7 @@ import { DASHBOARD_STAT_DEFINITIONS } from "@/lib/admin-dashboard-stats";
 import { resolveAdminBillboards } from "@/lib/billboards";
 import type { Billboard, CampaignSettings } from "@/lib/types";
 import { CampaignTools } from "@/components/admin/campaign-tools";
+import { canManageDirectives } from "@/lib/auth/access";
 import { getAuthSession, getOwnerFilter, isFullAdmin } from "@/lib/auth/get-session";
 import {
   defaultContributorPermissions,
@@ -19,6 +21,7 @@ import {
   type ContributorPermissionKey,
   type ContributorPermissions,
 } from "@/lib/contributor-permissions";
+import { pgListDirectivesForUserInbox } from "@/lib/db/repository-directives";
 import { pgGetUserPermissionsForCampaign } from "@/lib/db/repository-extended";
 import {
   buildCategoryCompleteness,
@@ -26,7 +29,8 @@ import {
   type CategoryCompletenessSummary,
   type EditSuggestionContentType,
 } from "@/lib/edit-suggestions";
-import { formatPersianNumber, adminHref } from "@/lib/utils";
+import { withFileAccessTokensDeep } from "@/lib/uploads";
+import { formatPersianNumber, adminHref, isPostgresConfigured } from "@/lib/utils";
 
 const PERMISSION_TO_CONTENT_TYPE: Partial<
   Record<ContributorPermissionKey, EditSuggestionContentType>
@@ -152,6 +156,14 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
     ? `edit-suggestions:${campaignId}:${session.userId}`
     : `edit-suggestions:${campaignId}`;
 
+  const canManageDirectivesForUser = Boolean(session && canManageDirectives(session));
+  const inboxDirectives =
+    session?.userId && isPostgresConfigured()
+      ? withFileAccessTokensDeep(
+          await pgListDirectivesForUserInbox(campaignId, session.userId)
+        )
+      : [];
+
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between flex-wrap gap-4">
@@ -180,6 +192,12 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
       </div>
 
       <CampaignTools isFullAdmin={canManageAll} />
+
+      <DashboardDirectivesPanel
+        campaignId={campaignId}
+        canManage={canManageDirectivesForUser}
+        inboxDirectives={inboxDirectives}
+      />
 
       <EditSuggestionsPanel
         suggestions={editSuggestions}

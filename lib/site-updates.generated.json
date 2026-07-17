@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "f4155af18cb21d92a4096150d88aecbb7f57971e",
+      "committedAt": "2026-07-17T19:45:04+03:30",
+      "title": "حذف بخش کاربران فعال امروز از رصد فعالیت",
+      "subject": "Remove active users today from audit dashboard"
+    },
+    {
       "hash": "f3a536a49f27082b31a83c697bce08c9e3ce14ab",
       "committedAt": "2026-07-17T19:35:27+03:30",
       "title": "جمع‌وجور شدن ساعت و خوش‌آمدگویی در گوشه صفحه ورود",

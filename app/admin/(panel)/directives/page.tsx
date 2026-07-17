@@ -1,9 +1,9 @@
 import { redirect } from "next/navigation";
 import { DirectivesAdmin } from "@/components/admin/directives-admin";
 import { resolveAdminCampaignId } from "@/lib/admin-campaign";
-import { canManageDirectives } from "@/lib/auth/access";
-import { getAuthSession } from "@/lib/auth/get-session";
-import { requireContributorAccess } from "@/lib/auth/require-contributor-access";
+import { canManageDirectives, canViewDirectives } from "@/lib/auth/access";
+import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
+import { pgGetUserPermissionsForCampaign } from "@/lib/db/repository-extended";
 import {
   pgListCampaignUsersForDirectives,
   pgListDirectivesForCampaign,
@@ -21,10 +21,14 @@ export default async function DirectivesPage({ searchParams }: PageProps) {
   const { campaignId } = await resolveAdminCampaignId(params.campaign);
   if (!campaignId) redirect("/admin/campaigns");
 
-  await requireContributorAccess(campaignId, "directives");
-
   const session = await getAuthSession();
-  if (!session) redirect("/admin/login");
+  if (!session || !canViewDirectives(session)) redirect("/admin/login");
+
+  if (!isFullAdmin(session)) {
+    if (!session.userId || !isPostgresConfigured()) redirect("/admin");
+    const membership = await pgGetUserPermissionsForCampaign(session.userId, campaignId);
+    if (!membership) redirect("/admin");
+  }
 
   const canManage = canManageDirectives(session);
 

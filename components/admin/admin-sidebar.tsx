@@ -57,6 +57,8 @@ const allNavItems: {
   icon: typeof LayoutDashboard;
   adminOnly?: boolean;
   adminOrClientOnly?: boolean;
+  /** Always visible for every panel user (not gated by section permissions). */
+  alwaysVisible?: boolean;
   permissionKey?: ContributorPermissionKey;
 }[] = [
   { href: "/admin", label: "داشبورد", icon: LayoutDashboard },
@@ -76,7 +78,7 @@ const allNavItems: {
   { href: "/admin/press-publications", label: "مجله و روزنامه", icon: FileText, permissionKey: "activities" },
   { href: "/admin/activities", label: "اقدامات", icon: Sparkles, permissionKey: "activities" },
   { href: "/admin/elanha", label: "اعلان‌ها", icon: Bell, adminOrClientOnly: true },
-  { href: "/admin/directives", label: "دستورکارها", icon: ClipboardCheck, permissionKey: "directives" },
+  { href: "/admin/directives", label: "دستورکارها", icon: ClipboardCheck, alwaysVisible: true },
   { href: "/admin/broadcast", label: "پخش صدا و سیما", icon: Radio, permissionKey: "broadcast" },
   { href: "/admin/meetings", label: "جلسات و مصوبات", icon: ClipboardList, permissionKey: "meetings" },
   { href: "/admin/submissions", label: "مشارکت‌ها", icon: FileText, permissionKey: "submissions" },
@@ -116,6 +118,7 @@ export function AdminSidebar() {
   }, [campaignId]);
 
   const navItems = allNavItems.filter((item) => {
+    if (item.alwaysVisible) return true;
     if (item.adminOrClientOnly) {
       return isFullAdminUser || isClientRole;
     }
@@ -125,8 +128,8 @@ export function AdminSidebar() {
     return hasContributorPermission(permissions, item.permissionKey);
   });
 
-  /** Admin/client: pin directives as a red alert CTA at the top of the right panel. */
-  const showDirectivesAlert = isFullAdminUser || isClientRole;
+  /** Pin directives as a red alert CTA at the top for every panel user. */
+  const showDirectivesAlert = true;
   const directivesNavItem = navItems.find((item) => item.href === DIRECTIVES_HREF);
   const contentNavItems = navItems.filter((item) => {
     if (managementNavHrefs.has(item.href)) return false;

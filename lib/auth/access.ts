@@ -9,6 +9,14 @@ export function canAccessNotifications(session: AuthSession): boolean {
   return isFullAdmin(session) || isClientUser(session);
 }
 
+/**
+ * All authenticated panel users can open the directives inbox.
+ * Campaign membership is enforced separately when loading data.
+ */
+export function canViewDirectives(session: AuthSession): boolean {
+  return Boolean(session);
+}
+
 /** Only admin and client (کارفرما) can create/edit/delete directives. */
 export function canManageDirectives(session: AuthSession): boolean {
   return isFullAdmin(session) || isClientUser(session);
