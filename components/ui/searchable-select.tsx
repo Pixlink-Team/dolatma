@@ -120,13 +120,14 @@ export function SearchableSelect({
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-controls={listId}
+        title={clearAfterSelect ? undefined : displayLabel || undefined}
         onClick={() => {
           if (disabled) return;
           setOpen((current) => !current);
           setQuery("");
         }}
         className={cn(
-          "flex h-10 w-full items-center justify-between rounded-lg border border-input bg-card px-3 py-2 text-sm ring-offset-background",
+          "flex min-h-10 w-full items-center justify-between gap-2 rounded-lg border border-input bg-card px-3 py-2 text-sm ring-offset-background",
           "focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50",
           triggerClassName
         )}
@@ -135,8 +136,8 @@ export function SearchableSelect({
           {leadingIcon}
           <span
             className={cn(
-              "min-w-0 flex-1 truncate text-right",
-              !displayLabel || clearAfterSelect ? "text-muted-foreground" : undefined
+              "min-w-0 flex-1 text-right text-[13px] font-medium leading-snug line-clamp-2",
+              !displayLabel || clearAfterSelect ? "text-muted-foreground font-normal" : undefined
             )}
           >
             {clearAfterSelect ? placeholder : displayLabel || placeholder}
@@ -147,7 +148,7 @@ export function SearchableSelect({
 
       {open && !disabled && (
         <div
-          className="absolute z-[220] mt-1 w-full overflow-hidden rounded-lg border border-border bg-popover text-popover-foreground shadow-md"
+          className="absolute z-[220] mt-1 w-full min-w-[min(100%,20rem)] max-w-[min(100vw-2rem,28rem)] overflow-hidden rounded-lg border border-border bg-popover text-popover-foreground shadow-md sm:min-w-full sm:w-max sm:max-w-[min(100vw-2rem,32rem)]"
           role="listbox"
           id={listId}
         >
@@ -159,7 +160,7 @@ export function SearchableSelect({
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder={searchPlaceholder}
-                className="h-8 pr-8 text-xs"
+                className="h-9 pr-8 text-sm"
                 onKeyDown={(event) => {
                   if (event.key === "Enter" && filtered[0]) {
                     event.preventDefault();
@@ -169,11 +170,11 @@ export function SearchableSelect({
               />
             </div>
           </div>
-          <div className="max-h-56 overflow-y-auto p-1">
+          <div className="max-h-64 overflow-y-auto">
             {filtered.length === 0 ? (
-              <p className="px-2 py-3 text-center text-xs text-muted-foreground">{emptyText}</p>
+              <p className="px-3 py-3 text-center text-sm text-muted-foreground">{emptyText}</p>
             ) : (
-              filtered.map((option) => {
+              filtered.map((option, index) => {
                 const isSelected = !clearAfterSelect && option.value === value;
                 return (
                   <button
@@ -181,17 +182,21 @@ export function SearchableSelect({
                     type="button"
                     role="option"
                     aria-selected={isSelected}
+                    title={option.label}
                     className={cn(
-                      "relative flex w-full cursor-default select-none items-center rounded-md py-1.5 pr-8 pl-2 text-sm outline-none",
+                      "relative flex w-full cursor-default select-none items-start py-2.5 pr-9 pl-3 text-sm outline-none",
                       "hover:bg-accent hover:text-accent-foreground",
-                      isSelected && "bg-accent/60"
+                      isSelected && "bg-accent/60",
+                      index > 0 && "border-t border-border/70"
                     )}
                     onClick={() => handleSelect(option.value)}
                   >
-                    <span className="absolute right-2 flex h-3.5 w-3.5 items-center justify-center">
+                    <span className="absolute right-2.5 top-3 flex h-3.5 w-3.5 items-center justify-center">
                       {isSelected ? <Check className="h-4 w-4" /> : null}
                     </span>
-                    <span className="truncate text-right">{option.label}</span>
+                    <span className="w-full whitespace-normal break-words text-right text-[13px] font-medium leading-relaxed">
+                      {option.label}
+                    </span>
                   </button>
                 );
               })

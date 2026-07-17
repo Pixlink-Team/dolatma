@@ -112,7 +112,7 @@ export function AdminContentFilterBar({
             options={userOptions}
             placeholder="کاربر"
             searchPlaceholder="جستجوی کاربر..."
-            className="w-full sm:w-52"
+            className="w-full sm:w-64"
             leadingIcon={<UserRound className="h-4 w-4 shrink-0 text-muted-foreground" />}
           />
         )}
@@ -127,7 +127,7 @@ export function AdminContentFilterBar({
             options={planOptions}
             placeholder="افزودن موضوع"
             searchPlaceholder="جستجوی موضوع..."
-            className="w-full sm:w-44"
+            className="w-full sm:w-56"
             clearAfterSelect
             emptyText="موضوعی برای افزودن نیست"
           />
