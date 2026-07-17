@@ -32,9 +32,8 @@ Open [http://localhost:3000](http://localhost:3000) for the public report.
 ### Admin Login
 
 - URL: `/admin/login`
-- Default credentials (override via `ADMIN_EMAIL` / `ADMIN_PASSWORD` env):
-  - Email: `admin@example.com`
-  - Password: `password`
+- Credentials come from `ADMIN_EMAIL` / `ADMIN_PASSWORD` (or the admin account stored in the database).
+- Set a strong `AUTH_SECRET` (16+ random characters). In production the app will not start with a missing or weak secret.
 
 ## Deploy on Coolify
 
@@ -73,11 +72,13 @@ Or run `database/schema.sql` manually in PostgreSQL.
 
 ### 5. Local Docker test
 
+Create a `.env` next to `docker-compose.yml` with strong `POSTGRES_PASSWORD`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, and `AUTH_SECRET`, then:
+
 ```bash
 docker compose up --build
 ```
 
-Open [http://localhost:3000](http://localhost:3000) — login with `ADMIN_EMAIL` / `ADMIN_PASSWORD`.
+Open [http://localhost:3030](http://localhost:3030) — login with `ADMIN_EMAIL` / `ADMIN_PASSWORD`.
 
 ---
 

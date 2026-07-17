@@ -1,19 +1,12 @@
 import { cookies } from "next/headers";
+import { getAuthSecret } from "@/lib/auth/secret";
 
 const UNLOCK_TTL_SECONDS = 7 * 24 * 60 * 60;
-
-function getUnlockSecret(): string {
-  return (
-    process.env.AUTH_SECRET ??
-    process.env.ADMIN_PASSWORD ??
-    "dev-insecure-secret-change-me"
-  );
-}
 
 async function signPayload(payload: string): Promise<string> {
   const key = await crypto.subtle.importKey(
     "raw",
-    new TextEncoder().encode(getUnlockSecret()),
+    new TextEncoder().encode(getAuthSecret()),
     { name: "HMAC", hash: "SHA-256" },
     false,
     ["sign"]

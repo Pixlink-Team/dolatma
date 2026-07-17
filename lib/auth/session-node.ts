@@ -1,14 +1,7 @@
 import { createHmac, timingSafeEqual } from "crypto";
+import { getAuthSecret } from "@/lib/auth/secret";
 import type { AuthSession, SessionRole } from "@/lib/types";
 import { buildEnvAdminPayload, buildUserSessionPayload, getSessionTtlMs } from "@/lib/auth/session";
-
-function getAuthSecret(): string {
-  return (
-    process.env.AUTH_SECRET ??
-    process.env.ADMIN_PASSWORD ??
-    "dev-insecure-secret-change-me"
-  );
-}
 
 function signPayloadSync(payload: string): string {
   return createHmac("sha256", getAuthSecret()).update(payload).digest("hex");

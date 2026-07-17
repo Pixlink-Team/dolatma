@@ -1,14 +1,7 @@
+import { getAuthSecret } from "@/lib/auth/secret";
 import type { AuthSession, SessionRole } from "@/lib/types";
 
 const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
-
-function getAuthSecret(): string {
-  return (
-    process.env.AUTH_SECRET ??
-    process.env.ADMIN_PASSWORD ??
-    "dev-insecure-secret-change-me"
-  );
-}
 
 async function signPayloadAsync(payload: string): Promise<string> {
   const key = await crypto.subtle.importKey(

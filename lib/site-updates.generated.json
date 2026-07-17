@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "7aa0dddf33fe5bc33532746c264d3845c5b933e3",
+      "committedAt": "2026-07-17T17:55:38+03:30",
+      "title": "رفع خطای به‌روزرسانی وضعیت گزارش مشکل کاربران",
+      "subject": "Fix problem report status update SQL causing 500 errors"
+    },
+    {
       "hash": "82ce82b7d2e33654ede9f610fbd7e65c7f446f96",
       "committedAt": "2026-07-17T17:52:15+03:30",
       "title": "قفل امنیتی روی عملیات ادمین بدون ورود",
