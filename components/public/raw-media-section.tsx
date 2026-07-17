@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo } from "react";
-import { Download, Film, HardDrive, ImageIcon } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Download, FileArchive, Film, HardDrive, ImageIcon, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { CollapsibleSection } from "@/components/public/collapsible-section";
 import { OwnerGroupedSection } from "@/components/public/owner-grouped-section";
@@ -24,6 +25,7 @@ interface RawMediaSectionProps {
   items: RawMediaUpload[];
   groups: DataOwnerGroup<RawMediaUpload>[];
   storage: RawMediaStorageSummary;
+  campaignId?: string;
 }
 
 function RawMediaList({ items }: { items: RawMediaUpload[] }) {
@@ -102,8 +104,9 @@ function StorageMeter({ storage }: { storage: RawMediaStorageSummary }) {
   );
 }
 
-export function RawMediaSection({ items, groups, storage }: RawMediaSectionProps) {
+export function RawMediaSection({ items, groups, storage, campaignId }: RawMediaSectionProps) {
   const { filter } = useOwnerLocationFilter();
+  const [isExporting, setIsExporting] = useState(false);
   const locationFilteredGroups = useFilteredOwnerGroups(groups);
   const filteredGroups = useMemo(
     () => filterGroupsByDisplayContent(locationFilteredGroups, fileHasDisplayContent),
@@ -114,6 +117,7 @@ export function RawMediaSection({ items, groups, storage }: RawMediaSectionProps
     [filteredGroups, filter.sortOrder]
   );
   const sectionVisible = useCampaignSectionVisibility(items.length, filteredItems.length);
+  const resolvedCampaignId = campaignId ?? items[0]?.campaignId;
 
   const { effectiveCount, hasMore, loadMore } = useSectionPagination(
     filteredItems.length,
@@ -137,6 +141,41 @@ export function RawMediaSection({ items, groups, storage }: RawMediaSectionProps
       .filter((group) => group.items.length > 0);
   }, [filteredGroups, visibleItems]);
 
+  const handleDownloadAll = async () => {
+    if (!resolvedCampaignId || isExporting) return;
+    setIsExporting(true);
+    try {
+      const response = await fetch(
+        `/api/campaign/raw-media/export?campaignId=${encodeURIComponent(resolvedCampaignId)}`
+      );
+      if (response.status === 401) {
+        toast.error("برای دانلود گروهی وارد پنل مدیریت شوید");
+        return;
+      }
+      if (!response.ok) {
+        const result = (await response.json().catch(() => null)) as { error?: string } | null;
+        toast.error(result?.error ?? "خطا در ساخت فایل ZIP");
+        return;
+      }
+
+      const blob = await response.blob();
+      const disposition = response.headers.get("Content-Disposition");
+      const match = disposition?.match(/filename="([^"]+)"/);
+      const filename = match?.[1] ?? `raw-media-${resolvedCampaignId}.zip`;
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = filename;
+      link.click();
+      URL.revokeObjectURL(blobUrl);
+      toast.success("دانلود ZIP شروع شد");
+    } catch {
+      toast.error("خطا در دانلود ZIP");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   if (!sectionVisible) return null;
 
   return (
@@ -153,6 +192,24 @@ export function RawMediaSection({ items, groups, storage }: RawMediaSectionProps
         </div>
       ) : (
         <div className="space-y-4">
+          {resolvedCampaignId && (
+            <div className="flex justify-end">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={isExporting}
+                onClick={() => void handleDownloadAll()}
+              >
+                {isExporting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <FileArchive className="h-4 w-4" />
+                )}
+                {isExporting ? "در حال آماده‌سازی…" : "دانلود همه (ZIP)"}
+              </Button>
+            </div>
+          )}
+
           <OwnerGroupedSection
             groups={visibleGroups}
             flatItems={chronological ? visibleItems : null}

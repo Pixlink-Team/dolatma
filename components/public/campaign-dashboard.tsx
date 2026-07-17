@@ -253,6 +253,7 @@ function CampaignDashboardBody({
                 items={data.rawMedia}
                 groups={data.rawMediaGroups}
                 storage={data.rawMediaStorage}
+                campaignId={data.settings.id}
               />
             </section>
           </DeferredSection>

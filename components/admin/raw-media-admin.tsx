@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { Download, Film, HardDrive, ImageIcon, Plus, Trash2 } from "lucide-react";
+import { Download, FileArchive, Film, HardDrive, ImageIcon, Loader2, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   AdminContentFilterBar,
@@ -91,6 +91,7 @@ export function RawMediaAdmin({
     mimeType: "",
   });
   const [isPending, startTransition] = useTransition();
+  const [isExporting, setIsExporting] = useState(false);
 
   const storage = useMemo(() => buildRawMediaStorageSummary(items), [items]);
   const filterUsers = useMemo(() => collectAdminFilterUsers(items), [items]);
@@ -98,6 +99,37 @@ export function RawMediaAdmin({
     () => items.filter((item) => matchesAdminContentFilter(item, contentFilter)),
     [items, contentFilter]
   );
+
+  const handleDownloadAll = async () => {
+    if (isExporting || items.length === 0) return;
+    setIsExporting(true);
+    try {
+      const response = await fetch(
+        `/api/campaign/raw-media/export?campaignId=${encodeURIComponent(campaignId)}`
+      );
+      if (!response.ok) {
+        const result = (await response.json().catch(() => null)) as { error?: string } | null;
+        toast.error(result?.error ?? "خطا در ساخت فایل ZIP");
+        return;
+      }
+
+      const blob = await response.blob();
+      const disposition = response.headers.get("Content-Disposition");
+      const match = disposition?.match(/filename="([^"]+)"/);
+      const filename = match?.[1] ?? `raw-media-${campaignId}.zip`;
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = filename;
+      link.click();
+      URL.revokeObjectURL(blobUrl);
+      toast.success("دانلود ZIP شروع شد");
+    } catch {
+      toast.error("خطا در دانلود ZIP");
+    } finally {
+      setIsExporting(false);
+    }
+  };
   const filteredIds = useMemo(() => filteredItems.map((item) => item.id), [filteredItems]);
   const bulk = useSectionBulkEdit(filteredIds);
 
@@ -192,6 +224,20 @@ export function RawMediaAdmin({
         </div>
         <div className="flex items-center gap-2">
           <AdminViewModeToggle value={viewMode} onChange={setViewMode} />
+          {items.length > 0 && (
+            <Button
+              variant="outline"
+              disabled={isExporting || isPending}
+              onClick={() => void handleDownloadAll()}
+            >
+              {isExporting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <FileArchive className="h-4 w-4" />
+              )}
+              {isExporting ? "در حال آماده‌سازی…" : "دانلود همه (ZIP)"}
+            </Button>
+          )}
           <Button onClick={() => setDialogOpen(true)}>
             <Plus className="h-4 w-4" />
             آپلود جدید
