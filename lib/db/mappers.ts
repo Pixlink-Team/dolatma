@@ -408,6 +408,7 @@ export function mapCampaignActivityFromDb(row: any): CampaignActivity {
     activityType: row.activity_type ?? "other",
     activityDate: toDateString(row.activity_date),
     location: row.location ?? "",
+    link: row.link ?? "",
     imageUrl: row.image_url ?? null,
     videoUrl: row.video_url ?? null,
     mediaItems:

@@ -57,11 +57,13 @@ export function activityHasDisplayContent(activity: {
   return Boolean(activity.imageUrl?.trim() || activity.videoUrl?.trim());
 }
 
-/** Press / newspaper cards require an image. */
+/** Press / newspaper cards need an image or an external link. */
 export function pressPublicationHasDisplayContent(activity: {
   imageUrl?: string | null;
+  link?: string | null;
   mediaItems?: { type?: string; url: string }[];
 }): boolean {
+  if (activity.link?.trim()) return true;
   if (activity.imageUrl?.trim()) return true;
   return Boolean(
     activity.mediaItems?.some((item) => item.type === "image" && item.url.trim())

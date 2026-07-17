@@ -33,7 +33,8 @@ import {
 } from "@/components/admin/section-bulk-edit";
 import { MediaUpload } from "@/components/ui/media-upload";
 import { PersianDateField } from "@/components/ui/persian-date-input";
-import { deleteSocialPostAction, saveSocialPostAction } from "@/lib/actions/extended-actions";
+import { deleteSocialPostAction, fetchSocialLinkMetricsAction, saveSocialPostAction } from "@/lib/actions/extended-actions";
+import { RefreshCw } from "lucide-react";
 import { normalizePlanLabels, type ContentTopic } from "@/lib/content-topics";
 import { type EditSuggestionMissingField } from "@/lib/edit-suggestions";
 import { useAdminEditDeepLink } from "@/lib/hooks/use-admin-edit-deep-link";
@@ -185,6 +186,46 @@ export function SitePublicationsAdmin({
       toast.success("حذف شد");
       closeDialog();
       setPreviewPost(null);
+    });
+  };
+
+  const handleFetchFromLink = () => {
+    const link = form.getValues("link")?.trim() ?? "";
+    if (!link) {
+      toast.error("ابتدا لینک مطلب را وارد کنید");
+      return;
+    }
+
+    startTransition(async () => {
+      const result = await fetchSocialLinkMetricsAction({ url: link, platform: "site" });
+      if (!result.success) {
+        toast.error(result.error);
+        return;
+      }
+
+      const currentTitle = form.getValues("title")?.trim() ?? "";
+      if (!currentTitle && result.title?.trim()) {
+        form.setValue("title", result.title.trim());
+      }
+
+      const currentDescription = form.getValues("description")?.trim() ?? "";
+      if (!currentDescription && result.description?.trim()) {
+        form.setValue("description", result.description.trim());
+      }
+
+      const currentCover = form.getValues("coverImageUrl")?.trim() ?? "";
+      if (!currentCover && result.coverImageUrl?.trim()) {
+        form.setValue("coverImageUrl", result.coverImageUrl.trim());
+      }
+
+      if (result.publishedDate) {
+        const currentDate = form.getValues("publishedDate")?.trim() ?? "";
+        if (!currentDate || currentDate === todayISO()) {
+          form.setValue("publishedDate", result.publishedDate);
+        }
+      }
+
+      toast.success("اطلاعات صفحه از لینک خوانده شد");
     });
   };
 
@@ -377,15 +418,34 @@ export function SitePublicationsAdmin({
             </div>
             <div className="space-y-2">
               <Label className={cn(highlightLink && "text-destructive")}>لینک مطلب</Label>
-              <Input
-                {...form.register("link")}
-                dir="ltr"
-                placeholder="https://example.com/article"
-                className={cn(highlightLink && "border-destructive focus-visible:ring-destructive")}
-              />
+              <div className="flex gap-2">
+                <Input
+                  {...form.register("link")}
+                  dir="ltr"
+                  placeholder="https://example.com/article"
+                  className={cn(
+                    "min-w-0 flex-1",
+                    highlightLink && "border-destructive focus-visible:ring-destructive"
+                  )}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={isPending}
+                  onClick={handleFetchFromLink}
+                  title="خواندن عنوان، توضیح و کاور از لینک"
+                  className="shrink-0 gap-1.5"
+                >
+                  <RefreshCw className={cn("h-4 w-4", isPending && "animate-spin")} />
+                  از لینک
+                </Button>
+              </div>
               {highlightLink && (
                 <p className="text-xs text-destructive">لینک مطلب خالی است؛ لطفاً تکمیل کنید.</p>
               )}
+              <p className="text-xs text-muted-foreground">
+                عنوان، توضیح و تصویر شاخص صفحه را در صورت خالی بودن پر می‌کند.
+              </p>
             </div>
             <PersianDateField control={form.control} name="publishedDate" label="تاریخ انتشار" />
             <PlanLabelSelect

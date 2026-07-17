@@ -542,6 +542,7 @@ export interface CampaignActivity extends Ownable {
   activityType: ActivityType;
   activityDate: string;
   location: string;
+  link?: string | null;
   imageUrl?: string | null;
   videoUrl?: string | null;
   mediaItems: ActivityMediaItem[];

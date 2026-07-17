@@ -3,6 +3,7 @@ import {
   getLinkMetricsSupportMessage,
 } from "./detect";
 import { fetchEitaaPostMetrics } from "./eitaa";
+import { fetchWebPageMetrics } from "./web-page";
 import type { LinkMetricsResult } from "./types";
 
 export async function fetchSocialLinkMetrics(
@@ -24,12 +25,8 @@ export async function fetchSocialLinkMetrics(
     return fetchEitaaPostMetrics(trimmed);
   }
 
-  if (platform === "unsupported") {
-    return {
-      platform,
-      supported: false,
-      error: getLinkMetricsSupportMessage(platform),
-    };
+  if (platform === "web") {
+    return fetchWebPageMetrics(trimmed);
   }
 
   return {
@@ -43,5 +40,6 @@ export {
   detectLinkMetricsPlatform,
   getLinkMetricsSupportMessage,
   isEitaaUrl,
+  isHttpUrl,
 } from "./detect";
 export type { LinkMetricsResult, LinkMetricsPlatform } from "./types";

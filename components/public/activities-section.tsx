@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Image from "next/image";
-import { Download, Eye, Music, Play } from "lucide-react";
+import { Download, ExternalLink, Eye, Music, Play } from "lucide-react";
 import { getActivityTypeLabel } from "@/lib/activity-types";
 import { useFilteredOwnerGroups } from "@/lib/hooks/use-filtered-owner-groups";
 import { useCampaignSectionVisibility } from "@/lib/hooks/use-campaign-section-visibility";
@@ -53,6 +53,7 @@ function ActivityCard({
 }) {
   const { canScore, campaignId } = useContentScoreAccess();
   const hasMedia = hasActivityMedia(activity);
+  const hasLink = Boolean(activity.link?.trim());
   const hasVideo = Boolean(activity.videoUrl?.trim());
   const audioOnly =
     !hasVideo &&
@@ -133,16 +134,26 @@ function ActivityCard({
         ) : null
       }
       actions={
-        hasMedia ? (
+        hasMedia || hasLink ? (
           <>
-            <Button variant="outline" size="sm" onClick={onOpen}>
-              <Eye className="h-4 w-4" />
-              مشاهده
-            </Button>
+            {hasMedia && (
+              <Button variant="outline" size="sm" onClick={onOpen}>
+                <Eye className="h-4 w-4" />
+                مشاهده
+              </Button>
+            )}
             {primaryMediaUrl && (
               <Button variant="outline" size="sm" onClick={handleDownload}>
                 <Download className="h-4 w-4" />
                 دانلود
+              </Button>
+            )}
+            {hasLink && (
+              <Button variant="outline" size="sm" asChild>
+                <a href={activity.link!} target="_blank" rel="noopener noreferrer">
+                  <ExternalLink className="h-4 w-4" />
+                  لینک
+                </a>
               </Button>
             )}
           </>

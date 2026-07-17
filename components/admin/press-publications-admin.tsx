@@ -8,7 +8,7 @@ import {
   CONTENT_TITLE_MAX_LENGTH,
   CONTENT_TITLE_MAX_LENGTH_MESSAGE,
 } from "@/lib/content-constraints";
-import { Trash2 } from "lucide-react";
+import { Trash2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,14 +29,18 @@ import { MediaUpload } from "@/components/ui/media-upload";
 import { PersianDateField } from "@/components/ui/persian-date-input";
 import { applyVideoCoverToMediaItems } from "@/lib/client/activity-media-cover";
 import { getActivityTypeLabel, pressActivityTypeOptions } from "@/lib/activity-types";
-import { deleteCampaignActivityAction, saveCampaignActivityAction } from "@/lib/actions/extended-actions";
+import {
+  deleteCampaignActivityAction,
+  fetchSocialLinkMetricsAction,
+  saveCampaignActivityAction,
+} from "@/lib/actions/extended-actions";
 import { normalizePlanLabels, type ContentTopic } from "@/lib/content-topics";
 import { useSectionCreateGate } from "@/lib/hooks/use-section-create-gate";
 import { useAdminInfiniteScroll } from "@/lib/hooks/use-admin-infinite-scroll";
 import { AdminInfiniteScrollSentinel } from "@/components/admin/admin-infinite-scroll-sentinel";
 import { todayISO } from "@/lib/jalali";
 import { isPressPublication } from "@/lib/press-publications";
-import { formatPersianDate } from "@/lib/utils";
+import { cn, formatPersianDate } from "@/lib/utils";
 import type { ActivityMediaItem, AdminUser, CampaignActivity } from "@/lib/types";
 
 const ACTIVITY_VIDEO_MAX_BYTES = 50 * 1024 * 1024;
@@ -50,6 +54,12 @@ const schema = z.object({
   activityType: z.enum(["magazine", "newspaper"]),
   activityDate: z.string(),
   location: z.string().optional(),
+  link: z
+    .string()
+    .optional()
+    .refine((value) => !value?.trim() || z.string().url().safeParse(value.trim()).success, {
+      message: "لینک معتبر وارد کنید",
+    }),
   description: z.string().optional(),
 });
 
@@ -96,6 +106,7 @@ export function PressPublicationsAdmin({
       activityType: "magazine",
       activityDate: todayISO(),
       location: "",
+      link: "",
       description: "",
     },
   });
@@ -119,6 +130,7 @@ export function PressPublicationsAdmin({
         activityType: "magazine",
         activityDate: todayISO(),
         location: "",
+        link: "",
         description: "",
       });
       setOpen(true);
@@ -134,6 +146,7 @@ export function PressPublicationsAdmin({
       activityType: activity.activityType === "newspaper" ? "newspaper" : "magazine",
       activityDate: activity.activityDate,
       location: activity.location,
+      link: activity.link ?? "",
       description: activity.description ?? "",
     });
     setOpen(true);
@@ -146,6 +159,64 @@ export function PressPublicationsAdmin({
       toast.success("حذف شد");
       setOpen(false);
       setPreviewActivity(null);
+    });
+  };
+
+  const handleFetchFromLink = () => {
+    const link = form.getValues("link")?.trim() ?? "";
+    const activityType = form.getValues("activityType");
+    if (!link) {
+      toast.error("ابتدا لینک را وارد کنید");
+      return;
+    }
+
+    startTransition(async () => {
+      const result = await fetchSocialLinkMetricsAction({
+        url: link,
+        platform: activityType,
+      });
+      if (!result.success) {
+        toast.error(result.error);
+        return;
+      }
+
+      const currentTitle = form.getValues("title")?.trim() ?? "";
+      if (!currentTitle && result.title?.trim()) {
+        form.setValue("title", result.title.trim());
+      }
+
+      const currentDescription = form.getValues("description")?.trim() ?? "";
+      if (!currentDescription && result.description?.trim()) {
+        form.setValue("description", result.description.trim());
+      }
+
+      if (result.coverImageUrl?.trim()) {
+        const coverUrl = result.coverImageUrl.trim();
+        const hasCoverImage = mediaItems.some(
+          (item) => item.type === "image" && item.url.trim()
+        );
+        if (!hasCoverImage) {
+          setMediaItems((prev) => {
+            const emptyImage = prev.find((item) => item.type === "image" && !item.url.trim());
+            if (emptyImage) {
+              return prev.map((item) =>
+                item.id === emptyImage.id ? { ...item, url: coverUrl } : item
+              );
+            }
+            if (prev.length >= MAX_MEDIA_ITEMS) return prev;
+            return [...prev, { id: crypto.randomUUID(), type: "image" as const, url: coverUrl }];
+          });
+        }
+      }
+
+      if (result.publishedDate) {
+        const currentDate = form.getValues("activityDate")?.trim() ?? "";
+        if (!currentDate || currentDate === todayISO()) {
+          form.setValue("activityDate", result.publishedDate);
+        }
+      }
+
+      toast.success("اطلاعات صفحه از لینک خوانده شد");
     });
   };
 
@@ -167,6 +238,7 @@ export function PressPublicationsAdmin({
         activityType: data.activityType,
         activityDate: data.activityDate,
         location: data.location?.trim() ?? "",
+        link: data.link?.trim() || "",
         imageUrl: filledMedia.find((item) => item.type === "image")?.url ?? null,
         videoUrl: filledMedia.find((item) => item.type === "video")?.url ?? null,
         mediaItems: filledMedia,
@@ -189,6 +261,7 @@ export function PressPublicationsAdmin({
         activityType: data.activityType,
         activityDate: data.activityDate,
         location: data.location?.trim() ?? "",
+        link: data.link?.trim() || "",
         imageUrl: primaryImage,
         videoUrl: primaryVideo,
         mediaItems: filledMedia,
@@ -293,6 +366,22 @@ export function PressPublicationsAdmin({
                     : "—",
                 },
                 {
+                  label: "لینک",
+                  value: previewActivity.link ? (
+                    <a
+                      href={previewActivity.link}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-primary underline"
+                      dir="ltr"
+                    >
+                      {previewActivity.link}
+                    </a>
+                  ) : (
+                    "—"
+                  ),
+                },
+                {
                   label: "برچسب‌ها",
                   value: previewActivity.planLabels?.length ? previewActivity.planLabels.join("، ") : "—",
                 },
@@ -340,6 +429,31 @@ export function PressPublicationsAdmin({
               </Select>
             </div>
             <PersianDateField control={form.control} name="activityDate" label="تاریخ" />
+            <div className="space-y-2">
+              <Label>لینک مطلب (اختیاری)</Label>
+              <div className="flex gap-2">
+                <Input
+                  {...form.register("link")}
+                  dir="ltr"
+                  placeholder="https://example.com/article"
+                  className="min-w-0 flex-1"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={isPending}
+                  onClick={handleFetchFromLink}
+                  title="خواندن عنوان، توضیح و کاور از لینک"
+                  className="shrink-0 gap-1.5"
+                >
+                  <RefreshCw className={cn("h-4 w-4", isPending && "animate-spin")} />
+                  از لینک
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                اگر لینک دارید، عنوان/توضیح/تصویر را می‌توان از صفحه خواند.
+              </p>
+            </div>
             <div className="space-y-2">
               <Label>مکان (اختیاری)</Label>
               <Input {...form.register("location")} />

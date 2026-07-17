@@ -1,4 +1,10 @@
-export type LinkMetricsPlatform = "eitaa" | "bale" | "soroush" | "rubika" | "unsupported";
+export type LinkMetricsPlatform =
+  | "eitaa"
+  | "web"
+  | "bale"
+  | "soroush"
+  | "rubika"
+  | "unsupported";
 
 export interface LinkMetricsResult {
   platform: LinkMetricsPlatform;

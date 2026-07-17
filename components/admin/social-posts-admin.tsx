@@ -289,7 +289,7 @@ export function SocialPostsAdmin({
     }
 
     const detected = detectLinkMetricsPlatform(link, platform);
-    if (detected !== "eitaa") {
+    if (detected !== "eitaa" && detected !== "web") {
       toast.error(
         detected === "unsupported"
           ? "واکشی خودکار برای این لینک پشتیبانی نمی‌شود"
@@ -344,7 +344,7 @@ export function SocialPostsAdmin({
       toast.success(
         typeof result.views === "number"
           ? `آمار از ایتا خوانده شد (بازدید: ${result.views.toLocaleString("fa-IR")})`
-          : "اطلاعات پست از ایتا خوانده شد"
+          : "اطلاعات از لینک خوانده شد"
       );
     });
   };
@@ -665,7 +665,7 @@ export function SocialPostsAdmin({
                   variant="outline"
                   disabled={isPending}
                   onClick={handleFetchFromLink}
-                  title="خواندن بازدید و محتوا از لینک (فعلاً فقط ایتا)"
+                  title="خواندن اطلاعات از لینک (ایتا یا صفحه وب)"
                   className="shrink-0 gap-1.5"
                 >
                   <RefreshCw className={cn("h-4 w-4", isPending && "animate-spin")} />
@@ -676,7 +676,7 @@ export function SocialPostsAdmin({
                 <p className="text-xs text-destructive">لینک پست خالی است؛ لطفاً تکمیل کنید.</p>
               )}
               <p className="text-xs text-muted-foreground">
-                فعلاً فقط لینک عمومی پست ایتا پشتیبانی می‌شود. بله، سروش و روبیکا را دستی وارد کنید.
+                ایتا: بازدید و محتوا. صفحات وب: عنوان، توضیح و کاور. بله/سروش/روبیکا دستی.
               </p>
             </div>
 
