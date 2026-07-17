@@ -6,7 +6,7 @@ import {
   getAdminSessionCookieName,
   verifyAdminSessionToken,
 } from "@/lib/auth/admin-session";
-import { getUploadPublicUrl, getUploadsDir } from "@/lib/uploads";
+import { getUploadPublicUrl, getUploadsDir, withFileAccessToken } from "@/lib/uploads";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -254,7 +254,7 @@ export async function POST(request: Request) {
   await writeFile(`${uploadsDir}/${filename}`, buffer);
 
   return NextResponse.json({
-    url: getUploadPublicUrl(filename),
+    url: withFileAccessToken(getUploadPublicUrl(filename)),
     fileName: file.name,
     fileSize: file.size,
     mimeType: file.type,

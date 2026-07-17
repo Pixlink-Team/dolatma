@@ -46,6 +46,7 @@ import { isPostgresConfigured } from "@/lib/utils";
 import { resolveSaveOwnerUserId } from "@/lib/admin-content-owner";
 import { auditContentChange, auditContentDelete, logAuditFromCurrentSession } from "@/lib/audit/log-event";
 import { getContentTitleValidationError } from "@/lib/content-constraints";
+import { stripFileAccessTokensDeep } from "@/lib/uploads";
 
 const UNAUTHORIZED = { success: false as const, error: "Unauthorized" };
 
@@ -99,15 +100,16 @@ async function withOwnerScope<T extends { id?: string; ownerUserId?: string | nu
   session: AuthSession,
   data: T
 ): Promise<T> {
+  const cleaned = stripFileAccessTokensDeep(data);
   const ownerUserId = await resolveSaveOwnerUserId({
     session,
-    explicitOwnerUserId: data.ownerUserId,
-    contentId: data.id,
+    explicitOwnerUserId: cleaned.ownerUserId,
+    contentId: cleaned.id,
   });
 
   if (!isFullAdmin(session)) {
     return {
-      ...data,
+      ...cleaned,
       ownerUserId,
       // Contributor uploads must be public on the campaign page.
       published: true,
@@ -115,7 +117,7 @@ async function withOwnerScope<T extends { id?: string; ownerUserId?: string | nu
   }
 
   return {
-    ...data,
+    ...cleaned,
     ownerUserId,
   };
 }
@@ -138,16 +140,17 @@ async function assertContributorOwnsBillboard(
 export async function saveCampaignAction(data: Partial<CampaignSettings> & { id?: string }) {
   const auth = await requireFullAdmin();
   if (isAuthError(auth)) return auth;
-  const validationError = validateTitlePayload(data);
+  const cleaned = stripFileAccessTokensDeep(data);
+  const validationError = validateTitlePayload(cleaned);
   if (validationError) return validationError;
-  const result = await saveCampaign(data);
+  const result = await saveCampaign(cleaned);
   await auditContentChange({
-    isUpdate: Boolean(data.id),
+    isUpdate: Boolean(cleaned.id),
     entityType: "campaign",
-    entityId: data.id,
-    label: data.title,
+    entityId: cleaned.id,
+    label: cleaned.title,
   });
-  await revalidateAll(data.slug);
+  await revalidateAll(cleaned.slug);
   return result;
 }
 
@@ -168,17 +171,18 @@ export async function deleteCampaignAction(id: string) {
 export async function updateSettingsAction(data: Partial<CampaignSettings>) {
   const auth = await requireFullAdmin();
   if (isAuthError(auth)) return auth;
-  const validationError = validateTitlePayload(data);
+  const cleaned = stripFileAccessTokensDeep(data);
+  const validationError = validateTitlePayload(cleaned);
   if (validationError) return validationError;
-  const result = await updateCampaignSettings(data);
+  const result = await updateCampaignSettings(cleaned);
   await logAuditFromCurrentSession({
     category: "admin",
     action: "admin.settings_update",
     entityType: "campaign",
-    entityId: data.id,
-    label: data.title ?? "به‌روزرسانی تنظیمات کمپین",
+    entityId: cleaned.id,
+    label: cleaned.title ?? "به‌روزرسانی تنظیمات کمپین",
   });
-  await revalidateAll(data.slug);
+  await revalidateAll(cleaned.slug);
   return result;
 }
 
@@ -223,15 +227,16 @@ export async function deleteBillboardAction(id: string) {
 export async function saveCategoryAction(data: Partial<MediaCategory> & { id?: string }) {
   const auth = await requireFullAdmin();
   if (isAuthError(auth)) return auth;
-  const validationError = validateTitlePayload(data);
+  const cleaned = stripFileAccessTokensDeep(data);
+  const validationError = validateTitlePayload(cleaned);
   if (validationError) return validationError;
-  const result = await saveMediaCategory(data);
+  const result = await saveMediaCategory(cleaned);
   await auditContentChange({
-    isUpdate: Boolean(data.id),
+    isUpdate: Boolean(cleaned.id),
     entityType: "media_category",
-    entityId: data.id,
-    campaignId: data.campaignId,
-    label: data.title,
+    entityId: cleaned.id,
+    campaignId: cleaned.campaignId,
+    label: cleaned.title,
   });
   await revalidateAll();
   return result;
@@ -283,13 +288,14 @@ export async function savePosterVersionAction(
 ) {
   const auth = await requireSession();
   if (isAuthError(auth)) return auth;
-  const result = await savePosterVersion(data);
+  const cleaned = stripFileAccessTokensDeep(data);
+  const result = await savePosterVersion(cleaned);
   await auditContentChange({
-    isUpdate: Boolean(data.id),
+    isUpdate: Boolean(cleaned.id),
     entityType: "poster_version",
-    entityId: data.id,
-    label: data.notes ?? `نسخه پوستر ${data.posterId}`,
-    metadata: { posterId: data.posterId },
+    entityId: cleaned.id,
+    label: cleaned.notes ?? `نسخه پوستر ${cleaned.posterId}`,
+    metadata: { posterId: cleaned.posterId },
   });
   await revalidateAll();
   return result;
@@ -337,13 +343,14 @@ export async function saveVideoVersionAction(
 ) {
   const auth = await requireSession();
   if (isAuthError(auth)) return auth;
-  const result = await saveVideoVersion(data);
+  const cleaned = stripFileAccessTokensDeep(data);
+  const result = await saveVideoVersion(cleaned);
   await auditContentChange({
-    isUpdate: Boolean(data.id),
+    isUpdate: Boolean(cleaned.id),
     entityType: "video_version",
-    entityId: data.id,
-    label: data.notes ?? `نسخه ویدیو ${data.videoId}`,
-    metadata: { videoId: data.videoId },
+    entityId: cleaned.id,
+    label: cleaned.notes ?? `نسخه ویدیو ${cleaned.videoId}`,
+    metadata: { videoId: cleaned.videoId },
   });
   await revalidateAll();
   return result;

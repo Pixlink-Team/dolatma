@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "1e34354fe4755dc432adb58ee9a862b5d06b9fa6",
+      "committedAt": "2026-07-17T18:04:25+03:30",
+      "title": "امن‌سازی کلید مخفی ورود سیستم",
+      "subject": "Require strong AUTH_SECRET in production"
+    },
+    {
       "hash": "7aa0dddf33fe5bc33532746c264d3845c5b933e3",
       "committedAt": "2026-07-17T17:55:38+03:30",
       "title": "رفع خطای به‌روزرسانی وضعیت گزارش مشکل کاربران",

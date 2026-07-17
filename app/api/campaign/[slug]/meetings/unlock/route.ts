@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { pgUnlockCampaignMeetings } from "@/lib/db/repository-extended";
+import { withFileAccessTokensDeep } from "@/lib/uploads";
 import { isPostgresConfigured } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -27,5 +28,5 @@ export async function POST(request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: "رمز اشتباه است" }, { status: 401 });
   }
 
-  return NextResponse.json({ meetings: result.meetings });
+  return NextResponse.json({ meetings: withFileAccessTokensDeep(result.meetings) });
 }

@@ -1,5 +1,10 @@
 import { open, stat } from "fs/promises";
+import { cookies } from "next/headers";
+import path from "path";
 import { NextResponse } from "next/server";
+import { getAdminSessionCookieName } from "@/lib/auth/admin-session";
+import { verifyFileAccessToken } from "@/lib/auth/file-access-token";
+import { parseSessionTokenSync } from "@/lib/auth/session-node";
 import { resolveUploadFilePath } from "@/lib/uploads";
 
 const MIME_TYPES: Record<string, string> = {
@@ -24,11 +29,34 @@ function getContentType(filename: string): string {
   return MIME_TYPES[ext] ?? "application/octet-stream";
 }
 
+function sanitizeFilename(raw: string): string | null {
+  const safeName = path.basename(raw.split("?")[0].split("#")[0]);
+  if (!safeName || safeName === "." || safeName === "..") return null;
+  return safeName;
+}
+
+async function canAccessFile(request: Request, filename: string): Promise<boolean> {
+  const cookieStore = await cookies();
+  const session = parseSessionTokenSync(cookieStore.get(getAdminSessionCookieName())?.value);
+  if (session) return true;
+
+  const { searchParams } = new URL(request.url);
+  return verifyFileAccessToken(filename, searchParams.get("exp"), searchParams.get("sig"));
+}
+
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ filename: string }> }
 ) {
-  const { filename } = await params;
+  const { filename: rawFilename } = await params;
+  const filename = sanitizeFilename(decodeURIComponent(rawFilename));
+  if (!filename) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  if (!(await canAccessFile(request, filename))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
   try {
     const filePath = resolveUploadFilePath(filename);
@@ -74,7 +102,7 @@ export async function GET(
             "Content-Length": String(chunkSize),
             "Content-Range": `bytes ${start}-${end}/${fileSize}`,
             "Accept-Ranges": "bytes",
-            "Cache-Control": "public, max-age=31536000, immutable",
+            "Cache-Control": "private, max-age=3600",
           },
         });
       }
@@ -94,7 +122,7 @@ export async function GET(
         "Content-Type": contentType,
         "Content-Length": String(fileSize),
         "Accept-Ranges": "bytes",
-        "Cache-Control": "public, max-age=31536000, immutable",
+        "Cache-Control": "private, max-age=3600",
       },
     });
   } catch {

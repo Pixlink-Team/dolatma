@@ -27,6 +27,7 @@ import { splitPressActivities } from "@/lib/press-publications";
 import { buildSocialAnalyticsSummary } from "@/lib/social-analytics";
 import { buildRawMediaStorageSummary } from "@/lib/raw-media-storage";
 import { sanitizePublicCampaignSettings } from "@/lib/campaign-page-unlock";
+import { withFileAccessTokensDeep } from "@/lib/uploads";
 import { isPostgresConfigured, isSupabaseConfigured } from "@/lib/utils";
 import * as pg from "@/lib/db/repository";
 import { fetchMetabaseMetrics, resolveChannelMetabaseEmbedUrl } from "@/lib/services/metabase";
@@ -436,7 +437,7 @@ function assemblePublicData(
 
   const adminOwnerLabel = resolveAdminOwnerLabel(settings.adminOwnerLabel);
 
-  return {
+  return withFileAccessTokensDeep({
     settings: sanitizePublicCampaignSettings(settings),
     kpis,
     sections,
@@ -472,7 +473,7 @@ function assemblePublicData(
     rawMediaGroups: groupByOwner(rawMedia, adminOwnerLabel),
     rawMediaStorage,
     lastUpdated: new Date().toISOString(),
-  };
+  });
 }
 
 function getMockPublicDataBySlug(slug: string): PublicCampaignData | null {
@@ -489,25 +490,27 @@ function getMockPublicDataBySlug(slug: string): PublicCampaignData | null {
 export async function getCampaignList(): Promise<CampaignListItem[]> {
   if (isPostgresConfigured()) {
     try {
-      return await pg.pgGetCampaignList();
+      return withFileAccessTokensDeep(await pg.pgGetCampaignList());
     } catch (error) {
       console.error("getCampaignList failed:", error);
       return [];
     }
   }
   if (!isSupabaseConfigured()) {
-    return getMockStore()
-      .campaigns.filter((c) => c.published)
-      .map(({ id, slug, title, description, status, startDate, endDate, coverImageUrl }) => ({
-        id,
-        slug,
-        title,
-        description,
-        status,
-        startDate,
-        endDate,
-        coverImageUrl,
-      }));
+    return withFileAccessTokensDeep(
+      getMockStore()
+        .campaigns.filter((c) => c.published)
+        .map(({ id, slug, title, description, status, startDate, endDate, coverImageUrl }) => ({
+          id,
+          slug,
+          title,
+          description,
+          status,
+          startDate,
+          endDate,
+          coverImageUrl,
+        }))
+    );
   }
 
   const supabase = await createClient();
@@ -520,29 +523,33 @@ export async function getCampaignList(): Promise<CampaignListItem[]> {
       .eq("published", true)
       .order("updated_at", { ascending: false });
 
-    return (data ?? []).map((row) => ({
-      id: row.id,
-      slug: row.slug,
-      title: row.title,
-      description: row.description,
-      status: row.status,
-      startDate: row.start_date,
-      endDate: row.end_date,
-      coverImageUrl: row.cover_image_url,
-    }));
+    return withFileAccessTokensDeep(
+      (data ?? []).map((row) => ({
+        id: row.id,
+        slug: row.slug,
+        title: row.title,
+        description: row.description,
+        status: row.status,
+        startDate: row.start_date,
+        endDate: row.end_date,
+        coverImageUrl: row.cover_image_url,
+      }))
+    );
   } catch {
-    return getMockStore()
-      .campaigns.filter((c) => c.published)
-      .map(({ id, slug, title, description, status, startDate, endDate, coverImageUrl }) => ({
-        id,
-        slug,
-        title,
-        description,
-        status,
-        startDate,
-        endDate,
-        coverImageUrl,
-      }));
+    return withFileAccessTokensDeep(
+      getMockStore()
+        .campaigns.filter((c) => c.published)
+        .map(({ id, slug, title, description, status, startDate, endDate, coverImageUrl }) => ({
+          id,
+          slug,
+          title,
+          description,
+          status,
+          startDate,
+          endDate,
+          coverImageUrl,
+        }))
+    );
   }
 }
 

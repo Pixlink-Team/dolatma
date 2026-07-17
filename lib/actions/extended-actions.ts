@@ -18,6 +18,7 @@ import type { BroadcastReport, CampaignActivity, CampaignMeeting, SocialMediaPos
 import { isSitePublication } from "@/lib/social-posts";
 import { isPostgresConfigured } from "@/lib/utils";
 import { resolveSaveOwnerUserId } from "@/lib/admin-content-owner";
+import { stripFileAccessTokensDeep } from "@/lib/uploads";
 import {
   auditContentChange,
   auditContentDelete,
@@ -58,22 +59,23 @@ async function withSaveOwnerScope<T extends { id?: string; ownerUserId?: string 
   session: NonNullable<Awaited<ReturnType<typeof getAuthSession>>>,
   data: T
 ): Promise<T> {
+  const cleaned = stripFileAccessTokensDeep(data);
   const ownerUserId = await resolveSaveOwnerUserId({
     session,
-    explicitOwnerUserId: data.ownerUserId,
-    contentId: data.id,
+    explicitOwnerUserId: cleaned.ownerUserId,
+    contentId: cleaned.id,
   });
 
   if (!isFullAdmin(session)) {
     return {
-      ...data,
+      ...cleaned,
       ownerUserId,
       published: true,
     };
   }
 
   return {
-    ...data,
+    ...cleaned,
     ownerUserId,
   };
 }

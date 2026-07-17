@@ -21,6 +21,7 @@ import type {
 import { generateId, isPostgresConfigured, isSupabaseConfigured, slugify } from "@/lib/utils";
 import { compareMeetingsByDateDesc } from "@/lib/meeting-tasks";
 import { createClient } from "@/lib/supabase/server";
+import { withFileAccessTokensDeep } from "@/lib/uploads";
 
 export type { AdminDataSection };
 
@@ -56,12 +57,12 @@ export async function getAdminData(campaignId: string, sections?: AdminDataSecti
       : items.filter((item) => (item.ownerUserId ?? null) === ownerFilter);
 
   if (isPostgresConfigured()) {
-    return pg.pgGetAdminData(campaignId, ownerFilter, sections);
+    return withFileAccessTokensDeep(await pg.pgGetAdminData(campaignId, ownerFilter, sections));
   }
   if (!isSupabaseConfigured()) {
     const store = getMockStoreForCampaign(campaignId);
 
-    return {
+    return withFileAccessTokensDeep({
       settings: store.settings ?? null,
       campaigns: getMockStore().campaigns,
       billboards: filterByOwner([...store.billboards]).sort((a, b) => a.sortOrder - b.sortOrder),
@@ -84,11 +85,11 @@ export async function getAdminData(campaignId: string, sections?: AdminDataSecti
       rawMedia: filterByOwner([...((store as { rawMedia?: RawMediaUpload[] }).rawMedia ?? [])]).sort(
         (a, b) => a.sortOrder - b.sortOrder || b.createdAt.localeCompare(a.createdAt)
       ),
-    };
+    });
   }
 
   const supabase = await createClient();
-  if (!supabase) return getAdminDataMock(campaignId);
+  if (!supabase) return withFileAccessTokensDeep(getAdminDataMock(campaignId));
 
   try {
     const [campaigns, settings, billboards, posterCategories, posters, posterVersions, videoCategories, videos, videoVersions, analytics, submissions] =
@@ -106,7 +107,7 @@ export async function getAdminData(campaignId: string, sections?: AdminDataSecti
         supabase.from("campaign_submissions").select("*").eq("campaign_id", campaignId).order("created_at", { ascending: false }),
       ]);
 
-    return {
+    return withFileAccessTokensDeep({
       settings: settings.data,
       campaigns: campaigns.data ?? [],
       billboards: filterByOwner(billboards.data ?? []),
@@ -125,11 +126,11 @@ export async function getAdminData(campaignId: string, sections?: AdminDataSecti
       meetings: [],
       activities: [],
       rawMedia: [],
-    };
+    });
   } catch {
     const mock = getAdminDataMock(campaignId);
-    if (ownerFilter === undefined) return mock;
-    return {
+    if (ownerFilter === undefined) return withFileAccessTokensDeep(mock);
+    return withFileAccessTokensDeep({
       ...mock,
       billboards: filterByOwner(mock.billboards),
       posters: filterByOwner(mock.posters),
@@ -143,7 +144,7 @@ export async function getAdminData(campaignId: string, sections?: AdminDataSecti
       meetings: filterByOwner(mock.meetings ?? []),
       activities: filterByOwner(mock.activities ?? []),
       rawMedia: filterByOwner(mock.rawMedia ?? []),
-    };
+    });
   }
 }
 
