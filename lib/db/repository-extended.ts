@@ -385,6 +385,39 @@ export async function pgGetSocialPostById(id: string): Promise<SocialMediaPost |
   return rows[0] ? mapSocialPostFromDb(rows[0]) : null;
 }
 
+/** Posts with links that may be refreshed from Eitaa or public web pages. */
+export async function pgListRefreshableSocialPosts(limit = 300): Promise<SocialMediaPost[]> {
+  const sql = getSql();
+  const rows = await sql`
+    SELECT sp.*, u.name AS owner_name, u.province AS owner_province, u.city AS owner_city
+    FROM social_media_posts sp
+    LEFT JOIN users u ON u.id = sp.owner_user_id
+    WHERE COALESCE(TRIM(sp.link), '') <> ''
+      AND (
+        sp.platform IN ('eitaa', 'site')
+        OR sp.link ILIKE '%eitaa.com%'
+      )
+    ORDER BY sp.updated_at ASC NULLS FIRST, sp.published_date DESC
+    LIMIT ${limit}
+  `;
+  return rows.map(mapSocialPostFromDb);
+}
+
+/** Magazine/newspaper activities that have an external link. */
+export async function pgListRefreshablePressActivities(limit = 300): Promise<CampaignActivity[]> {
+  const sql = getSql();
+  const rows = await sql`
+    SELECT ca.*, u.name AS owner_name, u.province AS owner_province, u.city AS owner_city
+    FROM campaign_activities ca
+    LEFT JOIN users u ON u.id = ca.owner_user_id
+    WHERE ca.activity_type IN ('magazine', 'newspaper')
+      AND COALESCE(TRIM(ca.link), '') <> ''
+    ORDER BY ca.updated_at ASC NULLS FIRST, ca.activity_date DESC
+    LIMIT ${limit}
+  `;
+  return rows.map(mapCampaignActivityFromDb);
+}
+
 export async function pgGetSocialPosts(
   campaignId: string,
   ownerUserId?: string | null

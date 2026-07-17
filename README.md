@@ -68,9 +68,31 @@ Or run `database/schema.sql` manually in PostgreSQL.
 | `ADMIN_EMAIL` | Yes | `admin@example.com` |
 | `ADMIN_PASSWORD` | Yes | strong password |
 | `AUTH_SECRET` | Yes | random 32+ chars |
+| `CRON_SECRET` | Yes (for daily auto-refresh) | random 32+ chars |
 | `NODE_ENV` | Yes | `production` |
 
-### 5. Local Docker test
+### 5. Daily link metrics refresh (Coolify Scheduled Job)
+
+The app refreshes Eitaa views and site/press link metadata via:
+
+`GET|POST /api/cron/refresh-link-metrics`
+
+1. In Coolify, open the app → **Scheduled Tasks** (or Cron Jobs).
+2. Schedule: once per day, e.g. `0 3 * * *` (03:00 server time).
+3. Command:
+
+```bash
+curl -fsS -X POST "$APP_URL/api/cron/refresh-link-metrics" \
+  -H "Authorization: Bearer $CRON_SECRET"
+```
+
+Replace `$APP_URL` with your public app URL (or internal service URL) and ensure `CRON_SECRET` is set in the app environment.
+
+What it updates:
+- **Eitaa posts**: views (and empty title/description/cover)
+- **Site publications** + **magazine/newspaper** with a link: Open Graph title/description/cover when empty
+
+### 6. Local Docker test
 
 Create a `.env` next to `docker-compose.yml` with strong `POSTGRES_PASSWORD`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, and `AUTH_SECRET`, then:
 

@@ -1,6 +1,18 @@
 {
   "entries": [
     {
+      "hash": "8e00b1760d10e0aeaa31031b0e63716ce88f34dd",
+      "committedAt": "2026-07-17T20:24:56+03:30",
+      "title": "خواندن خودکار عنوان و کاور از لینک انتشار سایت و مجله/روزنامه",
+      "subject": "Add web link metadata fetch for site and press publications"
+    },
+    {
+      "hash": "b5ce8cb49dfe8aba301471ecf68ec33be721dcff",
+      "committedAt": "2026-07-17T20:23:52+03:30",
+      "title": "ساعت ورود با فونت فارسی و جابه‌جایی به پایین راست",
+      "subject": "Use Persian clock font and move login clock to bottom-right"
+    },
+    {
       "hash": "33389863f95a297b081d772688f9ae4b68e29e2e",
       "committedAt": "2026-07-17T20:21:34+03:30",
       "title": "رفع نمایش تصاویر تبلیغات محیطی در کارت‌ها",
