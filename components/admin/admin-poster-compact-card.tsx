@@ -1,10 +1,19 @@
 "use client";
 
+import { useState } from "react";
+import { AdminCompactAddCard } from "@/components/admin/admin-compact-add-card";
 import { AdminItemActions } from "@/components/admin/admin-item-actions";
 import { AdminMediaCreateDropzone } from "@/components/admin/admin-media-create-dropzone";
 import { AdminOwnerBadge } from "@/components/admin/admin-owner-badge";
 import { AdminPlanLabelsBadges } from "@/components/admin/admin-plan-labels-badges";
 import { ContentScoreControl } from "@/components/admin/content-score-control";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { MediaThumbnail } from "@/components/ui/media-thumbnail";
 import { resolveDisplayVersion } from "@/lib/media-utils";
 import type { Poster, PosterVersion } from "@/lib/types";
@@ -101,12 +110,39 @@ export function AdminPosterAddCard({
   disabled,
   compact = false,
 }: AdminPosterAddCardProps) {
+  const [open, setOpen] = useState(false);
+
   return (
-    <AdminMediaCreateDropzone
-      kind="image"
-      compact={compact}
-      disabled={disabled}
-      onUploaded={(url) => onUploaded(url)}
-    />
+    <>
+      <div className={cn(compact && "w-full max-w-[10rem]")}>
+        <AdminCompactAddCard
+          onClick={() => setOpen(true)}
+          disabled={disabled}
+          label="پوستر جدید"
+          aspectClass={compact ? "min-h-28 aspect-auto" : "aspect-[3/4]"}
+        />
+      </div>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>آپلود پوستر</DialogTitle>
+            <DialogDescription>
+              تصویر پوستر را بکشید و رها کنید یا از دکمه انتخاب کنید
+            </DialogDescription>
+          </DialogHeader>
+          <AdminMediaCreateDropzone
+            kind="image"
+            compact
+            disabled={disabled}
+            className="min-h-52"
+            onUploaded={(url) => {
+              setOpen(false);
+              onUploaded(url);
+            }}
+          />
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
