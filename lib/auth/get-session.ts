@@ -1,9 +1,13 @@
 import { cookies } from "next/headers";
 import { cache } from "react";
 import { getAdminSessionCookieName } from "@/lib/auth/admin-session";
+import type { OwnerScope } from "@/lib/auth/owner-scope";
 import { parseSessionTokenSync } from "@/lib/auth/session-node";
 import { isSessionVersionCurrent } from "@/lib/auth/session-versions";
+import { pgListSubUserIds } from "@/lib/db/repository-ministries";
 import type { AuthSession } from "@/lib/types";
+import { isMinistryParentRole } from "@/lib/user-roles";
+import { isPostgresConfigured } from "@/lib/utils";
 
 export const getAuthSession = cache(async (): Promise<AuthSession | null> => {
   const cookieStore = await cookies();
@@ -33,11 +37,20 @@ export function isFullAdmin(session: AuthSession): boolean {
  * Owner scope for admin panel data.
  * - Admin: no filter (see all)
  * - Client (کارفرما): no filter (needs all content for scoring/oversight)
- * - Contributor: only their own `userId` rows
+ * - ministry_parent: own rows + sub-users' rows
+ * - sub_user / contributor: only their own rows
+ *
+ * Ministry users never see the shared "full campaign" feed — only their scope.
  */
-export function getOwnerFilter(session: AuthSession): string | null | undefined {
+export async function getOwnerFilter(session: AuthSession): Promise<OwnerScope> {
   if (isFullAdmin(session)) return undefined;
   if (session.role === "client") return undefined;
-  // Missing userId must not fall through as "unscoped" (undefined).
-  return session.userId ?? null;
+  if (!session.userId) return null;
+
+  if (isMinistryParentRole(session.role) && isPostgresConfigured()) {
+    const childIds = await pgListSubUserIds(session.userId);
+    return [session.userId, ...childIds];
+  }
+
+  return session.userId;
 }

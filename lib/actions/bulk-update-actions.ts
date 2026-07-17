@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getAuthSession, getOwnerFilter, isFullAdmin } from "@/lib/auth/get-session";
+import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
 import { hasContributorPermission, type ContributorPermissionKey } from "@/lib/contributor-permissions";
 import { normalizePlanLabels } from "@/lib/content-topics";
 import { getSql } from "@/lib/db/client";
@@ -91,7 +91,12 @@ async function assertCanBulkEdit(
     }
   }
 
-  return { ok: true, ownerUserId: getOwnerFilter(session) };
+  // Client oversees all content; scoped roles may only mutate their own rows.
+  if (session.role === "client") {
+    return { ok: true };
+  }
+
+  return { ok: true, ownerUserId: session.userId ?? null };
 }
 
 function hasAnyPatch(patch: BulkContentPatch): boolean {

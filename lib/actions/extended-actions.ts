@@ -15,7 +15,8 @@ import {
 import { hashPassword } from "@/lib/auth/password";
 import * as pgExt from "@/lib/db/repository-extended";
 import type { MeetingDecisionPayload, MeetingTaskPayload } from "@/lib/db/repository-extended";
-import type { BroadcastReport, CampaignActivity, CampaignMeeting, SocialMediaPost, SocialPlatformStat } from "@/lib/types";
+import type { AdminRole, BroadcastReport, CampaignActivity, CampaignMeeting, SocialMediaPost, SocialPlatformStat } from "@/lib/types";
+import { isMinistryParentRole } from "@/lib/user-roles";
 import { isSitePublication } from "@/lib/social-posts";
 import { isPostgresConfigured } from "@/lib/utils";
 import { resolveSaveOwnerUserId } from "@/lib/admin-content-owner";
@@ -615,21 +616,79 @@ export async function saveUserAction(data: {
   id?: string;
   email: string;
   name: string;
-  role: "admin" | "contributor" | "client";
+  role: AdminRole;
   password?: string;
   province?: string | null;
   city?: string | null;
   region?: string | null;
   phone?: string | null;
   accountManagerName?: string | null;
+  ministryId?: string | null;
+  parentUserId?: string | null;
   campaignIds?: string[];
   campaignPermissions?: Record<string, ContributorPermissions>;
 }) {
   const session = await getAuthSession();
-  if (!session || !isFullAdmin(session)) {
+  if (!session) {
     return { success: false, error: "Unauthorized" };
   }
   if (!isPostgresConfigured()) return { success: false, error: "Database required" };
+
+  const isAdmin = isFullAdmin(session);
+  const isParent = isMinistryParentRole(session.role);
+
+  if (!isAdmin && !isParent) {
+    return { success: false, error: "Unauthorized" };
+  }
+
+  let role = data.role;
+  let ministryId = data.ministryId ?? null;
+  let parentUserId = data.parentUserId ?? null;
+  let campaignIds = data.campaignIds;
+  let campaignPermissions = data.campaignPermissions;
+
+  if (isParent) {
+    if (!session.userId) return { success: false, error: "Unauthorized" };
+    const parent = await pgExt.pgGetUserById(session.userId);
+    if (!parent) return { success: false, error: "Unauthorized" };
+
+    // Parent may only create/edit their own sub-users.
+    role = "sub_user";
+    parentUserId = session.userId;
+    ministryId = parent.ministryId ?? null;
+    campaignIds = campaignIds?.length ? campaignIds : parent.campaignIds;
+    campaignPermissions = campaignPermissions ?? parent.campaignPermissions;
+
+    if (data.id) {
+      const existing = await pgExt.pgGetUserById(data.id);
+      if (!existing || existing.parentUserId !== session.userId || existing.role !== "sub_user") {
+        return { success: false, error: "فقط زیرمجموعه‌های خودتان را می‌توانید ویرایش کنید" };
+      }
+    }
+  } else if (role === "ministry_parent") {
+    if (!ministryId) {
+      return { success: false, error: "برای یوزر مادر انتخاب وزارتخانه الزامی است" };
+    }
+    parentUserId = null;
+  } else if (role === "sub_user") {
+    if (!parentUserId) {
+      return { success: false, error: "برای کاربر زیرمجموعه انتخاب یوزر مادر الزامی است" };
+    }
+    const parent = await pgExt.pgGetUserById(parentUserId);
+    if (!parent || parent.role !== "ministry_parent") {
+      return { success: false, error: "یوزر مادر معتبر نیست" };
+    }
+    ministryId = parent.ministryId ?? ministryId;
+  } else {
+    // admin / client / contributor — no ministry hierarchy required
+    if (role === "admin" || role === "client") {
+      ministryId = null;
+      parentUserId = null;
+    } else if (role === "contributor") {
+      ministryId = ministryId ?? null;
+      parentUserId = null;
+    }
+  }
 
   let accountManagerName = data.accountManagerName;
   let phone = data.phone;
@@ -646,6 +705,11 @@ export async function saveUserAction(data: {
 
   const result = await pgExt.pgSaveUser({
     ...data,
+    role,
+    ministryId,
+    parentUserId,
+    campaignIds,
+    campaignPermissions,
     accountManagerName,
     phone,
   });
@@ -655,7 +719,7 @@ export async function saveUserAction(data: {
     entityType: "user",
     entityId: data.id,
     label: data.name,
-    metadata: { role: data.role, email: data.email },
+    metadata: { role, email: data.email, ministryId, parentUserId },
   });
   await revalidateExtended();
   return result;
@@ -678,10 +742,24 @@ export async function saveUserRegionAction(data: {
 
 export async function deleteUserAction(id: string) {
   const session = await getAuthSession();
-  if (!session || !isFullAdmin(session)) {
+  if (!session) {
     return { success: false, error: "Unauthorized" };
   }
   if (!isPostgresConfigured()) return { success: false, error: "Database required" };
+
+  const isAdmin = isFullAdmin(session);
+  const isParent = isMinistryParentRole(session.role);
+  if (!isAdmin && !isParent) {
+    return { success: false, error: "Unauthorized" };
+  }
+
+  if (isParent) {
+    const existing = await pgExt.pgGetUserById(id);
+    if (!existing || existing.parentUserId !== session.userId || existing.role !== "sub_user") {
+      return { success: false, error: "فقط زیرمجموعه‌های خودتان را می‌توانید حذف کنید" };
+    }
+  }
+
   await pgExt.pgDeleteUser(id);
   await logAuditForSession(session, {
     category: "admin",

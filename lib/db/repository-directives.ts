@@ -8,6 +8,7 @@ import type {
   DirectiveSmsStatus,
 } from "@/lib/types";
 import type { UserRegion } from "@/lib/user-regions";
+import { isAdminRole } from "@/lib/user-roles";
 import { generateId } from "@/lib/utils";
 
 function toDateString(value: unknown): string | null {
@@ -161,7 +162,7 @@ export async function pgListCampaignUsersForDirectives(campaignId: string): Prom
     FROM users u
     INNER JOIN user_campaign_access uca ON uca.user_id = u.id
     WHERE uca.campaign_id = ${campaignId}
-      AND u.role IN ('contributor', 'client')
+      AND u.role IN ('contributor', 'client', 'ministry_parent', 'sub_user')
     ORDER BY u.name ASC
   `;
 
@@ -310,8 +311,8 @@ export async function pgListDirectiveRecipients(
     userId: String(row.user_id),
     userName: String(row.user_name ?? ""),
     userEmail: String(row.user_email ?? ""),
-    userRole: (row.user_role === "admin" || row.user_role === "client"
-      ? row.user_role
+    userRole: (isAdminRole(String(row.user_role ?? "contributor"))
+      ? String(row.user_role)
       : "contributor") as DirectiveRecipient["userRole"],
     userPhone:
       typeof row.user_phone === "string" && row.user_phone.trim()

@@ -3,6 +3,8 @@ import {
   getTehranCalendarDateIso,
   isSameDay,
 } from "@/lib/safe-dates";
+import type { OwnerScope } from "@/lib/auth/owner-scope";
+import { ownerMatchesScope } from "@/lib/auth/owner-scope";
 import type { Billboard, CampaignSettings } from "@/lib/types";
 
 export {
@@ -36,14 +38,14 @@ export function getBillboardUploadActivityDate(billboard: Billboard): string {
 
 export function billboardBelongsToUser(
   billboard: Billboard,
-  ownerUserId: string | null
+  ownerUserId: OwnerScope
 ): boolean {
-  return (billboard.ownerUserId ?? null) === ownerUserId;
+  return ownerMatchesScope(billboard.ownerUserId, ownerUserId);
 }
 
 export function filterBillboardsByOwnerUser(
   billboards: Billboard[],
-  ownerUserId: string | null
+  ownerUserId: OwnerScope
 ): Billboard[] {
   return billboards.filter((billboard) => billboardBelongsToUser(billboard, ownerUserId));
 }
@@ -55,7 +57,7 @@ function sortLocalBillboards(dbBillboards: Billboard[]): Billboard[] {
 export async function resolveAdminBillboards(
   _settings: CampaignSettings,
   dbBillboards: Billboard[],
-  ownerUserId?: string | null
+  ownerUserId?: OwnerScope
 ): Promise<Billboard[]> {
   const localBillboards = sortLocalBillboards(dbBillboards);
 

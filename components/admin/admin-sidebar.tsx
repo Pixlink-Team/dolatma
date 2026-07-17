@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   BarChart3,
   Bell,
+  Building2,
   ClipboardCheck,
   ClipboardList,
   FileStack,
@@ -56,6 +57,8 @@ const allNavItems: {
   icon: typeof LayoutDashboard;
   adminOnly?: boolean;
   adminOrClientOnly?: boolean;
+  /** Visible to admin, client, and ministry parent (sub-user management). */
+  usersNav?: boolean;
   /** Always visible for every panel user (not gated by section permissions). */
   alwaysVisible?: boolean;
   permissionKey?: ContributorPermissionKey;
@@ -64,6 +67,7 @@ const allNavItems: {
   { href: "/admin/profile", label: "پروفایل من", icon: UserCircle },
   { href: "/admin/settings", label: "تنظیمات کمپین", icon: Settings, adminOrClientOnly: true },
   { href: "/admin/tutorials", label: "آموزش بخش‌ها", icon: GraduationCap, adminOnly: true },
+  { href: "/admin/ministries", label: "وزارتخانه‌ها", icon: Building2, adminOnly: true },
   { href: "/admin/billboards", label: "تبلیغات محیطی", icon: LayoutGrid, permissionKey: "billboards" },
   { href: "/admin/posters", label: "پوسترها", icon: ImageIcon, permissionKey: "posters" },
   { href: "/admin/videos", label: "ویدیوها", icon: Video, permissionKey: "videos" },
@@ -80,13 +84,14 @@ const allNavItems: {
   { href: "/admin/broadcast", label: "پخش صدا و سیما", icon: Radio, permissionKey: "broadcast" },
   { href: "/admin/meetings", label: "جلسات و مصوبات", icon: ClipboardList, permissionKey: "meetings" },
   { href: "/admin/submissions", label: "مشارکت‌ها", icon: FileText, permissionKey: "submissions" },
-  { href: "/admin/users", label: "کاربران", icon: Users, adminOrClientOnly: true },
+  { href: "/admin/users", label: "کاربران", icon: Users, usersNav: true },
   { href: "/admin/updates", label: "آپدیت‌های سایت", icon: Rocket, adminOrClientOnly: true },
   { href: "/admin/audit", label: "رصد کاربران", icon: ScrollText, adminOnly: true },
 ];
 
 const managementNavHrefs = new Set([
   "/admin/users",
+  "/admin/ministries",
   "/admin/audit",
   "/admin/settings",
   "/admin/tutorials",
@@ -102,6 +107,7 @@ export function AdminSidebar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isFullAdminUser, setIsFullAdminUser] = useState(true);
   const [isClientRole, setIsClientRole] = useState(false);
+  const [isMinistryParent, setIsMinistryParent] = useState(false);
   const [permissions, setPermissions] = useState<ContributorPermissions | null>(null);
   const { campaignId, campaigns, currentCampaign, setCampaignId } = useAdminCampaign();
 
@@ -110,12 +116,16 @@ export function AdminSidebar() {
       if (!session) return;
       setIsFullAdminUser(session.type === "env_admin" || session.role === "admin");
       setIsClientRole(session.role === "client");
+      setIsMinistryParent(session.role === "ministry_parent");
       setPermissions(session.permissions ?? null);
     });
   }, [campaignId]);
 
   const navItems = allNavItems.filter((item) => {
     if (item.alwaysVisible) return true;
+    if (item.usersNav) {
+      return isFullAdminUser || isClientRole || isMinistryParent;
+    }
     if (item.adminOrClientOnly) {
       return isFullAdminUser || isClientRole;
     }

@@ -85,7 +85,7 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
       </div>
     );
   }
-  const ownerUserId = session ? getOwnerFilter(session) : undefined;
+  const ownerUserId = session ? await getOwnerFilter(session) : undefined;
 
   const features = data.settings.features;
   let contributorPermissions: ContributorPermissions | null = null;

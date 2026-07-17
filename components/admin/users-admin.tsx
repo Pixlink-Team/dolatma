@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -38,54 +38,79 @@ import {
   userRegionLabels,
   type UserRegion,
 } from "@/lib/user-regions";
-import type { AdminUser, CampaignSettings } from "@/lib/types";
+import { getRoleLabel } from "@/lib/user-roles";
+import type { AdminRole, AdminUser, CampaignSettings, Ministry } from "@/lib/types";
 
 const NO_REGION = "__none__";
+const NO_MINISTRY = "__none__";
+const NO_PARENT = "__none__";
 
 const schema = z.object({
   email: z.string().min(1, "نام کاربری یا ایمیل الزامی است"),
   name: z.string().min(1),
-  role: z.enum(["admin", "contributor", "client"]),
+  role: z.enum(["admin", "contributor", "client", "ministry_parent", "sub_user"]),
   password: z.string().optional(),
   province: z.string().optional(),
   city: z.string().optional(),
   region: z.enum(["north", "south", "east", "west"]).nullable().optional(),
   phone: z.string().optional(),
+  ministryId: z.string().nullable().optional(),
+  parentUserId: z.string().nullable().optional(),
   campaignIds: z.array(z.string()),
 });
 
 const permissionKeys = Object.keys(contributorPermissionLabels) as ContributorPermissionKey[];
 
+const rolesWithCampaignAccess: AdminRole[] = [
+  "contributor",
+  "client",
+  "ministry_parent",
+  "sub_user",
+];
+
 interface UsersAdminProps {
   initialUsers: AdminUser[];
   campaigns: CampaignSettings[];
-  /** full = admin; region = client can only set geographic region */
-  mode?: "full" | "region";
+  ministries?: Ministry[];
+  /** full = admin; region = client region only; sub_users = ministry parent manages children */
+  mode?: "full" | "region" | "sub_users";
+  parentUserId?: string;
 }
 
 export function UsersAdmin({
   initialUsers,
   campaigns,
+  ministries = [],
   mode = "full",
+  parentUserId,
 }: UsersAdminProps) {
   const isFullMode = mode === "full";
+  const isSubUsersMode = mode === "sub_users";
+  const canManageUsers = isFullMode || isSubUsersMode;
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [rows, setRows] = useState(initialUsers);
   const [campaignPermissions, setCampaignPermissions] = useState<Record<string, ContributorPermissions>>({});
   const [isPending, startTransition] = useTransition();
 
+  const parentOptions = useMemo(
+    () => rows.filter((user) => user.role === "ministry_parent"),
+    [rows]
+  );
+
   const form = useForm({
     resolver: zodResolver(schema),
     defaultValues: {
       email: "",
       name: "",
-      role: "contributor" as const,
+      role: (isSubUsersMode ? "sub_user" : "contributor") as AdminRole,
       password: "",
       province: "",
       city: "",
       region: null as UserRegion | null,
       phone: "",
+      ministryId: null as string | null,
+      parentUserId: parentUserId ?? null,
       campaignIds: [] as string[],
     },
   });
@@ -95,6 +120,8 @@ export function UsersAdmin({
   const selectedProvince = form.watch("province");
   const selectedCity = form.watch("city");
   const selectedRegion = form.watch("region");
+  const selectedMinistryId = form.watch("ministryId");
+  const selectedParentUserId = form.watch("parentUserId");
 
   const toggleCampaign = (campaignId: string) => {
     const current = form.getValues("campaignIds");
@@ -124,7 +151,7 @@ export function UsersAdmin({
   };
 
   const onSubmit = form.handleSubmit((data) => {
-    if (!isFullMode) {
+    if (mode === "region") {
       if (!editingId) return;
       startTransition(async () => {
         const result = await saveUserRegionAction({
@@ -151,16 +178,37 @@ export function UsersAdmin({
       return;
     }
 
+    const role: AdminRole = isSubUsersMode ? "sub_user" : data.role;
+    const ministryId =
+      role === "ministry_parent" || role === "sub_user" ? data.ministryId ?? null : null;
+    const nextParentUserId = isSubUsersMode
+      ? parentUserId ?? null
+      : role === "sub_user"
+        ? data.parentUserId ?? null
+        : null;
+
+    if (isFullMode && role === "ministry_parent" && !ministryId) {
+      toast.error("برای یوزر مادر انتخاب وزارتخانه الزامی است");
+      return;
+    }
+    if (isFullMode && role === "sub_user" && !nextParentUserId) {
+      toast.error("برای کاربر زیرمجموعه انتخاب یوزر مادر الزامی است");
+      return;
+    }
+
     startTransition(async () => {
       const result = await saveUserAction({
         ...data,
+        role,
         email: normalizeStoredUserEmail(data.email),
         id: editingId ?? undefined,
         province: data.province?.trim() || null,
         city: data.city?.trim() || null,
         region: data.region ?? null,
         phone: data.phone?.trim() || null,
-        campaignPermissions: data.role === "contributor" || data.role === "client" ? campaignPermissions : undefined,
+        ministryId,
+        parentUserId: nextParentUserId,
+        campaignPermissions: rolesWithCampaignAccess.includes(role) ? campaignPermissions : undefined,
       });
       if (!result.success) {
         toast.error(result.error ?? "ذخیره نشد");
@@ -169,19 +217,29 @@ export function UsersAdmin({
 
       const savedId = "id" in result ? result.id : (editingId ?? crypto.randomUUID());
       const existing = rows.find((row) => row.id === editingId);
+      const ministryName =
+        ministries.find((item) => item.id === ministryId)?.name ?? existing?.ministryName ?? null;
+      const parentName =
+        parentOptions.find((item) => item.id === nextParentUserId)?.name ??
+        existing?.parentUserName ??
+        null;
 
       const nextUser: AdminUser = {
         id: savedId!,
         email: normalizeStoredUserEmail(data.email),
         name: data.name,
-        role: data.role,
+        role,
         province: data.province?.trim() || null,
         city: data.city?.trim() || null,
         region: normalizeUserRegion(data.region),
         phone: data.phone?.trim() || null,
         accountManagerName: existing?.accountManagerName ?? null,
+        ministryId,
+        ministryName,
+        parentUserId: nextParentUserId,
+        parentUserName: parentName,
         campaignIds: data.campaignIds,
-        campaignPermissions: data.role === "contributor" || data.role === "client" ? campaignPermissions : {},
+        campaignPermissions: rolesWithCampaignAccess.includes(role) ? campaignPermissions : {},
         createdAt: existing?.createdAt ?? new Date().toISOString(),
       };
 
@@ -194,18 +252,20 @@ export function UsersAdmin({
   });
 
   const openCreate = () => {
-    if (!isFullMode) return;
+    if (!canManageUsers) return;
     setEditingId(null);
     setCampaignPermissions({});
     form.reset({
       email: "",
       name: "",
-      role: "contributor",
+      role: isSubUsersMode ? "sub_user" : "contributor",
       password: "",
       province: "",
       city: "",
       region: null,
       phone: "",
+      ministryId: null,
+      parentUserId: parentUserId ?? null,
       campaignIds: [],
     });
     setOpen(true);
@@ -230,12 +290,14 @@ export function UsersAdmin({
     form.reset({
       email: getLoginUsernameFromEmail(user.email ?? ""),
       name: user.name ?? "",
-      role: user.role ?? "contributor",
+      role: user.role ?? (isSubUsersMode ? "sub_user" : "contributor"),
       password: "",
       province: normalizedProvince,
       city: normalizedCity,
       region: normalizeUserRegion(user.region),
       phone: user.phone ?? "",
+      ministryId: user.ministryId ?? null,
+      parentUserId: user.parentUserId ?? parentUserId ?? null,
       campaignIds: user.campaignIds ?? [],
     });
     setOpen(true);
@@ -244,11 +306,15 @@ export function UsersAdmin({
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-bold">کاربران</h1>
+        <h1 className="text-2xl font-bold">
+          {isSubUsersMode ? "کاربران زیرمجموعه" : "کاربران"}
+        </h1>
         <p className="text-sm text-muted-foreground">
           {isFullMode
-            ? "تعریف کاربر، دسته‌بندی منطقه‌ای، ورود گروهی از Excel، دسترسی به کمپین و بخش‌های پنل"
-            : "تعیین دسته‌بندی منطقه‌ای کاربران (شمال / جنوب / شرق / غرب)"}
+            ? "تعریف وزارتخانه، یوزر مادر، کاربر زیرمجموعه، دسترسی کمپین و بخش‌های پنل"
+            : isSubUsersMode
+              ? "ایجاد و مدیریت کاربران زیرمجموعه با استان، شهر و شماره موبایل"
+              : "تعیین دسته‌بندی منطقه‌ای کاربران (شمال / جنوب / شرق / غرب)"}
         </p>
       </div>
 
@@ -259,11 +325,11 @@ export function UsersAdmin({
         </TabsList>
 
         <TabsContent value="list" className="space-y-4 mt-4">
-          {isFullMode && (
+          {canManageUsers && (
             <div className="flex justify-end">
               <Button onClick={openCreate}>
                 <Plus className="h-4 w-4" />
-                کاربر جدید
+                {isSubUsersMode ? "کاربر زیرمجموعه جدید" : "کاربر جدید"}
               </Button>
             </div>
           )}
@@ -280,6 +346,12 @@ export function UsersAdmin({
                 render: (item) => getLoginUsernameFromEmail(item.email),
               },
               { key: "province", label: "استان", render: (item) => item.province || "—" },
+              { key: "city", label: "شهر", render: (item) => item.city || "—" },
+              {
+                key: "ministryName",
+                label: "وزارتخانه",
+                render: (item) => item.ministryName || "—",
+              },
               {
                 key: "region",
                 label: "دسته منطقه‌ای",
@@ -293,8 +365,7 @@ export function UsersAdmin({
               {
                 key: "role",
                 label: "نقش",
-                render: (item) =>
-                  item.role === "admin" ? "مدیر" : item.role === "client" ? "کارفرما" : "کاربر",
+                render: (item) => getRoleLabel(item.role),
               },
               ...(isFullMode
                 ? [
@@ -311,7 +382,7 @@ export function UsersAdmin({
             ]}
             onEdit={openEdit}
             onDelete={
-              isFullMode
+              canManageUsers
                 ? (user) => {
                     startTransition(async () => {
                       const result = await deleteUserAction(user.id);
@@ -361,15 +432,19 @@ export function UsersAdmin({
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {!isFullMode
+              {mode === "region"
                 ? "دسته‌بندی منطقه‌ای کاربر"
                 : editingId
-                  ? "ویرایش کاربر"
-                  : "کاربر جدید"}
+                  ? isSubUsersMode
+                    ? "ویرایش کاربر زیرمجموعه"
+                    : "ویرایش کاربر"
+                  : isSubUsersMode
+                    ? "کاربر زیرمجموعه جدید"
+                    : "کاربر جدید"}
             </DialogTitle>
           </DialogHeader>
           <form onSubmit={onSubmit} className="space-y-4">
-            {isFullMode ? (
+            {canManageUsers ? (
               <>
                 <div className="space-y-2">
                   <Label>نام</Label>
@@ -385,7 +460,6 @@ export function UsersAdmin({
                   city={selectedCity ?? ""}
                   onProvinceChange={(value) => form.setValue("province", value)}
                   onCityChange={(value) => form.setValue("city", value)}
-                  hideCity
                 />
                 <div className="space-y-2">
                   <Label>شماره موبایل (برای پیامک)</Label>
@@ -407,43 +481,36 @@ export function UsersAdmin({
                   <span className="text-muted-foreground">نام کاربری: </span>
                   <span dir="ltr">{form.getValues("email") || "—"}</span>
                 </p>
-                {editingId && (
-                  <p>
-                    <span className="text-muted-foreground">مسئول اکانت: </span>
-                    {rows.find((row) => row.id === editingId)?.accountManagerName?.trim() || "—"}
-                  </p>
-                )}
               </div>
             )}
 
-            <div className="space-y-2">
-              <Label>دسته‌بندی منطقه‌ای</Label>
-              <Select
-                value={selectedRegion ?? NO_REGION}
-                onValueChange={(value) =>
-                  form.setValue("region", value === NO_REGION ? null : (value as UserRegion))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="انتخاب دسته" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={NO_REGION}>بدون دسته</SelectItem>
-                  {USER_REGIONS.map((region) => (
-                    <SelectItem key={region} value={region}>
-                      {userRegionLabels[region]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                فقط مدیر و کارفرما این دسته‌بندی را برای کاربر تعیین می‌کنند.
-              </p>
-            </div>
+            {!isSubUsersMode && (
+              <div className="space-y-2">
+                <Label>دسته‌بندی منطقه‌ای</Label>
+                <Select
+                  value={selectedRegion ?? NO_REGION}
+                  onValueChange={(value) =>
+                    form.setValue("region", value === NO_REGION ? null : (value as UserRegion))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="انتخاب دسته" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NO_REGION}>بدون دسته</SelectItem>
+                    {USER_REGIONS.map((region) => (
+                      <SelectItem key={region} value={region}>
+                        {userRegionLabels[region]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
-            {isFullMode && (
+            {canManageUsers && (
               <>
-                {editingId && (
+                {editingId && isFullMode && (
                   <div className="space-y-2">
                     <Label>مسئول اکانت</Label>
                     <Input
@@ -457,24 +524,78 @@ export function UsersAdmin({
                   <Label>{editingId ? "رمز عبور جدید (اختیاری)" : "رمز عبور"}</Label>
                   <Input type="password" {...form.register("password")} />
                 </div>
-                <div className="space-y-2">
-                  <Label>نقش</Label>
-                  <Select
-                    value={selectedRole}
-                    onValueChange={(value) =>
-                      form.setValue("role", value as "admin" | "contributor" | "client")
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="contributor">کاربر (فقط داده خودش)</SelectItem>
-                      <SelectItem value="client">کارفرما</SelectItem>
-                      <SelectItem value="admin">مدیر</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+
+                {isFullMode && (
+                  <>
+                    <div className="space-y-2">
+                      <Label>نقش</Label>
+                      <Select
+                        value={selectedRole}
+                        onValueChange={(value) => form.setValue("role", value as AdminRole)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="contributor">کاربر (فقط داده خودش)</SelectItem>
+                          <SelectItem value="ministry_parent">یوزر مادر وزارتخانه</SelectItem>
+                          <SelectItem value="sub_user">کاربر زیرمجموعه</SelectItem>
+                          <SelectItem value="client">کارفرما</SelectItem>
+                          <SelectItem value="admin">مدیر</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {(selectedRole === "ministry_parent" || selectedRole === "sub_user") && (
+                      <div className="space-y-2">
+                        <Label>وزارتخانه</Label>
+                        <Select
+                          value={selectedMinistryId ?? NO_MINISTRY}
+                          onValueChange={(value) =>
+                            form.setValue("ministryId", value === NO_MINISTRY ? null : value)
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="انتخاب وزارتخانه" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value={NO_MINISTRY}>انتخاب کنید</SelectItem>
+                            {ministries.map((ministry) => (
+                              <SelectItem key={ministry.id} value={ministry.id}>
+                                {ministry.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
+                    {selectedRole === "sub_user" && (
+                      <div className="space-y-2">
+                        <Label>یوزر مادر</Label>
+                        <Select
+                          value={selectedParentUserId ?? NO_PARENT}
+                          onValueChange={(value) =>
+                            form.setValue("parentUserId", value === NO_PARENT ? null : value)
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="انتخاب یوزر مادر" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value={NO_PARENT}>انتخاب کنید</SelectItem>
+                            {parentOptions.map((parent) => (
+                              <SelectItem key={parent.id} value={parent.id}>
+                                {parent.name}
+                                {parent.ministryName ? ` — ${parent.ministryName}` : ""}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                  </>
+                )}
 
                 <div className="space-y-2">
                   <Label>دسترسی به کمپین‌ها</Label>
@@ -492,39 +613,38 @@ export function UsersAdmin({
                   </div>
                 </div>
 
-                {(selectedRole === "contributor" || selectedRole === "client") &&
-                  selectedCampaignIds.length > 0 && (
-                    <div className="space-y-3">
-                      <Label>دسترسی به بخش‌های پنل (برای هر کمپین)</Label>
-                      {selectedCampaignIds.map((campaignId) => {
-                        const campaign = campaigns.find((item) => item.id === campaignId);
-                        const permissions = normalizeContributorPermissions(
-                          campaignPermissions[campaignId] ?? defaultContributorPermissions()
-                        );
-                        return (
-                          <div key={campaignId} className="rounded-lg border p-3 space-y-2">
-                            <p className="text-sm font-medium">{campaign?.title ?? campaignId}</p>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                              {permissionKeys.map((key) => (
-                                <label
-                                  key={key}
-                                  className="flex items-center justify-between gap-3 text-sm rounded-md border px-3 py-2"
-                                >
-                                  <span>{contributorPermissionLabels[key]}</span>
-                                  <Switch
-                                    checked={permissions[key]}
-                                    onCheckedChange={(value) =>
-                                      togglePermission(campaignId, key, value)
-                                    }
-                                  />
-                                </label>
-                              ))}
-                            </div>
+                {rolesWithCampaignAccess.includes(selectedRole) && selectedCampaignIds.length > 0 && (
+                  <div className="space-y-3">
+                    <Label>دسترسی به بخش‌های پنل (برای هر کمپین)</Label>
+                    {selectedCampaignIds.map((campaignId) => {
+                      const campaign = campaigns.find((item) => item.id === campaignId);
+                      const permissions = normalizeContributorPermissions(
+                        campaignPermissions[campaignId] ?? defaultContributorPermissions()
+                      );
+                      return (
+                        <div key={campaignId} className="rounded-lg border p-3 space-y-2">
+                          <p className="text-sm font-medium">{campaign?.title ?? campaignId}</p>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            {permissionKeys.map((key) => (
+                              <label
+                                key={key}
+                                className="flex items-center justify-between gap-3 text-sm rounded-md border px-3 py-2"
+                              >
+                                <span>{contributorPermissionLabels[key]}</span>
+                                <Switch
+                                  checked={permissions[key]}
+                                  onCheckedChange={(value) =>
+                                    togglePermission(campaignId, key, value)
+                                  }
+                                />
+                              </label>
+                            ))}
                           </div>
-                        );
-                      })}
-                    </div>
-                  )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </>
             )}
 

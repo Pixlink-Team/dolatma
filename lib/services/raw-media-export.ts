@@ -1,6 +1,8 @@
 import { readFile } from "fs/promises";
 import JSZip from "jszip";
 import { formatPlanLabelDisplay, normalizePlanLabels } from "@/lib/content-topics";
+import type { OwnerScope } from "@/lib/auth/owner-scope";
+import { ownerMatchesScope } from "@/lib/auth/owner-scope";
 import * as pg from "@/lib/db/repository";
 import { getMockStoreForCampaign } from "@/lib/mock-data";
 import { DEFAULT_ADMIN_OWNER_LABEL, resolveAdminOwnerLabel } from "@/lib/owner-groups";
@@ -67,7 +69,7 @@ function uniqueZipFileName(usedNames: Set<string>, folderPath: string, fileName:
 
 async function loadRawMediaForExport(
   campaignId: string,
-  ownerUserId?: string | null
+  ownerUserId?: OwnerScope
 ): Promise<{ items: RawMediaUpload[]; adminOwnerLabel: string; campaignSlug: string }> {
   if (isPostgresConfigured()) {
     const campaign = await pg.pgGetCampaignById(campaignId);
@@ -84,10 +86,7 @@ async function loadRawMediaForExport(
 
   const store = getMockStoreForCampaign(campaignId);
   const items = (((store as { rawMedia?: RawMediaUpload[] }).rawMedia ?? []) as RawMediaUpload[]).filter(
-    (item) => {
-      if (ownerUserId === undefined) return true;
-      return (item.ownerUserId ?? null) === ownerUserId;
-    }
+    (item) => ownerMatchesScope(item.ownerUserId, ownerUserId)
   );
   return {
     items,
@@ -109,7 +108,7 @@ export interface RawMediaExportResult {
  */
 export async function createRawMediaExportZip(
   campaignId: string,
-  ownerUserId?: string | null
+  ownerUserId?: OwnerScope
 ): Promise<RawMediaExportResult> {
   const { items, adminOwnerLabel, campaignSlug } = await loadRawMediaForExport(
     campaignId,

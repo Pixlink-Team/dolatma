@@ -2,6 +2,7 @@ import { createHmac, timingSafeEqual } from "crypto";
 import { getAuthSecret } from "@/lib/auth/secret";
 import type { AuthSession, SessionRole } from "@/lib/types";
 import { buildEnvAdminPayload, buildUserSessionPayload, getSessionTtlMs } from "@/lib/auth/session";
+import { isSessionRole } from "@/lib/user-roles";
 
 function signPayloadSync(payload: string): string {
   return createHmac("sha256", getAuthSecret()).update(payload).digest("hex");
@@ -34,7 +35,7 @@ function parsePayload(payload: string): AuthSession | null {
     const [, userId, role, expiresAtRaw, versionRaw] = parts;
     const expiresAt = Number(expiresAtRaw);
     const sessionVersion = Number(versionRaw);
-    if (!userId || (role !== "admin" && role !== "contributor" && role !== "client")) return null;
+    if (!userId || !isSessionRole(role)) return null;
     if (!Number.isFinite(expiresAt) || expiresAt <= Date.now()) return null;
     if (!Number.isFinite(sessionVersion) || sessionVersion < 0) return null;
     return {

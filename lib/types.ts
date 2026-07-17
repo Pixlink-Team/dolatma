@@ -5,7 +5,12 @@ export type VersionStatus = "draft" | "revised" | "final";
 export type SubmissionStatus = "pending" | "approved" | "rejected";
 export type TrafficSource = "instagram" | "telegram" | "direct" | "google" | "referral" | "other";
 export type DeviceType = "mobile" | "desktop" | "tablet";
-export type AdminRole = "admin" | "contributor" | "client";
+export type AdminRole =
+  | "admin"
+  | "contributor"
+  | "client"
+  | "ministry_parent"
+  | "sub_user";
 export type SocialPlatform = "instagram" | "x" | "telegram" | "linkedin" | "youtube" | "aparat" | "rubika" | "eitaa" | "soroush" | "bale" | "other";
 export type SocialPostPlatform = SocialPlatform | "site";
 export type ActivityType =
@@ -19,7 +24,13 @@ export type ActivityType =
   | "exhibition"
   | "other";
 export type SocialContentType = "image" | "text" | "video" | "carousel" | "story" | "reel" | "audio";
-export type SessionRole = "admin" | "contributor" | "client";
+export type SessionRole = AdminRole;
+
+export interface Ministry {
+  id: string;
+  name: string;
+  createdAt: string;
+}
 
 export interface CampaignFeatures {
   billboards: boolean;
@@ -343,6 +354,12 @@ export interface AdminUser {
   phone?: string | null;
   /** Account manager name set by the user in their profile. */
   accountManagerName?: string | null;
+  /** Government ministry this user belongs to (parent + sub-users). */
+  ministryId?: string | null;
+  ministryName?: string | null;
+  /** Parent ministry user for sub_user rows. */
+  parentUserId?: string | null;
+  parentUserName?: string | null;
   campaignIds: string[];
   campaignPermissions: Record<string, ContributorPermissions>;
   createdAt: string;

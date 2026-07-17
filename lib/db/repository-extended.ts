@@ -1,4 +1,6 @@
 import { getSql } from "@/lib/db/client";
+import type { OwnerScope } from "@/lib/auth/owner-scope";
+import { normalizeOwnerIds } from "@/lib/auth/owner-scope";
 import {
   mapBroadcastReportFromDb,
   mapCampaignActivityFromDb,
@@ -43,6 +45,21 @@ function resolvePlanFields(data: Partial<Ownable>) {
     planLabel: planLabels[0] ?? null,
     planLabels,
   };
+}
+
+function sqlOwnerIn(
+  sql: ReturnType<typeof getSql>,
+  scope: OwnerScope,
+  column: "sp.owner_user_id" | "br.owner_user_id" | "sps.owner_user_id" | "ca.owner_user_id" | "m.owner_user_id"
+) {
+  const ids = normalizeOwnerIds(scope);
+  if (ids === undefined) return sql``;
+  if (ids.length === 0) return sql`AND FALSE`;
+  if (column === "sp.owner_user_id") return sql`AND sp.owner_user_id IN ${sql(ids)}`;
+  if (column === "br.owner_user_id") return sql`AND br.owner_user_id IN ${sql(ids)}`;
+  if (column === "sps.owner_user_id") return sql`AND sps.owner_user_id IN ${sql(ids)}`;
+  if (column === "ca.owner_user_id") return sql`AND ca.owner_user_id IN ${sql(ids)}`;
+  return sql`AND m.owner_user_id IN ${sql(ids)}`;
 }
 
 interface CampaignAccessRow {
@@ -99,7 +116,14 @@ export async function pgGetUserAuthByLogin(identifier: string) {
 
 export async function pgGetUserById(id: string) {
   const sql = getSql();
-  const rows = await sql`SELECT * FROM users WHERE id = ${id} LIMIT 1`;
+  const rows = await sql`
+    SELECT u.*, m.name AS ministry_name, p.name AS parent_user_name
+    FROM users u
+    LEFT JOIN ministries m ON m.id = u.ministry_id
+    LEFT JOIN users p ON p.id = u.parent_user_id
+    WHERE u.id = ${id}
+    LIMIT 1
+  `;
   if (!rows[0]) return null;
 
   const access = await loadUserCampaignAccess(id);
@@ -142,7 +166,13 @@ export async function pgGetUserPermissionsForCampaign(userId: string, campaignId
 
 export async function pgGetAllUsers(): Promise<AdminUser[]> {
   const sql = getSql();
-  const rows = await sql`SELECT * FROM users ORDER BY created_at DESC`;
+  const rows = await sql`
+    SELECT u.*, m.name AS ministry_name, p.name AS parent_user_name
+    FROM users u
+    LEFT JOIN ministries m ON m.id = u.ministry_id
+    LEFT JOIN users p ON p.id = u.parent_user_id
+    ORDER BY u.created_at DESC
+  `;
   const users: AdminUser[] = [];
 
   for (const row of rows) {
@@ -153,17 +183,38 @@ export async function pgGetAllUsers(): Promise<AdminUser[]> {
   return users;
 }
 
+export async function pgGetSubUsersForParent(parentUserId: string): Promise<AdminUser[]> {
+  const sql = getSql();
+  const rows = await sql`
+    SELECT u.*, m.name AS ministry_name, p.name AS parent_user_name
+    FROM users u
+    LEFT JOIN ministries m ON m.id = u.ministry_id
+    LEFT JOIN users p ON p.id = u.parent_user_id
+    WHERE u.parent_user_id = ${parentUserId}
+      AND u.role = 'sub_user'
+    ORDER BY u.created_at DESC
+  `;
+  const users: AdminUser[] = [];
+  for (const row of rows) {
+    const access = await loadUserCampaignAccess(String(row.id));
+    users.push(mapAccessToUser(row, access));
+  }
+  return users;
+}
+
 export async function pgSaveUser(data: {
   id?: string;
   email: string;
   name: string;
-  role: "admin" | "contributor" | "client";
+  role: AdminUser["role"];
   password?: string;
   province?: string | null;
   city?: string | null;
   region?: string | null;
   phone?: string | null;
   accountManagerName?: string | null;
+  ministryId?: string | null;
+  parentUserId?: string | null;
   campaignIds?: string[];
   campaignPermissions?: Record<string, ContributorPermissions>;
 }) {
@@ -182,6 +233,8 @@ export async function pgSaveUser(data: {
       : null;
   const phone = data.phone?.trim() || null;
   const accountManagerName = data.accountManagerName?.trim() || null;
+  const ministryId = data.ministryId?.trim() || null;
+  const parentUserId = data.parentUserId?.trim() || null;
 
   try {
   if (data.id) {
@@ -197,6 +250,8 @@ export async function pgSaveUser(data: {
           region = ${region},
           phone = ${phone},
           account_manager_name = ${accountManagerName},
+          ministry_id = ${ministryId},
+          parent_user_id = ${parentUserId},
           password_hash = ${passwordHash}
         WHERE id = ${id}
       `;
@@ -210,7 +265,9 @@ export async function pgSaveUser(data: {
           city = ${city},
           region = ${region},
           phone = ${phone},
-          account_manager_name = ${accountManagerName}
+          account_manager_name = ${accountManagerName},
+          ministry_id = ${ministryId},
+          parent_user_id = ${parentUserId}
         WHERE id = ${id}
       `;
     }
@@ -220,8 +277,14 @@ export async function pgSaveUser(data: {
     }
     const passwordHash = await hashPassword(data.password);
     await sql`
-      INSERT INTO users (id, email, password_hash, name, role, province, city, region, phone, account_manager_name, created_at)
-      VALUES (${id}, ${email}, ${passwordHash}, ${data.name}, ${data.role}, ${province}, ${city}, ${region}, ${phone}, ${accountManagerName}, ${now})
+      INSERT INTO users (
+        id, email, password_hash, name, role, province, city, region, phone,
+        account_manager_name, ministry_id, parent_user_id, created_at
+      )
+      VALUES (
+        ${id}, ${email}, ${passwordHash}, ${data.name}, ${data.role}, ${province}, ${city},
+        ${region}, ${phone}, ${accountManagerName}, ${ministryId}, ${parentUserId}, ${now}
+      )
     `;
   }
 
@@ -421,26 +484,18 @@ export async function pgListRefreshablePressActivities(limit = 300): Promise<Cam
 
 export async function pgGetSocialPosts(
   campaignId: string,
-  ownerUserId?: string | null
+  ownerUserId?: OwnerScope
 ): Promise<SocialMediaPost[]> {
   const sql = getSql();
-  const rows =
-    ownerUserId === undefined
-      ? await sql`
-          SELECT sp.*, u.name AS owner_name, u.province AS owner_province, u.city AS owner_city
-          FROM social_media_posts sp
-          LEFT JOIN users u ON u.id = sp.owner_user_id
-          WHERE sp.campaign_id = ${campaignId}
-          ORDER BY sp.sort_order, sp.published_date DESC
-        `
-      : await sql`
-          SELECT sp.*, u.name AS owner_name, u.province AS owner_province, u.city AS owner_city
-          FROM social_media_posts sp
-          LEFT JOIN users u ON u.id = sp.owner_user_id
-          WHERE sp.campaign_id = ${campaignId}
-            AND sp.owner_user_id IS NOT DISTINCT FROM ${ownerUserId}
-          ORDER BY sp.sort_order, sp.published_date DESC
-        `;
+  const ownerFilter = sqlOwnerIn(sql, ownerUserId, "sp.owner_user_id");
+  const rows = await sql`
+    SELECT sp.*, u.name AS owner_name, u.province AS owner_province, u.city AS owner_city
+    FROM social_media_posts sp
+    LEFT JOIN users u ON u.id = sp.owner_user_id
+    WHERE sp.campaign_id = ${campaignId}
+    ${ownerFilter}
+    ORDER BY sp.sort_order, sp.published_date DESC
+  `;
 
   return rows.map(mapSocialPostFromDb);
 }
@@ -528,26 +583,18 @@ export async function pgGetSocialPlatformStatById(id: string): Promise<SocialPla
 
 export async function pgGetSocialPlatformStats(
   campaignId: string,
-  ownerUserId?: string | null
+  ownerUserId?: OwnerScope
 ): Promise<SocialPlatformStat[]> {
   const sql = getSql();
-  const rows =
-    ownerUserId === undefined
-      ? await sql`
-          SELECT sps.*, u.name AS owner_name, u.province AS owner_province, u.city AS owner_city
-          FROM social_platform_stats sps
-          LEFT JOIN users u ON u.id = sps.owner_user_id
-          WHERE sps.campaign_id = ${campaignId}
-          ORDER BY sps.sort_order, sps.platform
-        `
-      : await sql`
-          SELECT sps.*, u.name AS owner_name, u.province AS owner_province, u.city AS owner_city
-          FROM social_platform_stats sps
-          LEFT JOIN users u ON u.id = sps.owner_user_id
-          WHERE sps.campaign_id = ${campaignId}
-            AND sps.owner_user_id IS NOT DISTINCT FROM ${ownerUserId}
-          ORDER BY sps.sort_order, sps.platform
-        `;
+  const ownerFilter = sqlOwnerIn(sql, ownerUserId, "sps.owner_user_id");
+  const rows = await sql`
+    SELECT sps.*, u.name AS owner_name, u.province AS owner_province, u.city AS owner_city
+    FROM social_platform_stats sps
+    LEFT JOIN users u ON u.id = sps.owner_user_id
+    WHERE sps.campaign_id = ${campaignId}
+    ${ownerFilter}
+    ORDER BY sps.sort_order, sps.platform
+  `;
 
   return rows.map(mapSocialPlatformStatFromDb);
 }
@@ -621,26 +668,18 @@ export async function pgDeleteSocialPlatformStat(id: string) {
 
 export async function pgGetBroadcastReports(
   campaignId: string,
-  ownerUserId?: string | null
+  ownerUserId?: OwnerScope
 ): Promise<BroadcastReport[]> {
   const sql = getSql();
-  const rows =
-    ownerUserId === undefined
-      ? await sql`
-          SELECT br.*, u.name AS owner_name, u.province AS owner_province, u.city AS owner_city
-          FROM broadcast_reports br
-          LEFT JOIN users u ON u.id = br.owner_user_id
-          WHERE br.campaign_id = ${campaignId}
-          ORDER BY br.sort_order, br.report_date DESC
-        `
-      : await sql`
-          SELECT br.*, u.name AS owner_name, u.province AS owner_province, u.city AS owner_city
-          FROM broadcast_reports br
-          LEFT JOIN users u ON u.id = br.owner_user_id
-          WHERE br.campaign_id = ${campaignId}
-            AND br.owner_user_id IS NOT DISTINCT FROM ${ownerUserId}
-          ORDER BY br.sort_order, br.report_date DESC
-        `;
+  const ownerFilter = sqlOwnerIn(sql, ownerUserId, "br.owner_user_id");
+  const rows = await sql`
+    SELECT br.*, u.name AS owner_name, u.province AS owner_province, u.city AS owner_city
+    FROM broadcast_reports br
+    LEFT JOIN users u ON u.id = br.owner_user_id
+    WHERE br.campaign_id = ${campaignId}
+    ${ownerFilter}
+    ORDER BY br.sort_order, br.report_date DESC
+  `;
 
   return rows.map(mapBroadcastReportFromDb);
 }
@@ -701,26 +740,18 @@ export async function pgDeleteBroadcastReport(id: string) {
 
 export async function pgGetCampaignActivities(
   campaignId: string,
-  ownerUserId?: string | null
+  ownerUserId?: OwnerScope
 ): Promise<CampaignActivity[]> {
   const sql = getSql();
-  const rows =
-    ownerUserId === undefined
-      ? await sql`
-          SELECT ca.*, u.name AS owner_name, u.province AS owner_province, u.city AS owner_city
-          FROM campaign_activities ca
-          LEFT JOIN users u ON u.id = ca.owner_user_id
-          WHERE ca.campaign_id = ${campaignId}
-          ORDER BY ca.activity_date DESC, ca.sort_order
-        `
-      : await sql`
-          SELECT ca.*, u.name AS owner_name, u.province AS owner_province, u.city AS owner_city
-          FROM campaign_activities ca
-          LEFT JOIN users u ON u.id = ca.owner_user_id
-          WHERE ca.campaign_id = ${campaignId}
-            AND ca.owner_user_id IS NOT DISTINCT FROM ${ownerUserId}
-          ORDER BY ca.activity_date DESC, ca.sort_order
-        `;
+  const ownerFilter = sqlOwnerIn(sql, ownerUserId, "ca.owner_user_id");
+  const rows = await sql`
+    SELECT ca.*, u.name AS owner_name, u.province AS owner_province, u.city AS owner_city
+    FROM campaign_activities ca
+    LEFT JOIN users u ON u.id = ca.owner_user_id
+    WHERE ca.campaign_id = ${campaignId}
+    ${ownerFilter}
+    ORDER BY ca.activity_date DESC, ca.sort_order
+  `;
 
   return rows.map(mapCampaignActivityFromDb);
 }
@@ -1061,15 +1092,12 @@ export async function pgUnlockMeetingDetail(
 
 export async function pgGetMeetingsWithTasks(
   campaignId: string,
-  options?: { publishedOnly?: boolean; ownerUserId?: string | null }
+  options?: { publishedOnly?: boolean; ownerUserId?: OwnerScope }
 ): Promise<MeetingWithTasks[]> {
   try {
     const sql = getSql();
     const publishedOnly = options?.publishedOnly ?? false;
-    const ownerUserId = options?.ownerUserId;
-
-    const ownerFilter =
-      ownerUserId === undefined ? sql`` : sql`AND m.owner_user_id IS NOT DISTINCT FROM ${ownerUserId}`;
+    const ownerFilter = sqlOwnerIn(sql, options?.ownerUserId, "m.owner_user_id");
     const publishedFilter = publishedOnly ? sql`AND m.published = true` : sql``;
 
     const meetingRows = await sql`

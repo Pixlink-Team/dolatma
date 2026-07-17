@@ -785,3 +785,28 @@ CREATE INDEX IF NOT EXISTS idx_directive_recipients_user
 CREATE INDEX IF NOT EXISTS idx_directive_recipients_directive
   ON directive_recipients(directive_id, confirmed);
 
+-- Government ministries + parent/sub-user hierarchy
+CREATE TABLE IF NOT EXISTS ministries (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL UNIQUE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+ALTER TABLE users ADD COLUMN IF NOT EXISTS ministry_id UUID REFERENCES ministries(id) ON DELETE SET NULL;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS parent_user_id UUID REFERENCES users(id) ON DELETE SET NULL;
+
+ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
+ALTER TABLE users ADD CONSTRAINT users_role_check
+  CHECK (role IN ('admin', 'contributor', 'client', 'ministry_parent', 'sub_user'));
+
+CREATE INDEX IF NOT EXISTS idx_users_ministry ON users(ministry_id);
+CREATE INDEX IF NOT EXISTS idx_users_parent ON users(parent_user_id);
+
+ALTER TABLE ministries ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ministries NO FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS ministries_app_access ON ministries;
+CREATE POLICY ministries_app_access ON ministries
+  FOR ALL
+  USING (true)
+  WITH CHECK (true);
+

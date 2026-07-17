@@ -1,6 +1,18 @@
 {
   "entries": [
     {
+      "hash": "913b0e747e26a754a761378ec447dd44b82090eb",
+      "committedAt": "2026-07-17T22:09:35+03:30",
+      "title": "حذف کامل اتصال Map-Bilboard از پنل و سایت",
+      "subject": "Remove Map-Bilboard external connection entirely"
+    },
+    {
+      "hash": "1c98594b5916b328e62a71ee98587e412de439a3",
+      "committedAt": "2026-07-17T22:06:06+03:30",
+      "title": "به‌روزرسانی لوگوی سامانه و آیکون تب مرورگر",
+      "subject": "Replace site logo and favicon with dolat branding"
+    },
+    {
       "hash": "13069b9553dd510922368f675516adaa2eb5fc26",
       "committedAt": "2026-07-17T21:57:42+03:30",
       "title": "افزودن تصاویر جداگانه ظهر و شب برای صفحه ورود",

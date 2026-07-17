@@ -558,6 +558,10 @@ export function mapUserFromDb(
       : null,
     phone: typeof row.phone === "string" && row.phone.trim() ? row.phone.trim() : null,
     accountManagerName: row.account_manager_name ?? null,
+    ministryId: row.ministry_id ? String(row.ministry_id) : null,
+    ministryName: typeof row.ministry_name === "string" ? row.ministry_name : null,
+    parentUserId: row.parent_user_id ? String(row.parent_user_id) : null,
+    parentUserName: typeof row.parent_user_name === "string" ? row.parent_user_name : null,
     campaignIds: campaignAccess.map((access) => access.campaignId),
     campaignPermissions: Object.fromEntries(
       campaignAccess.map((access) => [access.campaignId, access.permissions])

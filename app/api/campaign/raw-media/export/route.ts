@@ -28,7 +28,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const ownerFilter = getOwnerFilter(session);
+    const ownerFilter = await getOwnerFilter(session);
     const { buffer, campaignSlug } = await createRawMediaExportZip(campaignId, ownerFilter);
     const date = new Date().toISOString().split("T")[0];
     const filename = `raw-media-${campaignSlug}-${date}.zip`;

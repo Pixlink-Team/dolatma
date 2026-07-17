@@ -1,5 +1,6 @@
 import { getAuthSecret } from "@/lib/auth/secret";
 import type { AuthSession, SessionRole } from "@/lib/types";
+import { isSessionRole } from "@/lib/user-roles";
 
 const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
 
@@ -36,7 +37,7 @@ function parsePayload(payload: string): AuthSession | null {
     const [, userId, role, expiresAtRaw, versionRaw] = parts;
     const expiresAt = Number(expiresAtRaw);
     const sessionVersion = Number(versionRaw);
-    if (!userId || (role !== "admin" && role !== "contributor" && role !== "client")) return null;
+    if (!userId || !isSessionRole(role)) return null;
     if (!Number.isFinite(expiresAt) || expiresAt <= Date.now()) return null;
     if (!Number.isFinite(sessionVersion) || sessionVersion < 0) return null;
     return {

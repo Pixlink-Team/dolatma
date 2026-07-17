@@ -22,7 +22,7 @@ export default async function BillboardsPage({ searchParams }: PageProps) {
   const session = await getAuthSession();
   const fullAdmin = Boolean(session && isFullAdmin(session));
   const canScore = Boolean(session && canScoreContent(session));
-  const ownerUserId = session ? getOwnerFilter(session) : undefined;
+  const ownerUserId = session ? await getOwnerFilter(session) : undefined;
   let contributorProfile = null;
 
   if (session?.userId) {

@@ -17,6 +17,8 @@ import {
   mapVideoFromDb,
   mapVideoVersionFromDb,
 } from "@/lib/db/mappers";
+import type { OwnerScope } from "@/lib/auth/owner-scope";
+import { normalizeOwnerIds } from "@/lib/auth/owner-scope";
 import type {
   AnalyticsMetric,
   Billboard,
@@ -132,7 +134,7 @@ const ALL_ADMIN_DATA_SECTIONS: AdminDataSection[] = [
 
 export async function pgGetAdminData(
   campaignId: string,
-  ownerUserId?: string | null,
+  ownerUserId?: OwnerScope,
   sections?: AdminDataSection[]
 ) {
   const sql = getSql();
@@ -140,11 +142,44 @@ export async function pgGetAdminData(
   // Settings are required for almost every admin page (plans/topics/features).
   want.add("settings");
 
+  const ownerIds = normalizeOwnerIds(ownerUserId);
   // Qualify column so JOIN aliases never leak other owners' rows.
   const ownerFilter =
-    ownerUserId === undefined
+    ownerIds === undefined
       ? sql``
-      : sql`AND owner_user_id IS NOT DISTINCT FROM ${ownerUserId}`;
+      : ownerIds.length === 0
+        ? sql`AND FALSE`
+        : sql`AND owner_user_id IN ${sql(ownerIds)}`;
+  const posterOwnerFilter =
+    ownerIds === undefined
+      ? sql``
+      : ownerIds.length === 0
+        ? sql`AND FALSE`
+        : sql`AND p.owner_user_id IN ${sql(ownerIds)}`;
+  const videoOwnerFilter =
+    ownerIds === undefined
+      ? sql``
+      : ownerIds.length === 0
+        ? sql`AND FALSE`
+        : sql`AND v.owner_user_id IN ${sql(ownerIds)}`;
+  const socialOwnerFilter =
+    ownerIds === undefined
+      ? sql``
+      : ownerIds.length === 0
+        ? sql`AND FALSE`
+        : sql`AND sp.owner_user_id IN ${sql(ownerIds)}`;
+  const broadcastOwnerFilter =
+    ownerIds === undefined
+      ? sql``
+      : ownerIds.length === 0
+        ? sql`AND FALSE`
+        : sql`AND br.owner_user_id IN ${sql(ownerIds)}`;
+  const socialStatsOwnerFilter =
+    ownerIds === undefined
+      ? sql``
+      : ownerIds.length === 0
+        ? sql`AND FALSE`
+        : sql`AND sps.owner_user_id IN ${sql(ownerIds)}`;
 
   const emptyRows = Promise.resolve([] as Record<string, unknown>[]);
   const emptyMeetings = Promise.resolve([] as Awaited<ReturnType<typeof pgGetMeetingsWithTasks>>);
@@ -225,7 +260,7 @@ export async function pgGetAdminData(
       SELECT pv.* FROM poster_versions pv
       INNER JOIN posters p ON p.id = pv.poster_id
       WHERE p.campaign_id = ${campaignId}
-      ${ownerUserId === undefined ? sql`` : sql`AND p.owner_user_id IS NOT DISTINCT FROM ${ownerUserId}`}
+      ${posterOwnerFilter}
     `
       : emptyRows,
     want.has("videoCategories")
@@ -246,7 +281,7 @@ export async function pgGetAdminData(
       SELECT vv.* FROM video_versions vv
       INNER JOIN videos v ON v.id = vv.video_id
       WHERE v.campaign_id = ${campaignId}
-      ${ownerUserId === undefined ? sql`` : sql`AND v.owner_user_id IS NOT DISTINCT FROM ${ownerUserId}`}
+      ${videoOwnerFilter}
     `
       : emptyRows,
     want.has("analytics")
@@ -285,7 +320,7 @@ export async function pgGetAdminData(
       FROM social_media_posts sp
       LEFT JOIN users u ON u.id = sp.owner_user_id
       WHERE sp.campaign_id = ${campaignId}
-      ${ownerUserId === undefined ? sql`` : sql`AND sp.owner_user_id IS NOT DISTINCT FROM ${ownerUserId}`}
+      ${socialOwnerFilter}
       ORDER BY sp.sort_order
     `
       : emptyRows,
@@ -295,7 +330,7 @@ export async function pgGetAdminData(
       FROM broadcast_reports br
       LEFT JOIN users u ON u.id = br.owner_user_id
       WHERE br.campaign_id = ${campaignId}
-      ${ownerUserId === undefined ? sql`` : sql`AND br.owner_user_id IS NOT DISTINCT FROM ${ownerUserId}`}
+      ${broadcastOwnerFilter}
       ORDER BY br.sort_order
     `
       : emptyRows,
@@ -305,7 +340,7 @@ export async function pgGetAdminData(
       FROM social_platform_stats sps
       LEFT JOIN users u ON u.id = sps.owner_user_id
       WHERE sps.campaign_id = ${campaignId}
-      ${ownerUserId === undefined ? sql`` : sql`AND sps.owner_user_id IS NOT DISTINCT FROM ${ownerUserId}`}
+      ${socialStatsOwnerFilter}
       ORDER BY sps.sort_order, sps.platform
     `
       : emptyRows,
