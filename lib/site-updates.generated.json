@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "660379e50ca0f281a9e1959fbfe9467694461de3",
+      "committedAt": "2026-07-17T19:01:44+03:30",
+      "title": "برجسته کردن دستورکارها و امکان افزودن چند فایل با عنوان",
+      "subject": "Pin directives as red CTA and add titled multi-file attachments"
+    },
+    {
       "hash": "a7b4393608145c20135f44f7056d98d9d6cd488c",
       "committedAt": "2026-07-17T18:51:00+03:30",
       "title": "رفع مشکل گیر کردن ورود به پنل",

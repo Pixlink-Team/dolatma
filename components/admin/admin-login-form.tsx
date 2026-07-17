@@ -7,6 +7,12 @@ import { toast } from "sonner";
 import { Label } from "@/components/ui/label";
 import { createClient } from "@/lib/supabase/client";
 import { loginAdminAction } from "@/lib/actions/auth-actions";
+import {
+  formatPersianClock,
+  formatPersianLoginDate,
+  getTimeOfDayConfig,
+  type TimeOfDayConfig,
+} from "@/lib/login-time-of-day";
 import { isSupabaseConfigured } from "@/lib/utils";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 
@@ -21,6 +27,13 @@ const INITIAL_TILT: CardTiltState = {
 };
 
 const MAX_CARD_ROTATION = 8;
+
+const ALL_PERIOD_BACKGROUNDS = [
+  "/images/login/morning.webp",
+  "/images/login/noon.webp",
+  "/images/login/evening.webp",
+  "/images/login/night.webp",
+] as const;
 
 function getBoundedMotion(value: number, max: number) {
   return Math.max(-max, Math.min(max, value));
@@ -44,6 +57,8 @@ export function AdminLoginForm() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [motionEnabled, setMotionEnabled] = useState(false);
   const [tilt, setTilt] = useState<CardTiltState>(INITIAL_TILT);
+  const [now, setNow] = useState<Date | null>(null);
+  const [timeOfDay, setTimeOfDay] = useState<TimeOfDayConfig | null>(null);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(pointer: fine)");
@@ -57,6 +72,18 @@ export function AdminLoginForm() {
     syncMotionPreference();
     mediaQuery.addEventListener("change", syncMotionPreference);
     return () => mediaQuery.removeEventListener("change", syncMotionPreference);
+  }, []);
+
+  useEffect(() => {
+    const syncClock = () => {
+      const current = new Date();
+      setNow(current);
+      setTimeOfDay(getTimeOfDayConfig(current));
+    };
+
+    syncClock();
+    const timerId = window.setInterval(syncClock, 1000);
+    return () => window.clearInterval(timerId);
   }, []);
 
   const handlePagePointerMove = (event: PointerEvent<HTMLElement>) => {
@@ -101,16 +128,42 @@ export function AdminLoginForm() {
 
   return (
     <main
-      className="dark relative isolate flex min-h-[100dvh] items-center justify-center overflow-hidden bg-slate-950 px-4 py-8 text-white"
+      className="dark relative isolate flex min-h-[100dvh] flex-col items-center justify-center gap-8 overflow-hidden bg-slate-950 px-4 py-8 text-white md:gap-10"
       dir="rtl"
       onPointerMove={handlePagePointerMove}
     >
+      {ALL_PERIOD_BACKGROUNDS.map((src) => (
+        <div
+          key={src}
+          className="pointer-events-none absolute inset-0 -z-20 bg-cover bg-center transition-opacity duration-1000 ease-in-out"
+          style={{
+            backgroundImage: `url('${src}')`,
+            opacity: timeOfDay?.backgroundSrc === src ? 1 : 0,
+          }}
+          aria-hidden
+        />
+      ))}
+
       <div
-        className="pointer-events-none absolute inset-0 -z-10 bg-cover bg-center"
-        style={{ backgroundImage: "url('/images/login-bg.png')" }}
+        className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-b from-black/45 via-black/35 to-black/55"
+        aria-hidden
       />
 
-      <div className="w-full max-w-[460px]" style={{ perspective: "1100px" }}>
+      <div className="relative z-10 flex min-h-[88px] flex-col items-center text-center [text-shadow:0_2px_18px_rgba(0,0,0,0.75)]">
+        {now && timeOfDay ? (
+          <>
+            <p className="text-[11px] font-medium tracking-[0.18em] text-white/70 md:text-xs">
+              {timeOfDay.greeting} · {timeOfDay.label}
+            </p>
+            <p className="mt-2 font-mono text-4xl font-semibold tabular-nums tracking-tight text-white md:text-5xl">
+              {formatPersianClock(now)}
+            </p>
+            <p className="mt-2 text-sm text-white/80 md:text-base">{formatPersianLoginDate(now)}</p>
+          </>
+        ) : null}
+      </div>
+
+      <div className="relative z-20 w-full max-w-[460px]" style={{ perspective: "1100px" }}>
         <section
           className="relative overflow-hidden rounded-[32px] border border-white/35 bg-white/[0.08] p-6 shadow-[0_24px_70px_rgba(0,0,0,0.28)] backdrop-blur-[10px] backdrop-saturate-150 transition-transform duration-150 ease-out will-change-transform md:p-7"
           style={{
