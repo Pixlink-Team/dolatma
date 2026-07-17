@@ -162,6 +162,7 @@ export async function pgSaveUser(data: {
   province?: string | null;
   city?: string | null;
   region?: string | null;
+  phone?: string | null;
   accountManagerName?: string | null;
   campaignIds?: string[];
   campaignPermissions?: Record<string, ContributorPermissions>;
@@ -179,6 +180,7 @@ export async function pgSaveUser(data: {
     data.region === "west"
       ? data.region
       : null;
+  const phone = data.phone?.trim() || null;
   const accountManagerName = data.accountManagerName?.trim() || null;
 
   try {
@@ -193,6 +195,7 @@ export async function pgSaveUser(data: {
           province = ${province},
           city = ${city},
           region = ${region},
+          phone = ${phone},
           account_manager_name = ${accountManagerName},
           password_hash = ${passwordHash}
         WHERE id = ${id}
@@ -206,6 +209,7 @@ export async function pgSaveUser(data: {
           province = ${province},
           city = ${city},
           region = ${region},
+          phone = ${phone},
           account_manager_name = ${accountManagerName}
         WHERE id = ${id}
       `;
@@ -216,8 +220,8 @@ export async function pgSaveUser(data: {
     }
     const passwordHash = await hashPassword(data.password);
     await sql`
-      INSERT INTO users (id, email, password_hash, name, role, province, city, region, account_manager_name, created_at)
-      VALUES (${id}, ${email}, ${passwordHash}, ${data.name}, ${data.role}, ${province}, ${city}, ${region}, ${accountManagerName}, ${now})
+      INSERT INTO users (id, email, password_hash, name, role, province, city, region, phone, account_manager_name, created_at)
+      VALUES (${id}, ${email}, ${passwordHash}, ${data.name}, ${data.role}, ${province}, ${city}, ${region}, ${phone}, ${accountManagerName}, ${now})
     `;
   }
 

@@ -18,6 +18,7 @@ const schema = z.object({
   province: z.string().optional(),
   city: z.string().optional(),
   accountManagerName: z.string().optional(),
+  phone: z.string().optional(),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -27,6 +28,7 @@ interface ProfileSettingsFormProps {
   initialProvince?: string | null;
   initialCity?: string | null;
   initialAccountManagerName?: string | null;
+  initialPhone?: string | null;
   initialRegion?: UserRegion | null;
   email: string;
 }
@@ -36,6 +38,7 @@ export function ProfileSettingsForm({
   initialProvince,
   initialCity,
   initialAccountManagerName,
+  initialPhone,
   initialRegion,
   email,
 }: ProfileSettingsFormProps) {
@@ -48,6 +51,7 @@ export function ProfileSettingsForm({
       province: initialProvince ?? "",
       city: initialCity ?? "",
       accountManagerName: initialAccountManagerName ?? "",
+      phone: initialPhone ?? "",
     },
   });
 
@@ -61,6 +65,7 @@ export function ProfileSettingsForm({
         province: data.province || null,
         city: data.city || null,
         accountManagerName: data.accountManagerName?.trim() || null,
+        phone: data.phone?.trim() || null,
       });
       if (!result.success) {
         toast.error(result.error ?? "ذخیره پروفایل ناموفق بود");
@@ -84,6 +89,19 @@ export function ProfileSettingsForm({
         <Label>نام کاربری</Label>
         <Input value={email} dir="ltr" disabled />
         <p className="text-xs text-muted-foreground">نام کاربری قابل تغییر نیست.</p>
+      </div>
+
+      <div className="space-y-2">
+        <Label>شماره موبایل (برای پیامک دستورکار)</Label>
+        <Input
+          {...form.register("phone")}
+          dir="ltr"
+          placeholder="0912xxxxxxx"
+          inputMode="tel"
+        />
+        <p className="text-xs text-muted-foreground">
+          برای دریافت پیامک دستورکارهای جدید این شماره را وارد کنید.
+        </p>
       </div>
 
       <div className="space-y-2">

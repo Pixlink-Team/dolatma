@@ -50,6 +50,7 @@ const schema = z.object({
   province: z.string().optional(),
   city: z.string().optional(),
   region: z.enum(["north", "south", "east", "west"]).nullable().optional(),
+  phone: z.string().optional(),
   campaignIds: z.array(z.string()),
 });
 
@@ -84,6 +85,7 @@ export function UsersAdmin({
       province: "",
       city: "",
       region: null as UserRegion | null,
+      phone: "",
       campaignIds: [] as string[],
     },
   });
@@ -157,6 +159,7 @@ export function UsersAdmin({
         province: data.province?.trim() || null,
         city: data.city?.trim() || null,
         region: data.region ?? null,
+        phone: data.phone?.trim() || null,
         campaignPermissions: data.role === "contributor" || data.role === "client" ? campaignPermissions : undefined,
       });
       if (!result.success) {
@@ -175,6 +178,7 @@ export function UsersAdmin({
         province: data.province?.trim() || null,
         city: data.city?.trim() || null,
         region: normalizeUserRegion(data.region),
+        phone: data.phone?.trim() || null,
         accountManagerName: existing?.accountManagerName ?? null,
         campaignIds: data.campaignIds,
         campaignPermissions: data.role === "contributor" || data.role === "client" ? campaignPermissions : {},
@@ -201,6 +205,7 @@ export function UsersAdmin({
       province: "",
       city: "",
       region: null,
+      phone: "",
       campaignIds: [],
     });
     setOpen(true);
@@ -230,6 +235,7 @@ export function UsersAdmin({
       province: normalizedProvince,
       city: normalizedCity,
       region: normalizeUserRegion(user.region),
+      phone: user.phone ?? "",
       campaignIds: user.campaignIds ?? [],
     });
     setOpen(true);
@@ -381,6 +387,15 @@ export function UsersAdmin({
                   onCityChange={(value) => form.setValue("city", value)}
                   hideCity
                 />
+                <div className="space-y-2">
+                  <Label>شماره موبایل (برای پیامک)</Label>
+                  <Input
+                    {...form.register("phone")}
+                    dir="ltr"
+                    placeholder="0912xxxxxxx"
+                    inputMode="tel"
+                  />
+                </div>
               </>
             ) : (
               <div className="rounded-lg border bg-muted/30 p-3 text-sm space-y-1">

@@ -1,0 +1,282 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
+import { canManageDirectives } from "@/lib/auth/access";
+import { hasContributorPermission } from "@/lib/contributor-permissions";
+import * as pgExt from "@/lib/db/repository-extended";
+import * as pgDirectives from "@/lib/db/repository-directives";
+import { getContentTitleValidationError } from "@/lib/content-constraints";
+import {
+  buildDirectiveSmsText,
+  DEFAULT_SMS_SETTINGS,
+  sendSms,
+} from "@/lib/sms/provider";
+import type {
+  CampaignDirective,
+  DirectiveAudienceType,
+  DirectivePriority,
+  DirectiveRecipient,
+} from "@/lib/types";
+import type { UserRegion } from "@/lib/user-regions";
+import { isPostgresConfigured } from "@/lib/utils";
+import { stripFileAccessTokensDeep } from "@/lib/uploads";
+
+async function assertDirectivesAccess(campaignId: string) {
+  const session = await getAuthSession();
+  if (!session) return { session: null, error: "Unauthorized" as const };
+
+  if (isFullAdmin(session)) {
+    return { session, error: null };
+  }
+
+  if (!session.userId || !isPostgresConfigured()) {
+    return { session: null, error: "Unauthorized" as const };
+  }
+
+  const permissions = await pgExt.pgGetUserPermissionsForCampaign(session.userId, campaignId);
+  if (!hasContributorPermission(permissions, "directives")) {
+    return { session: null, error: "دسترسی ندارید" as const };
+  }
+
+  return { session, error: null };
+}
+
+function revalidateDirectives(campaignId?: string) {
+  revalidatePath("/admin/directives");
+  if (campaignId) {
+    revalidatePath(`/admin/directives?campaign=${campaignId}`);
+  }
+}
+
+export async function listDirectivesAction(campaignId: string): Promise<{
+  success: boolean;
+  canManage: boolean;
+  directives: CampaignDirective[];
+  error?: string;
+}> {
+  const access = await assertDirectivesAccess(campaignId);
+  if (access.error || !access.session) {
+    return { success: false, canManage: false, directives: [], error: access.error ?? "Unauthorized" };
+  }
+
+  if (!isPostgresConfigured()) {
+    return { success: false, canManage: false, directives: [], error: "Database required" };
+  }
+
+  const canManage = canManageDirectives(access.session);
+
+  if (canManage) {
+    const directives = await pgDirectives.pgListDirectivesForCampaign(campaignId);
+    return { success: true, canManage: true, directives };
+  }
+
+  if (!access.session.userId) {
+    return { success: true, canManage: false, directives: [] };
+  }
+
+  const directives = await pgDirectives.pgListDirectivesForUserInbox(
+    campaignId,
+    access.session.userId
+  );
+  return { success: true, canManage: false, directives };
+}
+
+export async function listCampaignDirectiveUsersAction(campaignId: string) {
+  const access = await assertDirectivesAccess(campaignId);
+  if (access.error || !access.session) {
+    return { success: false as const, users: [], error: access.error ?? "Unauthorized" };
+  }
+  if (!canManageDirectives(access.session)) {
+    return { success: false as const, users: [], error: "دسترسی ندارید" };
+  }
+  if (!isPostgresConfigured()) {
+    return { success: false as const, users: [], error: "Database required" };
+  }
+
+  const users = await pgDirectives.pgListCampaignUsersForDirectives(campaignId);
+  return { success: true as const, users };
+}
+
+export async function getDirectiveRecipientsAction(directiveId: string): Promise<{
+  success: boolean;
+  recipients: DirectiveRecipient[];
+  error?: string;
+}> {
+  const session = await getAuthSession();
+  if (!session || !canManageDirectives(session)) {
+    return { success: false, recipients: [], error: "Unauthorized" };
+  }
+  if (!isPostgresConfigured()) {
+    return { success: false, recipients: [], error: "Database required" };
+  }
+
+  const directive = await pgDirectives.pgGetDirectiveById(directiveId);
+  if (!directive) {
+    return { success: false, recipients: [], error: "یافت نشد" };
+  }
+
+  const access = await assertDirectivesAccess(directive.campaignId);
+  if (access.error) {
+    return { success: false, recipients: [], error: access.error };
+  }
+
+  const recipients = await pgDirectives.pgListDirectiveRecipients(directiveId);
+  return { success: true, recipients };
+}
+
+export async function saveDirectiveAction(input: {
+  id?: string;
+  campaignId: string;
+  title: string;
+  body: string;
+  priority: DirectivePriority;
+  dueDate?: string | null;
+  audienceType: DirectiveAudienceType;
+  audienceRegion?: UserRegion | null;
+  selectedUserIds?: string[];
+  attachments: Array<{
+    id?: string;
+    fileUrl: string;
+    fileName: string;
+    mimeType: string;
+    fileSize: number;
+  }>;
+  sendSmsOnPublish?: boolean;
+}) {
+  const titleError = getContentTitleValidationError(input.title);
+  if (titleError) return { success: false as const, error: titleError };
+
+  const access = await assertDirectivesAccess(input.campaignId);
+  if (access.error || !access.session) {
+    return { success: false as const, error: access.error ?? "Unauthorized" };
+  }
+  if (!canManageDirectives(access.session)) {
+    return { success: false as const, error: "فقط مدیر و کارفرما می‌توانند دستورکار ثبت کنند" };
+  }
+  if (!isPostgresConfigured()) {
+    return { success: false as const, error: "Database required" };
+  }
+
+  if (input.audienceType === "region" && !input.audienceRegion) {
+    return { success: false as const, error: "منطقه مخاطب را انتخاب کنید" };
+  }
+  if (input.audienceType === "users" && !(input.selectedUserIds?.length)) {
+    return { success: false as const, error: "حداقل یک کاربر را انتخاب کنید" };
+  }
+
+  const cleaned = stripFileAccessTokensDeep({
+    ...input,
+    body: input.body?.trim() ?? "",
+    attachments: input.attachments ?? [],
+  });
+
+  const isUpdate = Boolean(cleaned.id);
+  const previous = cleaned.id ? await pgDirectives.pgGetDirectiveById(cleaned.id) : null;
+  const wasAlreadyPublished = Boolean(previous?.publishedAt);
+
+  const result = await pgDirectives.pgSaveDirective({
+    id: cleaned.id,
+    campaignId: cleaned.campaignId,
+    createdByUserId: access.session.userId,
+    title: cleaned.title.trim(),
+    body: cleaned.body,
+    priority: cleaned.priority,
+    dueDate: cleaned.dueDate,
+    audienceType: cleaned.audienceType,
+    audienceRegion: cleaned.audienceRegion,
+    published: true,
+    attachments: cleaned.attachments,
+    selectedUserIds: cleaned.selectedUserIds,
+  });
+
+  const shouldSendSms =
+    (cleaned.sendSmsOnPublish ?? true) && (!isUpdate || !wasAlreadyPublished);
+
+  if (shouldSendSms) {
+    await dispatchDirectiveSms(result.id, cleaned.title.trim(), cleaned.campaignId);
+  }
+
+  revalidateDirectives(cleaned.campaignId);
+  return { success: true as const, id: result.id };
+}
+
+async function dispatchDirectiveSms(
+  directiveId: string,
+  title: string,
+  campaignId: string
+) {
+  const pending = await pgDirectives.pgGetPendingSmsRecipients(directiveId);
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") || "";
+  const path = `/admin/directives?campaign=${encodeURIComponent(campaignId)}`;
+  const link = baseUrl ? `${baseUrl}${path}` : path;
+  const message = buildDirectiveSmsText(title, link);
+
+  for (const recipient of pending) {
+    const smsResult = await sendSms(recipient.phone, message, DEFAULT_SMS_SETTINGS);
+
+    if (!recipient.phone) {
+      await pgDirectives.pgUpdateRecipientSmsStatus({
+        directiveId,
+        userId: recipient.userId,
+        smsStatus: "no_phone",
+        smsError: "شماره موبایل ثبت نشده",
+      });
+      continue;
+    }
+
+    if (smsResult.ok) {
+      await pgDirectives.pgUpdateRecipientSmsStatus({
+        directiveId,
+        userId: recipient.userId,
+        smsStatus: "sent",
+      });
+      continue;
+    }
+
+    await pgDirectives.pgUpdateRecipientSmsStatus({
+      directiveId,
+      userId: recipient.userId,
+      smsStatus: smsResult.skipped ? "skipped" : "failed",
+      smsError: smsResult.error,
+    });
+  }
+}
+
+export async function deleteDirectiveAction(id: string, campaignId: string) {
+  const access = await assertDirectivesAccess(campaignId);
+  if (access.error || !access.session) {
+    return { success: false as const, error: access.error ?? "Unauthorized" };
+  }
+  if (!canManageDirectives(access.session)) {
+    return { success: false as const, error: "دسترسی ندارید" };
+  }
+  if (!isPostgresConfigured()) {
+    return { success: false as const, error: "Database required" };
+  }
+
+  await pgDirectives.pgDeleteDirective(id);
+  revalidateDirectives(campaignId);
+  return { success: true as const };
+}
+
+export async function confirmDirectiveSeenAction(directiveId: string, campaignId: string) {
+  const access = await assertDirectivesAccess(campaignId);
+  if (access.error || !access.session) {
+    return { success: false as const, error: access.error ?? "Unauthorized" };
+  }
+  if (!access.session.userId) {
+    return { success: false as const, error: "برای تأیید مشاهده باید با حساب کاربری وارد شوید" };
+  }
+  if (!isPostgresConfigured()) {
+    return { success: false as const, error: "Database required" };
+  }
+
+  const ok = await pgDirectives.pgConfirmDirectiveSeen(directiveId, access.session.userId);
+  if (!ok) {
+    return { success: false as const, error: "این دستورکار برای شما ثبت نشده است" };
+  }
+
+  revalidateDirectives(campaignId);
+  return { success: true as const };
+}

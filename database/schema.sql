@@ -699,3 +699,60 @@ CREATE POLICY user_audit_events_app_bypass ON user_audit_events
   USING (current_setting('app.rls_bypass', true) = 'on')
   WITH CHECK (current_setting('app.rls_bypass', true) = 'on');
 
+-- Phone number for SMS notifications (optional until SMS provider is configured)
+ALTER TABLE users ADD COLUMN IF NOT EXISTS phone TEXT;
+
+-- Directives (دستورکارها): admin/client publish, users acknowledge + download
+CREATE TABLE IF NOT EXISTS campaign_directives (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  campaign_id UUID NOT NULL REFERENCES campaign_settings(id) ON DELETE CASCADE,
+  created_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  title TEXT NOT NULL,
+  body TEXT NOT NULL DEFAULT '',
+  priority TEXT NOT NULL DEFAULT 'normal' CHECK (priority IN ('normal', 'urgent')),
+  due_date DATE,
+  audience_type TEXT NOT NULL DEFAULT 'all' CHECK (audience_type IN ('all', 'region', 'users')),
+  audience_region TEXT CHECK (audience_region IS NULL OR audience_region IN ('north', 'south', 'east', 'west')),
+  published BOOLEAN NOT NULL DEFAULT true,
+  published_at TIMESTAMPTZ,
+  sort_order INT NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_campaign_directives_campaign
+  ON campaign_directives(campaign_id, published, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS directive_attachments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  directive_id UUID NOT NULL REFERENCES campaign_directives(id) ON DELETE CASCADE,
+  file_url TEXT NOT NULL,
+  file_name TEXT NOT NULL,
+  mime_type TEXT NOT NULL DEFAULT 'application/octet-stream',
+  file_size INT NOT NULL DEFAULT 0,
+  sort_order INT NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_directive_attachments_directive
+  ON directive_attachments(directive_id, sort_order);
+
+CREATE TABLE IF NOT EXISTS directive_recipients (
+  directive_id UUID NOT NULL REFERENCES campaign_directives(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  sms_status TEXT NOT NULL DEFAULT 'pending'
+    CHECK (sms_status IN ('pending', 'sent', 'failed', 'no_phone', 'skipped')),
+  sms_error TEXT,
+  sms_sent_at TIMESTAMPTZ,
+  seen_at TIMESTAMPTZ,
+  confirmed BOOLEAN NOT NULL DEFAULT false,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (directive_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_directive_recipients_user
+  ON directive_recipients(user_id, confirmed, seen_at);
+
+CREATE INDEX IF NOT EXISTS idx_directive_recipients_directive
+  ON directive_recipients(directive_id, confirmed);
+

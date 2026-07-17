@@ -339,11 +339,68 @@ export interface AdminUser {
   city?: string | null;
   /** Geographic zone set by admin/client: north/south/east/west. */
   region?: import("./user-regions").UserRegion | null;
+  /** Mobile phone for SMS (optional until SMS provider is configured). */
+  phone?: string | null;
   /** Account manager name set by the user in their profile. */
   accountManagerName?: string | null;
   campaignIds: string[];
   campaignPermissions: Record<string, ContributorPermissions>;
   createdAt: string;
+}
+
+export type DirectivePriority = "normal" | "urgent";
+export type DirectiveAudienceType = "all" | "region" | "users";
+export type DirectiveSmsStatus = "pending" | "sent" | "failed" | "no_phone" | "skipped";
+
+export interface DirectiveAttachment {
+  id: string;
+  directiveId: string;
+  fileUrl: string;
+  fileName: string;
+  mimeType: string;
+  fileSize: number;
+  sortOrder: number;
+  createdAt: string;
+}
+
+export interface DirectiveRecipient {
+  directiveId: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  userRole: AdminRole;
+  userPhone?: string | null;
+  smsStatus: DirectiveSmsStatus;
+  smsError?: string | null;
+  smsSentAt?: string | null;
+  seenAt?: string | null;
+  confirmed: boolean;
+}
+
+export interface CampaignDirective {
+  id: string;
+  campaignId: string;
+  createdByUserId?: string | null;
+  createdByName?: string | null;
+  title: string;
+  body: string;
+  priority: DirectivePriority;
+  dueDate?: string | null;
+  audienceType: DirectiveAudienceType;
+  audienceRegion?: import("./user-regions").UserRegion | null;
+  published: boolean;
+  publishedAt?: string | null;
+  sortOrder: number;
+  attachments: DirectiveAttachment[];
+  /** Present for managers; optional summary counts. */
+  seenCount?: number;
+  unseenCount?: number;
+  recipientCount?: number;
+  /** Present when loading the current user's inbox row. */
+  confirmed?: boolean;
+  seenAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface AuthSession {

@@ -1,6 +1,18 @@
 {
   "entries": [
     {
+      "hash": "491fd053efc4228a43cc01e8ed58014714b067af",
+      "committedAt": "2026-07-17T18:32:50+03:30",
+      "title": "حذف فایل‌های موقت بررسی امنیتی",
+      "subject": "Remove temporary npm audit dump files"
+    },
+    {
+      "hash": "4dac4e035e2da06b69ce74636dd9e8d1914da898",
+      "committedAt": "2026-07-17T18:32:11+03:30",
+      "title": "تقویت مالکیت محتوا، آپلود امن و قفل دیتابیس",
+      "subject": "Harden ownership, uploads, CSP, RLS, and deps"
+    },
+    {
       "hash": "78e5163dece65598232ac7e5a37a00c9dab70da5",
       "committedAt": "2026-07-17T18:18:17+03:30",
       "title": "تقویت امنیت ورود، دسترسی‌ها و خروج از پنل",

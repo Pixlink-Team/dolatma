@@ -11,6 +11,7 @@ export interface ContributorPermissions {
   meetings: boolean;
   activities: boolean;
   submissions: boolean;
+  directives: boolean;
 }
 
 export type ContributorPermissionKey = keyof ContributorPermissions;
@@ -28,6 +29,7 @@ export const defaultContributorPermissions = (): ContributorPermissions => ({
   meetings: true,
   activities: true,
   submissions: true,
+  directives: true,
 });
 
 export const contributorPermissionLabels: Record<ContributorPermissionKey, string> = {
@@ -43,6 +45,7 @@ export const contributorPermissionLabels: Record<ContributorPermissionKey, strin
   meetings: "جلسات و مصوبات",
   activities: "اقدامات",
   submissions: "مشارکت‌ها",
+  directives: "دستورکارها",
 };
 
 export function normalizeContributorPermissions(
@@ -65,6 +68,7 @@ export function normalizeContributorPermissions(
     meetings: record.meetings ?? defaults.meetings,
     activities: record.activities ?? defaults.activities,
     submissions: record.submissions ?? defaults.submissions,
+    directives: record.directives ?? defaults.directives,
   };
 }
 

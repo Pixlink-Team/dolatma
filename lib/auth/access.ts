@@ -9,6 +9,11 @@ export function canAccessNotifications(session: AuthSession): boolean {
   return isFullAdmin(session) || isClientUser(session);
 }
 
+/** Only admin and client (کارفرما) can create/edit/delete directives. */
+export function canManageDirectives(session: AuthSession): boolean {
+  return isFullAdmin(session) || isClientUser(session);
+}
+
 /** Only admin and client (کارفرما) can score. Contributors never can. */
 export function canScoreContent(session: AuthSession): boolean {
   if (isFullAdmin(session)) return true;

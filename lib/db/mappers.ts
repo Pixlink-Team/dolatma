@@ -555,6 +555,7 @@ export function mapUserFromDb(
     region: row.region === "north" || row.region === "south" || row.region === "east" || row.region === "west"
       ? row.region
       : null,
+    phone: typeof row.phone === "string" && row.phone.trim() ? row.phone.trim() : null,
     accountManagerName: row.account_manager_name ?? null,
     campaignIds: campaignAccess.map((access) => access.campaignId),
     campaignPermissions: Object.fromEntries(

@@ -40,6 +40,7 @@ export default async function ProfilePage() {
             initialProvince={user.province}
             initialCity={user.city}
             initialAccountManagerName={user.accountManagerName}
+            initialPhone={user.phone}
             initialRegion={user.region}
             email={user.email}
           />

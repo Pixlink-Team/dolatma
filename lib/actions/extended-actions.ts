@@ -466,6 +466,7 @@ export async function saveProfileAction(data: {
   province?: string | null;
   city?: string | null;
   accountManagerName?: string | null;
+  phone?: string | null;
 }) {
   const session = await getAuthSession();
   if (!session?.userId) {
@@ -488,6 +489,7 @@ export async function saveProfileAction(data: {
     province: data.province,
     city: data.city,
     region: user.region,
+    phone: data.phone?.trim() || null,
     accountManagerName: data.accountManagerName,
     campaignIds: user.campaignIds,
     campaignPermissions: user.campaignPermissions,
@@ -512,6 +514,7 @@ export async function saveUserAction(data: {
   province?: string | null;
   city?: string | null;
   region?: string | null;
+  phone?: string | null;
   accountManagerName?: string | null;
   campaignIds?: string[];
   campaignPermissions?: Record<string, ContributorPermissions>;
@@ -523,17 +526,22 @@ export async function saveUserAction(data: {
   if (!isPostgresConfigured()) return { success: false, error: "Database required" };
 
   let accountManagerName = data.accountManagerName;
+  let phone = data.phone;
   if (data.id) {
     const existing = await pgExt.pgGetUserById(data.id);
     // Preserve profile-owned field unless explicitly provided
     if (accountManagerName === undefined) {
       accountManagerName = existing?.accountManagerName ?? null;
     }
+    if (phone === undefined) {
+      phone = existing?.phone ?? null;
+    }
   }
 
   const result = await pgExt.pgSaveUser({
     ...data,
     accountManagerName,
+    phone,
   });
   await logAuditForSession(session, {
     category: "admin",
