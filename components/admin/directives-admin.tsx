@@ -66,6 +66,49 @@ type FormValues = z.infer<typeof schema>;
 type InboxTab = "new" | "seen" | "all";
 type ManagerView = "manage" | "inbox";
 
+interface AttachmentDraft {
+  key: string;
+  id?: string;
+  title: string;
+  url: string;
+  fileName: string;
+  fileSize: number;
+  mimeType: string;
+}
+
+function createAttachmentDraft(partial?: Partial<AttachmentDraft>): AttachmentDraft {
+  return {
+    key: partial?.key ?? `att-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    id: partial?.id,
+    title: partial?.title ?? "",
+    url: partial?.url ?? "",
+    fileName: partial?.fileName ?? "",
+    fileSize: partial?.fileSize ?? 0,
+    mimeType: partial?.mimeType ?? "",
+  };
+}
+
+/** Skip legacy rows that only mirrored the official letter into attachments. */
+function toAttachmentDrafts(item: CampaignDirective): AttachmentDraft[] {
+  const letterUrl = item.letterFileUrl ?? "";
+  return (item.attachments ?? [])
+    .filter((attachment) => {
+      if (!letterUrl) return attachment.title.trim() !== "نامه رسمی";
+      return attachment.fileUrl !== letterUrl;
+    })
+    .map((attachment) =>
+      createAttachmentDraft({
+        key: attachment.id,
+        id: attachment.id,
+        title: attachment.title,
+        url: attachment.fileUrl,
+        fileName: attachment.fileName,
+        fileSize: attachment.fileSize,
+        mimeType: attachment.mimeType,
+      })
+    );
+}
+
 interface CampaignUserOption {
   id: string;
   name: string;
@@ -146,6 +189,48 @@ function OfficialLetterPreview({ item }: { item: CampaignDirective }) {
   );
 }
 
+function ActionFilesPreview({ item }: { item: CampaignDirective }) {
+  const files = toAttachmentDrafts(item);
+  if (files.length === 0) {
+    return <p className="text-sm text-muted-foreground">فایل اقدامی اضافه نشده</p>;
+  }
+
+  return (
+    <div className="space-y-2">
+      {files.map((file) => {
+        const isImage = Boolean(file.mimeType?.startsWith("image/"));
+        return (
+          <div key={file.key} className="space-y-2 rounded-lg border px-3 py-3">
+            <p className="text-sm font-medium">{file.title || file.fileName}</p>
+            {isImage && file.url && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={file.url}
+                alt={file.title || file.fileName}
+                className="max-h-48 w-full rounded-md object-contain bg-muted/30"
+              />
+            )}
+            <a
+              href={file.url}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-start gap-2 text-sm text-primary hover:underline"
+            >
+              <Download className="mt-0.5 h-4 w-4 shrink-0" />
+              <span className="min-w-0">
+                <span className="block font-medium text-foreground">
+                  {file.fileName || "دانلود فایل"}
+                </span>
+                <span className="block text-xs text-muted-foreground">دانلود / مشاهده</span>
+              </span>
+            </a>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function DirectiveDateRange({ item }: { item: CampaignDirective }) {
   const start = item.startDate;
   const end = item.endDate ?? item.dueDate;
@@ -181,6 +266,7 @@ export function DirectivesAdmin({
     fileSize: 0,
     mimeType: "",
   });
+  const [attachmentDrafts, setAttachmentDrafts] = useState<AttachmentDraft[]>([]);
   const [detailItem, setDetailItem] = useState<CampaignDirective | null>(null);
   const [trackingItem, setTrackingItem] = useState<CampaignDirective | null>(null);
   const [recipients, setRecipients] = useState<DirectiveRecipient[]>([]);
@@ -235,6 +321,7 @@ export function DirectivesAdmin({
     setSelectedCities([]);
     setCityProvince("");
     setLetterUpload({ url: "", fileName: "", fileSize: 0, mimeType: "" });
+    setAttachmentDrafts([]);
     form.reset({
       title: "",
       body: "",
@@ -256,6 +343,7 @@ export function DirectivesAdmin({
       fileSize: item.letterFileSize ?? 0,
       mimeType: item.letterMimeType ?? "",
     });
+    setAttachmentDrafts(toAttachmentDrafts(item));
     setSelectedUserIds([]);
     setSelectedCities(item.audienceCities ?? []);
     setCityProvince("");
@@ -305,6 +393,17 @@ export function DirectivesAdmin({
       return;
     }
 
+    for (const [index, draft] of attachmentDrafts.entries()) {
+      if (!draft.title.trim()) {
+        toast.error(`عنوان فایل اقدام شماره ${index + 1} را وارد کنید`);
+        return;
+      }
+      if (!draft.url) {
+        toast.error(`فایل اقدام «${draft.title.trim()}» را آپلود کنید`);
+        return;
+      }
+    }
+
     startTransition(async () => {
       const result = await saveDirectiveAction({
         id: editingId ?? undefined,
@@ -318,6 +417,14 @@ export function DirectivesAdmin({
         letterFileName: letterUpload.fileName || "نامه رسمی",
         letterMimeType: letterUpload.mimeType || "application/octet-stream",
         letterFileSize: letterUpload.fileSize || 0,
+        attachments: attachmentDrafts.map((draft) => ({
+          id: draft.id,
+          title: draft.title.trim(),
+          fileUrl: draft.url,
+          fileName: draft.fileName || draft.title.trim(),
+          mimeType: draft.mimeType || "application/octet-stream",
+          fileSize: draft.fileSize || 0,
+        })),
         audienceType: data.audienceType,
         audienceRegion: data.audienceType === "region" ? data.audienceRegion ?? null : null,
         audienceMinistryId:
@@ -597,6 +704,94 @@ export function DirectivesAdmin({
               onChange={(payload) => setLetterUpload(payload)}
             />
 
+            <div className="space-y-3 rounded-lg border p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <Label>فایل‌های اقدام</Label>
+                  <p className="text-xs text-muted-foreground">
+                    برای هر فایل یک عنوان و فایل جداگانه اضافه کنید
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setAttachmentDrafts((prev) => [...prev, createAttachmentDraft()])
+                  }
+                >
+                  <Plus className="h-4 w-4" />
+                  افزودن فایل
+                </Button>
+              </div>
+
+              {attachmentDrafts.length === 0 ? (
+                <p className="text-sm text-muted-foreground">هنوز فایل اقدامی اضافه نشده است</p>
+              ) : (
+                <div className="space-y-3">
+                  {attachmentDrafts.map((draft, index) => (
+                    <div key={draft.key} className="space-y-3 rounded-md border bg-muted/20 p-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="text-sm font-medium">فایل {formatPersianNumber(index + 1)}</p>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive hover:text-destructive"
+                          onClick={() =>
+                            setAttachmentDrafts((prev) =>
+                              prev.filter((item) => item.key !== draft.key)
+                            )
+                          }
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          حذف
+                        </Button>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>عنوان فایل</Label>
+                        <Input
+                          value={draft.title}
+                          maxLength={CONTENT_TITLE_MAX_LENGTH}
+                          placeholder="مثلاً پیوست ۱ / دستورالعمل"
+                          onChange={(event) => {
+                            const value = event.target.value;
+                            setAttachmentDrafts((prev) =>
+                              prev.map((item) =>
+                                item.key === draft.key ? { ...item, title: value } : item
+                              )
+                            );
+                          }}
+                        />
+                      </div>
+                      <DocumentUpload
+                        label="فایل"
+                        value={draft.url}
+                        fileName={draft.fileName}
+                        fileSize={draft.fileSize}
+                        mimeType={draft.mimeType}
+                        onChange={(payload) => {
+                          setAttachmentDrafts((prev) =>
+                            prev.map((item) =>
+                              item.key === draft.key
+                                ? {
+                                    ...item,
+                                    url: payload.url,
+                                    fileName: payload.fileName,
+                                    fileSize: payload.fileSize,
+                                    mimeType: payload.mimeType,
+                                  }
+                                : item
+                            )
+                          );
+                        }}
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <div className="space-y-2">
               <Label>مخاطب</Label>
               <Select
@@ -798,6 +993,10 @@ export function DirectivesAdmin({
                 <div>
                   <h3 className="mb-2 text-sm font-medium">نامه رسمی</h3>
                   <OfficialLetterPreview item={detailItem} />
+                </div>
+                <div>
+                  <h3 className="mb-2 text-sm font-medium">فایل‌های اقدام</h3>
+                  <ActionFilesPreview item={detailItem} />
                 </div>
                 {showingInbox && !detailItem.confirmed && (
                   <Button disabled={isPending} onClick={() => confirmSeen(detailItem)}>

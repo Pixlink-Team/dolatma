@@ -485,21 +485,33 @@ export async function pgSaveDirective(input: SaveDirectiveInput): Promise<{ id: 
       updated_at = EXCLUDED.updated_at
   `;
 
-  // Keep a single attachment row mirrored from the official letter for older UIs.
+  // Extra titled action files (official letter stays on campaign_directives columns).
   await sql`DELETE FROM directive_attachments WHERE directive_id = ${id}`;
-  if (letterFileUrl) {
+  const attachments = (input.attachments ?? [])
+    .map((item) => ({
+      id: item.id?.trim() || generateId(),
+      title: item.title.trim(),
+      fileUrl: item.fileUrl.trim(),
+      fileName: item.fileName.trim() || "file",
+      mimeType: item.mimeType.trim() || "application/octet-stream",
+      fileSize: Number(item.fileSize ?? 0),
+    }))
+    .filter((item) => item.title && item.fileUrl);
+
+  for (let index = 0; index < attachments.length; index++) {
+    const attachment = attachments[index];
     await sql`
       INSERT INTO directive_attachments (
         id, directive_id, title, file_url, file_name, mime_type, file_size, sort_order, created_at
       ) VALUES (
-        ${generateId()},
+        ${attachment.id},
         ${id},
-        ${"نامه رسمی"},
-        ${letterFileUrl},
-        ${letterFileName || "letter"},
-        ${letterMimeType || "application/octet-stream"},
-        ${letterFileSize},
-        ${0},
+        ${attachment.title},
+        ${attachment.fileUrl},
+        ${attachment.fileName},
+        ${attachment.mimeType},
+        ${attachment.fileSize},
+        ${index},
         ${now}
       )
     `;

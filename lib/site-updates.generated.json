@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "6e78dd97e7ff5fde34f89ed94e7b51273289a4d2",
+      "committedAt": "2026-07-17T23:03:54+03:30",
+      "title": "افزودن وزارتخانه‌ها و جایگزینی دسته‌بندی منطقه‌ای کاربر با وزارتخانه",
+      "subject": "Seed ministries and replace user region with ministry"
+    },
+    {
       "hash": "d7b6fce79a582ebca6f3a8872fa8b3f817bd8f36",
       "committedAt": "2026-07-17T22:58:38+03:30",
       "title": "امکان ارسال دستورکار بر اساس وزارتخانه و شهر",

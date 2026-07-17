@@ -139,6 +139,14 @@ export async function saveDirectiveAction(input: {
   letterFileName?: string | null;
   letterMimeType?: string | null;
   letterFileSize?: number;
+  attachments?: Array<{
+    id?: string;
+    title: string;
+    fileUrl: string;
+    fileName: string;
+    mimeType: string;
+    fileSize: number;
+  }>;
   audienceType: DirectiveAudienceType;
   audienceRegion?: UserRegion | null;
   audienceMinistryId?: string | null;
@@ -194,6 +202,37 @@ export async function saveDirectiveAction(input: {
     body: input.body?.trim() ?? "",
   });
 
+  const attachments = (cleaned.attachments ?? []).map((item) => ({
+    id: item.id,
+    title: item.title?.trim() ?? "",
+    fileUrl: item.fileUrl?.trim() ?? "",
+    fileName: item.fileName?.trim() ?? "",
+    mimeType: item.mimeType?.trim() ?? "application/octet-stream",
+    fileSize: Number(item.fileSize ?? 0),
+  }));
+
+  for (const [index, attachment] of attachments.entries()) {
+    if (!attachment.title) {
+      return {
+        success: false as const,
+        error: `عنوان فایل اقدام شماره ${index + 1} الزامی است`,
+      };
+    }
+    const attachmentTitleError = getContentTitleValidationError(attachment.title);
+    if (attachmentTitleError) {
+      return {
+        success: false as const,
+        error: `عنوان فایل اقدام شماره ${index + 1}: ${attachmentTitleError}`,
+      };
+    }
+    if (!attachment.fileUrl) {
+      return {
+        success: false as const,
+        error: `فایل اقدام «${attachment.title}» هنوز آپلود نشده است`,
+      };
+    }
+  }
+
   const isUpdate = Boolean(cleaned.id);
   const previous = cleaned.id ? await pgDirectives.pgGetDirectiveById(cleaned.id) : null;
   const wasAlreadyPublished = Boolean(previous?.publishedAt);
@@ -211,6 +250,7 @@ export async function saveDirectiveAction(input: {
     letterFileName: cleaned.letterFileName,
     letterMimeType: cleaned.letterMimeType,
     letterFileSize: cleaned.letterFileSize,
+    attachments,
     audienceType: cleaned.audienceType,
     audienceRegion: cleaned.audienceRegion,
     audienceMinistryId: cleaned.audienceMinistryId,
