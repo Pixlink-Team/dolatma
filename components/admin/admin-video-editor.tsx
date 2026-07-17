@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Play, Trash2 } from "lucide-react";
+import { Play, Trash2, VideoIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,9 +28,6 @@ import {
 import { todayISO } from "@/lib/jalali";
 import {
   buildVideoVersionMedia,
-  extractAparatVideoHash,
-  getAparatThumbnailUrl,
-  isAparatVideoInput,
   resolveDisplayVersion,
   resolveVideoThumbnail,
 } from "@/lib/media-utils";
@@ -52,10 +49,41 @@ interface AdminVideoEditorProps {
 }
 
 function draftCoverFromVersion(version: VideoVersion): string {
-  const hash = extractAparatVideoHash(version.videoUrl);
-  if (hash && version.thumbnailUrl === getAparatThumbnailUrl(hash)) return "";
   if (version.thumbnailUrl === version.videoUrl) return "";
   return version.thumbnailUrl ?? "";
+}
+
+function formatVideoDuration(seconds: number): string {
+  const totalSeconds = Math.max(0, Math.round(seconds));
+  const minutes = Math.floor(totalSeconds / 60);
+  const remainingSeconds = totalSeconds % 60;
+
+  return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
+}
+
+function readVideoDuration(file: File): Promise<string> {
+  return new Promise((resolve) => {
+    const objectUrl = URL.createObjectURL(file);
+    const video = document.createElement("video");
+
+    const cleanup = () => {
+      URL.revokeObjectURL(objectUrl);
+      video.removeAttribute("src");
+      video.load();
+    };
+
+    video.preload = "metadata";
+    video.onloadedmetadata = () => {
+      const nextDuration = Number.isFinite(video.duration) ? formatVideoDuration(video.duration) : "";
+      cleanup();
+      resolve(nextDuration);
+    };
+    video.onerror = () => {
+      cleanup();
+      resolve("");
+    };
+    video.src = objectUrl;
+  });
 }
 
 export function AdminVideoEditor({
@@ -126,7 +154,6 @@ export function AdminVideoEditor({
   const previewCover = videoUrl
     ? resolveVideoThumbnail(videoUrl, thumbnailUrl || undefined)
     : null;
-  const isAparat = isAparatVideoInput(videoUrl);
 
   const refresh = () => router.refresh();
 
@@ -204,29 +231,58 @@ export function AdminVideoEditor({
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div ref={scrollAreaRef} className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-y-contain pr-1">
-        <div
-          className={cn(
-            "relative mx-auto aspect-video max-h-56 w-full overflow-hidden rounded-xl bg-muted",
-            highlightMedia && "ring-2 ring-destructive ring-offset-2"
-          )}
-        >
-          {videoUrl ? (
-            previewCover ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={previewCover} alt={editTitle} className="h-full w-full object-contain" />
-            ) : (
-              <VideoThumbnail
-                videoUrl={videoUrl}
-                thumbnailUrl={thumbnailUrl || undefined}
-                alt={editTitle}
-                className="object-contain"
-              />
-            )
-          ) : null}
-          <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-            <Play className="h-12 w-12 text-white" />
-          </div>
-        </div>
+        <MediaUpload
+          label="ویدیو"
+          kind="video"
+          fileOnly
+          value={videoUrl}
+          onChange={setVideoUrl}
+          onUploadedFile={(file) => {
+            void readVideoDuration(file).then((nextDuration) => {
+              if (nextDuration) setDuration(nextDuration);
+            });
+          }}
+          coverImageUrl={thumbnailUrl}
+          onAutoCoverGenerated={(coverUrl) => {
+            setThumbnailUrl((current) => (current.trim() ? current : coverUrl));
+          }}
+          accept="video/mp4,video/webm,video/quicktime"
+          showPreview={false}
+          showLinkInput={false}
+          dropzoneContent={
+            <div
+              className={cn(
+                "relative mx-auto aspect-video max-h-56 w-full overflow-hidden rounded-xl bg-muted",
+                highlightMedia && "ring-2 ring-destructive ring-offset-2"
+              )}
+            >
+              {videoUrl ? (
+                previewCover ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={previewCover} alt={editTitle} className="h-full w-full object-contain" />
+                ) : (
+                  <VideoThumbnail
+                    videoUrl={videoUrl}
+                    thumbnailUrl={thumbnailUrl || undefined}
+                    alt={editTitle}
+                    className="object-contain"
+                  />
+                )
+              ) : (
+                <div className="flex h-full flex-col items-center justify-center gap-2 text-sm text-muted-foreground">
+                  <VideoIcon className="h-8 w-8" />
+                  <span>بدون ویدیو</span>
+                  <span className="text-xs">فایل ویدیو را اینجا بکشید و رها کنید</span>
+                </div>
+              )}
+              {videoUrl ? (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                  <Play className="h-12 w-12 text-white" />
+                </div>
+              ) : null}
+            </div>
+          }
+        />
 
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 space-y-3">
@@ -293,44 +349,16 @@ export function AdminVideoEditor({
                 onScoreSaved={setEditScore}
               />
             )}
-            <div
-              className={cn(
-                highlightMedia && "rounded-lg border border-destructive bg-destructive/5 p-3"
-              )}
-            >
-              <MediaUpload
-                label="ویدیو"
-                kind="video"
-                value={videoUrl}
-                onChange={setVideoUrl}
-                coverImageUrl={thumbnailUrl}
-                onAutoCoverGenerated={(coverUrl) => {
-                  setThumbnailUrl((current) => (current.trim() ? current : coverUrl));
-                }}
-              />
-              {highlightMedia && (
-                <p className="mt-2 text-xs text-destructive">ویدیو هنوز آپلود نشده است.</p>
-              )}
-            </div>
+            {highlightMedia && (
+              <p className="text-xs text-destructive">ویدیو هنوز آپلود نشده است.</p>
+            )}
             <MediaUpload
-              label={
-                isAparat
-                  ? "کاور سفارشی (اختیاری — بدون کاور از آپارات)"
-                  : "کاور (اختیاری — بدون کاور از ثانیه ۳ ویدیو ساخته می‌شود)"
-              }
+              label="کاور سفارشی (اختیاری — بدون کاور، خودکار از ویدیو ساخته می‌شود)"
               value={thumbnailUrl}
               onChange={setThumbnailUrl}
               dropzone={false}
+              showPreview={false}
             />
-            <div>
-              <Label>مدت (اختیاری)</Label>
-              <Input
-                value={duration}
-                onChange={(e) => setDuration(e.target.value)}
-                placeholder="0:30"
-                dir="ltr"
-              />
-            </div>
             <div>
               <Label>یادداشت (اختیاری)</Label>
               <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />

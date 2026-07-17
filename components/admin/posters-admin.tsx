@@ -38,6 +38,7 @@ import { useSectionCreateGate } from "@/lib/hooks/use-section-create-gate";
 import { useAdminInfiniteScroll } from "@/lib/hooks/use-admin-infinite-scroll";
 import { AdminInfiniteScrollSentinel } from "@/components/admin/admin-infinite-scroll-sentinel";
 import { resolveDisplayVersion } from "@/lib/media-utils";
+import { formatPersianDate } from "@/lib/utils";
 import type { AdminUser, MediaCategory, Poster, PosterVersion } from "@/lib/types";
 
 interface PostersAdminProps {
@@ -363,15 +364,44 @@ export function PostersAdmin({
           </DialogHeader>
           {previewPoster && (
             <div className="space-y-3">
-              <ImageZoom
-                src={
-                  resolveDisplayVersion(versionsByPosterId.get(previewPoster.id) ?? [])?.imageUrl ??
-                  ""
-                }
-                alt={previewPoster.title}
-                className="w-full rounded-lg bg-muted"
-                imgClassName="max-h-80 w-full object-contain"
-              />
+              {(() => {
+                const displayVersion = resolveDisplayVersion(versionsByPosterId.get(previewPoster.id) ?? []);
+
+                return (
+                  <>
+                    <ImageZoom
+                      src={displayVersion?.imageUrl ?? ""}
+                      alt={previewPoster.title}
+                      className="w-full rounded-lg bg-muted"
+                      imgClassName="max-h-80 w-full object-contain"
+                    />
+                    <div className="grid gap-2 rounded-lg border bg-muted/20 p-3 text-sm sm:grid-cols-2">
+                      <div>
+                        <p className="text-xs text-muted-foreground">تاریخ</p>
+                        <p>{displayVersion?.date ? formatPersianDate(displayVersion.date) : "—"}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">مالک</p>
+                        <p>{previewPoster.ownerName ?? "—"}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">برچسب‌ها</p>
+                        <p>{previewPoster.planLabels?.length ? previewPoster.planLabels.join("، ") : "—"}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">امتیاز</p>
+                        <p>{previewPoster.score ?? "—"}</p>
+                      </div>
+                      {displayVersion?.notes ? (
+                        <div className="sm:col-span-2">
+                          <p className="text-xs text-muted-foreground">یادداشت</p>
+                          <p className="whitespace-pre-wrap break-words">{displayVersion.notes}</p>
+                        </div>
+                      ) : null}
+                    </div>
+                  </>
+                );
+              })()}
               <p className="text-sm text-muted-foreground">{previewPoster.description || "بدون توضیحات"}</p>
               <AdminItemActions
                 onEdit={() => {

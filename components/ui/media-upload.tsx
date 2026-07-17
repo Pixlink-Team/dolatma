@@ -19,13 +19,14 @@ import {
   videoNeedsAutoCover,
 } from "@/lib/client/video-cover";
 import { Loader2, Trash2, Upload } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 interface MediaUploadProps {
   value: string;
   onChange: (url: string) => void;
   onUploaded?: (url: string) => void;
+  onUploadedFile?: (file: File, url: string) => void;
   onUploadedMeta?: (meta: {
     url: string;
     fileName: string;
@@ -46,12 +47,16 @@ interface MediaUploadProps {
   dropzone?: boolean;
   fileOnly?: boolean;
   maxFileSizeBytes?: number;
+  dropzoneContent?: ReactNode;
+  showPreview?: boolean;
+  showLinkInput?: boolean;
 }
 
 export function MediaUpload({
   value,
   onChange,
   onUploaded,
+  onUploadedFile,
   onUploadedMeta,
   onAutoCoverGenerated,
   coverImageUrl,
@@ -64,6 +69,9 @@ export function MediaUpload({
   dropzone = true,
   fileOnly = false,
   maxFileSizeBytes,
+  dropzoneContent,
+  showPreview = true,
+  showLinkInput = true,
 }: MediaUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const processedVideoCoverRef = useRef<string | null>(null);
@@ -175,6 +183,7 @@ export function MediaUpload({
       };
       onChange(data.url);
       onUploaded?.(data.url);
+      onUploadedFile?.(file, data.url);
       onUploadedMeta?.({
         url: data.url,
         fileName: data.fileName ?? file.name,
@@ -220,6 +229,7 @@ export function MediaUpload({
   const isLocalUploadedImage =
     kind === "image" && Boolean(value) && isLocalUploadedFileUrl(value);
   const hideImageLinkField = isLocalUploadedImage && !showLinkEditor;
+  const showInlineInput = showLinkInput && !dropzoneContent;
 
   return (
     <div className="space-y-2">
@@ -239,7 +249,9 @@ export function MediaUpload({
           !dropzone && "border-transparent p-0"
         )}
       >
-        {kind === "video" && !fileOnly ? (
+        {dropzoneContent ? <div className="mb-3">{dropzoneContent}</div> : null}
+
+        {showInlineInput && kind === "video" && !fileOnly ? (
           hideVideoLinkField ? null : (
             <Textarea
               value={value}
@@ -257,7 +269,7 @@ export function MediaUpload({
               className="min-h-24 font-mono text-xs"
             />
           )
-        ) : hideImageLinkField ? null : (
+        ) : showInlineInput && hideImageLinkField ? null : showInlineInput ? (
           <div className="flex flex-col gap-2 sm:flex-row">
             {!(kind === "video" && isDirectVideo && fileOnly) && (
               <Input
@@ -279,7 +291,7 @@ export function MediaUpload({
               {kind === "video" && fileOnly ? "آپلود ویدیو" : dropzone ? "انتخاب فایل" : "آپلود"}
             </Button>
           </div>
-        )}
+        ) : null}
 
         {kind === "audio" && (
           <div className="mt-2">
@@ -296,7 +308,40 @@ export function MediaUpload({
           </div>
         )}
 
-        {kind === "image" && isLocalUploadedImage && (
+        {kind === "video" && fileOnly && !showInlineInput && (
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={uploading || generatingCover}
+              onClick={() => inputRef.current?.click()}
+            >
+              {uploading || generatingCover ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+              {value ? "تعویض ویدیو" : "آپلود ویدیو"}
+            </Button>
+            {generatingCover && (
+              <span className="text-xs text-muted-foreground">در حال ساخت کاور از ثانیه ۳…</span>
+            )}
+            {value ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="text-destructive"
+                onClick={() => {
+                  onChange("");
+                  setShowLinkEditor(false);
+                }}
+              >
+                <Trash2 className="h-4 w-4" />
+                حذف ویدیو
+              </Button>
+            ) : null}
+          </div>
+        )}
+
+        {kind === "image" && (isLocalUploadedImage || !showInlineInput) && (
           <div className={cn("flex flex-wrap items-center gap-2", hideImageLinkField ? "mt-0" : "mt-2")}>
             <Button
               type="button"
@@ -306,29 +351,33 @@ export function MediaUpload({
               onClick={() => inputRef.current?.click()}
             >
               {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-              تعویض تصویر
+              {value ? "تعویض تصویر" : "انتخاب تصویر"}
             </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowLinkEditor((current) => !current)}
-            >
-              {showLinkEditor ? "پنهان کردن لینک" : "نمایش لینک"}
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="text-destructive"
-              onClick={() => {
-                onChange("");
-                setShowLinkEditor(false);
-              }}
-            >
-              <Trash2 className="h-4 w-4" />
-              حذف تصویر
-            </Button>
+            {showLinkInput && value ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowLinkEditor((current) => !current)}
+              >
+                {showLinkEditor ? "پنهان کردن لینک" : "نمایش لینک"}
+              </Button>
+            ) : null}
+            {value ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="text-destructive"
+                onClick={() => {
+                  onChange("");
+                  setShowLinkEditor(false);
+                }}
+              >
+                <Trash2 className="h-4 w-4" />
+                حذف تصویر
+              </Button>
+            ) : null}
           </div>
         )}
 
@@ -349,14 +398,16 @@ export function MediaUpload({
             )}
             {isDirectVideo && (
               <>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowLinkEditor((current) => !current)}
-                >
-                  {showLinkEditor ? "پنهان کردن لینک" : "نمایش لینک"}
-                </Button>
+                {showLinkInput ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowLinkEditor((current) => !current)}
+                  >
+                    {showLinkEditor ? "پنهان کردن لینک" : "نمایش لینک"}
+                  </Button>
+                ) : null}
                 <Button
                   type="button"
                   variant="ghost"
@@ -399,7 +450,7 @@ export function MediaUpload({
         }}
       />
 
-      {kind === "image" && (
+      {showPreview && kind === "image" && (
         <div className="relative h-24 w-full overflow-hidden rounded-lg border bg-muted">
           {value ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -410,7 +461,7 @@ export function MediaUpload({
         </div>
       )}
 
-      {kind === "video" && (
+      {showPreview && kind === "video" && (
         <div className="relative aspect-video w-full overflow-hidden rounded-lg border bg-black">
           {isDirectVideo ? (
             <video

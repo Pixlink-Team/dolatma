@@ -44,7 +44,7 @@ import { useSectionCreateGate } from "@/lib/hooks/use-section-create-gate";
 import { useAdminInfiniteScroll } from "@/lib/hooks/use-admin-infinite-scroll";
 import { AdminInfiniteScrollSentinel } from "@/components/admin/admin-infinite-scroll-sentinel";
 import type { AdminUser, Billboard } from "@/lib/types";
-import { getStatusLabel } from "@/lib/utils";
+import { formatPersianDate, getStatusLabel } from "@/lib/utils";
 import { formatBillboardCityLine } from "@/lib/billboard-location";
 
 interface ContributorProfile {
@@ -454,6 +454,21 @@ export function BillboardsAdmin({
               <p className="text-xs text-muted-foreground">{formatBillboardCityLine(previewBillboard)}</p>
             </div>
           ) : null
+        }
+        details={
+          previewBillboard
+            ? [
+                { label: "تاریخ", value: formatPersianDate(previewBillboard.date) },
+                { label: "وضعیت", value: getStatusLabel(previewBillboard.status) },
+                { label: "کد", value: previewBillboard.code || "—" },
+                { label: "مالک", value: previewBillboard.ownerName ?? "—" },
+                {
+                  label: "برچسب‌ها",
+                  value: previewBillboard.planLabels?.length ? previewBillboard.planLabels.join("، ") : "—",
+                },
+                { label: "یادداشت", value: previewBillboard.notes || "—" },
+              ]
+            : []
         }
         onEdit={
           previewBillboard

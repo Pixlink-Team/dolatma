@@ -17,6 +17,7 @@ interface AdminContentPreviewDialogProps {
   description?: string | null;
   imageUrl?: string | null;
   meta?: React.ReactNode;
+  details?: Array<{ label: string; value?: React.ReactNode | null }>;
   onEdit?: () => void;
   onDelete?: () => void;
   deleteLabel?: string;
@@ -29,6 +30,7 @@ export function AdminContentPreviewDialog({
   description,
   imageUrl,
   meta,
+  details = [],
   onEdit,
   onDelete,
   deleteLabel,
@@ -64,6 +66,19 @@ export function AdminContentPreviewDialog({
           )}
 
           {meta}
+
+          {details.length > 0 && (
+            <div className="grid gap-2 rounded-lg border bg-muted/20 p-3 text-sm sm:grid-cols-2">
+              {details.map((detail) =>
+                detail.value !== null && detail.value !== undefined && detail.value !== "" ? (
+                  <div key={detail.label} className="space-y-1">
+                    <p className="text-xs text-muted-foreground">{detail.label}</p>
+                    <div className="break-words">{detail.value}</div>
+                  </div>
+                ) : null
+              )}
+            </div>
+          )}
 
           {(onEdit || onDelete) && (
             <AdminItemActions

@@ -12,8 +12,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { AdminDataTable } from "@/components/admin/admin-data-table";
-import { adminOwnerTableColumn } from "@/components/admin/admin-owner-badge";
+import { Card, CardContent } from "@/components/ui/card";
+import { AdminItemActions } from "@/components/admin/admin-item-actions";
 import {
   AdminContentFilterBar,
   collectAdminFilterUsers,
@@ -159,6 +159,19 @@ export function SocialAnalyticsAdmin({
     });
   });
 
+  const handleDelete = (stat: SocialPlatformStat) => {
+    startTransition(async () => {
+      const result = await deleteSocialPlatformStatAction(stat.id);
+      if (!result.success) {
+        toast.error("error" in result && result.error ? result.error : "حذف نشد");
+        return;
+      }
+      setRows((prev) => prev.filter((row) => row.id !== stat.id));
+      toast.success("حذف شد");
+      router.refresh();
+    });
+  };
+
   return (
     <div className="space-y-4">
       {tutorialModal}
@@ -184,55 +197,53 @@ export function SocialAnalyticsAdmin({
         plans={contentPlans}
       />
 
-      <AdminDataTable
-        data={filteredRows}
-        searchKeys={["platform", "title", "profileUrl"]}
-        columns={[
-          {
-            key: "platform",
-            label: "کانال",
-            render: (item) => (
-              <div className="flex items-center gap-2">
-                <SocialPlatformIcon platform={item.platform} size="sm" />
-                <div className="min-w-0">
-                  <p className="truncate font-medium">{getSocialPlatformLabel(item.platform)}</p>
-                  {item.title?.trim() && (
-                    <p className="truncate text-xs text-muted-foreground">{item.title}</p>
-                  )}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        {filteredRows.map((item) => (
+          <Card key={item.id} className="overflow-hidden">
+            <CardContent className="space-y-4 p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-3">
+                  <SocialPlatformIcon platform={item.platform} size="lg" />
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold">{getSocialPlatformLabel(item.platform)}</p>
+                    {item.title?.trim() && (
+                      <p className="truncate text-xs text-muted-foreground">{item.title}</p>
+                    )}
+                    {isFullAdmin && item.ownerName ? (
+                      <p className="truncate text-xs text-muted-foreground">{item.ownerName}</p>
+                    ) : null}
+                  </div>
+                </div>
+                <AdminItemActions
+                  onView={() => {
+                    if (item.profileUrl?.trim()) window.open(item.profileUrl, "_blank");
+                    else openEdit(item);
+                  }}
+                  onEdit={() => openEdit(item)}
+                  onDelete={() => handleDelete(item)}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-lg bg-muted/50 p-3 text-center">
+                  <p className="text-xs text-muted-foreground">فالوور</p>
+                  <p className="text-xl font-bold">{formatPersianNumber(item.followers)}</p>
+                </div>
+                <div className="rounded-lg bg-muted/50 p-3 text-center">
+                  <p className="text-xs text-muted-foreground">پست</p>
+                  <p className="text-xl font-bold">{formatPersianNumber(item.posts)}</p>
                 </div>
               </div>
-            ),
-          },
-          ...(isFullAdmin ? [adminOwnerTableColumn<SocialPlatformStat>()] : []),
-          {
-            key: "followers",
-            label: "فالوور",
-            render: (item) => formatPersianNumber(item.followers),
-          },
-          {
-            key: "posts",
-            label: "پست",
-            render: (item) => formatPersianNumber(item.posts),
-          },
-        ]}
-        onView={(item) => {
-          if (item.profileUrl?.trim()) window.open(item.profileUrl, "_blank");
-          else openEdit(item);
-        }}
-        onEdit={openEdit}
-        onDelete={(item) => {
-          startTransition(async () => {
-            const result = await deleteSocialPlatformStatAction(item.id);
-            if (!result.success) {
-              toast.error("error" in result && result.error ? result.error : "حذف نشد");
-              return;
-            }
-            setRows((prev) => prev.filter((row) => row.id !== item.id));
-            toast.success("حذف شد");
-            router.refresh();
-          });
-        }}
-      />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {filteredRows.length === 0 && (
+        <div className="rounded-lg border px-4 py-8 text-center text-sm text-muted-foreground">
+          موردی یافت نشد.
+        </div>
+      )}
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>

@@ -49,7 +49,7 @@ import { videoNeedsAutoCover } from "@/lib/client/video-cover";
 import { isSitePublication } from "@/lib/social-posts";
 import { SocialPlatformIcon, getSocialPlatformLabel } from "@/components/public/social-platform-icon";
 import type { AdminUser, SocialContentType, SocialMediaPost, SocialPlatform } from "@/lib/types";
-import { cn, getStatusLabel } from "@/lib/utils";
+import { cn, formatPersianDate, formatPersianNumber, getStatusLabel } from "@/lib/utils";
 import { GenerateMissingVideoCoversButton } from "@/components/admin/generate-missing-video-covers-button";
 import {
   CONTENT_TITLE_MAX_LENGTH,
@@ -463,6 +463,33 @@ export function SocialPostsAdmin({
               {getStatusLabel(previewPost.platform)} · {previewPost.ownerName ?? "—"}
             </p>
           ) : null
+        }
+        details={
+          previewPost
+            ? [
+                { label: "تاریخ انتشار", value: formatPersianDate(previewPost.publishedDate) },
+                { label: "نوع محتوا", value: getStatusLabel(previewPost.contentType) },
+                {
+                  label: "برچسب‌ها",
+                  value: previewPost.planLabels?.length ? previewPost.planLabels.join("، ") : "—",
+                },
+                { label: "بازدید", value: formatPersianNumber(previewPost.views) },
+                { label: "لایک", value: formatPersianNumber(previewPost.likes) },
+                { label: "کامنت", value: formatPersianNumber(previewPost.comments) },
+                { label: "اشتراک‌گذاری", value: formatPersianNumber(previewPost.shares) },
+                {
+                  label: "لینک",
+                  value: previewPost.link ? (
+                    <a href={previewPost.link} target="_blank" rel="noreferrer" className="text-primary underline" dir="ltr">
+                      {previewPost.link}
+                    </a>
+                  ) : (
+                    "—"
+                  ),
+                },
+                { label: "امتیاز", value: previewPost.score ?? "—" },
+              ]
+            : []
         }
         onEdit={
           previewPost

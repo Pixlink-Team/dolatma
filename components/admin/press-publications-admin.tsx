@@ -36,6 +36,7 @@ import { useAdminInfiniteScroll } from "@/lib/hooks/use-admin-infinite-scroll";
 import { AdminInfiniteScrollSentinel } from "@/components/admin/admin-infinite-scroll-sentinel";
 import { todayISO } from "@/lib/jalali";
 import { isPressPublication } from "@/lib/press-publications";
+import { formatPersianDate } from "@/lib/utils";
 import type { ActivityMediaItem, AdminUser, CampaignActivity } from "@/lib/types";
 
 const ACTIVITY_VIDEO_MAX_BYTES = 50 * 1024 * 1024;
@@ -284,6 +285,25 @@ export function PressPublicationsAdmin({
               {previewActivity.location ? ` · ${previewActivity.location}` : ""}
             </p>
           ) : null
+        }
+        details={
+          previewActivity
+            ? [
+                { label: "تاریخ", value: formatPersianDate(previewActivity.activityDate) },
+                {
+                  label: "رسانه‌ها",
+                  value: previewActivity.mediaItems?.length
+                    ? `${previewActivity.mediaItems.length} مورد`
+                    : "—",
+                },
+                {
+                  label: "برچسب‌ها",
+                  value: previewActivity.planLabels?.length ? previewActivity.planLabels.join("، ") : "—",
+                },
+                { label: "مالک", value: previewActivity.ownerName ?? "—" },
+                { label: "امتیاز", value: previewActivity.score ?? "—" },
+              ]
+            : []
         }
         onEdit={
           previewActivity

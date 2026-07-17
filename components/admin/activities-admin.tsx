@@ -8,7 +8,7 @@ import {
   CONTENT_TITLE_MAX_LENGTH,
   CONTENT_TITLE_MAX_LENGTH_MESSAGE,
 } from "@/lib/content-constraints";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -50,7 +50,7 @@ import { AdminInfiniteScrollSentinel } from "@/components/admin/admin-infinite-s
 import { todayISO } from "@/lib/jalali";
 import { isPressPublication } from "@/lib/press-publications";
 import type { ActivityMediaItem, ActivityType, AdminUser, CampaignActivity } from "@/lib/types";
-import { cn } from "@/lib/utils";
+import { cn, formatPersianDate } from "@/lib/utils";
 
 const ACTIVITY_VIDEO_MAX_BYTES = 50 * 1024 * 1024;
 
@@ -108,6 +108,8 @@ export function ActivitiesAdmin({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [previewActivity, setPreviewActivity] = useState<CampaignActivity | null>(null);
   const [mediaItems, setMediaItems] = useState<ActivityMediaItem[]>([]);
+  const [isMediaDragging, setIsMediaDragging] = useState(false);
+  const [isBatchUploadingMedia, setIsBatchUploadingMedia] = useState(false);
   const [planLabels, setPlanLabels] = useState<string[]>([]);
   const [contentFilter, setContentFilter] = useState<AdminContentFilterState>(DEFAULT_ADMIN_CONTENT_FILTER);
   const { viewMode, setViewMode } = useAdminViewMode("activities");
@@ -243,6 +245,66 @@ export function ActivitiesAdmin({
       return;
     }
     setMediaItems((prev) => [...prev, { id: crypto.randomUUID(), type, url: "" }]);
+  };
+
+  const uploadMediaFiles = async (files: FileList | File[]) => {
+    const selectedFiles = Array.from(files);
+    if (selectedFiles.length === 0) return;
+
+    const availableSlots = MAX_MEDIA_ITEMS - mediaItems.length;
+    if (availableSlots <= 0) {
+      toast.error(`حداکثر ${MAX_MEDIA_ITEMS} فایل مجاز است`);
+      return;
+    }
+
+    const filesToUpload = selectedFiles.slice(0, availableSlots);
+    if (filesToUpload.length < selectedFiles.length) {
+      toast.warning(`فقط ${availableSlots} فایل اول اضافه شد`);
+    }
+
+    setIsBatchUploadingMedia(true);
+    try {
+      const uploadedItems: ActivityMediaItem[] = [];
+
+      for (const file of filesToUpload) {
+        const type: ActivityMediaItem["type"] = file.type.startsWith("video/")
+          ? "video"
+          : file.type.startsWith("audio/")
+            ? "audio"
+            : "image";
+
+        if (type === "video" && file.size > ACTIVITY_VIDEO_MAX_BYTES) {
+          toast.error(`حجم ویدیو ${file.name} بیشتر از حد مجاز است`);
+          continue;
+        }
+
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("kind", type === "video" ? "activity-video" : type);
+
+        const response = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!response.ok) {
+          const body = (await response.json().catch(() => null)) as { error?: string } | null;
+          throw new Error(body?.error ?? `آپلود ${file.name} ناموفق بود`);
+        }
+
+        const data = (await response.json()) as { url: string };
+        uploadedItems.push({ id: crypto.randomUUID(), type, url: data.url });
+      }
+
+      if (uploadedItems.length > 0) {
+        setMediaItems((prev) => [...prev, ...uploadedItems]);
+        toast.success(`${uploadedItems.length} رسانه اضافه شد`);
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "آپلود رسانه‌ها ناموفق بود");
+    } finally {
+      setIsBatchUploadingMedia(false);
+    }
   };
 
   const onSubmit = form.handleSubmit((data) => {
@@ -410,7 +472,7 @@ export function ActivitiesAdmin({
         open={Boolean(previewActivity)}
         onOpenChange={(open) => !open && setPreviewActivity(null)}
         title={previewActivity?.title ?? "نمایش اقدام"}
-        description={previewActivity?.location}
+        description={previewActivity?.description}
         imageUrl={
           previewActivity?.imageUrl ||
           previewActivity?.mediaItems?.find((item) => item.url)?.url ||
@@ -422,6 +484,25 @@ export function ActivitiesAdmin({
               {getActivityTypeLabel(previewActivity.activityType)} · {previewActivity.ownerName ?? "—"}
             </p>
           ) : null
+        }
+        details={
+          previewActivity
+            ? [
+                { label: "تاریخ", value: formatPersianDate(previewActivity.activityDate) },
+                { label: "مکان", value: previewActivity.location || "—" },
+                {
+                  label: "رسانه‌ها",
+                  value: previewActivity.mediaItems?.length
+                    ? `${previewActivity.mediaItems.length} مورد`
+                    : "—",
+                },
+                {
+                  label: "برچسب‌ها",
+                  value: previewActivity.planLabels?.length ? previewActivity.planLabels.join("، ") : "—",
+                },
+                { label: "امتیاز", value: previewActivity.score ?? "—" },
+              ]
+            : []
         }
         onEdit={
           previewActivity
@@ -525,6 +606,34 @@ export function ActivitiesAdmin({
                     + صوت
                   </Button>
                 </div>
+              </div>
+              <div
+                onDragOver={(event) => {
+                  event.preventDefault();
+                  setIsMediaDragging(true);
+                }}
+                onDragLeave={() => setIsMediaDragging(false)}
+                onDrop={(event) => {
+                  event.preventDefault();
+                  setIsMediaDragging(false);
+                  void uploadMediaFiles(event.dataTransfer.files);
+                }}
+                className={cn(
+                  "flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-5 text-center transition-colors",
+                  isMediaDragging && "border-primary bg-primary/5",
+                  isBatchUploadingMedia && "pointer-events-none opacity-60"
+                )}
+              >
+                <Upload className="h-7 w-7 text-muted-foreground" />
+                <div>
+                  <p className="text-sm font-medium">چند تصویر، فیلم یا صوت را اینجا بکشید و رها کنید</p>
+                  <p className="text-xs text-muted-foreground">
+                    فایل‌ها خودکار آپلود و به لیست رسانه‌ها اضافه می‌شوند.
+                  </p>
+                </div>
+                {isBatchUploadingMedia ? (
+                  <p className="text-xs text-muted-foreground">در حال آپلود رسانه‌ها...</p>
+                ) : null}
               </div>
               {mediaItems.map((item) => (
                 <div key={item.id} className="space-y-2 rounded-lg border p-3">

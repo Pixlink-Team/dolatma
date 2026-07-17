@@ -336,6 +336,18 @@ export function SitePublicationsAdmin({
             </div>
           ) : null
         }
+        details={
+          previewPost
+            ? [
+                {
+                  label: "برچسب‌ها",
+                  value: previewPost.planLabels?.length ? previewPost.planLabels.join("، ") : "—",
+                },
+                { label: "امتیاز", value: previewPost.score ?? "—" },
+                { label: "مالک", value: previewPost.ownerName ?? "—" },
+              ]
+            : []
+        }
         onEdit={
           previewPost
             ? () => {

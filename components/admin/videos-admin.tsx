@@ -402,6 +402,10 @@ export function VideosAdmin({
             title={previewVideo.title}
             versions={previewVersions}
             initialVersionId={display.id}
+            description={previewVideo.description}
+            category={initialCategories.find((category) => category.id === previewVideo.categoryId)?.title}
+            topics={previewVideo.planLabels ?? (previewVideo.planLabel ? [previewVideo.planLabel] : [])}
+            ownerName={previewVideo.ownerName}
           />
         );
       })()}

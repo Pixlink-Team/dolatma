@@ -1,39 +1,26 @@
 "use client";
 
-import type { CSSProperties, PointerEvent } from "react";
+import type { PointerEvent } from "react";
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { toast } from "sonner";
 import { Label } from "@/components/ui/label";
 import { createClient } from "@/lib/supabase/client";
 import { loginAdminAction } from "@/lib/actions/auth-actions";
 import { isSupabaseConfigured } from "@/lib/utils";
-import { Loader2, Zap } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
-type LoginMotionState = {
-  backgroundX: number;
-  backgroundY: number;
-  glareX: number;
-  glareY: number;
+type CardTiltState = {
   rotateX: number;
   rotateY: number;
 };
 
-type LoginSceneStyle = CSSProperties & {
-  "--login-bg-x": string;
-  "--login-bg-y": string;
-};
-
-const INITIAL_MOTION_STATE: LoginMotionState = {
-  backgroundX: 0,
-  backgroundY: 0,
-  glareX: 50,
-  glareY: 0,
+const INITIAL_TILT: CardTiltState = {
   rotateX: 0,
   rotateY: 0,
 };
 
-const MAX_BACKGROUND_OFFSET = 28;
-const MAX_CARD_ROTATION = 10;
+const MAX_CARD_ROTATION = 8;
 
 function getBoundedMotion(value: number, max: number) {
   return Math.max(-max, Math.min(max, value));
@@ -55,14 +42,14 @@ export function AdminLoginForm() {
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [motionEnabled, setMotionEnabled] = useState(false);
-  const [motion, setMotion] = useState<LoginMotionState>(INITIAL_MOTION_STATE);
+  const [tilt, setTilt] = useState<CardTiltState>(INITIAL_TILT);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(pointer: fine)");
     const syncMotionPreference = () => {
       setMotionEnabled(mediaQuery.matches);
       if (!mediaQuery.matches) {
-        setMotion(INITIAL_MOTION_STATE);
+        setTilt(INITIAL_TILT);
       }
     };
 
@@ -71,45 +58,21 @@ export function AdminLoginForm() {
     return () => mediaQuery.removeEventListener("change", syncMotionPreference);
   }, []);
 
-  const handleScenePointerMove = (event: PointerEvent<HTMLElement>) => {
-    if (!motionEnabled || event.pointerType !== "mouse") return;
-
-    const viewportX = event.clientX / window.innerWidth - 0.5;
-    const viewportY = event.clientY / window.innerHeight - 0.5;
-
-    setMotion((current) => ({
-      ...current,
-      backgroundX: getBoundedMotion(viewportX * MAX_BACKGROUND_OFFSET * 2, MAX_BACKGROUND_OFFSET),
-      backgroundY: getBoundedMotion(viewportY * MAX_BACKGROUND_OFFSET * 2, MAX_BACKGROUND_OFFSET),
-    }));
-  };
-
   const handleCardPointerMove = (event: PointerEvent<HTMLElement>) => {
     if (!motionEnabled || event.pointerType !== "mouse") return;
 
     const rect = event.currentTarget.getBoundingClientRect();
     const relativeX = (event.clientX - rect.left) / rect.width;
     const relativeY = (event.clientY - rect.top) / rect.height;
-    const rotateY = (relativeX - 0.5) * MAX_CARD_ROTATION * 2;
-    const rotateX = -(relativeY - 0.5) * MAX_CARD_ROTATION * 2;
 
-    setMotion((current) => ({
-      ...current,
-      glareX: relativeX * 100,
-      glareY: relativeY * 100,
-      rotateX: getBoundedMotion(rotateX, MAX_CARD_ROTATION),
-      rotateY: getBoundedMotion(rotateY, MAX_CARD_ROTATION),
-    }));
+    setTilt({
+      rotateY: getBoundedMotion((relativeX - 0.5) * MAX_CARD_ROTATION * 2, MAX_CARD_ROTATION),
+      rotateX: getBoundedMotion(-(relativeY - 0.5) * MAX_CARD_ROTATION * 2, MAX_CARD_ROTATION),
+    });
   };
 
-  const resetCardMotion = () => {
-    setMotion((current) => ({
-      ...current,
-      glareX: INITIAL_MOTION_STATE.glareX,
-      glareY: INITIAL_MOTION_STATE.glareY,
-      rotateX: INITIAL_MOTION_STATE.rotateX,
-      rotateY: INITIAL_MOTION_STATE.rotateY,
-    }));
+  const resetCardTilt = () => {
+    setTilt(INITIAL_TILT);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -140,56 +103,45 @@ export function AdminLoginForm() {
     }
   };
 
-  const sceneStyle: LoginSceneStyle = {
-    "--login-bg-x": `${motion.backgroundX}px`,
-    "--login-bg-y": `${motion.backgroundY}px`,
-  };
-
   return (
     <main
       className="dark relative isolate flex min-h-[100dvh] items-center justify-center overflow-hidden bg-slate-950 px-4 py-8 text-white"
       dir="rtl"
-      style={sceneStyle}
-      onPointerMove={handleScenePointerMove}
     >
       <div
-        className="pointer-events-none absolute -inset-8 -z-30 scale-105 bg-cover bg-center saturate-[1.18] transition-transform duration-300 ease-out motion-reduce:transform-none"
-        style={{
-          backgroundImage: "url('/images/login-bg.png')",
-          transform: "translate3d(var(--login-bg-x), var(--login-bg-y), 0)",
-        }}
+        className="pointer-events-none absolute inset-0 -z-10 bg-cover bg-center"
+        style={{ backgroundImage: "url('/images/login-bg.png')" }}
       />
-      <div className="pointer-events-none absolute inset-0 -z-20 bg-gradient-to-b from-black/35 via-slate-950/24 to-black/78" />
-      <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(2,6,23,0.18)_42%,rgba(0,0,0,0.76)_100%)]" />
 
-      <div className="w-full max-w-[460px]">
+      <div className="w-full max-w-[460px]" style={{ perspective: "1100px" }}>
         <section
-          className="group relative overflow-hidden rounded-[32px] border border-white/20 bg-white/[0.02] p-6 shadow-[0_32px_90px_rgba(0,0,0,0.58)] backdrop-blur-3xl backdrop-saturate-200 transition-transform duration-200 ease-out [transform-style:preserve-3d] md:p-7"
+          className="relative overflow-hidden rounded-[32px] border border-white/35 bg-white/[0.08] p-6 shadow-[0_24px_70px_rgba(0,0,0,0.28)] backdrop-blur-[48px] backdrop-saturate-150 transition-transform duration-150 ease-out will-change-transform md:p-7"
           style={{
             transform: motionEnabled
-              ? `perspective(1000px) rotateX(${motion.rotateX}deg) rotateY(${motion.rotateY}deg)`
+              ? `rotateX(${tilt.rotateX}deg) rotateY(${tilt.rotateY}deg)`
               : undefined,
           }}
           onPointerMove={handleCardPointerMove}
-          onPointerLeave={resetCardMotion}
+          onPointerLeave={resetCardTilt}
         >
-          <div className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-white/75 to-transparent" />
-          <div
-            className="pointer-events-none absolute -inset-16 opacity-0 mix-blend-screen transition-opacity duration-200 group-hover:opacity-100"
-            style={{
-              background: `radial-gradient(circle at ${motion.glareX}% ${motion.glareY}%, rgba(255,255,255,0.32), rgba(255,255,255,0.12) 13%, transparent 34%)`,
-            }}
-          />
+          <div className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-white/80 to-transparent" />
 
           <div className="relative">
             <header className="mb-8 flex items-center gap-4 [text-shadow:0_2px_18px_rgba(0,0,0,0.7)]">
-              <div className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl border border-white/20 bg-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.32)] backdrop-blur-2xl">
-                <Zap className="h-7 w-7 text-white drop-shadow-[0_2px_10px_rgba(255,255,255,0.26)]" aria-hidden />
+              <div className="h-14 w-14 shrink-0 overflow-hidden rounded-full border border-white/40 shadow-[0_8px_24px_rgba(0,0,0,0.28)]">
+                <Image
+                  src="/images/logo-tavanir.png"
+                  alt="لوگوی توانیر"
+                  width={56}
+                  height={56}
+                  className="h-full w-full object-cover"
+                  priority
+                />
               </div>
               <div className="min-w-0">
-                <p className="text-sm font-medium text-white/68">ورود به سامانه</p>
+                <p className="text-sm font-medium text-white/80">ورود به سامانه</p>
                 <h1 className="mt-1 text-2xl font-bold tracking-tight text-white">داشبورد گزارش زنده کمپین</h1>
-                <p className="mt-1 text-sm text-white/72">مدیریت امن گزارش‌ها و محتوای کمپین</p>
+                <p className="mt-1 text-sm text-white/78">مدیریت امن گزارش‌ها و محتوای کمپین</p>
               </div>
             </header>
 
@@ -210,7 +162,7 @@ export function AdminLoginForm() {
                   required
                   dir="ltr"
                   autoComplete="username"
-                  className="h-[52px] w-full rounded-2xl border border-white/18 bg-white/[0.07] px-4 py-3 text-left text-base text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] outline-none backdrop-blur-xl transition placeholder:text-white/38 focus:border-white/36 focus:bg-white/[0.1] focus:ring-4 focus:ring-[#0A84FF]/20"
+                  className="h-[52px] w-full rounded-2xl border border-white/30 bg-white/10 px-4 py-3 text-left text-base text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18)] outline-none backdrop-blur-md transition placeholder:text-white/45 focus:border-white/50 focus:bg-white/14 focus:ring-4 focus:ring-[#0A84FF]/20"
                 />
               </div>
 
@@ -230,12 +182,12 @@ export function AdminLoginForm() {
                   minLength={4}
                   placeholder="رمز عبور خود را وارد کنید"
                   autoComplete="current-password"
-                  className="h-[52px] w-full rounded-2xl border border-white/18 bg-white/[0.07] px-4 py-3 text-right text-base text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] outline-none backdrop-blur-xl transition placeholder:text-white/38 focus:border-white/36 focus:bg-white/[0.1] focus:ring-4 focus:ring-[#0A84FF]/20"
+                  className="h-[52px] w-full rounded-2xl border border-white/30 bg-white/10 px-4 py-3 text-right text-base text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18)] outline-none backdrop-blur-md transition placeholder:text-white/45 focus:border-white/50 focus:bg-white/14 focus:ring-4 focus:ring-[#0A84FF]/20"
                 />
               </div>
 
               {errorMessage ? (
-                <p className="rounded-2xl border border-red-300/20 bg-red-500/14 px-4 py-3 text-sm text-red-50 shadow-[0_10px_30px_rgba(127,29,29,0.18)] backdrop-blur-xl [text-shadow:0_2px_10px_rgba(0,0,0,0.62)]">
+                <p className="rounded-2xl border border-red-300/25 bg-red-500/18 px-4 py-3 text-sm text-red-50 shadow-[0_10px_30px_rgba(127,29,29,0.18)] backdrop-blur-xl [text-shadow:0_2px_10px_rgba(0,0,0,0.62)]">
                   {errorMessage}
                 </p>
               ) : null}
@@ -256,7 +208,7 @@ export function AdminLoginForm() {
               </button>
             </form>
 
-            <p className="mt-6 text-center text-xs text-white/58 [text-shadow:0_2px_14px_rgba(0,0,0,0.82)]">
+            <p className="mt-6 text-center text-xs text-white/70 [text-shadow:0_2px_14px_rgba(0,0,0,0.82)]">
               سامانه مدیریت گزارش زنده کمپین
             </p>
           </div>

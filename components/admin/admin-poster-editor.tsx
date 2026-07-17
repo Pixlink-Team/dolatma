@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Trash2 } from "lucide-react";
+import { ImageIcon, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -159,20 +159,37 @@ export function AdminPosterEditor({
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div ref={scrollAreaRef} className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-y-contain pr-1">
-        <div
-          className={cn(
-            "relative mx-auto aspect-[3/4] max-h-80 w-full max-w-xs overflow-hidden rounded-xl bg-muted",
-            highlightMedia && "ring-2 ring-destructive ring-offset-2"
-          )}
-        >
-          <MediaThumbnail
-            src={imageUrl || null}
-            alt={editTitle}
-            kind="poster"
-            sizes="320px"
-            objectFit="contain"
-          />
-        </div>
+        <MediaUpload
+          label="تصویر پوستر"
+          value={imageUrl}
+          onChange={setImageUrl}
+          showPreview={false}
+          showLinkInput={false}
+          dropzoneContent={
+            <div
+              className={cn(
+                "relative mx-auto aspect-[3/4] max-h-80 w-full max-w-xs overflow-hidden rounded-xl bg-muted",
+                highlightMedia && "ring-2 ring-destructive ring-offset-2"
+              )}
+            >
+              {imageUrl ? (
+                <MediaThumbnail
+                  src={imageUrl}
+                  alt={editTitle}
+                  kind="poster"
+                  sizes="320px"
+                  objectFit="contain"
+                />
+              ) : (
+                <div className="flex h-full flex-col items-center justify-center gap-2 text-sm text-muted-foreground">
+                  <ImageIcon className="h-8 w-8" />
+                  <span>بدون تصویر</span>
+                  <span className="text-xs">تصویر پوستر را اینجا بکشید و رها کنید</span>
+                </div>
+              )}
+            </div>
+          }
+        />
 
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 space-y-3">
@@ -220,16 +237,9 @@ export function AdminPosterEditor({
                 onScoreSaved={setEditScore}
               />
             )}
-            <div
-              className={cn(
-                highlightMedia && "rounded-lg border border-destructive bg-destructive/5 p-3"
-              )}
-            >
-              <MediaUpload label="تصویر" value={imageUrl} onChange={setImageUrl} />
-              {highlightMedia && (
-                <p className="mt-2 text-xs text-destructive">تصویر پوستر هنوز آپلود نشده است.</p>
-              )}
-            </div>
+            {highlightMedia && (
+              <p className="text-xs text-destructive">تصویر پوستر هنوز آپلود نشده است.</p>
+            )}
             <div>
               <Label>یادداشت (اختیاری)</Label>
               <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
