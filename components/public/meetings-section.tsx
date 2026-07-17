@@ -26,6 +26,7 @@ import {
 } from "@/lib/client/meetings-unlock-storage";
 import type { DataOwnerGroup, MeetingPublicDetail, MeetingPublicPreview } from "@/lib/types";
 import { formatPersianDate } from "@/lib/utils";
+import { PublicOwnerTag } from "@/components/public/public-owner-tag";
 
 const MEETINGS_ITEMS_PER_ROW = 4;
 const MEETINGS_GRID_CLASS = "grid grid-cols-2 md:grid-cols-4 gap-4";
@@ -64,7 +65,10 @@ function MeetingPreviewCard({
 
       <CardContent className="p-4 flex flex-col gap-3 flex-1">
         <div className="space-y-1">
-          <h3 className="font-semibold text-sm line-clamp-2">{meeting.title}</h3>
+          <div className="flex flex-wrap items-start gap-1.5">
+            <h3 className="font-semibold text-sm line-clamp-2">{meeting.title}</h3>
+            <PublicOwnerTag ownerUserId={meeting.ownerUserId} ownerName={meeting.ownerName} />
+          </div>
           <p className="text-xs text-muted-foreground">{formatPersianDate(meeting.meetingDate)}</p>
         </div>
 

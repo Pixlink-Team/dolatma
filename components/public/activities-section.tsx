@@ -18,6 +18,7 @@ import { CollapsibleSection } from "@/components/public/collapsible-section";
 import { OwnerGroupedSection } from "@/components/public/owner-grouped-section";
 import { SectionTopCompaniesBox } from "@/components/public/section-top-companies-box";
 import { ActivityMediaDialog } from "@/components/public/activity-media-dialog";
+import { PublicOwnerTag } from "@/components/public/public-owner-tag";
 import { PUBLIC_MEDIA_GRID_CLASS } from "@/lib/public-media-section";
 import { VideoThumbnail } from "@/components/media/video-thumbnail";
 import { cn } from "@/lib/utils";
@@ -104,7 +105,10 @@ function ActivityCard({
       </button>
 
       <CardContent className="space-y-1 p-2.5">
-        <h3 className="line-clamp-2 text-xs font-semibold leading-snug">{activity.title}</h3>
+        <div className="flex flex-wrap items-start gap-1">
+          <h3 className="line-clamp-2 text-xs font-semibold leading-snug">{activity.title}</h3>
+          <PublicOwnerTag ownerUserId={activity.ownerUserId} ownerName={activity.ownerName} />
+        </div>
         <p className="text-[10px] text-muted-foreground">{formatPersianDate(activity.activityDate)}</p>
         {activity.location && (
           <p className="inline-flex items-center gap-1 text-[10px] text-muted-foreground">

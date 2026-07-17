@@ -151,6 +151,8 @@ export function PostersSection({ categories: _categories, posters, groups }: Pos
                     description={poster.description}
                     versions={poster.versions}
                     score={poster.score}
+                    ownerUserId={poster.ownerUserId}
+                    ownerName={poster.ownerName}
                   />
                 ))}
               </div>

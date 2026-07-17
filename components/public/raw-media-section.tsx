@@ -13,6 +13,7 @@ import { useOwnerLocationFilter } from "@/lib/context/owner-location-filter-cont
 import { ShowMoreButton } from "@/components/public/show-more-button";
 import { useSectionPagination } from "@/lib/hooks/use-section-pagination";
 import { formatStorageBytes } from "@/lib/raw-media-storage";
+import { PublicOwnerTag } from "@/components/public/public-owner-tag";
 import type { DataOwnerGroup, RawMediaStorageSummary, RawMediaUpload } from "@/lib/types";
 import { formatPersianDateTime, formatPersianNumber } from "@/lib/utils";
 
@@ -39,7 +40,10 @@ function RawMediaList({ items }: { items: RawMediaUpload[] }) {
                 <Icon className="h-5 w-5 text-primary" />
               </div>
               <div className="min-w-0">
-                <p className="font-medium">{item.title}</p>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <p className="font-medium">{item.title}</p>
+                  <PublicOwnerTag ownerUserId={item.ownerUserId} ownerName={item.ownerName} />
+                </div>
                 {item.description && (
                   <p className="mt-1 text-sm text-muted-foreground">{item.description}</p>
                 )}

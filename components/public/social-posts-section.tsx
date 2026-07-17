@@ -19,6 +19,7 @@ import { flattenOwnerGroupsInSortOrder, shouldRenderChronologically } from "@/li
 import { useOwnerLocationFilter } from "@/lib/context/owner-location-filter-context";
 import { isDirectAudioUrl, isDirectVideoUrl, resolveAbsoluteMediaUrl } from "@/lib/media-utils";
 import { ShowMoreButton } from "@/components/public/show-more-button";
+import { PublicOwnerTag } from "@/components/public/public-owner-tag";
 
 interface SocialPostsSectionProps {
   posts: SocialMediaPost[];
@@ -127,7 +128,10 @@ function SocialPostCard({ post }: { post: SocialMediaPost }) {
       </div>
 
       <CardContent className="space-y-1 p-2.5">
-        <h3 className="line-clamp-2 text-xs font-semibold leading-snug">{titleContent}</h3>
+        <div className="flex flex-wrap items-start gap-1">
+          <h3 className="line-clamp-2 text-xs font-semibold leading-snug">{titleContent}</h3>
+          <PublicOwnerTag ownerUserId={post.ownerUserId} ownerName={post.ownerName} />
+        </div>
         <p className="text-[10px] text-muted-foreground">{formatPersianDate(post.publishedDate)}</p>
         <div className="grid grid-cols-2 gap-x-2 gap-y-0.5 text-[10px] text-muted-foreground">
           <span>بازدید: {formatPersianNumber(post.views)}</span>

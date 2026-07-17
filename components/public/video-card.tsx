@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { VideoModal } from "@/components/media/video-modal";
 import { VideoThumbnail } from "@/components/media/video-thumbnail";
 import { ContentScoreControl } from "@/components/admin/content-score-control";
+import { PublicOwnerTag } from "@/components/public/public-owner-tag";
 import { useContentScoreAccess } from "@/lib/context/content-score-context";
 import type { VideoVersion } from "@/lib/types";
 import { downloadMedia, getFilenameFromUrl, hasDistinctThumbnail, resolveDisplayVersion } from "@/lib/media-utils";
@@ -20,6 +21,8 @@ interface VideoCardProps {
   description?: string | null;
   versions: VideoVersion[];
   score?: number | null;
+  ownerUserId?: string | null;
+  ownerName?: string | null;
 }
 
 export function VideoCard({
@@ -29,6 +32,8 @@ export function VideoCard({
   description,
   versions,
   score,
+  ownerUserId,
+  ownerName,
 }: VideoCardProps) {
   const { canScore, campaignId: scoreCampaignId } = useContentScoreAccess();
   const [expanded, setExpanded] = useState(false);
@@ -110,7 +115,10 @@ export function VideoCard({
 
         <CardContent className="p-4 space-y-3">
           <div>
-            <h3 className="font-semibold">{title}</h3>
+            <div className="flex flex-wrap items-start gap-1.5">
+              <h3 className="font-semibold">{title}</h3>
+              <PublicOwnerTag ownerUserId={ownerUserId} ownerName={ownerName} />
+            </div>
             {description && <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{description}</p>}
           </div>
           <div className="flex items-center justify-between text-xs text-muted-foreground">

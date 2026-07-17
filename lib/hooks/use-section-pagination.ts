@@ -2,15 +2,16 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useCampaignExportMode } from "@/lib/context/campaign-export-context";
+import { PUBLIC_MEDIA_PAGE_SIZE } from "@/lib/public-media-section";
 
 export function useSectionPagination(
   totalCount: number,
-  itemsPerRow: number,
-  maxRows = 3,
+  _itemsPerRow?: number,
+  _maxRows?: number,
   resetKey = ""
 ) {
   const exportMode = useCampaignExportMode();
-  const pageSize = itemsPerRow * maxRows;
+  const pageSize = PUBLIC_MEDIA_PAGE_SIZE;
   const [visibleCount, setVisibleCount] = useState(pageSize);
 
   useEffect(() => {

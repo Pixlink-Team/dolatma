@@ -10,6 +10,7 @@ import { LightboxModal } from "@/components/media/lightbox-modal";
 import { MediaPlaceholder } from "@/components/ui/media-placeholder";
 import { ImageZoom } from "@/components/ui/image-zoom";
 import { ContentScoreControl } from "@/components/admin/content-score-control";
+import { PublicOwnerTag } from "@/components/public/public-owner-tag";
 import { useContentScoreAccess } from "@/lib/context/content-score-context";
 import type { PosterVersion } from "@/lib/types";
 import { downloadMedia, getFilenameFromUrl, resolveDisplayVersion } from "@/lib/media-utils";
@@ -22,6 +23,8 @@ interface PosterCardProps {
   description?: string | null;
   versions: PosterVersion[];
   score?: number | null;
+  ownerUserId?: string | null;
+  ownerName?: string | null;
 }
 
 export function PosterCard({
@@ -31,6 +34,8 @@ export function PosterCard({
   description,
   versions,
   score,
+  ownerUserId,
+  ownerName,
 }: PosterCardProps) {
   const { canScore, campaignId: scoreCampaignId } = useContentScoreAccess();
   const [expanded, setExpanded] = useState(false);
@@ -88,7 +93,10 @@ export function PosterCard({
 
         <CardContent className="p-4 pt-4 space-y-3">
           <div>
-            <h3 className="font-semibold">{title}</h3>
+            <div className="flex flex-wrap items-start gap-1.5">
+              <h3 className="font-semibold">{title}</h3>
+              <PublicOwnerTag ownerUserId={ownerUserId} ownerName={ownerName} />
+            </div>
             {description && (
               <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{description}</p>
             )}

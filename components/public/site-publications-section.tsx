@@ -15,6 +15,7 @@ import { ShowMoreButton } from "@/components/public/show-more-button";
 import { useSectionPagination } from "@/lib/hooks/use-section-pagination";
 import { Badge } from "@/components/ui/badge";
 import { ImageZoom } from "@/components/ui/image-zoom";
+import { PublicOwnerTag } from "@/components/public/public-owner-tag";
 
 const PUBLICATIONS_ITEMS_PER_ROW = 1;
 
@@ -50,6 +51,7 @@ function PublicationList({ items }: { items: SocialMediaPost[] }) {
                 <Globe className="h-3.5 w-3.5" />
                 منتشرشده در سایت
               </Badge>
+              <PublicOwnerTag ownerUserId={item.ownerUserId} ownerName={item.ownerName} />
               <span className="text-sm text-muted-foreground">{formatPersianDate(item.publishedDate)}</span>
             </div>
 

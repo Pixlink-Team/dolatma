@@ -7,6 +7,7 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { ImageZoom } from "@/components/ui/image-zoom";
 import { ContentScoreControl } from "@/components/admin/content-score-control";
 import { BillboardThumbnail } from "@/components/public/billboard-thumbnail";
+import { PublicOwnerTag } from "@/components/public/public-owner-tag";
 import { useContentScoreAccess } from "@/lib/context/content-score-context";
 import { resolveBillboardCategoryDisplay } from "@/lib/billboard-categories";
 import {
@@ -72,7 +73,10 @@ export function BillboardCard({ billboard, onView }: BillboardCardProps) {
       </div>
 
       <CardContent className="flex flex-1 flex-col space-y-3 p-4">
-        <h3 className="line-clamp-2 min-h-[2.5rem] font-semibold leading-tight">{billboard.title}</h3>
+        <div className="flex flex-wrap items-start gap-1.5">
+          <h3 className="line-clamp-2 min-h-[2.5rem] font-semibold leading-tight">{billboard.title}</h3>
+          <PublicOwnerTag ownerUserId={billboard.ownerUserId} ownerName={billboard.ownerName} />
+        </div>
 
         {categoryLabel && (
           <div className="flex flex-wrap gap-1.5">

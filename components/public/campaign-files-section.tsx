@@ -12,6 +12,7 @@ import { flattenOwnerGroupsInSortOrder, shouldRenderChronologically } from "@/li
 import { useOwnerLocationFilter } from "@/lib/context/owner-location-filter-context";
 import { ShowMoreButton } from "@/components/public/show-more-button";
 import { useSectionPagination } from "@/lib/hooks/use-section-pagination";
+import { PublicOwnerTag } from "@/components/public/public-owner-tag";
 import type { CampaignFile, DataOwnerGroup } from "@/lib/types";
 import { formatPersianNumber } from "@/lib/utils";
 
@@ -37,7 +38,10 @@ function FileList({ files }: { files: CampaignFile[] }) {
                 <Icon className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <p className="font-medium">{file.title}</p>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <p className="font-medium">{file.title}</p>
+                  <PublicOwnerTag ownerUserId={file.ownerUserId} ownerName={file.ownerName} />
+                </div>
                 {file.description && (
                   <p className="mt-1 text-sm text-muted-foreground">{file.description}</p>
                 )}

@@ -158,6 +158,8 @@ export function VideosSection({ categories: _categories, videos, groups }: Video
                     description={video.description}
                     versions={video.versions}
                     score={video.score}
+                    ownerUserId={video.ownerUserId}
+                    ownerName={video.ownerName}
                   />
                 ))}
               </div>

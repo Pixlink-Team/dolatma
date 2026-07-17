@@ -21,6 +21,7 @@ import { groupByOwner, shouldRenderChronologically } from "@/lib/owner-groups";
 import { SOCIAL_ANALYTICS_PAGE_SIZE } from "@/lib/public-media-section";
 import type { SocialAnalyticsSummary, SocialPlatformStat } from "@/lib/types";
 import { formatPersianNumber } from "@/lib/utils";
+import { PublicOwnerTag } from "@/components/public/public-owner-tag";
 
 interface SocialAnalyticsSectionProps {
   analytics: SocialAnalyticsSummary;
@@ -35,7 +36,10 @@ function PlatformStatCard({ platform }: { platform: SocialPlatformStat }) {
           <div className="flex items-center gap-3">
             <SocialPlatformIcon platform={platform.platform} size="lg" />
             <div>
-              <h3 className="font-semibold">{getSocialPlatformLabel(platform.platform)}</h3>
+              <div className="flex flex-wrap items-center gap-1.5">
+                <h3 className="font-semibold">{getSocialPlatformLabel(platform.platform)}</h3>
+                <PublicOwnerTag ownerUserId={platform.ownerUserId} ownerName={platform.ownerName} />
+              </div>
               {platform.title?.trim() && (
                 <p className="text-sm text-muted-foreground">{platform.title}</p>
               )}

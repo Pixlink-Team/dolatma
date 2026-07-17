@@ -14,6 +14,7 @@ import { ShowMoreButton } from "@/components/public/show-more-button";
 import { useSectionPagination } from "@/lib/hooks/use-section-pagination";
 import { Button } from "@/components/ui/button";
 import { Download, FileText } from "lucide-react";
+import { PublicOwnerTag } from "@/components/public/public-owner-tag";
 
 const BROADCAST_ITEMS_PER_ROW = 1;
 
@@ -28,9 +29,10 @@ function BroadcastReportCard({ report }: { report: BroadcastReport }) {
   return (
     <article className="rounded-xl border bg-card p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
       <div className="space-y-2">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <FileText className="h-4 w-4 text-primary" />
           <h3 className="font-semibold">{report.title}</h3>
+          <PublicOwnerTag ownerUserId={report.ownerUserId} ownerName={report.ownerName} />
         </div>
         <p className="text-sm text-muted-foreground">{formatPersianDate(report.reportDate)}</p>
         {summaryData.notes && (

@@ -3,6 +3,9 @@ export const PUBLIC_MEDIA_GRID_CLASS =
 
 export const PUBLIC_MEDIA_MAX_ROWS = 2;
 
+/** Initial / load-more page size for all public campaign sections. */
+export const PUBLIC_MEDIA_PAGE_SIZE = 9;
+
 export function getPublicMediaColumnCount(width: number): number {
   if (width >= 1280) return 6;
   if (width >= 1024) return 5;
@@ -11,16 +14,13 @@ export function getPublicMediaColumnCount(width: number): number {
   return 2;
 }
 
-export function getPublicMediaPageSize(width: number): number {
-  return getPublicMediaColumnCount(width) * PUBLIC_MEDIA_MAX_ROWS;
+export function getPublicMediaPageSize(): number {
+  return PUBLIC_MEDIA_PAGE_SIZE;
 }
 
-/** @deprecated Use getPublicMediaPageSize(width) for viewport-aware sizing */
-export const PUBLIC_MEDIA_PAGE_SIZE = 18;
-
-export const PUBLIC_MEDIA_MOBILE_INITIAL = 6;
-export const PUBLIC_MEDIA_MOBILE_PAGE_SIZE = 6;
-export const SOCIAL_ANALYTICS_PAGE_SIZE = 6;
+export const PUBLIC_MEDIA_MOBILE_INITIAL = PUBLIC_MEDIA_PAGE_SIZE;
+export const PUBLIC_MEDIA_MOBILE_PAGE_SIZE = PUBLIC_MEDIA_PAGE_SIZE;
+export const SOCIAL_ANALYTICS_PAGE_SIZE = PUBLIC_MEDIA_PAGE_SIZE;
 export const PUBLIC_MEDIA_MOBILE_QUERY = "(max-width: 639px)";
 
 export function posterHasDisplayContent(poster: { versions: { imageUrl?: string | null }[] }): boolean {

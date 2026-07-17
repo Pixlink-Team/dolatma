@@ -16,6 +16,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import type { CampaignSubmission, DataOwnerGroup, SubmissionSummary } from "@/lib/types";
 import { formatPersianDate, getStatusLabel } from "@/lib/utils";
 import { CheckCircle, Clock, FileText, Users, XCircle } from "lucide-react";
+import { PublicOwnerTag } from "@/components/public/public-owner-tag";
 
 const SUBMISSIONS_ITEMS_PER_ROW = 4;
 
@@ -46,6 +47,7 @@ function SubmissionCards({ submissions }: { submissions: CampaignSubmission[] })
               <h3 className="font-semibold text-sm line-clamp-2">{sub.title}</h3>
               <Badge status={sub.status}>{getStatusLabel(sub.status)}</Badge>
             </div>
+            <PublicOwnerTag ownerUserId={sub.ownerUserId} ownerName={sub.ownerName} />
             <p className="text-xs text-muted-foreground">{sub.submissionType}</p>
             <p className="text-sm line-clamp-2">{sub.text}</p>
             <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t">

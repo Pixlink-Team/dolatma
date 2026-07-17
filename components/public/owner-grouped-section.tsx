@@ -1,6 +1,4 @@
 import type { DataOwnerGroup } from "@/lib/types";
-import { hasUserOwnedGroups } from "@/lib/owner-groups";
-import { Badge } from "@/components/ui/badge";
 
 interface OwnerGroupedSectionProps<T> {
   groups: DataOwnerGroup<T>[];
@@ -12,102 +10,22 @@ interface OwnerGroupedSectionProps<T> {
   flatItems?: T[] | null;
 }
 
-function GroupHeader({
-  label,
-  count,
-  province,
-  city,
-  variant = "outline",
-}: {
-  label: string;
-  count: number;
-  province?: string | null;
-  city?: string | null;
-  variant?: "outline" | "secondary";
-}) {
-  const location =
-    province && city ? `${province} — ${city}` : province ? province : city ? city : null;
-
-  return (
-    <div className="flex flex-wrap items-center gap-2">
-      <Badge variant={variant}>{label}</Badge>
-      {location && <span className="text-xs text-muted-foreground">{location}</span>}
-      <span className="text-xs text-muted-foreground">{count} مورد</span>
-    </div>
-  );
-}
-
-function UserContentDivider() {
-  return (
-    <div className="relative py-2" role="separator" aria-label="محتوای کاربران">
-      <div className="absolute inset-0 flex items-center">
-        <span className="w-full border-t" />
-      </div>
-      <div className="relative flex justify-center">
-        <span className="bg-background px-4 text-sm font-medium text-muted-foreground">
-          محتوای کاربران
-        </span>
-      </div>
-    </div>
-  );
-}
-
+/**
+ * Renders all items in a single flat list (no per-user group headers).
+ * Owner identity is shown as a tag on each card instead.
+ */
 export function OwnerGroupedSection<T>({ groups, children, flatItems }: OwnerGroupedSectionProps<T>) {
-  if (flatItems) {
-    if (flatItems.length === 0) return null;
-    const flatGroup: DataOwnerGroup<T> = {
-      ownerKey: "chronological",
-      ownerLabel: "",
-      ownerUserId: null,
-      ownerProvince: null,
-      ownerCity: null,
-      items: flatItems,
-    };
-    return <>{children(flatItems, flatGroup)}</>;
-  }
+  const items = flatItems ?? groups.flatMap((group) => group.items);
+  if (items.length === 0) return null;
 
-  if (groups.length === 0) return null;
+  const flatGroup: DataOwnerGroup<T> = {
+    ownerKey: "all",
+    ownerLabel: "",
+    ownerUserId: null,
+    ownerProvince: null,
+    ownerCity: null,
+    items,
+  };
 
-  const adminGroups = groups.filter((group) => group.ownerUserId === null);
-  const userGroups = groups.filter((group) => group.ownerUserId !== null);
-  const showUserDivider = adminGroups.length > 0 && userGroups.length > 0;
-  const showGroupHeaders = hasUserOwnedGroups(groups);
-
-  if (!showGroupHeaders) {
-    const onlyGroup = groups[0];
-    return onlyGroup ? <>{children(onlyGroup.items, onlyGroup)}</> : null;
-  }
-
-  return (
-    <div className="space-y-8">
-      {adminGroups.map((group) => (
-        <div key={group.ownerKey} className="space-y-4">
-          {showUserDivider && (
-            <GroupHeader
-              label={group.ownerLabel}
-              count={group.items.length}
-              province={group.ownerProvince}
-              city={group.ownerCity}
-              variant="secondary"
-            />
-          )}
-          {children(group.items, group)}
-        </div>
-      ))}
-
-      {showUserDivider && <UserContentDivider />}
-
-      {userGroups.map((group) => (
-        <div key={group.ownerKey} className="space-y-4">
-          <GroupHeader
-            label={group.ownerLabel}
-            count={group.items.length}
-            province={group.ownerProvince}
-            city={group.ownerCity}
-          />
-          {children(group.items, group)}
-        </div>
-      ))}
-    </div>
-  );
+  return <>{children(items, flatGroup)}</>;
 }
