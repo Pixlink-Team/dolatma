@@ -111,7 +111,7 @@ export function AdminLoginForm() {
 
       <div className="w-full max-w-[460px]" style={{ perspective: "1100px" }}>
         <section
-          className="relative overflow-hidden rounded-[32px] border border-white/35 bg-white/[0.08] p-6 shadow-[0_24px_70px_rgba(0,0,0,0.28)] backdrop-blur-[19px] backdrop-saturate-150 transition-transform duration-150 ease-out will-change-transform md:p-7"
+          className="relative overflow-hidden rounded-[32px] border border-white/35 bg-white/[0.08] p-6 shadow-[0_24px_70px_rgba(0,0,0,0.28)] backdrop-blur-[10px] backdrop-saturate-150 transition-transform duration-150 ease-out will-change-transform md:p-7"
           style={{
             transform: motionEnabled
               ? `rotateX(${tilt.rotateX}deg) rotateY(${tilt.rotateY}deg)`
