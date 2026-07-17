@@ -29,6 +29,11 @@ export function DashboardCompletenessCards({ cards }: DashboardCompletenessCards
         const Icon = card.icon;
         const status = card.completeness?.status ?? "empty";
         const errorMessages = card.completeness?.errorMessages.slice(0, 3) ?? [];
+        const warningMessages = card.completeness?.warningMessages.slice(0, 3) ?? [];
+        const hasMessages = errorMessages.length > 0 || warningMessages.length > 0;
+        const softOnly =
+          (card.completeness?.incompleteItems ?? 0) === 0 &&
+          (card.completeness?.recommendedItems ?? 0) > 0;
 
         return (
           <Link key={card.href} href={card.href}>
@@ -66,22 +71,38 @@ export function DashboardCompletenessCards({ cards }: DashboardCompletenessCards
                       >
                         {getCompletenessStatusLabel(status)}
                       </Badge>
-                      {card.completeness.incompleteItems > 0 && (
+                      {card.completeness.incompleteItems > 0 ? (
                         <span className="text-xs text-muted-foreground">
                           {formatPersianNumber(card.completeness.incompleteItems)} ناقص از{" "}
                           {formatPersianNumber(card.completeness.totalItems)}
                         </span>
-                      )}
+                      ) : softOnly ? (
+                        <span className="text-xs text-muted-foreground">
+                          {formatPersianNumber(card.completeness.recommendedItems)} مورد بهتر است
+                          تکمیل شود
+                        </span>
+                      ) : null}
                     </div>
 
                     {status === "empty" ? (
                       <p className="text-xs text-muted-foreground">هنوز موردی ثبت نشده است.</p>
-                    ) : errorMessages.length > 0 ? (
-                      <ul className="space-y-1 text-xs text-destructive">
-                        {errorMessages.map((message) => (
-                          <li key={message}>• {message}</li>
-                        ))}
-                      </ul>
+                    ) : hasMessages ? (
+                      <div className="space-y-1">
+                        {errorMessages.length > 0 ? (
+                          <ul className="space-y-1 text-xs text-destructive">
+                            {errorMessages.map((message) => (
+                              <li key={message}>• {message}</li>
+                            ))}
+                          </ul>
+                        ) : null}
+                        {warningMessages.length > 0 ? (
+                          <ul className="space-y-1 text-xs text-amber-800 dark:text-amber-200">
+                            {warningMessages.map((message) => (
+                              <li key={message}>• {message}</li>
+                            ))}
+                          </ul>
+                        ) : null}
+                      </div>
                     ) : (
                       <p className="text-xs text-emerald-700 dark:text-emerald-300">
                         همه فیلدهای این بخش کامل است.

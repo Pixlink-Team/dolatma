@@ -16,9 +16,10 @@ import {
 import {
   editSuggestionContentTypeLabels,
   editSuggestionFieldLabels,
+  hasOnlyRecommendedMissingFields,
   type EditSuggestionItem,
 } from "@/lib/edit-suggestions";
-import { formatPersianNumber } from "@/lib/utils";
+import { cn, formatPersianNumber } from "@/lib/utils";
 
 interface EditSuggestionsPanelProps {
   suggestions: EditSuggestionItem[];
@@ -85,10 +86,17 @@ export function EditSuggestionsPanel({ suggestions, storageKey }: EditSuggestion
           </DialogHeader>
 
           <div className="max-h-[60vh] space-y-3 overflow-y-auto px-6 py-4">
-            {visibleSuggestions.map((suggestion) => (
+            {visibleSuggestions.map((suggestion) => {
+              const isSoftOnly = hasOnlyRecommendedMissingFields(suggestion.missingFields);
+              return (
               <div
                 key={`${suggestion.contentType}:${suggestion.id}`}
-                className="rounded-xl border border-destructive/20 bg-destructive/5 p-4"
+                className={cn(
+                  "rounded-xl border p-4",
+                  isSoftOnly
+                    ? "border-warning/30 bg-warning/10"
+                    : "border-destructive/20 bg-destructive/5"
+                )}
               >
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0 space-y-2">
@@ -98,8 +106,13 @@ export function EditSuggestionsPanel({ suggestions, storageKey }: EditSuggestion
                       </Badge>
                       <p className="truncate font-medium">{suggestion.title}</p>
                     </div>
-                    <p className="text-sm text-destructive">
-                      ناقص است:{" "}
+                    <p
+                      className={cn(
+                        "text-sm",
+                        isSoftOnly ? "text-amber-800 dark:text-amber-200" : "text-destructive"
+                      )}
+                    >
+                      {isSoftOnly ? "بهتر است تکمیل شود: " : "ناقص است: "}
                       {suggestion.missingFields
                         .map((field) => editSuggestionFieldLabels[field])
                         .join("، ")}
@@ -121,7 +134,8 @@ export function EditSuggestionsPanel({ suggestions, storageKey }: EditSuggestion
                   </Button>
                 </div>
               </div>
-            ))}
+              );
+            })}
 
             {remainingCount > 0 && (
               <div className="rounded-xl border border-dashed px-4 py-3 text-center text-sm text-muted-foreground">

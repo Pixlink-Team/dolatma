@@ -351,22 +351,31 @@ export function BillboardCreateAssignmentDialog({
               />
             </div>
             <div className="space-y-2">
-              <Label className={cn((highlightLocation || highlightDescription) && "text-destructive")}>
+              <Label
+                className={cn(
+                  highlightLocation && "text-destructive",
+                  !highlightLocation && highlightDescription && "text-amber-700 dark:text-amber-300"
+                )}
+              >
                 آدرس توصیفی
               </Label>
               <Input
                 value={address}
                 onChange={(event) => setAddress(event.target.value)}
                 className={cn(
-                  (highlightLocation || highlightDescription) &&
-                    "border-destructive focus-visible:ring-destructive"
+                  highlightLocation && "border-destructive focus-visible:ring-destructive",
+                  !highlightLocation &&
+                    highlightDescription &&
+                    "border-amber-500 focus-visible:ring-amber-500"
                 )}
               />
               {highlightLocation && (
                 <p className="text-xs text-destructive">آدرس/موقعیت خالی است؛ بهتر است تکمیل شود.</p>
               )}
               {highlightDescription && !highlightLocation && (
-                <p className="text-xs text-destructive">توضیحات خالی است؛ بهتر است تکمیل شود.</p>
+                <p className="text-xs text-amber-700 dark:text-amber-300">
+                  توضیحات خالی است؛ بهتر است تکمیل شود.
+                </p>
               )}
             </div>
           </div>

@@ -698,17 +698,17 @@ export function ActivitiesAdmin({
               )}
             </div>
             <div className="space-y-2">
-              <Label className={cn(highlightDescription && "text-destructive")}>توضیحات (اختیاری)</Label>
+              <Label className={cn(highlightDescription && "text-amber-700 dark:text-amber-300")}>توضیحات (اختیاری)</Label>
               <Textarea
                 {...form.register("description")}
                 rows={4}
                 placeholder="جزئیات اقدام، تعداد مخاطب، نتایج و ..."
                 className={cn(
-                  highlightDescription && "border-destructive focus-visible:ring-destructive"
+                  highlightDescription && "border-amber-500 focus-visible:ring-amber-500"
                 )}
               />
               {highlightDescription && (
-                <p className="text-xs text-destructive">توضیحات خالی است؛ بهتر است تکمیل شود.</p>
+                <p className="text-xs text-amber-700 dark:text-amber-300">توضیحات خالی است؛ بهتر است تکمیل شود.</p>
               )}
             </div>
             <Button type="submit" disabled={isPending} className="w-full">

@@ -53,15 +53,36 @@ export interface CategoryCompletenessSummary {
   href: string;
   totalItems: number;
   completeItems: number;
+  /** Items missing at least one required field (counts toward red "ناقص"). */
   incompleteItems: number;
+  /** Items that only miss recommended fields such as description. */
+  recommendedItems: number;
   status: CategoryCompletenessStatus;
   errorMessages: string[];
+  warningMessages: string[];
   suggestions: EditSuggestionItem[];
 }
 
 interface CheckedField {
   key: EditSuggestionMissingField;
   ok: boolean;
+}
+
+/** Soft gaps: better to fill, but should not mark a category as red/incomplete. */
+const RECOMMENDED_FIELDS = new Set<EditSuggestionMissingField>(["description"]);
+
+export function isRecommendedEditField(field: EditSuggestionMissingField): boolean {
+  return RECOMMENDED_FIELDS.has(field);
+}
+
+export function hasCriticalMissingFields(fields: EditSuggestionMissingField[]): boolean {
+  return fields.some((field) => !isRecommendedEditField(field));
+}
+
+export function hasOnlyRecommendedMissingFields(
+  fields: EditSuggestionMissingField[]
+): boolean {
+  return fields.length > 0 && !hasCriticalMissingFields(fields);
 }
 
 const MISSING_FIELD_VALUES = new Set<EditSuggestionMissingField>([
@@ -333,17 +354,25 @@ function scopedByOwner<T extends { ownerUserId?: string | null }>(
   return items.filter((item) => item.ownerUserId === ownerUserId);
 }
 
-function buildErrorMessages(suggestions: EditSuggestionItem[]): string[] {
+function buildFieldCountMessages(
+  suggestions: EditSuggestionItem[],
+  predicate: (field: EditSuggestionMissingField) => boolean
+): string[] {
   const counts = new Map<EditSuggestionMissingField, number>();
   for (const suggestion of suggestions) {
     for (const field of suggestion.missingFields) {
+      if (!predicate(field)) continue;
       counts.set(field, (counts.get(field) ?? 0) + 1);
     }
   }
 
   return [...counts.entries()]
     .sort((a, b) => b[1] - a[1])
-    .map(([field, count]) => `${count} مورد بدون ${editSuggestionFieldLabels[field]}`);
+    .map(([field, count]) =>
+      isRecommendedEditField(field)
+        ? `${count} مورد بدون ${editSuggestionFieldLabels[field]} (بهتر است تکمیل شود)`
+        : `${count} مورد بدون ${editSuggestionFieldLabels[field]}`
+    );
 }
 
 function summarizeCategory(
@@ -351,12 +380,18 @@ function summarizeCategory(
   totalItems: number,
   suggestions: EditSuggestionItem[]
 ): CategoryCompletenessSummary {
-  const incompleteItems = suggestions.length;
-  const completeItems = Math.max(totalItems - incompleteItems, 0);
+  const incompleteItems = suggestions.filter((item) =>
+    hasCriticalMissingFields(item.missingFields)
+  ).length;
+  const recommendedItems = suggestions.filter((item) =>
+    hasOnlyRecommendedMissingFields(item.missingFields)
+  ).length;
+  const fullyCompleteItems = Math.max(totalItems - suggestions.length, 0);
   let status: CategoryCompletenessStatus = "empty";
   if (totalItems === 0) status = "empty";
-  else if (incompleteItems === 0) status = "complete";
-  else if (completeItems === 0) status = "incomplete";
+  else if (suggestions.length === 0) status = "complete";
+  // Red only when every item has a required-field gap (not description-only).
+  else if (incompleteItems === totalItems) status = "incomplete";
   else status = "partial";
 
   return {
@@ -364,10 +399,12 @@ function summarizeCategory(
     label: editSuggestionContentTypeLabels[contentType],
     href: CONTENT_TYPE_PATH[contentType],
     totalItems,
-    completeItems,
+    completeItems: fullyCompleteItems,
     incompleteItems,
+    recommendedItems,
     status,
-    errorMessages: buildErrorMessages(suggestions),
+    errorMessages: buildFieldCountMessages(suggestions, (field) => !isRecommendedEditField(field)),
+    warningMessages: buildFieldCountMessages(suggestions, isRecommendedEditField),
     suggestions,
   };
 }

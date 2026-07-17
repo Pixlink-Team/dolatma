@@ -206,18 +206,18 @@ export function AdminPosterEditor({
               )}
             </div>
             <div>
-              <Label className={cn(highlightDescription && "text-destructive")}>توضیحات</Label>
+              <Label className={cn(highlightDescription && "text-amber-700 dark:text-amber-300")}>توضیحات</Label>
               <Textarea
                 value={editDescription}
                 onChange={(e) => setEditDescription(e.target.value)}
                 rows={2}
                 placeholder="توضیحات (اختیاری)"
                 className={cn(
-                  highlightDescription && "border-destructive focus-visible:ring-destructive"
+                  highlightDescription && "border-amber-500 focus-visible:ring-amber-500"
                 )}
               />
               {highlightDescription && (
-                <p className="mt-1 text-xs text-destructive">توضیحات خالی است؛ بهتر است تکمیل شود.</p>
+                <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">توضیحات خالی است؛ بهتر است تکمیل شود.</p>
               )}
             </div>
             <PlanLabelSelect

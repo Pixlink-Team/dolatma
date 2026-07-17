@@ -443,17 +443,17 @@ export function FilesAdmin({
               )}
             </div>
             <div>
-              <Label className={cn(highlightDescription && "text-destructive")}>توضیحات (اختیاری)</Label>
+              <Label className={cn(highlightDescription && "text-amber-700 dark:text-amber-300")}>توضیحات (اختیاری)</Label>
               <Textarea
                 value={description}
                 onChange={(event) => setDescription(event.target.value)}
                 rows={2}
                 className={cn(
-                  highlightDescription && "border-destructive focus-visible:ring-destructive"
+                  highlightDescription && "border-amber-500 focus-visible:ring-amber-500"
                 )}
               />
               {highlightDescription && (
-                <p className="mt-1 text-xs text-destructive">توضیحات خالی است؛ بهتر است تکمیل شود.</p>
+                <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">توضیحات خالی است؛ بهتر است تکمیل شود.</p>
               )}
             </div>
             <PlanLabelSelect
