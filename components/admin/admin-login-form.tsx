@@ -186,8 +186,8 @@ export function AdminLoginForm() {
             <header className="mb-8 flex items-center gap-4 [text-shadow:0_2px_18px_rgba(0,0,0,0.7)]">
               <div className="h-14 w-14 shrink-0 overflow-hidden rounded-full border border-white/40 shadow-[0_8px_24px_rgba(0,0,0,0.28)]">
                 <Image
-                  src="/images/logo-tavanir.png"
-                  alt="لوگوی توانیر"
+                  src="/images/dolat.webp"
+                  alt="لوگوی سامانه"
                   width={56}
                   height={56}
                   className="h-full w-full object-cover"

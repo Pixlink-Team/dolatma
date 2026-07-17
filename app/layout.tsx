@@ -12,9 +12,9 @@ export const metadata: Metadata = {
   title: "گزارش زنده کمپین",
   description: "گزارش زنده پیشرفت کمپین تبلیغاتی",
   icons: {
-    icon: [{ url: "/images/logo-tavanir.png", type: "image/png" }],
-    apple: [{ url: "/images/logo-tavanir.png", type: "image/png" }],
-    shortcut: ["/images/logo-tavanir.png"],
+    icon: [{ url: "/images/dolat.webp", type: "image/webp" }],
+    apple: [{ url: "/images/dolat.webp", type: "image/webp" }],
+    shortcut: ["/images/dolat.webp"],
   },
 };
 
