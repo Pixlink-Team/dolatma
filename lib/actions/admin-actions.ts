@@ -42,6 +42,7 @@ import type {
 } from "@/lib/types";
 import { isPostgresConfigured } from "@/lib/utils";
 import { resolveSaveOwnerUserId } from "@/lib/admin-content-owner";
+import { auditContentChange, auditContentDelete, logAuditFromCurrentSession } from "@/lib/audit/log-event";
 
 async function revalidateAll(slug?: string) {
   revalidatePath("/");
@@ -105,6 +106,12 @@ async function assertContributorOwnsBillboard(
 
 export async function saveCampaignAction(data: Partial<CampaignSettings> & { id?: string }) {
   const result = await saveCampaign(data);
+  await auditContentChange({
+    isUpdate: Boolean(data.id),
+    entityType: "campaign",
+    entityId: data.id,
+    label: data.title,
+  });
   await revalidateAll(data.slug);
   return result;
 }
@@ -112,6 +119,7 @@ export async function saveCampaignAction(data: Partial<CampaignSettings> & { id?
 export async function deleteCampaignAction(id: string) {
   try {
     const result = await deleteCampaign(id);
+    await auditContentDelete({ entityType: "campaign", entityId: id });
     await revalidateAll();
     return result;
   } catch (error) {
@@ -122,6 +130,13 @@ export async function deleteCampaignAction(id: string) {
 
 export async function updateSettingsAction(data: Partial<CampaignSettings>) {
   const result = await updateCampaignSettings(data);
+  await logAuditFromCurrentSession({
+    category: "admin",
+    action: "admin.settings_update",
+    entityType: "campaign",
+    entityId: data.id,
+    label: data.title ?? "به‌روزرسانی تنظیمات کمپین",
+  });
   await revalidateAll(data.slug);
   return result;
 }
@@ -132,6 +147,13 @@ export async function saveBillboardAction(data: Partial<Billboard> & { id?: stri
     if (denied) return denied;
   }
   const result = await saveBillboard(await withOwnerScope(data));
+  await auditContentChange({
+    isUpdate: Boolean(data.id),
+    entityType: "billboard",
+    entityId: data.id,
+    campaignId: data.campaignId,
+    label: data.title,
+  });
   await revalidateAll();
   return result;
 }
@@ -140,30 +162,51 @@ export async function deleteBillboardAction(id: string) {
   const denied = await assertContributorOwnsBillboard(id);
   if (denied) return denied;
   const result = await deleteBillboard(id);
+  await auditContentDelete({ entityType: "billboard", entityId: id });
   await revalidateAll();
   return result;
 }
 
 export async function saveCategoryAction(data: Partial<MediaCategory> & { id?: string }) {
   const result = await saveMediaCategory(data);
+  await auditContentChange({
+    isUpdate: Boolean(data.id),
+    entityType: "media_category",
+    entityId: data.id,
+    campaignId: data.campaignId,
+    label: data.title,
+  });
   await revalidateAll();
   return result;
 }
 
 export async function deleteCategoryAction(id: string, type: "poster" | "video") {
   const result = await deleteMediaCategory(id, type);
+  await auditContentDelete({
+    entityType: "media_category",
+    entityId: id,
+    metadata: { type },
+  });
   await revalidateAll();
   return result;
 }
 
 export async function savePosterAction(data: Partial<Poster> & { id?: string }) {
   const result = await savePoster(await withOwnerScope(data));
+  await auditContentChange({
+    isUpdate: Boolean(data.id),
+    entityType: "poster",
+    entityId: data.id,
+    campaignId: data.campaignId,
+    label: data.title,
+  });
   await revalidateAll();
   return result;
 }
 
 export async function deletePosterAction(id: string) {
   const result = await deletePoster(id);
+  await auditContentDelete({ entityType: "poster", entityId: id });
   await revalidateAll();
   return result;
 }
@@ -172,24 +215,40 @@ export async function savePosterVersionAction(
   data: Partial<PosterVersion> & { id?: string; posterId: string }
 ) {
   const result = await savePosterVersion(data);
+  await auditContentChange({
+    isUpdate: Boolean(data.id),
+    entityType: "poster_version",
+    entityId: data.id,
+    label: data.notes ?? `نسخه پوستر ${data.posterId}`,
+    metadata: { posterId: data.posterId },
+  });
   await revalidateAll();
   return result;
 }
 
 export async function deletePosterVersionAction(id: string) {
   const result = await deletePosterVersion(id);
+  await auditContentDelete({ entityType: "poster_version", entityId: id });
   await revalidateAll();
   return result;
 }
 
 export async function saveVideoAction(data: Partial<Video> & { id?: string }) {
   const result = await saveVideo(await withOwnerScope(data));
+  await auditContentChange({
+    isUpdate: Boolean(data.id),
+    entityType: "video",
+    entityId: data.id,
+    campaignId: data.campaignId,
+    label: data.title,
+  });
   await revalidateAll();
   return result;
 }
 
 export async function deleteVideoAction(id: string) {
   const result = await deleteVideo(id);
+  await auditContentDelete({ entityType: "video", entityId: id });
   await revalidateAll();
   return result;
 }
@@ -198,24 +257,40 @@ export async function saveVideoVersionAction(
   data: Partial<VideoVersion> & { id?: string; videoId: string }
 ) {
   const result = await saveVideoVersion(data);
+  await auditContentChange({
+    isUpdate: Boolean(data.id),
+    entityType: "video_version",
+    entityId: data.id,
+    label: data.notes ?? `نسخه ویدیو ${data.videoId}`,
+    metadata: { videoId: data.videoId },
+  });
   await revalidateAll();
   return result;
 }
 
 export async function deleteVideoVersionAction(id: string) {
   const result = await deleteVideoVersion(id);
+  await auditContentDelete({ entityType: "video_version", entityId: id });
   await revalidateAll();
   return result;
 }
 
 export async function saveAnalyticsAction(data: Partial<AnalyticsMetric> & { id?: string }) {
   const result = await saveAnalyticsMetric(await withOwnerScope(data));
+  await auditContentChange({
+    isUpdate: Boolean(data.id),
+    entityType: "analytics_metric",
+    entityId: data.id,
+    campaignId: data.campaignId,
+    label: "آمار سایت",
+  });
   await revalidateAll();
   return result;
 }
 
 export async function deleteAnalyticsAction(id: string) {
   const result = await deleteAnalyticsMetric(id);
+  await auditContentDelete({ entityType: "analytics_metric", entityId: id });
   await revalidateAll();
   return result;
 }
@@ -225,36 +300,61 @@ export async function updateSubmissionAction(
   data: { status?: "pending" | "approved" | "rejected"; published?: boolean }
 ) {
   const result = await updateSubmission(id, data);
+  await logAuditFromCurrentSession({
+    category: "content",
+    action: "content.update",
+    entityType: "submission",
+    entityId: id,
+    label: "به‌روزرسانی مشارکت",
+    metadata: { ...data },
+  });
   await revalidateAll();
   return result;
 }
 
 export async function deleteSubmissionAction(id: string) {
   const result = await deleteSubmission(id);
+  await auditContentDelete({ entityType: "submission", entityId: id });
   await revalidateAll();
   return result;
 }
 
 export async function saveCampaignFileAction(data: Partial<CampaignFile> & { id?: string }) {
   const result = await saveCampaignFile(await withOwnerScope(data));
+  await auditContentChange({
+    isUpdate: Boolean(data.id),
+    entityType: "file",
+    entityId: data.id,
+    campaignId: data.campaignId,
+    label: data.title,
+  });
   await revalidateAll();
   return result;
 }
 
 export async function deleteCampaignFileAction(id: string) {
   const result = await deleteCampaignFile(id);
+  await auditContentDelete({ entityType: "file", entityId: id });
   await revalidateAll();
   return result;
 }
 
 export async function saveRawMediaUploadAction(data: Partial<RawMediaUpload> & { id?: string }) {
   const result = await saveRawMediaUpload(await withOwnerScope(data));
+  await auditContentChange({
+    isUpdate: Boolean(data.id),
+    entityType: "raw_media",
+    entityId: data.id,
+    campaignId: data.campaignId,
+    label: data.title,
+  });
   await revalidateAll();
   return result;
 }
 
 export async function deleteRawMediaUploadAction(id: string) {
   const result = await deleteRawMediaUpload(id);
+  await auditContentDelete({ entityType: "raw_media", entityId: id });
   await revalidateAll();
   return result;
 }

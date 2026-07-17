@@ -16,6 +16,7 @@ import {
   LogOut,
   Menu,
   Radio,
+  ScrollText,
   Settings,
   Share2,
   Sparkles,
@@ -73,11 +74,13 @@ const allNavItems: {
   { href: "/admin/meetings", label: "جلسات و مصوبات", icon: ClipboardList, permissionKey: "meetings" },
   { href: "/admin/submissions", label: "مشارکت‌ها", icon: FileText, permissionKey: "submissions" },
   { href: "/admin/users", label: "کاربران", icon: Users, adminOrClientOnly: true },
+  { href: "/admin/audit", label: "رصد کاربران", icon: ScrollText, adminOnly: true },
 ];
 
 const managementNavHrefs = new Set([
   "/admin/integrations",
   "/admin/users",
+  "/admin/audit",
   "/admin/settings",
   "/admin/elanha",
 ]);

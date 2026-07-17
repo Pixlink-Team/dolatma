@@ -14,6 +14,11 @@ import type { MeetingDecisionPayload, MeetingTaskPayload } from "@/lib/db/reposi
 import type { BroadcastReport, CampaignActivity, CampaignMeeting, SocialMediaPost, SocialPlatformStat } from "@/lib/types";
 import { isPostgresConfigured } from "@/lib/utils";
 import { resolveSaveOwnerUserId } from "@/lib/admin-content-owner";
+import {
+  auditContentChange,
+  auditContentDelete,
+  logAuditForSession,
+} from "@/lib/audit/log-event";
 
 async function revalidateExtended(slug?: string) {
   revalidatePath("/admin/social-posts");
@@ -70,6 +75,13 @@ export async function saveSocialPostAction(data: Partial<SocialMediaPost> & { id
   }
 
   const result = await pgExt.pgSaveSocialPost(payload);
+  await auditContentChange({
+    isUpdate: Boolean(data.id),
+    entityType: "social_post",
+    entityId: data.id,
+    campaignId: data.campaignId,
+    label: data.title ?? data.platform,
+  });
   await revalidateExtended();
   return result;
 }
@@ -79,6 +91,7 @@ export async function deleteSocialPostAction(id: string) {
   if (!session) return { success: false, error: "Unauthorized" };
   if (!isPostgresConfigured()) return { success: false, error: "Database required" };
   await pgExt.pgDeleteSocialPost(id);
+  await auditContentDelete({ entityType: "social_post", entityId: id });
   await revalidateExtended();
   return { success: true };
 }
@@ -111,6 +124,13 @@ export async function saveSocialPlatformStatAction(data: Partial<SocialPlatformS
   const payload = await withSaveOwnerScope(session, data);
 
   const result = await pgExt.pgSaveSocialPlatformStat(payload);
+  await auditContentChange({
+    isUpdate: Boolean(data.id),
+    entityType: "social_platform_stat",
+    entityId: data.id,
+    campaignId: data.campaignId,
+    label: data.title ?? data.platform,
+  });
   await revalidateExtended();
   return result;
 }
@@ -131,6 +151,7 @@ export async function deleteSocialPlatformStatAction(id: string) {
   }
 
   await pgExt.pgDeleteSocialPlatformStat(id);
+  await auditContentDelete({ entityType: "social_platform_stat", entityId: id });
   await revalidateExtended();
   return { success: true };
 }
@@ -153,6 +174,13 @@ export async function saveBroadcastReportAction(data: Partial<BroadcastReport> &
   }
 
   const result = await pgExt.pgSaveBroadcastReport(payload);
+  await auditContentChange({
+    isUpdate: Boolean(data.id),
+    entityType: "broadcast_report",
+    entityId: data.id,
+    campaignId: data.campaignId,
+    label: data.title,
+  });
   await revalidateExtended();
   return result;
 }
@@ -162,6 +190,7 @@ export async function deleteBroadcastReportAction(id: string) {
   if (!session) return { success: false, error: "Unauthorized" };
   if (!isPostgresConfigured()) return { success: false, error: "Database required" };
   await pgExt.pgDeleteBroadcastReport(id);
+  await auditContentDelete({ entityType: "broadcast_report", entityId: id });
   await revalidateExtended();
   return { success: true };
 }
@@ -184,6 +213,14 @@ export async function saveCampaignActivityAction(data: Partial<CampaignActivity>
   }
 
   const result = await pgExt.pgSaveCampaignActivity(payload);
+  await auditContentChange({
+    isUpdate: Boolean(data.id),
+    entityType: "activity",
+    entityId: data.id,
+    campaignId: data.campaignId,
+    label: data.title,
+    metadata: { activityType: data.activityType },
+  });
   await revalidateExtended();
   return result;
 }
@@ -193,6 +230,7 @@ export async function deleteCampaignActivityAction(id: string) {
   if (!session) return { success: false, error: "Unauthorized" };
   if (!isPostgresConfigured()) return { success: false, error: "Database required" };
   await pgExt.pgDeleteCampaignActivity(id);
+  await auditContentDelete({ entityType: "activity", entityId: id });
   await revalidateExtended();
   return { success: true };
 }
@@ -219,6 +257,14 @@ export async function saveMeetingAction(
   }
 
   const result = await pgExt.pgSaveMeetingWithTasks(payload, tasks, decisions);
+  await auditContentChange({
+    isUpdate: Boolean(data.id),
+    entityType: "meeting",
+    entityId: data.id,
+    campaignId: data.campaignId,
+    label: data.title,
+    metadata: { taskCount: tasks.length, decisionCount: decisions.length },
+  });
   await revalidateExtended();
   return result;
 }
@@ -298,6 +344,7 @@ export async function deleteMeetingAction(id: string) {
   if (!session) return { success: false, error: "Unauthorized" };
   if (!isPostgresConfigured()) return { success: false, error: "Database required" };
   await pgExt.pgDeleteMeeting(id);
+  await auditContentDelete({ entityType: "meeting", entityId: id });
   await revalidateExtended();
   return { success: true };
 }
@@ -342,6 +389,13 @@ export async function saveProfileAction(data: {
     campaignIds: user.campaignIds,
     campaignPermissions: user.campaignPermissions,
   });
+  await logAuditForSession(session, {
+    category: "admin",
+    action: "profile.update",
+    entityType: "user",
+    entityId: session.userId,
+    label: "به‌روزرسانی پروفایل",
+  });
   await revalidateExtended();
   return result;
 }
@@ -378,6 +432,14 @@ export async function saveUserAction(data: {
     ...data,
     accountManagerName,
   });
+  await logAuditForSession(session, {
+    category: "admin",
+    action: data.id ? "user.update" : "user.create",
+    entityType: "user",
+    entityId: data.id,
+    label: data.name,
+    metadata: { role: data.role, email: data.email },
+  });
   await revalidateExtended();
   return result;
 }
@@ -404,6 +466,13 @@ export async function deleteUserAction(id: string) {
   }
   if (!isPostgresConfigured()) return { success: false, error: "Database required" };
   await pgExt.pgDeleteUser(id);
+  await logAuditForSession(session, {
+    category: "admin",
+    action: "user.delete",
+    entityType: "user",
+    entityId: id,
+    label: "حذف کاربر",
+  });
   await revalidateExtended();
   return { success: true };
 }
@@ -417,6 +486,13 @@ export async function deleteUsersAction(ids: string[]) {
   if (ids.length === 0) return { success: true, deleted: 0 };
 
   const result = await pgExt.pgDeleteUsers(ids);
+  await logAuditForSession(session, {
+    category: "admin",
+    action: "user.delete",
+    entityType: "user",
+    label: "حذف گروهی کاربران",
+    metadata: { count: ids.length, ids },
+  });
   await revalidateExtended();
   return result;
 }

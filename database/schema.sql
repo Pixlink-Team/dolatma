@@ -561,3 +561,42 @@ BEGIN
     AND owner_user_id IS NULL;
 END $$;
 
+-- User activity audit trail (admin-only reporting)
+CREATE TABLE IF NOT EXISTS user_audit_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  actor_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  actor_type TEXT NOT NULL DEFAULT 'db_user'
+    CHECK (actor_type IN ('env_admin', 'db_user', 'anonymous')),
+  actor_email TEXT,
+  actor_name TEXT,
+  actor_role TEXT,
+  category TEXT NOT NULL
+    CHECK (category IN ('auth', 'navigation', 'content', 'ui', 'admin', 'system')),
+  action TEXT NOT NULL,
+  entity_type TEXT,
+  entity_id TEXT,
+  campaign_id UUID REFERENCES campaign_settings(id) ON DELETE SET NULL,
+  label TEXT,
+  path TEXT,
+  method TEXT,
+  metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+  ip_address TEXT,
+  user_agent TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_audit_events_created
+  ON user_audit_events(created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_user_audit_events_actor
+  ON user_audit_events(actor_user_id, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_user_audit_events_category
+  ON user_audit_events(category, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_user_audit_events_action
+  ON user_audit_events(action, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_user_audit_events_campaign
+  ON user_audit_events(campaign_id, created_at DESC);
+

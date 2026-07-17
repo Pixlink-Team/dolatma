@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { AdminSidebar } from "@/components/admin/admin-sidebar";
 import { AdminElanhaButton } from "@/components/admin/admin-elanha-button";
 import { AdminCampaignProvider } from "@/components/admin/admin-campaign-provider";
+import { AuditTracker } from "@/components/admin/audit-tracker";
 import type { CampaignSettings } from "@/lib/types";
 
 function AdminPanelShell({
@@ -16,6 +17,7 @@ function AdminPanelShell({
   return (
     <AdminCampaignProvider campaigns={campaigns}>
       <div className="min-h-screen bg-background">
+        <AuditTracker />
         <AdminSidebar />
         <AdminElanhaButton />
         <main className="lg:mr-64 min-h-screen">

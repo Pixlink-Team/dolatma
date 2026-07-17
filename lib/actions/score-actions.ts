@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { canScoreContent } from "@/lib/auth/access";
 import { getAuthSession } from "@/lib/auth/get-session";
 import { normalizeScoreValue } from "@/lib/content-score";
+import { logAuditForSession } from "@/lib/audit/log-event";
 import { getSql } from "@/lib/db/client";
 import type { ScoreableContentType } from "@/lib/types";
 import { isPostgresConfigured } from "@/lib/utils";
@@ -68,6 +69,16 @@ export async function saveContentScoreAction(input: {
   } else if (table === "campaign_meetings") {
     await sql`UPDATE campaign_meetings SET score = ${score}, updated_at = ${now} WHERE id = ${input.contentId} AND campaign_id = ${input.campaignId}`;
   }
+
+  await logAuditForSession(session, {
+    category: "content",
+    action: "content.score",
+    entityType: input.contentType,
+    entityId: input.contentId,
+    campaignId: input.campaignId,
+    label: `امتیازدهی (${score ?? "حذف امتیاز"})`,
+    metadata: { score },
+  });
 
   revalidatePath(`/admin`);
   revalidatePath(`/campaign`);

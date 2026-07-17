@@ -14,9 +14,13 @@ import {
 } from "@/lib/auth/admin-session-node";
 import { verifyPassword } from "@/lib/auth/password";
 import { pgGetUserAuthByLogin } from "@/lib/db/repository-extended";
+import { getAuthSession } from "@/lib/auth/get-session";
+import { logAuditEvent, logAuditForSession } from "@/lib/audit/log-event";
 import { isPostgresConfigured } from "@/lib/utils";
 
 export async function loginAdminAction(email: string, password: string) {
+  const loginEmail = email.trim();
+
   if (verifyAdminCredentials(email, password)) {
     const cookieStore = await cookies();
     const token = createAdminSessionTokenSync();
@@ -24,6 +28,18 @@ export async function loginAdminAction(email: string, password: string) {
 
     cookieStore.set(getAdminSessionCookieName(), token, cookieOptions);
     cookieStore.set(getLegacyMockCookieName(), "", { ...cookieOptions, maxAge: 0 });
+
+    await logAuditEvent({
+      actorType: "env_admin",
+      actorEmail: loginEmail || null,
+      actorName: "مدیر سیستم",
+      actorRole: "admin",
+      category: "auth",
+      action: "auth.login",
+      label: "ورود مدیر سیستم",
+      metadata: { method: "env_admin" },
+    });
+
     redirect("/admin");
   }
 
@@ -36,14 +52,43 @@ export async function loginAdminAction(email: string, password: string) {
 
       cookieStore.set(getAdminSessionCookieName(), token, cookieOptions);
       cookieStore.set(getLegacyMockCookieName(), "", { ...cookieOptions, maxAge: 0 });
+
+      await logAuditEvent({
+        actorUserId: user.id,
+        actorType: "db_user",
+        actorEmail: user.email,
+        actorName: user.name,
+        actorRole: user.role,
+        category: "auth",
+        action: "auth.login",
+        label: "ورود کاربر",
+        metadata: { method: "db_user" },
+      });
+
       redirect("/admin");
     }
   }
+
+  await logAuditEvent({
+    actorType: "anonymous",
+    actorEmail: loginEmail || null,
+    category: "auth",
+    action: "auth.login_failed",
+    label: "ورود ناموفق",
+    metadata: { email: loginEmail },
+  });
 
   return { success: false as const, error: "ایمیل یا رمز عبور اشتباه است" };
 }
 
 export async function logoutAdminAction() {
+  const session = await getAuthSession();
+  await logAuditForSession(session, {
+    category: "auth",
+    action: "auth.logout",
+    label: "خروج از پنل",
+  });
+
   const cookieStore = await cookies();
   const cookieOptions = getAdminSessionCookieOptions(0);
 
