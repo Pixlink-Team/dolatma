@@ -1,6 +1,22 @@
 import type { NextConfig } from "next";
 import path from "path";
 
+const contentSecurityPolicy = [
+  "default-src 'self'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'self'",
+  "object-src 'none'",
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.aparat.com",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob: https://www.aparat.com https://aparat.com https://*.supabase.co https://billboard.pixlink.ir https://*.darkube.ir",
+  "media-src 'self' blob:",
+  "font-src 'self' data:",
+  "connect-src 'self' https://*.supabase.co https://billboard.pixlink.ir https://*.darkube.ir",
+  "frame-src 'self' https://www.aparat.com https://aparat.com https://*.darkube.ir",
+  "upgrade-insecure-requests",
+].join("; ");
+
 const nextConfig: NextConfig = {
   output: "standalone",
   outputFileTracingRoot: path.join(__dirname),
@@ -29,6 +45,7 @@ const nextConfig: NextConfig = {
       {
         source: "/:path*",
         headers: [
+          { key: "Content-Security-Policy", value: contentSecurityPolicy },
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "X-Frame-Options", value: "SAMEORIGIN" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },

@@ -17,32 +17,97 @@ import { pgGetUserAuthByLogin } from "@/lib/db/repository-extended";
 import { getAuthSession } from "@/lib/auth/get-session";
 import { bumpSessionVersion, getSessionVersion } from "@/lib/auth/session-versions";
 import { logAuditEvent, logAuditForSession } from "@/lib/audit/log-event";
-import { consumeRateLimit, resetRateLimit } from "@/lib/security/rate-limit";
+import { consumeRateLimit, getRateLimitBlock, resetRateLimit } from "@/lib/security/rate-limit";
+import { recordLoginSecurityAlert } from "@/lib/security/login-alerts";
 import { isPostgresConfigured } from "@/lib/utils";
 
-async function resolveLoginRateLimitKey(email: string): Promise<string> {
+const LOGIN_WINDOW_MS = 15 * 60 * 1000;
+const LOGIN_LIMIT = 5;
+
+async function resolveLoginClient(email: string): Promise<{ rateKey: string; ip: string }> {
   const headerStore = await headers();
   const forwarded = headerStore.get("x-forwarded-for");
   const ip =
     forwarded?.split(",")[0]?.trim() ||
     headerStore.get("x-real-ip")?.trim() ||
     "unknown";
-  return `login:${ip}:${email.trim().toLowerCase() || "empty"}`;
+  return {
+    ip,
+    rateKey: `login:${ip}:${email.trim().toLowerCase() || "empty"}`,
+  };
+}
+
+async function registerFailedLogin(rateKey: string, loginEmail: string, ip: string) {
+  const rate = consumeRateLimit(rateKey, {
+    limit: LOGIN_LIMIT,
+    windowMs: LOGIN_WINDOW_MS,
+    lockMs: LOGIN_WINDOW_MS,
+  });
+
+  await logAuditEvent({
+    actorType: "anonymous",
+    actorEmail: loginEmail || null,
+    category: "auth",
+    action: "auth.login_failed",
+    label: "ورود ناموفق",
+    metadata: { email: loginEmail, ip },
+  });
+
+  if (!rate.ok) {
+    await recordLoginSecurityAlert({
+      email: loginEmail || null,
+      ipAddress: ip,
+      reason: "rate_limited",
+      failureCount: LOGIN_LIMIT,
+    });
+    await logAuditEvent({
+      actorType: "anonymous",
+      actorEmail: loginEmail || null,
+      category: "auth",
+      action: "auth.login_suspicious",
+      label: "قفل موقت ورود به‌خاطر تلاش‌های مشکوک",
+      metadata: { ip, retryAfterSec: rate.retryAfterSec },
+    });
+    return {
+      success: false as const,
+      error: `تلاش‌های ورود بیش از حد مجاز است. ${rate.retryAfterSec} ثانیه دیگر دوباره تلاش کنید`,
+    };
+  }
+
+  if (rate.ok) {
+    // After 3 failures in the window, raise a soft alert (still allowing more attempts until lock).
+    const soft = consumeRateLimit(`login-soft:${rateKey}`, {
+      limit: 3,
+      windowMs: LOGIN_WINDOW_MS,
+    });
+    if (!soft.ok) {
+      await recordLoginSecurityAlert({
+        email: loginEmail || null,
+        ipAddress: ip,
+        reason: "repeated_failures",
+        failureCount: 3,
+      });
+    }
+  }
+
+  return { success: false as const, error: "ایمیل یا رمز عبور اشتباه است" };
 }
 
 export async function loginAdminAction(email: string, password: string) {
   const loginEmail = email.trim();
-  const rateKey = await resolveLoginRateLimitKey(loginEmail);
-  const rate = consumeRateLimit(rateKey, {
-    limit: 5,
-    windowMs: 15 * 60 * 1000,
-    lockMs: 15 * 60 * 1000,
-  });
+  const { rateKey, ip } = await resolveLoginClient(loginEmail);
 
-  if (!rate.ok) {
+  const blocked = getRateLimitBlock(rateKey);
+  if (!blocked.ok) {
+    await recordLoginSecurityAlert({
+      email: loginEmail || null,
+      ipAddress: ip,
+      reason: "rate_limited",
+      failureCount: LOGIN_LIMIT,
+    });
     return {
       success: false as const,
-      error: `تلاش‌های ورود بیش از حد مجاز است. ${rate.retryAfterSec} ثانیه دیگر دوباره تلاش کنید`,
+      error: `تلاش‌های ورود بیش از حد مجاز است. ${blocked.retryAfterSec} ثانیه دیگر دوباره تلاش کنید`,
     };
   }
 
@@ -58,6 +123,7 @@ export async function loginAdminAction(email: string, password: string) {
       cookieStore.set(getAdminSessionCookieName(), token, cookieOptions);
       cookieStore.set(getLegacyMockCookieName(), "", { ...cookieOptions, maxAge: 0 });
       resetRateLimit(rateKey);
+      resetRateLimit(`login-soft:${rateKey}`);
 
       await logAuditEvent({
         actorUserId: user.id,
@@ -88,6 +154,7 @@ export async function loginAdminAction(email: string, password: string) {
         cookieStore.set(getAdminSessionCookieName(), token, cookieOptions);
         cookieStore.set(getLegacyMockCookieName(), "", { ...cookieOptions, maxAge: 0 });
         resetRateLimit(rateKey);
+        resetRateLimit(`login-soft:${rateKey}`);
 
         await logAuditEvent({
           actorUserId: linkedUser.id,
@@ -110,6 +177,7 @@ export async function loginAdminAction(email: string, password: string) {
     cookieStore.set(getAdminSessionCookieName(), token, cookieOptions);
     cookieStore.set(getLegacyMockCookieName(), "", { ...cookieOptions, maxAge: 0 });
     resetRateLimit(rateKey);
+    resetRateLimit(`login-soft:${rateKey}`);
 
     await logAuditEvent({
       actorType: "env_admin",
@@ -125,16 +193,7 @@ export async function loginAdminAction(email: string, password: string) {
     redirect("/admin");
   }
 
-  await logAuditEvent({
-    actorType: "anonymous",
-    actorEmail: loginEmail || null,
-    category: "auth",
-    action: "auth.login_failed",
-    label: "ورود ناموفق",
-    metadata: { email: loginEmail },
-  });
-
-  return { success: false as const, error: "ایمیل یا رمز عبور اشتباه است" };
+  return registerFailedLogin(rateKey, loginEmail, ip);
 }
 
 export async function logoutAdminAction() {

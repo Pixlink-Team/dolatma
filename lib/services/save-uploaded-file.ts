@@ -1,5 +1,6 @@
 import { mkdir, writeFile } from "fs/promises";
 import { randomUUID } from "crypto";
+import { assertMagicMatchesKind } from "@/lib/security/file-magic";
 import { getUploadPublicUrl, getUploadsDir } from "@/lib/uploads";
 
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
@@ -27,6 +28,10 @@ function extensionForMime(mime: string): string {
 }
 
 export async function saveUploadedImageFile(file: File): Promise<string> {
+  if (file.type === "image/svg+xml") {
+    throw new Error("آپلود فایل SVG مجاز نیست");
+  }
+
   if (!IMAGE_TYPES.has(file.type)) {
     throw new Error("نوع فایل تصویر مجاز نیست");
   }
@@ -35,13 +40,17 @@ export async function saveUploadedImageFile(file: File): Promise<string> {
     throw new Error("حجم تصویر بیش از حد مجاز است");
   }
 
+  const buffer = Buffer.from(await file.arrayBuffer());
+  const magic = assertMagicMatchesKind(buffer, "image");
+  if (!magic.ok) {
+    throw new Error(magic.error);
+  }
+
   const extension = extensionForMime(file.type);
   const filename = `${randomUUID()}${extension}`;
   const uploadsDir = getUploadsDir();
 
   await mkdir(uploadsDir, { recursive: true });
-
-  const buffer = Buffer.from(await file.arrayBuffer());
   await writeFile(`${uploadsDir}/${filename}`, buffer);
 
   return getUploadPublicUrl(filename);

@@ -662,3 +662,40 @@ CREATE INDEX IF NOT EXISTS idx_user_problem_reports_reporter
 CREATE INDEX IF NOT EXISTS idx_user_problem_reports_created
   ON user_problem_reports(created_at DESC);
 
+-- ─── Database privilege + RLS hardening ───
+-- Connections must set app.rls_bypass=on (see lib/db/client.ts). Raw DATABASE_URL
+-- access without that setting cannot read forced-RLS sensitive tables.
+
+REVOKE ALL ON TABLE users FROM PUBLIC;
+REVOKE ALL ON TABLE system_settings FROM PUBLIC;
+REVOKE ALL ON TABLE user_campaign_access FROM PUBLIC;
+REVOKE ALL ON TABLE user_audit_events FROM PUBLIC;
+
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE users FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS users_app_bypass ON users;
+CREATE POLICY users_app_bypass ON users
+  USING (current_setting('app.rls_bypass', true) = 'on')
+  WITH CHECK (current_setting('app.rls_bypass', true) = 'on');
+
+ALTER TABLE system_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE system_settings FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS system_settings_app_bypass ON system_settings;
+CREATE POLICY system_settings_app_bypass ON system_settings
+  USING (current_setting('app.rls_bypass', true) = 'on')
+  WITH CHECK (current_setting('app.rls_bypass', true) = 'on');
+
+ALTER TABLE user_campaign_access ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_campaign_access FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS user_campaign_access_app_bypass ON user_campaign_access;
+CREATE POLICY user_campaign_access_app_bypass ON user_campaign_access
+  USING (current_setting('app.rls_bypass', true) = 'on')
+  WITH CHECK (current_setting('app.rls_bypass', true) = 'on');
+
+ALTER TABLE user_audit_events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_audit_events FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS user_audit_events_app_bypass ON user_audit_events;
+CREATE POLICY user_audit_events_app_bypass ON user_audit_events
+  USING (current_setting('app.rls_bypass', true) = 'on')
+  WITH CHECK (current_setting('app.rls_bypass', true) = 'on');
+

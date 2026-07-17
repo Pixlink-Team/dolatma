@@ -2,8 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
+import { assertCanMutateOwnedContent } from "@/lib/auth/assert-content-ownership";
 import { assertTutorialForPossibleCreate } from "@/lib/auth/require-tutorial-completion";
-import * as pg from "@/lib/db/repository";
 import {
   deleteAnalyticsMetric,
   deleteBillboard,
@@ -42,7 +42,6 @@ import type {
   Video,
   VideoVersion,
 } from "@/lib/types";
-import { isPostgresConfigured } from "@/lib/utils";
 import { resolveSaveOwnerUserId } from "@/lib/admin-content-owner";
 import { auditContentChange, auditContentDelete, logAuditFromCurrentSession } from "@/lib/audit/log-event";
 import { getContentTitleValidationError } from "@/lib/content-constraints";
@@ -126,15 +125,7 @@ async function assertContributorOwnsBillboard(
   session: AuthSession,
   billboardId: string
 ): Promise<{ success: false; error: string } | null> {
-  if (isFullAdmin(session)) return null;
-  if (!isPostgresConfigured()) return null;
-
-  const billboard = await pg.pgGetBillboardById(billboardId);
-  if (!billboard) return { success: false, error: "بیلبورد یافت نشد" };
-  if (billboard.ownerUserId !== session.userId) {
-    return { success: false, error: "دسترسی ندارید" };
-  }
-  return null;
+  return assertCanMutateOwnedContent(session, "billboards", billboardId);
 }
 
 export async function saveCampaignAction(data: Partial<CampaignSettings> & { id?: string }) {
@@ -260,6 +251,10 @@ export async function savePosterAction(data: Partial<Poster> & { id?: string }) 
   if (isAuthError(auth)) return auth;
   const validationError = validateTitlePayload(data);
   if (validationError) return validationError;
+  if (data.id) {
+    const denied = await assertCanMutateOwnedContent(auth, "posters", data.id);
+    if (denied) return denied;
+  }
   const tutorialDenied = await assertTutorialForPossibleCreate("posters", "posters", data.id);
   if (tutorialDenied) return tutorialDenied;
   const result = await savePoster(await withOwnerScope(auth, data));
@@ -277,6 +272,8 @@ export async function savePosterAction(data: Partial<Poster> & { id?: string }) 
 export async function deletePosterAction(id: string) {
   const auth = await requireSession();
   if (isAuthError(auth)) return auth;
+  const denied = await assertCanMutateOwnedContent(auth, "posters", id);
+  if (denied) return denied;
   const result = await deletePoster(id);
   await auditContentDelete({ entityType: "poster", entityId: id });
   await revalidateAll();
@@ -289,6 +286,13 @@ export async function savePosterVersionAction(
   const auth = await requireSession();
   if (isAuthError(auth)) return auth;
   const cleaned = stripFileAccessTokensDeep(data);
+  if (cleaned.id) {
+    const denied = await assertCanMutateOwnedContent(auth, "poster_versions", cleaned.id);
+    if (denied) return denied;
+  } else {
+    const denied = await assertCanMutateOwnedContent(auth, "posters", cleaned.posterId);
+    if (denied) return denied;
+  }
   const result = await savePosterVersion(cleaned);
   await auditContentChange({
     isUpdate: Boolean(cleaned.id),
@@ -304,6 +308,8 @@ export async function savePosterVersionAction(
 export async function deletePosterVersionAction(id: string) {
   const auth = await requireSession();
   if (isAuthError(auth)) return auth;
+  const denied = await assertCanMutateOwnedContent(auth, "poster_versions", id);
+  if (denied) return denied;
   const result = await deletePosterVersion(id);
   await auditContentDelete({ entityType: "poster_version", entityId: id });
   await revalidateAll();
@@ -315,6 +321,10 @@ export async function saveVideoAction(data: Partial<Video> & { id?: string }) {
   if (isAuthError(auth)) return auth;
   const validationError = validateTitlePayload(data);
   if (validationError) return validationError;
+  if (data.id) {
+    const denied = await assertCanMutateOwnedContent(auth, "videos", data.id);
+    if (denied) return denied;
+  }
   const tutorialDenied = await assertTutorialForPossibleCreate("videos", "videos", data.id);
   if (tutorialDenied) return tutorialDenied;
   const result = await saveVideo(await withOwnerScope(auth, data));
@@ -332,6 +342,8 @@ export async function saveVideoAction(data: Partial<Video> & { id?: string }) {
 export async function deleteVideoAction(id: string) {
   const auth = await requireSession();
   if (isAuthError(auth)) return auth;
+  const denied = await assertCanMutateOwnedContent(auth, "videos", id);
+  if (denied) return denied;
   const result = await deleteVideo(id);
   await auditContentDelete({ entityType: "video", entityId: id });
   await revalidateAll();
@@ -344,6 +356,13 @@ export async function saveVideoVersionAction(
   const auth = await requireSession();
   if (isAuthError(auth)) return auth;
   const cleaned = stripFileAccessTokensDeep(data);
+  if (cleaned.id) {
+    const denied = await assertCanMutateOwnedContent(auth, "video_versions", cleaned.id);
+    if (denied) return denied;
+  } else {
+    const denied = await assertCanMutateOwnedContent(auth, "videos", cleaned.videoId);
+    if (denied) return denied;
+  }
   const result = await saveVideoVersion(cleaned);
   await auditContentChange({
     isUpdate: Boolean(cleaned.id),
@@ -359,6 +378,8 @@ export async function saveVideoVersionAction(
 export async function deleteVideoVersionAction(id: string) {
   const auth = await requireSession();
   if (isAuthError(auth)) return auth;
+  const denied = await assertCanMutateOwnedContent(auth, "video_versions", id);
+  if (denied) return denied;
   const result = await deleteVideoVersion(id);
   await auditContentDelete({ entityType: "video_version", entityId: id });
   await revalidateAll();
@@ -368,6 +389,10 @@ export async function deleteVideoVersionAction(id: string) {
 export async function saveAnalyticsAction(data: Partial<AnalyticsMetric> & { id?: string }) {
   const auth = await requireSession();
   if (isAuthError(auth)) return auth;
+  if (data.id) {
+    const denied = await assertCanMutateOwnedContent(auth, "analytics_metrics", data.id);
+    if (denied) return denied;
+  }
   const tutorialDenied = await assertTutorialForPossibleCreate(
     "analytics",
     "analytics_metrics",
@@ -389,6 +414,8 @@ export async function saveAnalyticsAction(data: Partial<AnalyticsMetric> & { id?
 export async function deleteAnalyticsAction(id: string) {
   const auth = await requireSession();
   if (isAuthError(auth)) return auth;
+  const denied = await assertCanMutateOwnedContent(auth, "analytics_metrics", id);
+  if (denied) return denied;
   const result = await deleteAnalyticsMetric(id);
   await auditContentDelete({ entityType: "analytics_metric", entityId: id });
   await revalidateAll();
@@ -401,6 +428,8 @@ export async function updateSubmissionAction(
 ) {
   const auth = await requireSession();
   if (isAuthError(auth)) return auth;
+  const denied = await assertCanMutateOwnedContent(auth, "campaign_submissions", id);
+  if (denied) return denied;
   const result = await updateSubmission(id, data);
   await logAuditFromCurrentSession({
     category: "content",
@@ -417,6 +446,8 @@ export async function updateSubmissionAction(
 export async function deleteSubmissionAction(id: string) {
   const auth = await requireSession();
   if (isAuthError(auth)) return auth;
+  const denied = await assertCanMutateOwnedContent(auth, "campaign_submissions", id);
+  if (denied) return denied;
   const result = await deleteSubmission(id);
   await auditContentDelete({ entityType: "submission", entityId: id });
   await revalidateAll();
@@ -428,6 +459,10 @@ export async function saveCampaignFileAction(data: Partial<CampaignFile> & { id?
   if (isAuthError(auth)) return auth;
   const validationError = validateTitlePayload(data);
   if (validationError) return validationError;
+  if (data.id) {
+    const denied = await assertCanMutateOwnedContent(auth, "campaign_files", data.id);
+    if (denied) return denied;
+  }
   const tutorialDenied = await assertTutorialForPossibleCreate(
     "files",
     "campaign_files",
@@ -449,6 +484,8 @@ export async function saveCampaignFileAction(data: Partial<CampaignFile> & { id?
 export async function deleteCampaignFileAction(id: string) {
   const auth = await requireSession();
   if (isAuthError(auth)) return auth;
+  const denied = await assertCanMutateOwnedContent(auth, "campaign_files", id);
+  if (denied) return denied;
   const result = await deleteCampaignFile(id);
   await auditContentDelete({ entityType: "file", entityId: id });
   await revalidateAll();
@@ -460,6 +497,10 @@ export async function saveRawMediaUploadAction(data: Partial<RawMediaUpload> & {
   if (isAuthError(auth)) return auth;
   const validationError = validateTitlePayload(data);
   if (validationError) return validationError;
+  if (data.id) {
+    const denied = await assertCanMutateOwnedContent(auth, "raw_media_uploads", data.id);
+    if (denied) return denied;
+  }
   const tutorialDenied = await assertTutorialForPossibleCreate(
     "rawMedia",
     "raw_media_uploads",
@@ -481,6 +522,8 @@ export async function saveRawMediaUploadAction(data: Partial<RawMediaUpload> & {
 export async function deleteRawMediaUploadAction(id: string) {
   const auth = await requireSession();
   if (isAuthError(auth)) return auth;
+  const denied = await assertCanMutateOwnedContent(auth, "raw_media_uploads", id);
+  if (denied) return denied;
   const result = await deleteRawMediaUpload(id);
   await auditContentDelete({ entityType: "raw_media", entityId: id });
   await revalidateAll();

@@ -26,6 +26,19 @@ export function getRequestClientIp(request: Request): string {
   return "unknown";
 }
 
+export function getRateLimitBlock(key: string): RateLimitResult {
+  const current = nowMs();
+  const existing = buckets.get(key);
+  if (existing?.lockedUntil && existing.lockedUntil > current) {
+    return {
+      ok: false,
+      locked: true,
+      retryAfterSec: Math.max(1, Math.ceil((existing.lockedUntil - current) / 1000)),
+    };
+  }
+  return { ok: true };
+}
+
 /**
  * Fixed-window counter with optional lockout after the limit is exceeded.
  * In-memory only (fine for a single app instance).

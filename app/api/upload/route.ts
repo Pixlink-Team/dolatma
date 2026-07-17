@@ -2,6 +2,7 @@ import { mkdir, writeFile } from "fs/promises";
 import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth/get-session";
+import { assertMagicMatchesKind } from "@/lib/security/file-magic";
 import { getUploadPublicUrl, getUploadsDir, withFileAccessToken } from "@/lib/uploads";
 
 export const runtime = "nodejs";
@@ -60,7 +61,6 @@ const RAW_IMAGE_EXTENSIONS = new Set([
   ".heic",
   ".heif",
   ".avif",
-  ".svg",
   ".ico",
   ".raw",
   ".cr2",
@@ -175,8 +175,10 @@ function resolveUploadExtension(file: File): string {
 }
 
 function isAllowedRawImage(file: File): boolean {
+  if (file.type === "image/svg+xml") return false;
   if (file.type.startsWith("image/")) return true;
   const ext = extensionFromFileName(file.name);
+  if (ext === ".svg") return false;
   return RAW_IMAGE_EXTENSIONS.has(ext);
 }
 
@@ -237,13 +239,21 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "حجم فایل بیش از حد مجاز است" }, { status: 400 });
   }
 
+  const buffer = Buffer.from(await file.arrayBuffer());
+  const magic = assertMagicMatchesKind(buffer, kind);
+  if (!magic.ok) {
+    return NextResponse.json({ error: magic.error }, { status: 400 });
+  }
+
   const extension = isRawKind ? resolveUploadExtension(file) : extensionForMime(file.type);
+  if (extension === ".svg") {
+    return NextResponse.json({ error: "آپلود فایل SVG مجاز نیست" }, { status: 400 });
+  }
   const filename = `${randomUUID()}${extension}`;
   const uploadsDir = getUploadsDir();
 
   await mkdir(uploadsDir, { recursive: true });
 
-  const buffer = Buffer.from(await file.arrayBuffer());
   await writeFile(`${uploadsDir}/${filename}`, buffer);
 
   return NextResponse.json({

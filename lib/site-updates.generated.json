@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "78e5163dece65598232ac7e5a37a00c9dab70da5",
+      "committedAt": "2026-07-17T18:18:17+03:30",
+      "title": "تقویت امنیت ورود، دسترسی‌ها و خروج از پنل",
+      "subject": "Harden auth rate limits, ACL, headers, and session revoke"
+    },
+    {
       "hash": "9e34b87844012d83d479a805dd7a87af6d228374",
       "committedAt": "2026-07-17T18:14:41+03:30",
       "title": "اصلاح نمایش آمار امروز در کارت‌های خلاصه کمپین",

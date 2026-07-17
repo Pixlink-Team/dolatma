@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getAuthSession, getOwnerFilter, isFullAdmin } from "@/lib/auth/get-session";
+import { assertCanMutateOwnedContent } from "@/lib/auth/assert-content-ownership";
 import { canScoreContent, isClientUser } from "@/lib/auth/access";
 import {
   assertTutorialForPossibleCreate,
@@ -99,6 +100,11 @@ export async function saveSocialPostAction(data: Partial<SocialMediaPost> & { id
     return { success: false, error: "Database required" };
   }
 
+  if (data.id) {
+    const denied = await assertCanMutateOwnedContent(session, "social_media_posts", data.id);
+    if (denied) return denied;
+  }
+
   const tutorialKey = isSitePublication({ platform: data.platform ?? "other" })
     ? "sitePublications"
     : "socialPosts";
@@ -125,6 +131,8 @@ export async function deleteSocialPostAction(id: string) {
   const session = await getAuthSession();
   if (!session) return { success: false, error: "Unauthorized" };
   if (!isPostgresConfigured()) return { success: false, error: "Database required" };
+  const denied = await assertCanMutateOwnedContent(session, "social_media_posts", id);
+  if (denied) return denied;
   await pgExt.pgDeleteSocialPost(id);
   await auditContentDelete({ entityType: "social_post", entityId: id });
   await revalidateExtended();
@@ -242,6 +250,8 @@ export async function deleteBroadcastReportAction(id: string) {
   const session = await getAuthSession();
   if (!session) return { success: false, error: "Unauthorized" };
   if (!isPostgresConfigured()) return { success: false, error: "Database required" };
+  const denied = await assertCanMutateOwnedContent(session, "broadcast_reports", id);
+  if (denied) return denied;
   await pgExt.pgDeleteBroadcastReport(id);
   await auditContentDelete({ entityType: "broadcast_report", entityId: id });
   await revalidateExtended();
@@ -291,6 +301,8 @@ export async function deleteCampaignActivityAction(id: string) {
   const session = await getAuthSession();
   if (!session) return { success: false, error: "Unauthorized" };
   if (!isPostgresConfigured()) return { success: false, error: "Database required" };
+  const denied = await assertCanMutateOwnedContent(session, "campaign_activities", id);
+  if (denied) return denied;
   await pgExt.pgDeleteCampaignActivity(id);
   await auditContentDelete({ entityType: "activity", entityId: id });
   await revalidateExtended();
