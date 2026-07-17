@@ -1,3 +1,4 @@
+import { extractAparatVideoHash } from "@/lib/media-utils";
 import type { LinkMetricsPlatform } from "./types";
 
 const MANUAL_ONLY_PLATFORMS = new Set([
@@ -6,7 +7,6 @@ const MANUAL_ONLY_PLATFORMS = new Set([
   "telegram",
   "linkedin",
   "youtube",
-  "aparat",
   "bale",
   "soroush",
   "rubika",
@@ -19,6 +19,10 @@ export function isEitaaUrl(rawUrl: string): boolean {
   } catch {
     return false;
   }
+}
+
+export function isAparatUrl(rawUrl: string): boolean {
+  return extractAparatVideoHash(rawUrl) !== null;
 }
 
 export function isHttpUrl(rawUrl: string): boolean {
@@ -42,7 +46,6 @@ function detectBlockedMessengerHost(host: string): LinkMetricsPlatform | null {
     host.includes("youtube.com") ||
     host.includes("youtu.be") ||
     host.includes("linkedin.com") ||
-    host.includes("aparat.com") ||
     host === "x.com" ||
     host.includes("twitter.com")
   ) {
@@ -56,6 +59,7 @@ export function detectLinkMetricsPlatform(
   declaredPlatform?: string | null
 ): LinkMetricsPlatform {
   if (isEitaaUrl(url) || declaredPlatform === "eitaa") return "eitaa";
+  if (isAparatUrl(url) || declaredPlatform === "aparat") return "aparat";
 
   if (declaredPlatform === "bale") return "bale";
   if (declaredPlatform === "soroush") return "soroush";
@@ -95,6 +99,9 @@ const BLOCKED_REASONS: Record<"bale" | "soroush" | "rubika", string> = {
 export function getLinkMetricsSupportMessage(platform: LinkMetricsPlatform): string {
   if (platform === "eitaa") {
     return "از لینک عمومی پست ایتا می‌توان بازدید، متن و کاور را خواند.";
+  }
+  if (platform === "aparat") {
+    return "از لینک ویدیو آپارات می‌توان بازدید، لایک، کامنت، عنوان و کاور را خواند.";
   }
   if (platform === "web") {
     return "از لینک صفحه می‌توان عنوان، توضیح و تصویر شاخص (Open Graph) را خواند.";

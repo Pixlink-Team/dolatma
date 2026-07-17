@@ -394,8 +394,9 @@ export async function pgListRefreshableSocialPosts(limit = 300): Promise<SocialM
     LEFT JOIN users u ON u.id = sp.owner_user_id
     WHERE COALESCE(TRIM(sp.link), '') <> ''
       AND (
-        sp.platform IN ('eitaa', 'site')
+        sp.platform IN ('eitaa', 'aparat', 'site')
         OR sp.link ILIKE '%eitaa.com%'
+        OR sp.link ILIKE '%aparat.com%'
       )
     ORDER BY sp.updated_at ASC NULLS FIRST, sp.published_date DESC
     LIMIT ${limit}

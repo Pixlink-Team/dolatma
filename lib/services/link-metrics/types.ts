@@ -1,5 +1,6 @@
 export type LinkMetricsPlatform =
   | "eitaa"
+  | "aparat"
   | "web"
   | "bale"
   | "soroush"

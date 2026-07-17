@@ -2,6 +2,7 @@ import {
   detectLinkMetricsPlatform,
   getLinkMetricsSupportMessage,
 } from "./detect";
+import { fetchAparatPostMetrics } from "./aparat";
 import { fetchEitaaPostMetrics } from "./eitaa";
 import { fetchWebPageMetrics } from "./web-page";
 import type { LinkMetricsResult } from "./types";
@@ -25,6 +26,10 @@ export async function fetchSocialLinkMetrics(
     return fetchEitaaPostMetrics(trimmed);
   }
 
+  if (platform === "aparat") {
+    return fetchAparatPostMetrics(trimmed);
+  }
+
   if (platform === "web") {
     return fetchWebPageMetrics(trimmed);
   }
@@ -39,6 +44,7 @@ export async function fetchSocialLinkMetrics(
 export {
   detectLinkMetricsPlatform,
   getLinkMetricsSupportMessage,
+  isAparatUrl,
   isEitaaUrl,
   isHttpUrl,
 } from "./detect";

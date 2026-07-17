@@ -90,6 +90,7 @@ Replace `$APP_URL` with your public app URL (or internal service URL) and ensure
 
 What it updates:
 - **Eitaa posts**: views (and empty title/description/cover)
+- **Aparat videos**: views, likes, comments (and empty title/description/cover)
 - **Site publications** + **magazine/newspaper** with a link: Open Graph title/description/cover when empty
 
 ### 6. Local Docker test

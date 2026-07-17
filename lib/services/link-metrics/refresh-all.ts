@@ -27,7 +27,7 @@ export function isLinkAutoRefreshable(
   const trimmed = url?.trim() ?? "";
   if (!trimmed) return false;
   const detected = detectLinkMetricsPlatform(trimmed, platform);
-  return detected === "eitaa" || detected === "web";
+  return detected === "eitaa" || detected === "aparat" || detected === "web";
 }
 
 function pickText(existing: string | null | undefined, next: string | null | undefined): string | null | undefined {

@@ -289,7 +289,7 @@ export function SocialPostsAdmin({
     }
 
     const detected = detectLinkMetricsPlatform(link, platform);
-    if (detected !== "eitaa" && detected !== "web") {
+    if (detected !== "eitaa" && detected !== "aparat" && detected !== "web") {
       toast.error(
         detected === "unsupported"
           ? "واکشی خودکار برای این لینک پشتیبانی نمی‌شود"
@@ -337,13 +337,13 @@ export function SocialPostsAdmin({
         form.setValue("publishedDate", result.publishedDate);
       }
 
-      if (platform !== "eitaa") {
-        form.setValue("platform", "eitaa");
+      if (platform !== "eitaa" && platform !== "aparat" && (detected === "eitaa" || detected === "aparat")) {
+        form.setValue("platform", detected);
       }
 
       toast.success(
         typeof result.views === "number"
-          ? `آمار از ایتا خوانده شد (بازدید: ${result.views.toLocaleString("fa-IR")})`
+          ? `آمار از لینک خوانده شد (بازدید: ${result.views.toLocaleString("fa-IR")})`
           : "اطلاعات از لینک خوانده شد"
       );
     });
@@ -665,7 +665,7 @@ export function SocialPostsAdmin({
                   variant="outline"
                   disabled={isPending}
                   onClick={handleFetchFromLink}
-                  title="خواندن اطلاعات از لینک (ایتا یا صفحه وب)"
+                  title="خواندن اطلاعات از لینک (ایتا، آپارات یا صفحه وب)"
                   className="shrink-0 gap-1.5"
                 >
                   <RefreshCw className={cn("h-4 w-4", isPending && "animate-spin")} />
@@ -676,7 +676,7 @@ export function SocialPostsAdmin({
                 <p className="text-xs text-destructive">لینک پست خالی است؛ لطفاً تکمیل کنید.</p>
               )}
               <p className="text-xs text-muted-foreground">
-                ایتا: بازدید و محتوا. صفحات وب: عنوان، توضیح و کاور. بله/سروش/روبیکا دستی.
+                ایتا و آپارات: بازدید/آمار و محتوا. صفحات وب: عنوان، توضیح و کاور. بله/سروش/روبیکا دستی.
               </p>
             </div>
 
