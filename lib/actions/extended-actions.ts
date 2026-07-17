@@ -139,6 +139,112 @@ export async function deleteSocialPostAction(id: string) {
   return { success: true };
 }
 
+export async function fetchSocialLinkMetricsAction(input: {
+  url: string;
+  platform?: string | null;
+}) {
+  const session = await getAuthSession();
+  if (!session) return { success: false as const, error: "Unauthorized" };
+
+  const { fetchSocialLinkMetrics } = await import("@/lib/services/link-metrics");
+  const metrics = await fetchSocialLinkMetrics(input.url, input.platform);
+
+  if (metrics.error || metrics.supported === false) {
+    return {
+      success: false as const,
+      error: metrics.error ?? "واکشی از این لینک پشتیبانی نمی‌شود",
+      platform: metrics.platform,
+    };
+  }
+
+  return {
+    success: true as const,
+    platform: metrics.platform,
+    views: metrics.views,
+    likes: metrics.likes,
+    comments: metrics.comments,
+    shares: metrics.shares,
+    title: metrics.title ?? null,
+    description: metrics.description ?? null,
+    coverImageUrl: metrics.coverImageUrl ?? null,
+    publishedDate: metrics.publishedDate ?? null,
+  };
+}
+
+export async function refreshSocialPostMetricsAction(postId: string) {
+  const session = await getAuthSession();
+  if (!session) return { success: false as const, error: "Unauthorized" };
+  if (!isPostgresConfigured()) return { success: false as const, error: "Database required" };
+
+  const denied = await assertCanMutateOwnedContent(session, "social_media_posts", postId);
+  if (denied) return { success: false as const, error: denied.error };
+
+  const existing = await pgExt.pgGetSocialPostById(postId);
+  if (!existing) return { success: false as const, error: "پست یافت نشد" };
+
+  if (!isFullAdmin(session) && existing.campaignId) {
+    const permissions = await pgExt.pgGetUserPermissionsForCampaign(session.userId!, existing.campaignId);
+    if (!hasContributorPermission(permissions, "socialPosts")) {
+      return { success: false as const, error: "دسترسی ندارید" };
+    }
+  }
+
+  const { fetchSocialLinkMetrics } = await import("@/lib/services/link-metrics");
+  const metrics = await fetchSocialLinkMetrics(existing.link, existing.platform);
+
+  if (metrics.error || metrics.supported === false) {
+    return {
+      success: false as const,
+      error: metrics.error ?? "واکشی از این لینک پشتیبانی نمی‌شود",
+      platform: metrics.platform,
+    };
+  }
+
+  const nextTitle =
+    existing.title?.trim() || metrics.title?.trim() || existing.title || "";
+  const nextDescription = existing.description?.trim()
+    ? existing.description
+    : metrics.description ?? existing.description;
+  const nextCover = existing.coverImageUrl?.trim()
+    ? existing.coverImageUrl
+    : metrics.coverImageUrl ?? existing.coverImageUrl;
+  const nextPublishedDate = existing.publishedDate || metrics.publishedDate || existing.publishedDate;
+
+  const result = await pgExt.pgSaveSocialPost({
+    ...existing,
+    title: nextTitle,
+    description: nextDescription,
+    coverImageUrl: nextCover,
+    publishedDate: nextPublishedDate,
+    views: metrics.views ?? existing.views,
+    likes: metrics.likes ?? existing.likes,
+    comments: metrics.comments ?? existing.comments,
+    shares: metrics.shares ?? existing.shares,
+  });
+
+  await auditContentChange({
+    isUpdate: true,
+    entityType: "social_post",
+    entityId: postId,
+    campaignId: existing.campaignId,
+    label: nextTitle || existing.platform,
+  });
+  await revalidateExtended();
+
+  return {
+    success: true as const,
+    id: result.id,
+    views: metrics.views ?? existing.views,
+    likes: metrics.likes ?? existing.likes,
+    comments: metrics.comments ?? existing.comments,
+    shares: metrics.shares ?? existing.shares,
+    title: nextTitle,
+    description: nextDescription ?? null,
+    coverImageUrl: nextCover ?? null,
+    publishedDate: nextPublishedDate,
+  };
+}
+
 export async function saveSocialPlatformStatAction(data: Partial<SocialPlatformStat> & { id?: string }) {
   const validationError = validateTitlePayload(data);
   if (validationError) return validationError;

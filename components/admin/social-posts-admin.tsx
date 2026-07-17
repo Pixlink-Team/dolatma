@@ -34,7 +34,9 @@ import {
 import { normalizePlanLabels, type ContentTopic } from "@/lib/content-topics";
 import { MediaUpload } from "@/components/ui/media-upload";
 import { PersianDateField } from "@/components/ui/persian-date-input";
-import { deleteSocialPostAction, saveSocialPostAction } from "@/lib/actions/extended-actions";
+import { deleteSocialPostAction, fetchSocialLinkMetricsAction, saveSocialPostAction } from "@/lib/actions/extended-actions";
+import { detectLinkMetricsPlatform } from "@/lib/services/link-metrics/detect";
+import { RefreshCw } from "lucide-react";
 import {
   parseEditSuggestionMissingFields,
   type EditSuggestionMissingField,
@@ -275,6 +277,75 @@ export function SocialPostsAdmin({
       await deleteSocialPostAction(post.id);
       setRows((prev) => prev.filter((row) => row.id !== post.id));
       toast.success("حذف شد");
+    });
+  };
+
+  const handleFetchFromLink = () => {
+    const link = form.getValues("link")?.trim() ?? "";
+    const platform = form.getValues("platform");
+    if (!link) {
+      toast.error("ابتدا لینک پست را وارد کنید");
+      return;
+    }
+
+    const detected = detectLinkMetricsPlatform(link, platform);
+    if (detected !== "eitaa") {
+      toast.error(
+        detected === "unsupported"
+          ? "واکشی خودکار برای این لینک پشتیبانی نمی‌شود"
+          : "برای بله، سروش و روبیکا واکشی خودکار از لینک ممکن نیست؛ اعداد را دستی وارد کنید"
+      );
+      return;
+    }
+
+    startTransition(async () => {
+      const result = await fetchSocialLinkMetricsAction({ url: link, platform });
+      if (!result.success) {
+        toast.error(result.error);
+        return;
+      }
+
+      if (typeof result.views === "number") {
+        form.setValue("views", result.views);
+      }
+      if (typeof result.likes === "number") {
+        form.setValue("likes", result.likes);
+      }
+      if (typeof result.comments === "number") {
+        form.setValue("comments", result.comments);
+      }
+      if (typeof result.shares === "number") {
+        form.setValue("shares", result.shares);
+      }
+
+      const currentTitle = form.getValues("title")?.trim() ?? "";
+      if (!currentTitle && result.title?.trim()) {
+        form.setValue("title", result.title.trim());
+      }
+
+      const currentDescription = form.getValues("description")?.trim() ?? "";
+      if (!currentDescription && result.description?.trim()) {
+        form.setValue("description", result.description.trim());
+      }
+
+      const currentCover = form.getValues("coverImageUrl")?.trim() ?? "";
+      if (!currentCover && result.coverImageUrl?.trim()) {
+        form.setValue("coverImageUrl", result.coverImageUrl.trim());
+      }
+
+      if (result.publishedDate && !form.getValues("publishedDate")) {
+        form.setValue("publishedDate", result.publishedDate);
+      }
+
+      if (platform !== "eitaa") {
+        form.setValue("platform", "eitaa");
+      }
+
+      toast.success(
+        typeof result.views === "number"
+          ? `آمار از ایتا خوانده شد (بازدید: ${result.views.toLocaleString("fa-IR")})`
+          : "اطلاعات پست از ایتا خوانده شد"
+      );
     });
   };
 
@@ -580,14 +651,33 @@ export function SocialPostsAdmin({
 
             <div className="space-y-2">
               <Label className={cn(highlightLink && "text-destructive")}>لینک پست</Label>
-              <Input
-                {...form.register("link")}
-                dir="ltr"
-                className={cn(highlightLink && "border-destructive focus-visible:ring-destructive")}
-              />
+              <div className="flex gap-2">
+                <Input
+                  {...form.register("link")}
+                  dir="ltr"
+                  className={cn(
+                    "min-w-0 flex-1",
+                    highlightLink && "border-destructive focus-visible:ring-destructive"
+                  )}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={isPending}
+                  onClick={handleFetchFromLink}
+                  title="خواندن بازدید و محتوا از لینک (فعلاً فقط ایتا)"
+                  className="shrink-0 gap-1.5"
+                >
+                  <RefreshCw className={cn("h-4 w-4", isPending && "animate-spin")} />
+                  از لینک
+                </Button>
+              </div>
               {highlightLink && (
                 <p className="text-xs text-destructive">لینک پست خالی است؛ لطفاً تکمیل کنید.</p>
               )}
+              <p className="text-xs text-muted-foreground">
+                فعلاً فقط لینک عمومی پست ایتا پشتیبانی می‌شود. بله، سروش و روبیکا را دستی وارد کنید.
+              </p>
             </div>
 
             <PersianDateField control={form.control} name="publishedDate" label="تاریخ انتشار" />

@@ -373,6 +373,18 @@ export async function pgDeleteUsers(ids: string[]) {
   return { success: true, deleted: ids.length };
 }
 
+export async function pgGetSocialPostById(id: string): Promise<SocialMediaPost | null> {
+  const sql = getSql();
+  const rows = await sql`
+    SELECT sp.*, u.name AS owner_name, u.province AS owner_province, u.city AS owner_city
+    FROM social_media_posts sp
+    LEFT JOIN users u ON u.id = sp.owner_user_id
+    WHERE sp.id = ${id}
+    LIMIT 1
+  `;
+  return rows[0] ? mapSocialPostFromDb(rows[0]) : null;
+}
+
 export async function pgGetSocialPosts(
   campaignId: string,
   ownerUserId?: string | null
