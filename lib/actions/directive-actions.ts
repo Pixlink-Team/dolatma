@@ -133,34 +133,32 @@ export async function saveDirectiveAction(input: {
   title: string;
   body: string;
   priority: DirectivePriority;
-  dueDate?: string | null;
+  startDate?: string | null;
+  endDate?: string | null;
+  letterFileUrl?: string | null;
+  letterFileName?: string | null;
+  letterMimeType?: string | null;
+  letterFileSize?: number;
   audienceType: DirectiveAudienceType;
   audienceRegion?: UserRegion | null;
   selectedUserIds?: string[];
-  attachments: Array<{
-    id?: string;
-    title: string;
-    fileUrl: string;
-    fileName: string;
-    mimeType: string;
-    fileSize: number;
-  }>;
   sendSmsOnPublish?: boolean;
 }) {
   const titleError = getContentTitleValidationError(input.title);
   if (titleError) return { success: false as const, error: titleError };
 
-  for (const attachment of input.attachments ?? []) {
-    const attachmentTitleError = getContentTitleValidationError(attachment.title);
-    if (attachmentTitleError) {
-      return {
-        success: false as const,
-        error: `عنوان پیوست: ${attachmentTitleError}`,
-      };
-    }
-    if (!attachment.fileUrl?.trim()) {
-      return { success: false as const, error: "برای هر پیوست باید فایل آپلود شود" };
-    }
+  if (!input.startDate?.trim()) {
+    return { success: false as const, error: "تاریخ شروع الزامی است" };
+  }
+  if (!input.endDate?.trim()) {
+    return { success: false as const, error: "تاریخ پایان الزامی است" };
+  }
+  if (input.startDate.trim() > input.endDate.trim()) {
+    return { success: false as const, error: "تاریخ شروع نمی‌تواند بعد از تاریخ پایان باشد" };
+  }
+
+  if (!input.letterFileUrl?.trim()) {
+    return { success: false as const, error: "آپلود نامه رسمی (PDF یا تصویر) الزامی است" };
   }
 
   const access = await assertDirectivesAccess(input.campaignId);
@@ -184,7 +182,6 @@ export async function saveDirectiveAction(input: {
   const cleaned = stripFileAccessTokensDeep({
     ...input,
     body: input.body?.trim() ?? "",
-    attachments: input.attachments ?? [],
   });
 
   const isUpdate = Boolean(cleaned.id);
@@ -198,11 +195,15 @@ export async function saveDirectiveAction(input: {
     title: cleaned.title.trim(),
     body: cleaned.body,
     priority: cleaned.priority,
-    dueDate: cleaned.dueDate,
+    startDate: cleaned.startDate,
+    endDate: cleaned.endDate,
+    letterFileUrl: cleaned.letterFileUrl,
+    letterFileName: cleaned.letterFileName,
+    letterMimeType: cleaned.letterMimeType,
+    letterFileSize: cleaned.letterFileSize,
     audienceType: cleaned.audienceType,
     audienceRegion: cleaned.audienceRegion,
     published: true,
-    attachments: cleaned.attachments,
     selectedUserIds: cleaned.selectedUserIds,
   });
 

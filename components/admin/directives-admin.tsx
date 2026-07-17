@@ -42,7 +42,6 @@ import {
 } from "@/lib/content-constraints";
 import type {
   CampaignDirective,
-  DirectiveAttachment,
   DirectiveRecipient,
 } from "@/lib/types";
 import { USER_REGIONS, getUserRegionLabel, type UserRegion } from "@/lib/user-regions";
@@ -52,7 +51,8 @@ const schema = z.object({
   title: z.string().min(1).max(CONTENT_TITLE_MAX_LENGTH, CONTENT_TITLE_MAX_LENGTH_MESSAGE),
   body: z.string().min(1, "متن دستورکار الزامی است"),
   priority: z.enum(["normal", "urgent"]),
-  dueDate: z.string().optional(),
+  startDate: z.string().min(1, "تاریخ شروع الزامی است"),
+  endDate: z.string().min(1, "تاریخ پایان الزامی است"),
   audienceType: z.enum(["all", "region", "users"]),
   audienceRegion: z.enum(["north", "south", "east", "west"]).nullable().optional(),
 });
@@ -89,43 +89,52 @@ const smsStatusLabels: Record<DirectiveRecipient["smsStatus"], string> = {
   skipped: "رد شد",
 };
 
-function AttachmentList({ attachments }: { attachments: DirectiveAttachment[] }) {
-  if (attachments.length === 0) {
-    return <p className="text-sm text-muted-foreground">پیوستی ندارد</p>;
+function OfficialLetterPreview({ item }: { item: CampaignDirective }) {
+  if (!item.letterFileUrl) {
+    return <p className="text-sm text-muted-foreground">نامه رسمی آپلود نشده</p>;
   }
 
+  const isImage = Boolean(item.letterMimeType?.startsWith("image/"));
+
   return (
-    <ul className="space-y-2">
-      {attachments.map((file) => (
-        <li key={file.id} className="rounded-lg border px-3 py-2">
-          <a
-            href={file.fileUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-start gap-2 text-sm text-primary hover:underline"
-          >
-            <Download className="mt-0.5 h-4 w-4 shrink-0" />
-            <span className="min-w-0">
-              <span className="block font-medium text-foreground">{file.title || file.fileName}</span>
-              {file.title && file.title !== file.fileName && (
-                <span className="block text-xs text-muted-foreground">{file.fileName}</span>
-              )}
-            </span>
-          </a>
-        </li>
-      ))}
-    </ul>
+    <div className="space-y-2 rounded-lg border px-3 py-3">
+      {isImage && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={item.letterFileUrl}
+          alt={item.letterFileName || "نامه رسمی"}
+          className="max-h-64 w-full rounded-md object-contain bg-muted/30"
+        />
+      )}
+      <a
+        href={item.letterFileUrl}
+        target="_blank"
+        rel="noreferrer"
+        className="inline-flex items-start gap-2 text-sm text-primary hover:underline"
+      >
+        <Download className="mt-0.5 h-4 w-4 shrink-0" />
+        <span className="min-w-0">
+          <span className="block font-medium text-foreground">
+            {item.letterFileName || "نامه رسمی"}
+          </span>
+          <span className="block text-xs text-muted-foreground">دانلود / مشاهده نامه رسمی</span>
+        </span>
+      </a>
+    </div>
   );
 }
 
-type DraftAttachment = {
-  id?: string;
-  title: string;
-  fileUrl: string;
-  fileName: string;
-  mimeType: string;
-  fileSize: number;
-};
+function DirectiveDateRange({ item }: { item: CampaignDirective }) {
+  const start = item.startDate;
+  const end = item.endDate ?? item.dueDate;
+  if (!start && !end) return null;
+  return (
+    <>
+      {start && <span>شروع: {formatPersianDate(start)}</span>}
+      {end && <span>پایان: {formatPersianDate(end)}</span>}
+    </>
+  );
+}
 
 export function DirectivesAdmin({
   campaignId,
@@ -141,11 +150,7 @@ export function DirectivesAdmin({
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
-  const [attachments, setAttachments] = useState<DraftAttachment[]>([]);
-  const [attachmentDialogOpen, setAttachmentDialogOpen] = useState(false);
-  const [editingAttachmentIndex, setEditingAttachmentIndex] = useState<number | null>(null);
-  const [attachmentTitle, setAttachmentTitle] = useState("");
-  const [attachmentUpload, setAttachmentUpload] = useState({
+  const [letterUpload, setLetterUpload] = useState({
     url: "",
     fileName: "",
     fileSize: 0,
@@ -163,7 +168,8 @@ export function DirectivesAdmin({
       title: "",
       body: "",
       priority: "normal",
-      dueDate: "",
+      startDate: "",
+      endDate: "",
       audienceType: "all",
       audienceRegion: null,
     },
@@ -183,12 +189,13 @@ export function DirectivesAdmin({
   const openCreate = () => {
     setEditingId(null);
     setSelectedUserIds([]);
-    setAttachments([]);
+    setLetterUpload({ url: "", fileName: "", fileSize: 0, mimeType: "" });
     form.reset({
       title: "",
       body: "",
       priority: "normal",
-      dueDate: "",
+      startDate: "",
+      endDate: "",
       audienceType: "all",
       audienceRegion: null,
     });
@@ -197,22 +204,19 @@ export function DirectivesAdmin({
 
   const openEdit = (item: CampaignDirective) => {
     setEditingId(item.id);
-    setAttachments(
-      item.attachments.map((file) => ({
-        id: file.id,
-        title: file.title || file.fileName,
-        fileUrl: file.fileUrl,
-        fileName: file.fileName,
-        mimeType: file.mimeType,
-        fileSize: file.fileSize,
-      }))
-    );
+    setLetterUpload({
+      url: item.letterFileUrl ?? "",
+      fileName: item.letterFileName ?? "",
+      fileSize: item.letterFileSize ?? 0,
+      mimeType: item.letterMimeType ?? "",
+    });
     setSelectedUserIds([]);
     form.reset({
       title: item.title,
       body: item.body,
       priority: item.priority,
-      dueDate: item.dueDate ?? "",
+      startDate: item.startDate ?? "",
+      endDate: item.endDate ?? item.dueDate ?? "",
       audienceType: item.audienceType,
       audienceRegion: item.audienceRegion,
     });
@@ -232,63 +236,6 @@ export function DirectivesAdmin({
   const closeDialog = () => {
     setOpen(false);
     setEditingId(null);
-    setAttachmentDialogOpen(false);
-    setEditingAttachmentIndex(null);
-  };
-
-  const openAddAttachment = () => {
-    setEditingAttachmentIndex(null);
-    setAttachmentTitle("");
-    setAttachmentUpload({ url: "", fileName: "", fileSize: 0, mimeType: "" });
-    setAttachmentDialogOpen(true);
-  };
-
-  const openEditAttachment = (index: number) => {
-    const current = attachments[index];
-    if (!current) return;
-    setEditingAttachmentIndex(index);
-    setAttachmentTitle(current.title);
-    setAttachmentUpload({
-      url: current.fileUrl,
-      fileName: current.fileName,
-      fileSize: current.fileSize,
-      mimeType: current.mimeType,
-    });
-    setAttachmentDialogOpen(true);
-  };
-
-  const closeAttachmentDialog = () => {
-    setAttachmentDialogOpen(false);
-    setEditingAttachmentIndex(null);
-    setAttachmentTitle("");
-    setAttachmentUpload({ url: "", fileName: "", fileSize: 0, mimeType: "" });
-  };
-
-  const saveAttachmentDraft = () => {
-    const title = attachmentTitle.trim();
-    if (!title) {
-      toast.error("عنوان فایل الزامی است");
-      return;
-    }
-    if (!attachmentUpload.url) {
-      toast.error("فایل را آپلود کنید");
-      return;
-    }
-
-    const next: DraftAttachment = {
-      id: editingAttachmentIndex != null ? attachments[editingAttachmentIndex]?.id : undefined,
-      title,
-      fileUrl: attachmentUpload.url,
-      fileName: attachmentUpload.fileName || title,
-      mimeType: attachmentUpload.mimeType || "application/octet-stream",
-      fileSize: attachmentUpload.fileSize || 0,
-    };
-
-    setAttachments((prev) => {
-      if (editingAttachmentIndex == null) return [...prev, next];
-      return prev.map((item, index) => (index === editingAttachmentIndex ? next : item));
-    });
-    closeAttachmentDialog();
   };
 
   const toggleUser = (userId: string) => {
@@ -298,6 +245,11 @@ export function DirectivesAdmin({
   };
 
   const onSubmit = form.handleSubmit((data) => {
+    if (!letterUpload.url) {
+      toast.error("آپلود نامه رسمی (PDF یا تصویر) الزامی است");
+      return;
+    }
+
     startTransition(async () => {
       const result = await saveDirectiveAction({
         id: editingId ?? undefined,
@@ -305,11 +257,15 @@ export function DirectivesAdmin({
         title: data.title,
         body: data.body,
         priority: data.priority,
-        dueDate: data.dueDate || null,
+        startDate: data.startDate,
+        endDate: data.endDate,
+        letterFileUrl: letterUpload.url,
+        letterFileName: letterUpload.fileName || "نامه رسمی",
+        letterMimeType: letterUpload.mimeType || "application/octet-stream",
+        letterFileSize: letterUpload.fileSize || 0,
         audienceType: data.audienceType,
         audienceRegion: data.audienceType === "region" ? data.audienceRegion ?? null : null,
         selectedUserIds: data.audienceType === "users" ? selectedUserIds : undefined,
-        attachments,
         sendSmsOnPublish: true,
       });
 
@@ -373,7 +329,7 @@ export function DirectivesAdmin({
           <p className="text-sm text-muted-foreground">
             {canManage
               ? "انتشار دستورکار برای کاربران و پیگیری مشاهده و پیامک"
-              : "دستورکارهای جدید را ببینید، پیوست‌ها را بردارید و تأیید مشاهده بزنید"}
+              : "دستورکارهای جدید را ببینید، نامه رسمی را مشاهده کنید و تأیید مشاهده بزنید"}
           </p>
         </div>
         {canManage && managerView === "manage" && (
@@ -450,7 +406,7 @@ export function DirectivesAdmin({
                   </p>
                   <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
                     <span>انتشار: {formatPersianDateTime(item.publishedAt ?? item.createdAt)}</span>
-                    {item.dueDate && <span>مهلت: {formatPersianDate(item.dueDate)}</span>}
+                    <DirectiveDateRange item={item} />
                     {!showingInbox && (
                       <span>
                         {formatPersianNumber(item.seenCount ?? 0)} دیده‌اند ·{" "}
@@ -549,13 +505,36 @@ export function DirectivesAdmin({
                   </SelectContent>
                 </Select>
               </div>
+            </div>
 
+            <div className="grid gap-4 sm:grid-cols-2">
               <PersianDateField
                 control={form.control}
-                name="dueDate"
-                label="مهلت اقدام (اختیاری)"
+                name="startDate"
+                label="تاریخ شروع"
+              />
+              <PersianDateField
+                control={form.control}
+                name="endDate"
+                label="تاریخ پایان"
               />
             </div>
+            {(form.formState.errors.startDate || form.formState.errors.endDate) && (
+              <p className="text-sm text-destructive">
+                {form.formState.errors.startDate?.message ||
+                  form.formState.errors.endDate?.message}
+              </p>
+            )}
+
+            <DocumentUpload
+              variant="letter"
+              label="نامه رسمی این اقدام"
+              value={letterUpload.url}
+              fileName={letterUpload.fileName}
+              fileSize={letterUpload.fileSize}
+              mimeType={letterUpload.mimeType}
+              onChange={(payload) => setLetterUpload(payload)}
+            />
 
             <div className="space-y-2">
               <Label>مخاطب</Label>
@@ -624,55 +603,6 @@ export function DirectivesAdmin({
               </div>
             )}
 
-            <div className="space-y-3">
-              <div className="flex items-center justify-between gap-2">
-                <Label>پیوست‌ها</Label>
-                <Button type="button" variant="outline" size="sm" onClick={openAddAttachment}>
-                  <Plus className="h-4 w-4" />
-                  افزودن فایل
-                </Button>
-              </div>
-              {attachments.length === 0 ? (
-                <p className="rounded-lg border border-dashed px-3 py-6 text-center text-sm text-muted-foreground">
-                  هنوز فایلی اضافه نشده — با «افزودن فایل» پیوست بگذارید
-                </p>
-              ) : (
-                <ul className="space-y-2">
-                  {attachments.map((file, index) => (
-                    <li
-                      key={`${file.fileUrl}-${index}`}
-                      className="flex items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate font-medium">{file.title}</p>
-                        <p className="truncate text-xs text-muted-foreground">{file.fileName}</p>
-                      </div>
-                      <div className="flex shrink-0 gap-1">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => openEditAttachment(index)}
-                        >
-                          ویرایش
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() =>
-                            setAttachments((prev) => prev.filter((_, i) => i !== index))
-                          }
-                        >
-                          حذف
-                        </Button>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-
             <p className="text-xs text-muted-foreground">
               با انتشار، برای مخاطبان پیامک رزرو می‌شود (سرویس پیامک فعلاً جای خالی است و بعداً وصل می‌شود).
             </p>
@@ -686,52 +616,6 @@ export function DirectivesAdmin({
               </Button>
             </div>
           </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Add / edit attachment */}
-      <Dialog
-        open={attachmentDialogOpen}
-        onOpenChange={(next) => (next ? setAttachmentDialogOpen(true) : closeAttachmentDialog())}
-      >
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {editingAttachmentIndex != null ? "ویرایش فایل" : "افزودن فایل"}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>عنوان فایل</Label>
-              <Input
-                value={attachmentTitle}
-                maxLength={CONTENT_TITLE_MAX_LENGTH}
-                onChange={(event) => setAttachmentTitle(event.target.value)}
-                placeholder="مثلاً پوستر اینستاگرام / متن پیامک / فایل چاپ"
-              />
-            </div>
-            <DocumentUpload
-              label="فایل"
-              value={attachmentUpload.url}
-              fileName={attachmentUpload.fileName}
-              fileSize={attachmentUpload.fileSize}
-              mimeType={attachmentUpload.mimeType}
-              onChange={(payload) => {
-                setAttachmentUpload(payload);
-                if (!attachmentTitle.trim() && payload.fileName) {
-                  setAttachmentTitle(payload.fileName.replace(/\.[^.]+$/, ""));
-                }
-              }}
-            />
-            <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={closeAttachmentDialog}>
-                انصراف
-              </Button>
-              <Button type="button" onClick={saveAttachmentDraft}>
-                {editingAttachmentIndex != null ? "ذخیره فایل" : "افزودن به دستورکار"}
-              </Button>
-            </div>
-          </div>
         </DialogContent>
       </Dialog>
 
@@ -755,16 +639,14 @@ export function DirectivesAdmin({
                     انتشار:{" "}
                     {formatPersianDateTime(detailItem.publishedAt ?? detailItem.createdAt)}
                   </span>
-                  {detailItem.dueDate && (
-                    <span>مهلت: {formatPersianDate(detailItem.dueDate)}</span>
-                  )}
+                  <DirectiveDateRange item={detailItem} />
                   {detailItem.createdByName && (
                     <span>از طرف: {detailItem.createdByName}</span>
                   )}
                 </div>
                 <div>
-                  <h3 className="mb-2 text-sm font-medium">پیوست‌ها</h3>
-                  <AttachmentList attachments={detailItem.attachments} />
+                  <h3 className="mb-2 text-sm font-medium">نامه رسمی</h3>
+                  <OfficialLetterPreview item={detailItem} />
                 </div>
                 {showingInbox && !detailItem.confirmed && (
                   <Button disabled={isPending} onClick={() => confirmSeen(detailItem)}>

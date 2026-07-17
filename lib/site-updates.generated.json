@@ -1,6 +1,18 @@
 {
   "entries": [
     {
+      "hash": "9cb11184302a73ef49cfeb9ef90ec542e723cb67",
+      "committedAt": "2026-07-17T19:49:28+03:30",
+      "title": "افزودن تنظیمات پیامک به بخش تنظیمات کمپین",
+      "subject": "Add SMS provider settings to campaign settings"
+    },
+    {
+      "hash": "20760669eef3f55e46b35e440e07b8dd5855c5ea",
+      "committedAt": "2026-07-17T19:46:17+03:30",
+      "title": "نمایش دستورکارها در داشبورد برای همه کاربران",
+      "subject": "Show directives on dashboard for all users"
+    },
+    {
       "hash": "f4155af18cb21d92a4096150d88aecbb7f57971e",
       "committedAt": "2026-07-17T19:45:04+03:30",
       "title": "حذف بخش کاربران فعال امروز از رصد فعالیت",

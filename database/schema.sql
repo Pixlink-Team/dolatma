@@ -719,6 +719,12 @@ CREATE TABLE IF NOT EXISTS campaign_directives (
   body TEXT NOT NULL DEFAULT '',
   priority TEXT NOT NULL DEFAULT 'normal' CHECK (priority IN ('normal', 'urgent')),
   due_date DATE,
+  start_date DATE,
+  end_date DATE,
+  letter_file_url TEXT,
+  letter_file_name TEXT,
+  letter_mime_type TEXT,
+  letter_file_size INT NOT NULL DEFAULT 0,
   audience_type TEXT NOT NULL DEFAULT 'all' CHECK (audience_type IN ('all', 'region', 'users')),
   audience_region TEXT CHECK (audience_region IS NULL OR audience_region IN ('north', 'south', 'east', 'west')),
   published BOOLEAN NOT NULL DEFAULT true,
@@ -727,6 +733,17 @@ CREATE TABLE IF NOT EXISTS campaign_directives (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+ALTER TABLE campaign_directives ADD COLUMN IF NOT EXISTS start_date DATE;
+ALTER TABLE campaign_directives ADD COLUMN IF NOT EXISTS end_date DATE;
+ALTER TABLE campaign_directives ADD COLUMN IF NOT EXISTS letter_file_url TEXT;
+ALTER TABLE campaign_directives ADD COLUMN IF NOT EXISTS letter_file_name TEXT;
+ALTER TABLE campaign_directives ADD COLUMN IF NOT EXISTS letter_mime_type TEXT;
+ALTER TABLE campaign_directives ADD COLUMN IF NOT EXISTS letter_file_size INT NOT NULL DEFAULT 0;
+
+UPDATE campaign_directives
+SET end_date = due_date
+WHERE end_date IS NULL AND due_date IS NOT NULL;
 
 CREATE INDEX IF NOT EXISTS idx_campaign_directives_campaign
   ON campaign_directives(campaign_id, published, created_at DESC);

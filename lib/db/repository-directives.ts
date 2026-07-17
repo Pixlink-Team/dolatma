@@ -71,6 +71,20 @@ function mapDirectiveRow(
   row: Record<string, unknown>,
   attachments: DirectiveAttachment[]
 ): CampaignDirective {
+  const dueDate = toDateString(row.due_date);
+  const startDate = toDateString(row.start_date);
+  const endDate = toDateString(row.end_date) ?? dueDate;
+  const letterFileUrl = row.letter_file_url ? String(row.letter_file_url) : null;
+  const letterFromAttachment =
+    !letterFileUrl && attachments[0]
+      ? {
+          letterFileUrl: attachments[0].fileUrl,
+          letterFileName: attachments[0].fileName,
+          letterMimeType: attachments[0].mimeType,
+          letterFileSize: attachments[0].fileSize,
+        }
+      : null;
+
   return {
     id: String(row.id),
     campaignId: String(row.campaign_id),
@@ -79,7 +93,20 @@ function mapDirectiveRow(
     title: String(row.title ?? ""),
     body: String(row.body ?? ""),
     priority: mapPriority(row.priority),
-    dueDate: toDateString(row.due_date),
+    dueDate,
+    startDate,
+    endDate,
+    letterFileUrl: letterFileUrl ?? letterFromAttachment?.letterFileUrl ?? null,
+    letterFileName: row.letter_file_name
+      ? String(row.letter_file_name)
+      : letterFromAttachment?.letterFileName ?? null,
+    letterMimeType: row.letter_mime_type
+      ? String(row.letter_mime_type)
+      : letterFromAttachment?.letterMimeType ?? null,
+    letterFileSize:
+      row.letter_file_size != null
+        ? Number(row.letter_file_size)
+        : letterFromAttachment?.letterFileSize ?? 0,
     audienceType: mapAudienceType(row.audience_type),
     audienceRegion: mapRegion(row.audience_region),
     published: Boolean(row.published),
@@ -305,11 +332,16 @@ export interface SaveDirectiveInput {
   title: string;
   body: string;
   priority: DirectivePriority;
-  dueDate?: string | null;
+  startDate?: string | null;
+  endDate?: string | null;
+  letterFileUrl?: string | null;
+  letterFileName?: string | null;
+  letterMimeType?: string | null;
+  letterFileSize?: number;
   audienceType: DirectiveAudienceType;
   audienceRegion?: UserRegion | null;
   published?: boolean;
-  attachments: Array<{
+  attachments?: Array<{
     id?: string;
     title: string;
     fileUrl: string;
@@ -325,7 +357,12 @@ export async function pgSaveDirective(input: SaveDirectiveInput): Promise<{ id: 
   const id = input.id ?? generateId();
   const now = new Date().toISOString();
   const published = input.published ?? true;
-  const dueDate = input.dueDate?.trim() || null;
+  const startDate = input.startDate?.trim() || null;
+  const endDate = input.endDate?.trim() || null;
+  const letterFileUrl = input.letterFileUrl?.trim() || null;
+  const letterFileName = input.letterFileName?.trim() || null;
+  const letterMimeType = input.letterMimeType?.trim() || null;
+  const letterFileSize = letterFileUrl ? Number(input.letterFileSize ?? 0) : 0;
   const audienceRegion =
     input.audienceType === "region" ? (input.audienceRegion ?? null) : null;
 
@@ -343,6 +380,7 @@ export async function pgSaveDirective(input: SaveDirectiveInput): Promise<{ id: 
   await sql`
     INSERT INTO campaign_directives (
       id, campaign_id, created_by_user_id, title, body, priority, due_date,
+      start_date, end_date, letter_file_url, letter_file_name, letter_mime_type, letter_file_size,
       audience_type, audience_region, published, published_at, sort_order, created_at, updated_at
     ) VALUES (
       ${id},
@@ -351,7 +389,13 @@ export async function pgSaveDirective(input: SaveDirectiveInput): Promise<{ id: 
       ${input.title},
       ${input.body},
       ${input.priority},
-      ${dueDate},
+      ${endDate},
+      ${startDate},
+      ${endDate},
+      ${letterFileUrl},
+      ${letterFileName},
+      ${letterMimeType},
+      ${letterFileSize},
       ${input.audienceType},
       ${audienceRegion},
       ${published},
@@ -365,6 +409,12 @@ export async function pgSaveDirective(input: SaveDirectiveInput): Promise<{ id: 
       body = EXCLUDED.body,
       priority = EXCLUDED.priority,
       due_date = EXCLUDED.due_date,
+      start_date = EXCLUDED.start_date,
+      end_date = EXCLUDED.end_date,
+      letter_file_url = EXCLUDED.letter_file_url,
+      letter_file_name = EXCLUDED.letter_file_name,
+      letter_mime_type = EXCLUDED.letter_mime_type,
+      letter_file_size = EXCLUDED.letter_file_size,
       audience_type = EXCLUDED.audience_type,
       audience_region = EXCLUDED.audience_region,
       published = EXCLUDED.published,
@@ -372,24 +422,21 @@ export async function pgSaveDirective(input: SaveDirectiveInput): Promise<{ id: 
       updated_at = EXCLUDED.updated_at
   `;
 
+  // Keep a single attachment row mirrored from the official letter for older UIs.
   await sql`DELETE FROM directive_attachments WHERE directive_id = ${id}`;
-  for (let index = 0; index < input.attachments.length; index += 1) {
-    const attachment = input.attachments[index];
-    const attachmentId = attachment.id ?? generateId();
-    const attachmentTitle =
-      attachment.title?.trim() || attachment.fileName?.trim() || `پیوست ${index + 1}`;
+  if (letterFileUrl) {
     await sql`
       INSERT INTO directive_attachments (
         id, directive_id, title, file_url, file_name, mime_type, file_size, sort_order, created_at
       ) VALUES (
-        ${attachmentId},
+        ${generateId()},
         ${id},
-        ${attachmentTitle},
-        ${attachment.fileUrl},
-        ${attachment.fileName},
-        ${attachment.mimeType || "application/octet-stream"},
-        ${attachment.fileSize || 0},
-        ${index},
+        ${"نامه رسمی"},
+        ${letterFileUrl},
+        ${letterFileName || "letter"},
+        ${letterMimeType || "application/octet-stream"},
+        ${letterFileSize},
+        ${0},
         ${now}
       )
     `;

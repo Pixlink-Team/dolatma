@@ -16,6 +16,11 @@ interface DocumentUploadProps {
   onChange: (payload: { url: string; fileName: string; fileSize: number; mimeType: string }) => void;
   label?: string;
   disabled?: boolean;
+  /**
+   * letter = PDF or image (official directive letter).
+   * document = PDF/Office/text only (default).
+   */
+  variant?: "document" | "letter";
 }
 
 function formatFileSize(bytes: number): string {
@@ -23,6 +28,12 @@ function formatFileSize(bytes: number): string {
   if (bytes < 1024 * 1024) return `${formatPersianNumber(Math.round(bytes / 1024))} KB`;
   return `${formatPersianNumber(Math.round(bytes / (1024 * 1024)))} MB`;
 }
+
+const LETTER_ACCEPT =
+  ".pdf,image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.gif,application/pdf";
+
+const DOCUMENT_ACCEPT =
+  ".pdf,.doc,.docx,.xls,.xlsx,.txt,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/plain";
 
 export function DocumentUpload({
   value,
@@ -32,17 +43,30 @@ export function DocumentUpload({
   onChange,
   label,
   disabled,
+  variant = "document",
 }: DocumentUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const isLetter = variant === "letter";
 
   const handleUpload = async (file: File) => {
+    if (isLetter) {
+      const isPdf = file.type === "application/pdf" || /\.pdf$/i.test(file.name);
+      const isImage = file.type.startsWith("image/");
+      if (!isPdf && !isImage) {
+        toast.error("فقط PDF یا تصویر مجاز است");
+        return;
+      }
+    }
+
     setUploading(true);
     try {
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("kind", "document");
+      const kind =
+        isLetter && file.type.startsWith("image/") ? "image" : "document";
+      formData.append("kind", kind);
 
       const response = await fetch("/api/upload", {
         method: "POST",
@@ -96,7 +120,9 @@ export function DocumentUpload({
         <div className="flex flex-col items-center gap-3 text-center">
           <FileText className="h-8 w-8 text-muted-foreground" />
           <p className="text-sm text-muted-foreground">
-            PDF، Word، Excel یا فایل متنی — حداکثر ۲۵ مگابایت
+            {isLetter
+              ? "PDF یا تصویر نامه رسمی — حداکثر ۲۵ مگابایت"
+              : "PDF، Word، Excel یا فایل متنی — حداکثر ۲۵ مگابایت"}
           </p>
           <Button
             type="button"
@@ -113,7 +139,7 @@ export function DocumentUpload({
       <input
         ref={inputRef}
         type="file"
-        accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/plain"
+        accept={isLetter ? LETTER_ACCEPT : DOCUMENT_ACCEPT}
         className="hidden"
         onChange={(event) => {
           const file = event.target.files?.[0];

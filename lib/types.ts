@@ -404,7 +404,15 @@ export interface CampaignDirective {
   title: string;
   body: string;
   priority: DirectivePriority;
+  /** @deprecated Prefer endDate. Kept for older rows. */
   dueDate?: string | null;
+  startDate?: string | null;
+  endDate?: string | null;
+  /** Official letter (PDF or image) for this directive. */
+  letterFileUrl?: string | null;
+  letterFileName?: string | null;
+  letterMimeType?: string | null;
+  letterFileSize?: number;
   audienceType: DirectiveAudienceType;
   audienceRegion?: import("./user-regions").UserRegion | null;
   published: boolean;
