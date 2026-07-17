@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { getAdminSessionCookieName } from "@/lib/auth/admin-session";
 import { parseSessionTokenSync } from "@/lib/auth/session-node";
 import { isFullAdmin } from "@/lib/auth/get-session";
+import { assertContributorTutorialCompleted } from "@/lib/auth/require-tutorial-completion";
 import { resolveDefaultAdminOwnerUserId } from "@/lib/admin-content-owner";
 import { hasContributorPermission } from "@/lib/contributor-permissions";
 import { pgGetUserPermissionsForCampaign } from "@/lib/db/repository-extended";
@@ -45,6 +46,11 @@ export async function POST(request: Request) {
     if (!hasContributorPermission(permissions, "submissions")) {
       return NextResponse.json({ error: "دسترسی ندارید" }, { status: 403 });
     }
+  }
+
+  const tutorialDenied = await assertContributorTutorialCompleted("submissions");
+  if (tutorialDenied) {
+    return NextResponse.json({ error: tutorialDenied.error }, { status: 403 });
   }
 
   try {

@@ -37,7 +37,10 @@ import { resolveBillboardCategoryLabel } from "@/lib/billboard-categories";
 import { canManageBillboardPeriods, isApiBillboard } from "@/lib/billboards";
 import { getBillboardDisplayImage } from "@/lib/billboard-media";
 import type { ContentTopic } from "@/lib/content-topics";
+import { type EditSuggestionMissingField } from "@/lib/edit-suggestions";
+import { useAdminEditDeepLink } from "@/lib/hooks/use-admin-edit-deep-link";
 import { useAdminViewMode } from "@/lib/hooks/use-admin-view-mode";
+import { useSectionCreateGate } from "@/lib/hooks/use-section-create-gate";
 import { useAdminInfiniteScroll } from "@/lib/hooks/use-admin-infinite-scroll";
 import { AdminInfiniteScrollSentinel } from "@/components/admin/admin-infinite-scroll-sentinel";
 import type { AdminUser, Billboard } from "@/lib/types";
@@ -78,6 +81,7 @@ export function BillboardsAdmin({
   users = [],
   contributorProfile = null,
 }: BillboardsAdminProps) {
+  const { requestCreate, tutorialModal } = useSectionCreateGate("billboards");
   const router = useRouter();
   const [billboards, setBillboards] = useState(initialBillboards);
   const [formOpen, setFormOpen] = useState(false);
@@ -89,6 +93,17 @@ export function BillboardsAdmin({
   const [contentFilter, setContentFilter] = useState<AdminContentFilterState>(DEFAULT_ADMIN_CONTENT_FILTER);
   const { viewMode, setViewMode } = useAdminViewMode("billboards");
   const [, startTransition] = useTransition();
+
+  const { highlightFields, setHighlightFields, resetDeepLink } = useAdminEditDeepLink({
+    items: billboards.filter((billboard) => !isApiBillboard(billboard)),
+    getId: (billboard) => billboard.id,
+    basePath: "/admin/billboards",
+    onOpen: (billboard, fields) => {
+      setEditingBillboard(billboard);
+      setHighlightFields(fields);
+      setFormOpen(true);
+    },
+  });
 
   useEffect(() => {
     setBillboards(initialBillboards);
@@ -148,14 +163,24 @@ export function BillboardsAdmin({
   const showExternalPeriodTools = showExternalMigrationTools && Boolean(externalCampaignId);
 
   const openCreate = () => {
-    setEditingBillboard(null);
+    void requestCreate(() => {
+      setEditingBillboard(null);
+      setHighlightFields([]);
+      setFormOpen(true);
+    });
+  };
+
+  const openEdit = (billboard: Billboard, fields: EditSuggestionMissingField[] = []) => {
+    if (isApiBillboard(billboard)) return;
+    setEditingBillboard(billboard);
+    setHighlightFields(fields);
     setFormOpen(true);
   };
 
-  const openEdit = (billboard: Billboard) => {
-    if (isApiBillboard(billboard)) return;
-    setEditingBillboard(billboard);
-    setFormOpen(true);
+  const closeForm = () => {
+    setFormOpen(false);
+    setEditingBillboard(null);
+    resetDeepLink();
   };
 
   const handleDelete = (item: Billboard) => {
@@ -170,6 +195,7 @@ export function BillboardsAdmin({
 
   return (
     <div className="space-y-6">
+      {tutorialModal}
       <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">تبلیغات محیطی</h1>
@@ -250,10 +276,7 @@ export function BillboardsAdmin({
 
       <BillboardCreateAssignmentDialog
         open={formOpen}
-        onOpenChange={(open) => {
-          setFormOpen(open);
-          if (!open) setEditingBillboard(null);
-        }}
+        onOpenChange={(open) => (open ? setFormOpen(true) : closeForm())}
         campaignId={campaignId}
         contentPlans={contentPlans}
         contentTopics={contentTopics}
@@ -261,6 +284,7 @@ export function BillboardsAdmin({
         mode={isFullAdmin ? "admin" : "client"}
         contributorProfile={contributorProfile}
         editingBillboard={editingBillboard}
+        highlightFields={highlightFields}
         onCreated={() => router.refresh()}
       />
 

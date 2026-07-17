@@ -34,6 +34,7 @@ import {
   type EditSuggestionMissingField,
 } from "@/lib/edit-suggestions";
 import { useAdminViewMode } from "@/lib/hooks/use-admin-view-mode";
+import { useSectionCreateGate } from "@/lib/hooks/use-section-create-gate";
 import { useAdminInfiniteScroll } from "@/lib/hooks/use-admin-infinite-scroll";
 import { AdminInfiniteScrollSentinel } from "@/components/admin/admin-infinite-scroll-sentinel";
 import { resolveDisplayVersion } from "@/lib/media-utils";
@@ -65,6 +66,7 @@ export function PostersAdmin({
   isFullAdmin = false,
   users = [],
 }: PostersAdminProps) {
+  const { requestCreate, tutorialModal } = useSectionCreateGate("posters");
   const router = useRouter();
   const searchParams = useSearchParams();
   const openedFromQueryRef = useRef<string | null>(null);
@@ -158,24 +160,26 @@ export function PostersAdmin({
   };
 
   const handleCreatePoster = () => {
-    const posterId = crypto.randomUUID();
-    const categoryId = initialCategories[0]?.id ?? "";
-    const now = new Date().toISOString();
-    const newPoster: Poster = {
-      id: posterId,
-      campaignId,
-      categoryId,
-      title: `پوستر ${posters.length + 1}`,
-      description: "",
-      published: true,
-      sortOrder: posters.length + 1,
-      planLabel: null,
-      createdAt: now,
-      updatedAt: now,
-    };
+    void requestCreate(() => {
+      const posterId = crypto.randomUUID();
+      const categoryId = initialCategories[0]?.id ?? "";
+      const now = new Date().toISOString();
+      const newPoster: Poster = {
+        id: posterId,
+        campaignId,
+        categoryId,
+        title: `پوستر ${posters.length + 1}`,
+        description: "",
+        published: true,
+        sortOrder: posters.length + 1,
+        planLabel: null,
+        createdAt: now,
+        updatedAt: now,
+      };
 
-    setDraftPoster(newPoster);
-    openEditor(posterId);
+      setDraftPoster(newPoster);
+      openEditor(posterId);
+    });
   };
 
   const handleDelete = (poster: Poster) => {
@@ -190,6 +194,7 @@ export function PostersAdmin({
 
   return (
     <div className="space-y-6">
+      {tutorialModal}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">پوسترها</h1>

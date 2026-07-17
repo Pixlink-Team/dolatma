@@ -50,9 +50,12 @@ import {
   saveRawMediaUploadAction,
 } from "@/lib/actions/admin-actions";
 import { useAdminViewMode } from "@/lib/hooks/use-admin-view-mode";
+import { useSectionCreateGate } from "@/lib/hooks/use-section-create-gate";
+import { useAdminEditDeepLink } from "@/lib/hooks/use-admin-edit-deep-link";
 import { useAdminInfiniteScroll } from "@/lib/hooks/use-admin-infinite-scroll";
 import { CONTENT_TITLE_MAX_LENGTH } from "@/lib/content-constraints";
 import type { ContentTopic } from "@/lib/content-topics";
+import { type EditSuggestionMissingField } from "@/lib/edit-suggestions";
 import {
   buildRawMediaStorageSummary,
   canAcceptRawMediaUpload,
@@ -60,7 +63,7 @@ import {
   RAW_MEDIA_MAX_FILE_BYTES,
 } from "@/lib/raw-media-storage";
 import type { AdminUser, RawMediaKind, RawMediaUpload } from "@/lib/types";
-import { formatPersianDateTime, formatPersianNumber } from "@/lib/utils";
+import { cn, formatPersianDateTime, formatPersianNumber } from "@/lib/utils";
 
 interface RawMediaAdminProps {
   campaignId: string;
@@ -81,6 +84,7 @@ export function RawMediaAdmin({
   isFullAdmin = false,
   users = [],
 }: RawMediaAdminProps) {
+  const { requestCreate, tutorialModal } = useSectionCreateGate("rawMedia");
   const [items, setItems] = useState(initialItems);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -161,12 +165,38 @@ export function RawMediaAdmin({
     setUpload({ url: "", fileName: "", fileSize: 0, mimeType: "" });
   };
 
+  const { highlightFields, setHighlightFields, resetDeepLink } = useAdminEditDeepLink({
+    items,
+    getId: (item) => item.id,
+    basePath: "/admin/raw-media",
+    onOpen: (item, fields) => {
+      setEditingId(item.id);
+      setTitle(item.title);
+      setDescription(item.description ?? "");
+      setMediaKind(item.mediaKind);
+      setPlanLabels(
+        item.planLabels?.length ? item.planLabels : item.planLabel ? [item.planLabel] : []
+      );
+      setUpload({
+        url: item.fileUrl,
+        fileName: item.fileName,
+        fileSize: item.fileSize,
+        mimeType: item.mimeType,
+      });
+      setHighlightFields(fields);
+      setDialogOpen(true);
+    },
+  });
+
   const openCreate = () => {
-    resetForm();
-    setDialogOpen(true);
+    void requestCreate(() => {
+      resetForm();
+      setHighlightFields([]);
+      setDialogOpen(true);
+    });
   };
 
-  const openEdit = (item: RawMediaUpload) => {
+  const openEdit = (item: RawMediaUpload, fields: EditSuggestionMissingField[] = []) => {
     setEditingId(item.id);
     setTitle(item.title);
     setDescription(item.description ?? "");
@@ -178,8 +208,19 @@ export function RawMediaAdmin({
       fileSize: item.fileSize,
       mimeType: item.mimeType,
     });
+    setHighlightFields(fields);
     setDialogOpen(true);
   };
+
+  const closeDialog = () => {
+    setDialogOpen(false);
+    resetForm();
+    resetDeepLink();
+  };
+
+  const highlightTitle = highlightFields.includes("title") && !title.trim();
+  const highlightFile = highlightFields.includes("file") && !upload.url;
+  const highlightDescription = highlightFields.includes("description") && !description.trim();
 
   const handleSave = () => {
     if (!title.trim()) {
@@ -257,8 +298,7 @@ export function RawMediaAdmin({
           : [nextItem, ...prev]
       );
       toast.success(editingId ? "راش به‌روزرسانی شد" : "راش تصویر ذخیره شد");
-      setDialogOpen(false);
-      resetForm();
+      closeDialog();
     });
   };
 
@@ -267,13 +307,13 @@ export function RawMediaAdmin({
       await deleteRawMediaUploadAction(item.id);
       setItems((prev) => prev.filter((row) => row.id !== item.id));
       toast.success("حذف شد — فضای ذخیره‌سازی آزاد شد");
-      setDialogOpen(false);
-      resetForm();
+      closeDialog();
     });
   };
 
   return (
     <div className="space-y-6">
+      {tutorialModal}
       <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">راش تصویر</h1>
@@ -491,13 +531,7 @@ export function RawMediaAdmin({
         remaining={filteredItems.length - visibleCount}
       />
 
-      <Dialog
-        open={dialogOpen}
-        onOpenChange={(open) => {
-          setDialogOpen(open);
-          if (!open) resetForm();
-        }}
-      >
+      <Dialog open={dialogOpen} onOpenChange={(open) => (open ? setDialogOpen(true) : closeDialog())}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>{editingId ? "ویرایش راش تصویر" : "آپلود راش تصویر"}</DialogTitle>
@@ -508,22 +542,32 @@ export function RawMediaAdmin({
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>عنوان</Label>
+              <Label className={cn(highlightTitle && "text-destructive")}>عنوان</Label>
               <Input
                 value={title}
                 maxLength={CONTENT_TITLE_MAX_LENGTH}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="نام محتوا"
+                className={cn(highlightTitle && "border-destructive focus-visible:ring-destructive")}
               />
+              {highlightTitle && (
+                <p className="text-xs text-destructive">عنوان خالی است؛ لطفاً تکمیل کنید.</p>
+              )}
             </div>
             <div className="space-y-2">
-              <Label>توضیحات</Label>
+              <Label className={cn(highlightDescription && "text-destructive")}>توضیحات</Label>
               <Textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 rows={2}
                 placeholder="اختیاری"
+                className={cn(
+                  highlightDescription && "border-destructive focus-visible:ring-destructive"
+                )}
               />
+              {highlightDescription && (
+                <p className="text-xs text-destructive">توضیحات خالی است؛ بهتر است تکمیل شود.</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label>نوع فایل</Label>
@@ -546,24 +590,33 @@ export function RawMediaAdmin({
               </Select>
             </div>
             <PlanLabelSelect topics={contentTopics} plans={contentPlans} values={planLabels} onChangeMultiple={setPlanLabels} />
-            <MediaUpload
-              label={mediaKind === "video" ? "ویدیو خام" : "تصویر خام"}
-              kind={mediaKind}
-              uploadKind={mediaKind === "video" ? "raw-video" : "raw-image"}
-              value={upload.url}
-              fileOnly
-              accept={mediaKind === "video" ? "video/*,.mkv,.avi,.wmv,.flv,.mts,.m2ts,.ts,.mpg,.mpeg,.3gp,.ogv" : "image/*,.heic,.heif,.tif,.tiff,.bmp,.avif,.raw,.cr2,.nef,.dng,.orf,.arw,.rw2"}
-              maxFileSizeBytes={RAW_MEDIA_MAX_FILE_BYTES}
-              onChange={(url) => setUpload((prev) => ({ ...prev, url }))}
-              onUploadedMeta={(meta) =>
-                setUpload({
-                  url: meta.url,
-                  fileName: meta.fileName,
-                  fileSize: meta.fileSize,
-                  mimeType: meta.mimeType,
-                })
-              }
-            />
+            <div
+              className={cn(
+                highlightFile && "rounded-lg border border-destructive bg-destructive/5 p-3"
+              )}
+            >
+              <MediaUpload
+                label={mediaKind === "video" ? "ویدیو خام" : "تصویر خام"}
+                kind={mediaKind}
+                uploadKind={mediaKind === "video" ? "raw-video" : "raw-image"}
+                value={upload.url}
+                fileOnly
+                accept={mediaKind === "video" ? "video/*,.mkv,.avi,.wmv,.flv,.mts,.m2ts,.ts,.mpg,.mpeg,.3gp,.ogv" : "image/*,.heic,.heif,.tif,.tiff,.bmp,.avif,.raw,.cr2,.nef,.dng,.orf,.arw,.rw2"}
+                maxFileSizeBytes={RAW_MEDIA_MAX_FILE_BYTES}
+                onChange={(url) => setUpload((prev) => ({ ...prev, url }))}
+                onUploadedMeta={(meta) =>
+                  setUpload({
+                    url: meta.url,
+                    fileName: meta.fileName,
+                    fileSize: meta.fileSize,
+                    mimeType: meta.mimeType,
+                  })
+                }
+              />
+              {highlightFile && (
+                <p className="mt-2 text-xs text-destructive">فایل هنوز آپلود نشده است.</p>
+              )}
+            </div>
             <Button className="w-full" disabled={isPending} onClick={handleSave}>
               ذخیره
             </Button>

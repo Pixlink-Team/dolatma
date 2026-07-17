@@ -36,12 +36,15 @@ import { MediaUpload } from "@/components/ui/media-upload";
 import { PersianDateField } from "@/components/ui/persian-date-input";
 import { deleteSocialPostAction, saveSocialPostAction } from "@/lib/actions/extended-actions";
 import { normalizePlanLabels, type ContentTopic } from "@/lib/content-topics";
+import { type EditSuggestionMissingField } from "@/lib/edit-suggestions";
+import { useAdminEditDeepLink } from "@/lib/hooks/use-admin-edit-deep-link";
+import { useSectionCreateGate } from "@/lib/hooks/use-section-create-gate";
 import { useAdminInfiniteScroll } from "@/lib/hooks/use-admin-infinite-scroll";
 import { AdminInfiniteScrollSentinel } from "@/components/admin/admin-infinite-scroll-sentinel";
 import { todayISO } from "@/lib/jalali";
 import { isSitePublication } from "@/lib/social-posts";
 import type { AdminUser, SocialMediaPost } from "@/lib/types";
-import { formatPersianDate } from "@/lib/utils";
+import { cn, formatPersianDate } from "@/lib/utils";
 
 const schema = z.object({
   title: z
@@ -73,6 +76,7 @@ export function SitePublicationsAdmin({
   isFullAdmin = false,
   users = [],
 }: SitePublicationsAdminProps) {
+  const { requestCreate, tutorialModal } = useSectionCreateGate("sitePublications");
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [planLabels, setPlanLabels] = useState<string[]>([]);
@@ -109,20 +113,52 @@ export function SitePublicationsAdmin({
     },
   });
 
+  const { highlightFields, setHighlightFields, resetDeepLink } = useAdminEditDeepLink({
+    items: rows,
+    getId: (row) => row.id,
+    basePath: "/admin/site-publications",
+    onOpen: (post, fields) => {
+      setEditingId(post.id);
+      setPlanLabels(normalizePlanLabels(post.planLabels, post.planLabel));
+      form.reset({
+        title: post.title,
+        link: post.link,
+        coverImageUrl: post.coverImageUrl ?? "",
+        description: post.description ?? "",
+        publishedDate: post.publishedDate,
+      });
+      setHighlightFields(fields);
+      setOpen(true);
+    },
+  });
+
+  const watchedTitle = form.watch("title");
+  const watchedLink = form.watch("link");
+  const watchedCover = form.watch("coverImageUrl");
+  const watchedDescription = form.watch("description");
+  const highlightTitle = highlightFields.includes("title") && !watchedTitle?.trim();
+  const highlightLink = highlightFields.includes("link") && !watchedLink?.trim();
+  const highlightMedia = highlightFields.includes("media") && !watchedCover?.trim();
+  const highlightDescription =
+    highlightFields.includes("description") && !watchedDescription?.trim();
+
   const openCreate = () => {
-    setEditingId(null);
-    setPlanLabels([]);
-    form.reset({
-      title: "",
-      link: "",
-      coverImageUrl: "",
-      description: "",
-      publishedDate: todayISO(),
+    void requestCreate(() => {
+      setEditingId(null);
+      setPlanLabels([]);
+      setHighlightFields([]);
+      form.reset({
+        title: "",
+        link: "",
+        coverImageUrl: "",
+        description: "",
+        publishedDate: todayISO(),
+      });
+      setOpen(true);
     });
-    setOpen(true);
   };
 
-  const openEdit = (post: SocialMediaPost) => {
+  const openEdit = (post: SocialMediaPost, fields: EditSuggestionMissingField[] = []) => {
     setEditingId(post.id);
     setPlanLabels(normalizePlanLabels(post.planLabels, post.planLabel));
     form.reset({
@@ -132,7 +168,15 @@ export function SitePublicationsAdmin({
       description: post.description ?? "",
       publishedDate: post.publishedDate,
     });
+    setHighlightFields(fields);
     setOpen(true);
+  };
+
+  const closeDialog = () => {
+    setOpen(false);
+    setEditingId(null);
+    setPlanLabels([]);
+    resetDeepLink();
   };
 
   const handleDelete = (post: SocialMediaPost) => {
@@ -140,7 +184,7 @@ export function SitePublicationsAdmin({
       await deleteSocialPostAction(post.id);
       setRows((prev) => prev.filter((row) => row.id !== post.id));
       toast.success("حذف شد");
-      setOpen(false);
+      closeDialog();
       setPreviewPost(null);
     });
   };
@@ -198,12 +242,13 @@ export function SitePublicationsAdmin({
         editingId ? prev.map((row) => (row.id === editingId ? { ...row, ...nextPost } : row)) : [...prev, nextPost]
       );
       toast.success("ذخیره شد");
-      setOpen(false);
+      closeDialog();
     });
   });
 
   return (
     <div className="space-y-4">
+      {tutorialModal}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">انتشار در سایت</h1>
@@ -303,23 +348,37 @@ export function SitePublicationsAdmin({
         deleteLabel="این انتشار"
       />
 
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={open} onOpenChange={(nextOpen) => (nextOpen ? setOpen(true) : closeDialog())}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingId ? "ویرایش انتشار" : "انتشار جدید در سایت"}</DialogTitle>
           </DialogHeader>
           <form onSubmit={onSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label>عنوان (به‌صورت لینک نمایش داده می‌شود)</Label>
+              <Label className={cn(highlightTitle && "text-destructive")}>
+                عنوان (به‌صورت لینک نمایش داده می‌شود)
+              </Label>
               <Input
                 {...form.register("title")}
                 maxLength={CONTENT_TITLE_MAX_LENGTH}
                 placeholder="عنوان مطلب در سایت"
+                className={cn(highlightTitle && "border-destructive focus-visible:ring-destructive")}
               />
+              {highlightTitle && (
+                <p className="text-xs text-destructive">عنوان خالی است؛ لطفاً تکمیل کنید.</p>
+              )}
             </div>
             <div className="space-y-2">
-              <Label>لینک مطلب</Label>
-              <Input {...form.register("link")} dir="ltr" placeholder="https://example.com/article" />
+              <Label className={cn(highlightLink && "text-destructive")}>لینک مطلب</Label>
+              <Input
+                {...form.register("link")}
+                dir="ltr"
+                placeholder="https://example.com/article"
+                className={cn(highlightLink && "border-destructive focus-visible:ring-destructive")}
+              />
+              {highlightLink && (
+                <p className="text-xs text-destructive">لینک مطلب خالی است؛ لطفاً تکمیل کنید.</p>
+              )}
             </div>
             <PersianDateField control={form.control} name="publishedDate" label="تاریخ انتشار" />
             <PlanLabelSelect
@@ -342,17 +401,35 @@ export function SitePublicationsAdmin({
                 }
               />
             )}
-            <div className="space-y-2">
+            <div
+              className={cn(
+                "space-y-2",
+                highlightMedia && "rounded-lg border border-destructive bg-destructive/5 p-3"
+              )}
+            >
               <Label>تصویر شاخص (اختیاری)</Label>
               <MediaUpload
                 value={form.watch("coverImageUrl") ?? ""}
                 onChange={(url) => form.setValue("coverImageUrl", url)}
                 accept="image/*"
               />
+              {highlightMedia && (
+                <p className="text-xs text-destructive">تصویر شاخص هنوز اضافه نشده است.</p>
+              )}
             </div>
             <div className="space-y-2">
-              <Label>توضیح (اختیاری)</Label>
-              <Textarea {...form.register("description")} rows={3} placeholder="خلاصه یا یادداشت درباره این انتشار" />
+              <Label className={cn(highlightDescription && "text-destructive")}>توضیح (اختیاری)</Label>
+              <Textarea
+                {...form.register("description")}
+                rows={3}
+                placeholder="خلاصه یا یادداشت درباره این انتشار"
+                className={cn(
+                  highlightDescription && "border-destructive focus-visible:ring-destructive"
+                )}
+              />
+              {highlightDescription && (
+                <p className="text-xs text-destructive">توضیحات خالی است؛ بهتر است تکمیل شود.</p>
+              )}
             </div>
             <Button type="submit" disabled={isPending} className="w-full">
               ذخیره

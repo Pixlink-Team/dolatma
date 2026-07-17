@@ -15,6 +15,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { updateSubmissionAction, deleteSubmissionAction } from "@/lib/actions/admin-actions";
+import { useSectionCreateGate } from "@/lib/hooks/use-section-create-gate";
 import type { CampaignSubmission } from "@/lib/types";
 import { formatPersianDate, formatPersianNumber, getStatusLabel, maskEmail, maskPhone } from "@/lib/utils";
 
@@ -24,6 +25,7 @@ interface SubmissionsAdminProps {
 }
 
 export function SubmissionsAdmin({ campaignId, initialSubmissions }: SubmissionsAdminProps) {
+  const { requestCreate, tutorialModal } = useSectionCreateGate("submissions");
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const [submissions, setSubmissions] = useState(initialSubmissions);
@@ -50,7 +52,7 @@ export function SubmissionsAdmin({ campaignId, initialSubmissions }: Submissions
     });
   };
 
-  const handleExcelUpload = async (file: File) => {
+  const runExcelUpload = async (file: File) => {
     setUploading(true);
     try {
       const formData = new FormData();
@@ -86,8 +88,21 @@ export function SubmissionsAdmin({ campaignId, initialSubmissions }: Submissions
     }
   };
 
+  const handleExcelUpload = (file: File) => {
+    void requestCreate(() => {
+      void runExcelUpload(file);
+    });
+  };
+
+  const openExcelPicker = () => {
+    void requestCreate(() => {
+      inputRef.current?.click();
+    });
+  };
+
   return (
     <div className="space-y-6">
+      {tutorialModal}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 space-y-1">
           <h1 className="text-2xl font-bold">مشارکت کاربران</h1>
@@ -100,7 +115,7 @@ export function SubmissionsAdmin({ campaignId, initialSubmissions }: Submissions
           variant="outline"
           className="shrink-0 self-start"
           disabled={uploading}
-          onClick={() => inputRef.current?.click()}
+          onClick={openExcelPicker}
         >
           {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
           آپلود Excel
@@ -126,7 +141,7 @@ export function SubmissionsAdmin({ campaignId, initialSubmissions }: Submissions
         className="hidden"
         onChange={(event) => {
           const file = event.target.files?.[0];
-          if (file) void handleExcelUpload(file);
+          if (file) handleExcelUpload(file);
         }}
       />
 

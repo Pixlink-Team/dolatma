@@ -36,11 +36,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { deleteCampaignFileAction, saveCampaignFileAction } from "@/lib/actions/admin-actions";
 import { CONTENT_TITLE_MAX_LENGTH } from "@/lib/content-constraints";
 import type { ContentTopic } from "@/lib/content-topics";
+import { isDefaultFileTitle, type EditSuggestionMissingField } from "@/lib/edit-suggestions";
+import { useAdminEditDeepLink } from "@/lib/hooks/use-admin-edit-deep-link";
+import { useSectionCreateGate } from "@/lib/hooks/use-section-create-gate";
 import { useAdminViewMode } from "@/lib/hooks/use-admin-view-mode";
 import { useAdminInfiniteScroll } from "@/lib/hooks/use-admin-infinite-scroll";
 import { AdminInfiniteScrollSentinel } from "@/components/admin/admin-infinite-scroll-sentinel";
 import type { AdminUser, CampaignFile } from "@/lib/types";
-import { formatPersianNumber } from "@/lib/utils";
+import { cn, formatPersianNumber } from "@/lib/utils";
 
 interface FilesAdminProps {
   campaignId: string;
@@ -74,6 +77,7 @@ export function FilesAdmin({
   isFullAdmin = false,
   users = [],
 }: FilesAdminProps) {
+  const { requestCreate, tutorialModal } = useSectionCreateGate("files");
   const [files, setFiles] = useState(initialFiles);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -115,12 +119,37 @@ export function FilesAdmin({
     setUpload({ url: "", fileName: "", fileSize: 0, mimeType: "" });
   };
 
+  const { highlightFields, setHighlightFields, resetDeepLink } = useAdminEditDeepLink({
+    items: files,
+    getId: (file) => file.id,
+    basePath: "/admin/files",
+    onOpen: (file, fields) => {
+      setEditingId(file.id);
+      setTitle(file.title);
+      setDescription(file.description ?? "");
+      setPlanLabels(
+        file.planLabels?.length ? file.planLabels : file.planLabel ? [file.planLabel] : []
+      );
+      setUpload({
+        url: file.fileUrl,
+        fileName: file.fileName,
+        fileSize: file.fileSize,
+        mimeType: file.mimeType,
+      });
+      setHighlightFields(fields);
+      setDialogOpen(true);
+    },
+  });
+
   const openCreate = () => {
-    resetForm();
-    setDialogOpen(true);
+    void requestCreate(() => {
+      resetForm();
+      setHighlightFields([]);
+      setDialogOpen(true);
+    });
   };
 
-  const openEdit = (file: CampaignFile) => {
+  const openEdit = (file: CampaignFile, fields: EditSuggestionMissingField[] = []) => {
     setEditingId(file.id);
     setTitle(file.title);
     setDescription(file.description ?? "");
@@ -131,8 +160,20 @@ export function FilesAdmin({
       fileSize: file.fileSize,
       mimeType: file.mimeType,
     });
+    setHighlightFields(fields);
     setDialogOpen(true);
   };
+
+  const closeDialog = () => {
+    setDialogOpen(false);
+    resetForm();
+    resetDeepLink();
+  };
+
+  const highlightTitle =
+    highlightFields.includes("title") && (isDefaultFileTitle(title) || !title.trim());
+  const highlightFile = highlightFields.includes("file") && !upload.url;
+  const highlightDescription = highlightFields.includes("description") && !description.trim();
 
   const handleSave = () => {
     if (!title.trim()) {
@@ -207,8 +248,7 @@ export function FilesAdmin({
           : [...prev, nextFile]
       );
       toast.success(editingId ? "فایل به‌روزرسانی شد" : "فایل اضافه شد");
-      setDialogOpen(false);
-      resetForm();
+      closeDialog();
     });
   };
 
@@ -217,13 +257,13 @@ export function FilesAdmin({
       await deleteCampaignFileAction(file.id);
       setFiles((prev) => prev.filter((item) => item.id !== file.id));
       toast.success("فایل حذف شد");
-      setDialogOpen(false);
-      resetForm();
+      closeDialog();
     });
   };
 
   return (
     <div className="space-y-6">
+      {tutorialModal}
       <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">فایل‌های کمپین</h1>
@@ -377,13 +417,7 @@ export function FilesAdmin({
         remaining={filteredFiles.length - visibleCount}
       />
 
-      <Dialog
-        open={dialogOpen}
-        onOpenChange={(open) => {
-          setDialogOpen(open);
-          if (!open) resetForm();
-        }}
-      >
+      <Dialog open={dialogOpen} onOpenChange={(open) => (open ? setDialogOpen(true) : closeDialog())}>
         <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingId ? "ویرایش فایل" : "افزودن فایل"}</DialogTitle>
@@ -394,21 +428,33 @@ export function FilesAdmin({
 
           <div className="space-y-4">
             <div>
-              <Label>عنوان</Label>
+              <Label className={cn(highlightTitle && "text-destructive")}>عنوان</Label>
               <Input
                 value={title}
                 maxLength={CONTENT_TITLE_MAX_LENGTH}
                 onChange={(event) => setTitle(event.target.value)}
                 placeholder="عنوان فایل"
+                className={cn(highlightTitle && "border-destructive focus-visible:ring-destructive")}
               />
+              {highlightTitle && (
+                <p className="mt-1 text-xs text-destructive">
+                  عنوان پیش‌فرض یا خالی است؛ یک عنوان اختصاصی وارد کنید.
+                </p>
+              )}
             </div>
             <div>
-              <Label>توضیحات (اختیاری)</Label>
+              <Label className={cn(highlightDescription && "text-destructive")}>توضیحات (اختیاری)</Label>
               <Textarea
                 value={description}
                 onChange={(event) => setDescription(event.target.value)}
                 rows={2}
+                className={cn(
+                  highlightDescription && "border-destructive focus-visible:ring-destructive"
+                )}
               />
+              {highlightDescription && (
+                <p className="mt-1 text-xs text-destructive">توضیحات خالی است؛ بهتر است تکمیل شود.</p>
+              )}
             </div>
             <PlanLabelSelect
               topics={contentTopics}
@@ -416,15 +462,24 @@ export function FilesAdmin({
               values={planLabels}
               onChangeMultiple={setPlanLabels}
             />
-            <DocumentUpload
-              label="فایل"
-              value={upload.url}
-              fileName={upload.fileName}
-              fileSize={upload.fileSize}
-              mimeType={upload.mimeType}
-              onChange={setUpload}
-              disabled={isPending}
-            />
+            <div
+              className={cn(
+                highlightFile && "rounded-lg border border-destructive bg-destructive/5 p-3"
+              )}
+            >
+              <DocumentUpload
+                label="فایل"
+                value={upload.url}
+                fileName={upload.fileName}
+                fileSize={upload.fileSize}
+                mimeType={upload.mimeType}
+                onChange={setUpload}
+                disabled={isPending}
+              />
+              {highlightFile && (
+                <p className="mt-2 text-xs text-destructive">فایل هنوز آپلود نشده است.</p>
+              )}
+            </div>
             <Button onClick={handleSave} disabled={isPending} className="w-full">
               {isPending ? "در حال ذخیره..." : "ذخیره فایل"}
             </Button>

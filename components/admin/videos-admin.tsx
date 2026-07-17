@@ -35,6 +35,7 @@ import {
   type EditSuggestionMissingField,
 } from "@/lib/edit-suggestions";
 import { useAdminViewMode } from "@/lib/hooks/use-admin-view-mode";
+import { useSectionCreateGate } from "@/lib/hooks/use-section-create-gate";
 import { useAdminInfiniteScroll } from "@/lib/hooks/use-admin-infinite-scroll";
 import { AdminInfiniteScrollSentinel } from "@/components/admin/admin-infinite-scroll-sentinel";
 import { resolveDisplayVersion } from "@/lib/media-utils";
@@ -68,6 +69,7 @@ export function VideosAdmin({
   isFullAdmin = false,
   users = [],
 }: VideosAdminProps) {
+  const { requestCreate, tutorialModal } = useSectionCreateGate("videos");
   const router = useRouter();
   const searchParams = useSearchParams();
   const openedFromQueryRef = useRef<string | null>(null);
@@ -190,24 +192,26 @@ export function VideosAdmin({
   };
 
   const handleCreateVideo = () => {
-    const videoId = crypto.randomUUID();
-    const categoryId = pickDefaultVideoCategoryId(initialCategories);
-    const now = new Date().toISOString();
-    const newVideo: Video = {
-      id: videoId,
-      campaignId,
-      categoryId,
-      title: `ویدیو ${videos.length + 1}`,
-      description: "",
-      published: true,
-      sortOrder: videos.length + 1,
-      planLabel: null,
-      createdAt: now,
-      updatedAt: now,
-    };
+    void requestCreate(() => {
+      const videoId = crypto.randomUUID();
+      const categoryId = pickDefaultVideoCategoryId(initialCategories);
+      const now = new Date().toISOString();
+      const newVideo: Video = {
+        id: videoId,
+        campaignId,
+        categoryId,
+        title: `ویدیو ${videos.length + 1}`,
+        description: "",
+        published: true,
+        sortOrder: videos.length + 1,
+        planLabel: null,
+        createdAt: now,
+        updatedAt: now,
+      };
 
-    setDraftVideo(newVideo);
-    openEditor(videoId);
+      setDraftVideo(newVideo);
+      openEditor(videoId);
+    });
   };
 
   const handleDelete = (video: Video) => {
@@ -222,6 +226,7 @@ export function VideosAdmin({
 
   return (
     <div className="space-y-6">
+      {tutorialModal}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">ویدیوها</h1>

@@ -25,6 +25,9 @@ import {
   saveMeetingAction,
   saveMeetingsViewPasswordAction,
 } from "@/lib/actions/extended-actions";
+import { useAdminEditDeepLink } from "@/lib/hooks/use-admin-edit-deep-link";
+import { useSectionCreateGate } from "@/lib/hooks/use-section-create-gate";
+import { isDefaultMeetingTitle, type EditSuggestionMissingField } from "@/lib/edit-suggestions";
 import {
   appendMultilineDecisions,
   appendMultilineTasks,
@@ -69,6 +72,7 @@ function decisionSummary(decisions: MeetingDecisionInput[]) {
 }
 
 export function MeetingsAdmin({ campaignId, initialMeetings, hasMeetingsPassword }: MeetingsAdminProps) {
+  const { requestCreate, tutorialModal } = useSectionCreateGate("meetings");
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [rows, setRows] = useState(initialMeetings);
@@ -96,6 +100,67 @@ export function MeetingsAdmin({ campaignId, initialMeetings, hasMeetingsPassword
     },
   });
 
+  const resetDialog = () => {
+    setTasks([]);
+    setDecisions([]);
+    setAttendees([]);
+    setBulkText("");
+    setDecisionsBulkText("");
+    setAttendeesText("");
+    setEditingTaskIndex(null);
+    setEditingDecisionIndex(null);
+  };
+
+  const { highlightFields, setHighlightFields, resetDeepLink } = useAdminEditDeepLink({
+    items: rows,
+    getId: (row) => row.id,
+    basePath: "/admin/meetings",
+    onOpen: (meeting, fields) => {
+      setEditingId(meeting.id);
+      resetDialog();
+      form.reset({
+        title: meeting.title,
+        meetingDate: meeting.meetingDate,
+        location: meeting.location,
+        imageUrl: meeting.imageUrl ?? "",
+        discussionSummary: meeting.discussionSummary,
+        audioUrl: meeting.audioUrl ?? "",
+      });
+      setAttendees([...meeting.attendees]);
+      setTasks(
+        meeting.tasks.map((task) => ({
+          id: task.id,
+          title: task.title,
+          completed: task.completed,
+          sortOrder: task.sortOrder,
+        }))
+      );
+      setDecisions(
+        meeting.decisions.map((decision) => ({
+          id: decision.id,
+          title: decision.title,
+          sortOrder: decision.sortOrder,
+        }))
+      );
+      setHighlightFields(fields);
+      setOpen(true);
+    },
+  });
+
+  const watchedTitle = form.watch("title");
+  const watchedMeetingDate = form.watch("meetingDate");
+  const watchedLocation = form.watch("location");
+  const watchedImageUrl = form.watch("imageUrl");
+  const watchedDiscussion = form.watch("discussionSummary");
+  const highlightTitle =
+    highlightFields.includes("title") &&
+    (!watchedTitle?.trim() || isDefaultMeetingTitle(watchedTitle));
+  const highlightDate = highlightFields.includes("date") && !watchedMeetingDate?.trim();
+  const highlightLocation = highlightFields.includes("location") && !watchedLocation?.trim();
+  const highlightMedia = highlightFields.includes("media") && !watchedImageUrl?.trim();
+  const highlightDiscussion =
+    highlightFields.includes("discussion") && !watchedDiscussion?.trim();
+
   const saveMeetingsPassword = (removePassword = false) => {
     startTransition(async () => {
       const result = await saveMeetingsViewPasswordAction(campaignId, {
@@ -114,32 +179,24 @@ export function MeetingsAdmin({ campaignId, initialMeetings, hasMeetingsPassword
     });
   };
 
-  const resetDialog = () => {
-    setTasks([]);
-    setDecisions([]);
-    setAttendees([]);
-    setBulkText("");
-    setDecisionsBulkText("");
-    setAttendeesText("");
-    setEditingTaskIndex(null);
-    setEditingDecisionIndex(null);
-  };
-
   const openCreate = () => {
-    setEditingId(null);
-    resetDialog();
-    form.reset({
-      title: "",
-      meetingDate: todayISO(),
-      location: "",
-      imageUrl: "",
-      discussionSummary: "",
-      audioUrl: "",
+    void requestCreate(() => {
+      setEditingId(null);
+      resetDialog();
+      setHighlightFields([]);
+      form.reset({
+        title: "",
+        meetingDate: todayISO(),
+        location: "",
+        imageUrl: "",
+        discussionSummary: "",
+        audioUrl: "",
+      });
+      setOpen(true);
     });
-    setOpen(true);
   };
 
-  const openEdit = (meeting: MeetingWithTasks) => {
+  const openEdit = (meeting: MeetingWithTasks, fields: EditSuggestionMissingField[] = []) => {
     setEditingId(meeting.id);
     resetDialog();
     form.reset({
@@ -166,7 +223,15 @@ export function MeetingsAdmin({ campaignId, initialMeetings, hasMeetingsPassword
         sortOrder: decision.sortOrder,
       }))
     );
+    setHighlightFields(fields);
     setOpen(true);
+  };
+
+  const closeDialog = () => {
+    setOpen(false);
+    setEditingId(null);
+    resetDialog();
+    resetDeepLink();
   };
 
   const addBulkTasks = () => {
@@ -315,12 +380,13 @@ export function MeetingsAdmin({ campaignId, initialMeetings, hasMeetingsPassword
         return [...next].sort(compareMeetingsByDateDesc);
       });
       toast.success("ذخیره شد");
-      setOpen(false);
+      closeDialog();
     });
   });
 
   return (
     <div className="space-y-4">
+      {tutorialModal}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 space-y-1">
           <h1 className="text-2xl font-bold">جلسات و مصوبات</h1>
@@ -404,34 +470,59 @@ export function MeetingsAdmin({ campaignId, initialMeetings, hasMeetingsPassword
         }}
       />
 
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={open} onOpenChange={(nextOpen) => (nextOpen ? setOpen(true) : closeDialog())}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingId ? "ویرایش جلسه" : "جلسه جدید"}</DialogTitle>
           </DialogHeader>
           <form onSubmit={onSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label>عنوان جلسه</Label>
+              <Label className={cn(highlightTitle && "text-destructive")}>عنوان جلسه</Label>
               <Input
                 {...form.register("title")}
                 maxLength={CONTENT_TITLE_MAX_LENGTH}
                 placeholder="مثلاً جلسه هماهنگی کمپین"
+                className={cn(highlightTitle && "border-destructive focus-visible:ring-destructive")}
               />
+              {highlightTitle && (
+                <p className="text-xs text-destructive">عنوان پیش‌فرض است؛ یک عنوان اختصاصی وارد کنید.</p>
+              )}
             </div>
 
-            <PersianDateField control={form.control} name="meetingDate" label="تاریخ جلسه" />
+            <div className={cn(highlightDate && "rounded-lg border border-destructive bg-destructive/5 p-3")}>
+              <PersianDateField control={form.control} name="meetingDate" label="تاریخ جلسه" />
+              {highlightDate && (
+                <p className="mt-1 text-xs text-destructive">تاریخ جلسه خالی است؛ لطفاً انتخاب کنید.</p>
+              )}
+            </div>
 
             <div className="space-y-2">
-              <Label>مکان جلسه</Label>
-              <Input {...form.register("location")} placeholder="مثلاً سالن جلسات مرکز" />
+              <Label className={cn(highlightLocation && "text-destructive")}>مکان جلسه</Label>
+              <Input
+                {...form.register("location")}
+                placeholder="مثلاً سالن جلسات مرکز"
+                className={cn(highlightLocation && "border-destructive focus-visible:ring-destructive")}
+              />
+              {highlightLocation && (
+                <p className="text-xs text-destructive">مکان جلسه خالی است؛ لطفاً تکمیل کنید.</p>
+              )}
             </div>
 
-            <MediaUpload
-              label="عکس جلسه"
-              value={form.watch("imageUrl") ?? ""}
-              onChange={(url) => form.setValue("imageUrl", url)}
-              kind="image"
-            />
+            <div
+              className={cn(
+                highlightMedia && "rounded-lg border border-destructive bg-destructive/5 p-3"
+              )}
+            >
+              <MediaUpload
+                label="عکس جلسه"
+                value={form.watch("imageUrl") ?? ""}
+                onChange={(url) => form.setValue("imageUrl", url)}
+                kind="image"
+              />
+              {highlightMedia && (
+                <p className="mt-2 text-xs text-destructive">عکس جلسه هنوز آپلود نشده است.</p>
+              )}
+            </div>
 
             <MediaUpload
               label="فایل صوتی جلسه"
@@ -442,12 +533,18 @@ export function MeetingsAdmin({ campaignId, initialMeetings, hasMeetingsPassword
             />
 
             <div className="space-y-2">
-              <Label>خلاصه صحبت‌ها</Label>
+              <Label className={cn(highlightDiscussion && "text-destructive")}>خلاصه صحبت‌ها</Label>
               <Textarea
                 {...form.register("discussionSummary")}
                 rows={4}
                 placeholder="خلاصه مباحث و نتایج کلی جلسه"
+                className={cn(
+                  highlightDiscussion && "border-destructive focus-visible:ring-destructive"
+                )}
               />
+              {highlightDiscussion && (
+                <p className="text-xs text-destructive">خلاصه بحث خالی است؛ بهتر است تکمیل شود.</p>
+              )}
             </div>
 
             <div className="space-y-3 rounded-lg border p-4">

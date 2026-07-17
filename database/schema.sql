@@ -600,3 +600,23 @@ CREATE INDEX IF NOT EXISTS idx_user_audit_events_action
 CREATE INDEX IF NOT EXISTS idx_user_audit_events_campaign
   ON user_audit_events(campaign_id, created_at DESC);
 
+-- Section tutorials (admin-managed onboarding before first create)
+CREATE TABLE IF NOT EXISTS section_tutorials (
+  section_key TEXT PRIMARY KEY,
+  title TEXT NOT NULL DEFAULT '',
+  version INT NOT NULL DEFAULT 1 CHECK (version >= 1),
+  steps JSONB NOT NULL DEFAULT '[]'::jsonb,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS user_tutorial_completions (
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  section_key TEXT NOT NULL,
+  tutorial_version INT NOT NULL CHECK (tutorial_version >= 1),
+  completed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (user_id, section_key)
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_tutorial_completions_section
+  ON user_tutorial_completions(section_key, tutorial_version);
+

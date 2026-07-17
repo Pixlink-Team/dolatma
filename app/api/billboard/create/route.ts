@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
+import { assertTutorialForPossibleCreate } from "@/lib/auth/require-tutorial-completion";
 import { resolveDefaultAdminOwnerUserId } from "@/lib/admin-content-owner";
 import { pgGetCampaignById } from "@/lib/db/repository";
 import { pgGetUserById } from "@/lib/db/repository-extended";
@@ -117,6 +118,15 @@ export async function POST(request: Request) {
 
   try {
     const periods = parseRequiredPeriods(formData);
+
+    const tutorialDenied = await assertTutorialForPossibleCreate(
+      "billboards",
+      "billboards",
+      billboardId
+    );
+    if (tutorialDenied) {
+      return NextResponse.json({ error: tutorialDenied.error }, { status: 403 });
+    }
 
     await createLocalBillboard({
       campaignId,

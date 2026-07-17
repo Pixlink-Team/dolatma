@@ -15,6 +15,7 @@ import { AdminDataTable } from "@/components/admin/admin-data-table";
 import { adminOwnerTableColumn } from "@/components/admin/admin-owner-badge";
 import { PersianDateField } from "@/components/ui/persian-date-input";
 import { saveAnalyticsAction, deleteAnalyticsAction } from "@/lib/actions/admin-actions";
+import { useSectionCreateGate } from "@/lib/hooks/use-section-create-gate";
 import { todayISO } from "@/lib/jalali";
 import type { AnalyticsMetric } from "@/lib/types";
 import { formatPersianDate, getStatusLabel } from "@/lib/utils";
@@ -37,6 +38,7 @@ interface AnalyticsAdminProps {
 }
 
 export function AnalyticsAdmin({ campaignId, initialMetrics }: AnalyticsAdminProps) {
+  const { requestCreate, tutorialModal } = useSectionCreateGate("analytics");
   const siteMetrics = useMemo(
     () => initialMetrics.filter((metric) => (metric.channel ?? "site") === "site"),
     [initialMetrics]
@@ -78,8 +80,23 @@ export function AnalyticsAdmin({ campaignId, initialMetrics }: AnalyticsAdminPro
     });
   });
 
+  const openCreate = () => {
+    void requestCreate(() => {
+      setEditingId(null);
+      form.reset({
+        date: todayISO(),
+        visitors: 0,
+        uniqueVisitors: 0,
+        pageViews: 0,
+        avgSessionDuration: 120,
+      });
+      setOpen(true);
+    });
+  };
+
   return (
     <div className="space-y-6">
+      {tutorialModal}
       <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">آمار سایت</h1>
@@ -87,19 +104,7 @@ export function AnalyticsAdmin({ campaignId, initialMetrics }: AnalyticsAdminPro
             بازدید صفحات، منابع ورود و دستگاه‌ها — آمار شبکه‌های اجتماعی در بخش جداگانه ثبت می‌شود
           </p>
         </div>
-        <Button
-          onClick={() => {
-            setEditingId(null);
-            form.reset({
-              date: todayISO(),
-              visitors: 0,
-              uniqueVisitors: 0,
-              pageViews: 0,
-              avgSessionDuration: 120,
-            });
-            setOpen(true);
-          }}
-        >
+        <Button onClick={openCreate}>
           <Plus className="h-4 w-4" /> افزودن
         </Button>
       </div>

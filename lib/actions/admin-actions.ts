@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
+import { assertTutorialForPossibleCreate } from "@/lib/auth/require-tutorial-completion";
 import * as pg from "@/lib/db/repository";
 import {
   deleteAnalyticsMetric,
@@ -166,6 +167,12 @@ export async function saveBillboardAction(data: Partial<Billboard> & { id?: stri
     const denied = await assertContributorOwnsBillboard(data.id);
     if (denied) return denied;
   }
+  const tutorialDenied = await assertTutorialForPossibleCreate(
+    "billboards",
+    "billboards",
+    data.id
+  );
+  if (tutorialDenied) return tutorialDenied;
   const result = await saveBillboard(await withOwnerScope(data));
   await auditContentChange({
     isUpdate: Boolean(data.id),
@@ -216,6 +223,8 @@ export async function deleteCategoryAction(id: string, type: "poster" | "video")
 export async function savePosterAction(data: Partial<Poster> & { id?: string }) {
   const validationError = validateTitlePayload(data);
   if (validationError) return validationError;
+  const tutorialDenied = await assertTutorialForPossibleCreate("posters", "posters", data.id);
+  if (tutorialDenied) return tutorialDenied;
   const result = await savePoster(await withOwnerScope(data));
   await auditContentChange({
     isUpdate: Boolean(data.id),
@@ -260,6 +269,8 @@ export async function deletePosterVersionAction(id: string) {
 export async function saveVideoAction(data: Partial<Video> & { id?: string }) {
   const validationError = validateTitlePayload(data);
   if (validationError) return validationError;
+  const tutorialDenied = await assertTutorialForPossibleCreate("videos", "videos", data.id);
+  if (tutorialDenied) return tutorialDenied;
   const result = await saveVideo(await withOwnerScope(data));
   await auditContentChange({
     isUpdate: Boolean(data.id),
@@ -302,6 +313,12 @@ export async function deleteVideoVersionAction(id: string) {
 }
 
 export async function saveAnalyticsAction(data: Partial<AnalyticsMetric> & { id?: string }) {
+  const tutorialDenied = await assertTutorialForPossibleCreate(
+    "analytics",
+    "analytics_metrics",
+    data.id
+  );
+  if (tutorialDenied) return tutorialDenied;
   const result = await saveAnalyticsMetric(await withOwnerScope(data));
   await auditContentChange({
     isUpdate: Boolean(data.id),
@@ -348,6 +365,12 @@ export async function deleteSubmissionAction(id: string) {
 export async function saveCampaignFileAction(data: Partial<CampaignFile> & { id?: string }) {
   const validationError = validateTitlePayload(data);
   if (validationError) return validationError;
+  const tutorialDenied = await assertTutorialForPossibleCreate(
+    "files",
+    "campaign_files",
+    data.id
+  );
+  if (tutorialDenied) return tutorialDenied;
   const result = await saveCampaignFile(await withOwnerScope(data));
   await auditContentChange({
     isUpdate: Boolean(data.id),
@@ -370,6 +393,12 @@ export async function deleteCampaignFileAction(id: string) {
 export async function saveRawMediaUploadAction(data: Partial<RawMediaUpload> & { id?: string }) {
   const validationError = validateTitlePayload(data);
   if (validationError) return validationError;
+  const tutorialDenied = await assertTutorialForPossibleCreate(
+    "rawMedia",
+    "raw_media_uploads",
+    data.id
+  );
+  if (tutorialDenied) return tutorialDenied;
   const result = await saveRawMediaUpload(await withOwnerScope(data));
   await auditContentChange({
     isUpdate: Boolean(data.id),

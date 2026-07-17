@@ -20,9 +20,11 @@ import { adminOwnerTableColumn } from "@/components/admin/admin-owner-badge";
 import { DocumentUpload } from "@/components/ui/document-upload";
 import { PersianDateField } from "@/components/ui/persian-date-input";
 import { deleteBroadcastReportAction, saveBroadcastReportAction } from "@/lib/actions/extended-actions";
+import { useAdminEditDeepLink } from "@/lib/hooks/use-admin-edit-deep-link";
+import { useSectionCreateGate } from "@/lib/hooks/use-section-create-gate";
 import { todayISO } from "@/lib/jalali";
 import type { BroadcastReport } from "@/lib/types";
-import { formatPersianDate } from "@/lib/utils";
+import { cn, formatPersianDate } from "@/lib/utils";
 
 const schema = z.object({
   title: z.string().min(1).max(CONTENT_TITLE_MAX_LENGTH, CONTENT_TITLE_MAX_LENGTH_MESSAGE),
@@ -38,6 +40,7 @@ interface BroadcastAdminProps {
 }
 
 export function BroadcastAdmin({ campaignId, initialReports }: BroadcastAdminProps) {
+  const { requestCreate, tutorialModal } = useSectionCreateGate("broadcast");
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [rows, setRows] = useState(initialReports);
@@ -54,20 +57,49 @@ export function BroadcastAdmin({ campaignId, initialReports }: BroadcastAdminPro
     },
   });
 
+  const { highlightFields, setHighlightFields, resetDeepLink } = useAdminEditDeepLink({
+    items: rows,
+    getId: (row) => row.id,
+    basePath: "/admin/broadcast",
+    onOpen: (report, fields) => {
+      setEditingId(report.id);
+      form.reset({
+        title: report.title,
+        reportDate: report.reportDate,
+        pdfUrl: report.pdfUrl,
+        fileName: report.fileName,
+        notes: report.summaryData.notes ?? "",
+      });
+      setHighlightFields(fields);
+      setOpen(true);
+    },
+  });
+
+  const watchedTitle = form.watch("title");
+  const watchedReportDate = form.watch("reportDate");
+  const watchedPdfUrl = form.watch("pdfUrl");
+  const highlightTitle = highlightFields.includes("title") && !watchedTitle?.trim();
+  const highlightDate = highlightFields.includes("date") && !watchedReportDate?.trim();
+  const highlightFile = highlightFields.includes("file") && !watchedPdfUrl?.trim();
+
   const openCreate = () => {
-    setEditingId(null);
-    form.reset({
-      title: "",
-      reportDate: todayISO(),
-      pdfUrl: "",
-      fileName: "",
-      notes: "",
+    void requestCreate(() => {
+      setEditingId(null);
+      setHighlightFields([]);
+      form.reset({
+        title: "",
+        reportDate: todayISO(),
+        pdfUrl: "",
+        fileName: "",
+        notes: "",
+      });
+      setOpen(true);
     });
-    setOpen(true);
   };
 
   const openEdit = (report: BroadcastReport) => {
     setEditingId(report.id);
+    setHighlightFields([]);
     form.reset({
       title: report.title,
       reportDate: report.reportDate,
@@ -76,6 +108,12 @@ export function BroadcastAdmin({ campaignId, initialReports }: BroadcastAdminPro
       notes: report.summaryData.notes ?? "",
     });
     setOpen(true);
+  };
+
+  const closeDialog = () => {
+    setOpen(false);
+    setEditingId(null);
+    resetDeepLink();
   };
 
   const onSubmit = form.handleSubmit((data) => {
@@ -117,12 +155,13 @@ export function BroadcastAdmin({ campaignId, initialReports }: BroadcastAdminPro
         editingId ? prev.map((row) => (row.id === editingId ? { ...row, ...nextRow } : row)) : [...prev, nextRow]
       );
       toast.success("ذخیره شد");
-      setOpen(false);
+      closeDialog();
     });
   });
 
   return (
     <div className="space-y-4">
+      {tutorialModal}
       <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">گزارش پخش صدا و سیما</h1>
@@ -156,35 +195,53 @@ export function BroadcastAdmin({ campaignId, initialReports }: BroadcastAdminPro
         }}
       />
 
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={open} onOpenChange={(nextOpen) => (nextOpen ? setOpen(true) : closeDialog())}>
         <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingId ? "ویرایش گزارش" : "گزارش جدید"}</DialogTitle>
           </DialogHeader>
           <form onSubmit={onSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label>عنوان گزارش</Label>
+              <Label className={cn(highlightTitle && "text-destructive")}>عنوان گزارش</Label>
               <Input
                 {...form.register("title")}
                 maxLength={CONTENT_TITLE_MAX_LENGTH}
                 placeholder="مثلاً گزارش روزانه پخش"
+                className={cn(highlightTitle && "border-destructive focus-visible:ring-destructive")}
               />
+              {highlightTitle && (
+                <p className="text-xs text-destructive">عنوان خالی است؛ لطفاً تکمیل کنید.</p>
+              )}
             </div>
 
-            <PersianDateField control={form.control} name="reportDate" label="تاریخ گزارش" />
+            <div className={cn(highlightDate && "rounded-lg border border-destructive bg-destructive/5 p-3")}>
+              <PersianDateField control={form.control} name="reportDate" label="تاریخ گزارش" />
+              {highlightDate && (
+                <p className="mt-1 text-xs text-destructive">تاریخ گزارش خالی است؛ لطفاً انتخاب کنید.</p>
+              )}
+            </div>
 
-            <DocumentUpload
-              label="فایل PDF گزارش"
-              value={form.watch("pdfUrl")}
-              fileName={form.watch("fileName")}
-              onChange={(payload) => {
-                form.setValue("pdfUrl", payload.url);
-                form.setValue("fileName", payload.fileName || "report.pdf");
-                if (!form.getValues("title")) {
-                  form.setValue("title", payload.fileName?.replace(/\.pdf$/i, "") ?? "گزارش پخش");
-                }
-              }}
-            />
+            <div
+              className={cn(
+                highlightFile && "rounded-lg border border-destructive bg-destructive/5 p-3"
+              )}
+            >
+              <DocumentUpload
+                label="فایل PDF گزارش"
+                value={form.watch("pdfUrl")}
+                fileName={form.watch("fileName")}
+                onChange={(payload) => {
+                  form.setValue("pdfUrl", payload.url);
+                  form.setValue("fileName", payload.fileName || "report.pdf");
+                  if (!form.getValues("title")) {
+                    form.setValue("title", payload.fileName?.replace(/\.pdf$/i, "") ?? "گزارش پخش");
+                  }
+                }}
+              />
+              {highlightFile && (
+                <p className="mt-2 text-xs text-destructive">فایل PDF هنوز آپلود نشده است.</p>
+              )}
+            </div>
 
             <div className="space-y-2">
               <Label>یادداشت (اختیاری)</Label>

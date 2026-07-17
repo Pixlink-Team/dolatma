@@ -129,6 +129,26 @@ export function isDefaultVideoTitle(title: string): boolean {
   return DEFAULT_VIDEO_TITLE_PATTERN.test(title.trim());
 }
 
+export function isDefaultBillboardTitle(title: string): boolean {
+  return DEFAULT_BILLBOARD_TITLE_PATTERN.test(title.trim());
+}
+
+export function isDefaultFileTitle(title: string): boolean {
+  return DEFAULT_FILE_TITLE_PATTERN.test(title.trim());
+}
+
+export function isDefaultMeetingTitle(title: string): boolean {
+  return DEFAULT_MEETING_TITLE_PATTERN.test(title.trim());
+}
+
+export function isDefaultActivityTitle(title: string): boolean {
+  return DEFAULT_ACTIVITY_TITLE_PATTERN.test(title.trim());
+}
+
+export function isPlaceholderBillboardImage(url?: string | null): boolean {
+  return isPlaceholderImage(url);
+}
+
 function isBlank(value?: string | null): boolean {
   return !value?.trim();
 }

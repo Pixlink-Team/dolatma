@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { ImageFileDropzone } from "@/components/ui/image-file-dropzone";
 import { PersianDateInput } from "@/components/ui/persian-date-input";
 import { todayISO } from "@/lib/jalali";
+import { cn } from "@/lib/utils";
 
 export interface DisplayPeriodDraft {
   id: string;
@@ -25,6 +26,7 @@ interface BillboardDisplayPeriodsEditorProps {
   singlePeriod?: boolean;
   requireBillboardImage?: boolean;
   requireConfirmationImage?: boolean;
+  highlightMedia?: boolean;
 }
 
 export function createDisplayPeriod(): DisplayPeriodDraft {
@@ -45,6 +47,7 @@ export function BillboardDisplayPeriodsEditor({
   singlePeriod = false,
   requireBillboardImage = false,
   requireConfirmationImage = false,
+  highlightMedia = false,
 }: BillboardDisplayPeriodsEditorProps) {
   const updatePeriod = (id: string, patch: Partial<DisplayPeriodDraft>) => {
     onChange(periods.map((period) => (period.id === id ? { ...period, ...patch } : period)));
@@ -62,12 +65,22 @@ export function BillboardDisplayPeriodsEditor({
   const visiblePeriods = singlePeriod ? periods.slice(0, 1) : periods;
 
   return (
-    <div className="space-y-4">
+    <div
+      className={cn(
+        "space-y-4",
+        highlightMedia && "rounded-lg border border-destructive bg-destructive/5 p-3"
+      )}
+    >
       <div>
-        <Label className="text-sm font-semibold">دوره نمایش *</Label>
+        <Label className={cn("text-sm font-semibold", highlightMedia && "text-destructive")}>
+          دوره نمایش *
+        </Label>
         <p className="text-xs text-muted-foreground">
           عکس بیلبورد الزامی است. تصویر تأییدیه اختیاری است.
         </p>
+        {highlightMedia && (
+          <p className="mt-1 text-xs text-destructive">عکس بیلبورد هنوز اضافه نشده است.</p>
+        )}
       </div>
 
       {visiblePeriods.map((period, index) => (

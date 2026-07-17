@@ -41,12 +41,16 @@ import { applyVideoCoverToMediaItems } from "@/lib/client/activity-media-cover";
 import { fieldActivityTypeOptions, getActivityTypeLabel } from "@/lib/activity-types";
 import { deleteCampaignActivityAction, saveCampaignActivityAction } from "@/lib/actions/extended-actions";
 import { normalizePlanLabels, type ContentTopic } from "@/lib/content-topics";
+import { isDefaultActivityTitle, type EditSuggestionMissingField } from "@/lib/edit-suggestions";
+import { useAdminEditDeepLink } from "@/lib/hooks/use-admin-edit-deep-link";
 import { useAdminViewMode } from "@/lib/hooks/use-admin-view-mode";
+import { useSectionCreateGate } from "@/lib/hooks/use-section-create-gate";
 import { useAdminInfiniteScroll } from "@/lib/hooks/use-admin-infinite-scroll";
 import { AdminInfiniteScrollSentinel } from "@/components/admin/admin-infinite-scroll-sentinel";
 import { todayISO } from "@/lib/jalali";
 import { isPressPublication } from "@/lib/press-publications";
 import type { ActivityMediaItem, ActivityType, AdminUser, CampaignActivity } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 const ACTIVITY_VIDEO_MAX_BYTES = 50 * 1024 * 1024;
 
@@ -99,6 +103,7 @@ export function ActivitiesAdmin({
   isFullAdmin = false,
   users = [],
 }: ActivitiesAdminProps) {
+  const { requestCreate, tutorialModal } = useSectionCreateGate("activities");
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [previewActivity, setPreviewActivity] = useState<CampaignActivity | null>(null);
@@ -141,23 +146,64 @@ export function ActivitiesAdmin({
     },
   });
 
+  const { highlightFields, setHighlightFields, resetDeepLink } = useAdminEditDeepLink({
+    items: rows,
+    getId: (row) => row.id,
+    basePath: "/admin/activities",
+    onOpen: (activity, fields) => {
+      setEditingId(activity.id);
+      setMediaItems(activity.mediaItems ?? []);
+      setPlanLabels(normalizePlanLabels(activity.planLabels, activity.planLabel));
+      form.reset({
+        title: activity.title,
+        activityType: resolveFieldActivityType(activity.activityType),
+        activityDate: activity.activityDate,
+        location: activity.location,
+        imageUrl: activity.imageUrl ?? "",
+        videoUrl: activity.videoUrl ?? "",
+        description: activity.description ?? "",
+      });
+      setHighlightFields(fields);
+      setOpen(true);
+    },
+  });
+
+  const watchedTitle = form.watch("title");
+  const watchedActivityDate = form.watch("activityDate");
+  const watchedLocation = form.watch("location");
+  const watchedDescription = form.watch("description");
+  const hasActivityMedia =
+    Boolean(form.watch("imageUrl")?.trim() || form.watch("videoUrl")?.trim()) ||
+    mediaItems.some((item) => item.url.trim());
+  const highlightTitle =
+    highlightFields.includes("title") &&
+    (!watchedTitle?.trim() || isDefaultActivityTitle(watchedTitle));
+  const highlightDate = highlightFields.includes("date") && !watchedActivityDate?.trim();
+  const highlightLocation = highlightFields.includes("location") && !watchedLocation?.trim();
+  const highlightMedia = highlightFields.includes("media") && !hasActivityMedia;
+  const highlightDescription =
+    highlightFields.includes("description") && !watchedDescription?.trim();
+
   const openCreate = () => {
-    setEditingId(null);
-    setMediaItems([]);
-    setPlanLabels([]);
-    form.reset({
-      title: "",
-      activityType: "field",
-      activityDate: todayISO(),
-      location: "",
-      imageUrl: "",
-      videoUrl: "",
-      description: "",
+    void requestCreate(() => {
+      setEditingId(null);
+      setMediaItems([]);
+      setPlanLabels([]);
+      setHighlightFields([]);
+      form.reset({
+        title: "",
+        activityType: "field",
+        activityDate: todayISO(),
+        location: "",
+        imageUrl: "",
+        videoUrl: "",
+        description: "",
+      });
+      setOpen(true);
     });
-    setOpen(true);
   };
 
-  const openEdit = (activity: CampaignActivity) => {
+  const openEdit = (activity: CampaignActivity, fields: EditSuggestionMissingField[] = []) => {
     setEditingId(activity.id);
     setMediaItems(activity.mediaItems ?? []);
     setPlanLabels(normalizePlanLabels(activity.planLabels, activity.planLabel));
@@ -170,7 +216,16 @@ export function ActivitiesAdmin({
       videoUrl: activity.videoUrl ?? "",
       description: activity.description ?? "",
     });
+    setHighlightFields(fields);
     setOpen(true);
+  };
+
+  const closeDialog = () => {
+    setOpen(false);
+    setEditingId(null);
+    setMediaItems([]);
+    setPlanLabels([]);
+    resetDeepLink();
   };
 
   const handleDelete = (activity: CampaignActivity) => {
@@ -240,12 +295,13 @@ export function ActivitiesAdmin({
           : [...prev, nextActivity]
       );
       toast.success("ذخیره شد");
-      setOpen(false);
+      closeDialog();
     });
   });
 
   return (
     <div className="space-y-4">
+      {tutorialModal}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">اقدامات</h1>
@@ -377,19 +433,23 @@ export function ActivitiesAdmin({
         }
       />
 
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={open} onOpenChange={(nextOpen) => (nextOpen ? setOpen(true) : closeDialog())}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingId ? "ویرایش اقدام" : "اقدام جدید"}</DialogTitle>
           </DialogHeader>
           <form onSubmit={onSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label>عنوان</Label>
+              <Label className={cn(highlightTitle && "text-destructive")}>عنوان</Label>
               <Input
                 {...form.register("title")}
                 maxLength={CONTENT_TITLE_MAX_LENGTH}
                 placeholder="مثلاً غرفه‌گذاری در نمایشگاه کتاب"
+                className={cn(highlightTitle && "border-destructive focus-visible:ring-destructive")}
               />
+              {highlightTitle && (
+                <p className="text-xs text-destructive">عنوان پیش‌فرض یا خالی است؛ یک عنوان اختصاصی وارد کنید.</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label>نوع اقدام</Label>
@@ -409,10 +469,22 @@ export function ActivitiesAdmin({
                 </SelectContent>
               </Select>
             </div>
-            <PersianDateField control={form.control} name="activityDate" label="تاریخ" />
+            <div className={cn(highlightDate && "rounded-lg border border-destructive bg-destructive/5 p-3")}>
+              <PersianDateField control={form.control} name="activityDate" label="تاریخ" />
+              {highlightDate && (
+                <p className="mt-1 text-xs text-destructive">تاریخ اقدام خالی است؛ لطفاً انتخاب کنید.</p>
+              )}
+            </div>
             <div className="space-y-2">
-              <Label>مکان (اختیاری)</Label>
-              <Input {...form.register("location")} placeholder="شهر یا محل برگزاری" />
+              <Label className={cn(highlightLocation && "text-destructive")}>مکان (اختیاری)</Label>
+              <Input
+                {...form.register("location")}
+                placeholder="شهر یا محل برگزاری"
+                className={cn(highlightLocation && "border-destructive focus-visible:ring-destructive")}
+              />
+              {highlightLocation && (
+                <p className="text-xs text-destructive">مکان خالی است؛ بهتر است تکمیل شود.</p>
+              )}
             </div>
             <PlanLabelSelect
               topics={contentTopics}
@@ -434,7 +506,12 @@ export function ActivitiesAdmin({
                 }
               />
             )}
-            <div className="space-y-3">
+            <div
+              className={cn(
+                "space-y-3",
+                highlightMedia && "rounded-lg border border-destructive bg-destructive/5 p-3"
+              )}
+            >
               <div className="flex items-center justify-between gap-2">
                 <Label>رسانه‌ها (حداکثر {MAX_MEDIA_ITEMS})</Label>
                 <div className="flex flex-wrap justify-end gap-2">
@@ -507,10 +584,23 @@ export function ActivitiesAdmin({
                   />
                 </div>
               ))}
+              {highlightMedia && (
+                <p className="text-xs text-destructive">هنوز رسانه‌ای اضافه نشده است.</p>
+              )}
             </div>
             <div className="space-y-2">
-              <Label>توضیحات (اختیاری)</Label>
-              <Textarea {...form.register("description")} rows={4} placeholder="جزئیات اقدام، تعداد مخاطب، نتایج و ..." />
+              <Label className={cn(highlightDescription && "text-destructive")}>توضیحات (اختیاری)</Label>
+              <Textarea
+                {...form.register("description")}
+                rows={4}
+                placeholder="جزئیات اقدام، تعداد مخاطب، نتایج و ..."
+                className={cn(
+                  highlightDescription && "border-destructive focus-visible:ring-destructive"
+                )}
+              />
+              {highlightDescription && (
+                <p className="text-xs text-destructive">توضیحات خالی است؛ بهتر است تکمیل شود.</p>
+              )}
             </div>
             <Button type="submit" disabled={isPending} className="w-full">
               ذخیره
@@ -526,7 +616,7 @@ export function ActivitiesAdmin({
                     await deleteCampaignActivityAction(editingId);
                     setRows((prev) => prev.filter((row) => row.id !== editingId));
                     toast.success("حذف شد");
-                    setOpen(false);
+                    closeDialog();
                   });
                 }}
               >

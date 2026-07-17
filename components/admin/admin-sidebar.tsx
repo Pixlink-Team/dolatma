@@ -8,6 +8,7 @@ import {
   ClipboardList,
   FileStack,
   FileText,
+  GraduationCap,
   HardDrive,
   ImageIcon,
   Globe,
@@ -59,6 +60,7 @@ const allNavItems: {
   { href: "/admin/profile", label: "پروفایل من", icon: UserCircle },
   { href: "/admin/integrations", label: "اتصال Map-Bilboard", icon: Unplug, adminOnly: true },
   { href: "/admin/settings", label: "تنظیمات کمپین", icon: Settings, adminOrClientOnly: true },
+  { href: "/admin/tutorials", label: "آموزش بخش‌ها", icon: GraduationCap, adminOnly: true },
   { href: "/admin/billboards", label: "تبلیغات محیطی", icon: LayoutGrid, permissionKey: "billboards" },
   { href: "/admin/posters", label: "پوسترها", icon: ImageIcon, permissionKey: "posters" },
   { href: "/admin/videos", label: "ویدیوها", icon: Video, permissionKey: "videos" },
@@ -82,6 +84,7 @@ const managementNavHrefs = new Set([
   "/admin/users",
   "/admin/audit",
   "/admin/settings",
+  "/admin/tutorials",
   "/admin/elanha",
 ]);
 

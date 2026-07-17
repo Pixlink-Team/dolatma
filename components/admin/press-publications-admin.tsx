@@ -31,6 +31,7 @@ import { applyVideoCoverToMediaItems } from "@/lib/client/activity-media-cover";
 import { getActivityTypeLabel, pressActivityTypeOptions } from "@/lib/activity-types";
 import { deleteCampaignActivityAction, saveCampaignActivityAction } from "@/lib/actions/extended-actions";
 import { normalizePlanLabels, type ContentTopic } from "@/lib/content-topics";
+import { useSectionCreateGate } from "@/lib/hooks/use-section-create-gate";
 import { useAdminInfiniteScroll } from "@/lib/hooks/use-admin-infinite-scroll";
 import { AdminInfiniteScrollSentinel } from "@/components/admin/admin-infinite-scroll-sentinel";
 import { todayISO } from "@/lib/jalali";
@@ -68,6 +69,7 @@ export function PressPublicationsAdmin({
   isFullAdmin = false,
   users = [],
 }: PressPublicationsAdminProps) {
+  const { requestCreate, tutorialModal } = useSectionCreateGate("pressPublications");
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [mediaItems, setMediaItems] = useState<ActivityMediaItem[]>([]);
@@ -107,17 +109,19 @@ export function PressPublicationsAdmin({
   );
 
   const openCreate = () => {
-    setEditingId(null);
-    setMediaItems([]);
-    setPlanLabels([]);
-    form.reset({
-      title: "",
-      activityType: "magazine",
-      activityDate: todayISO(),
-      location: "",
-      description: "",
+    void requestCreate(() => {
+      setEditingId(null);
+      setMediaItems([]);
+      setPlanLabels([]);
+      form.reset({
+        title: "",
+        activityType: "magazine",
+        activityDate: todayISO(),
+        location: "",
+        description: "",
+      });
+      setOpen(true);
     });
-    setOpen(true);
   };
 
   const openEdit = (activity: CampaignActivity) => {
@@ -208,6 +212,7 @@ export function PressPublicationsAdmin({
 
   return (
     <div className="space-y-4">
+      {tutorialModal}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">مجله و روزنامه</h1>

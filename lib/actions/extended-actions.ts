@@ -4,6 +4,9 @@ import { revalidatePath } from "next/cache";
 import { getAuthSession, getOwnerFilter, isFullAdmin } from "@/lib/auth/get-session";
 import { canScoreContent, isClientUser } from "@/lib/auth/access";
 import {
+  assertTutorialForPossibleCreate,
+} from "@/lib/auth/require-tutorial-completion";
+import {
   defaultContributorPermissions,
   hasContributorPermission,
   type ContributorPermissions,
@@ -12,6 +15,7 @@ import { hashPassword } from "@/lib/auth/password";
 import * as pgExt from "@/lib/db/repository-extended";
 import type { MeetingDecisionPayload, MeetingTaskPayload } from "@/lib/db/repository-extended";
 import type { BroadcastReport, CampaignActivity, CampaignMeeting, SocialMediaPost, SocialPlatformStat } from "@/lib/types";
+import { isSitePublication } from "@/lib/social-posts";
 import { isPostgresConfigured } from "@/lib/utils";
 import { resolveSaveOwnerUserId } from "@/lib/admin-content-owner";
 import {
@@ -20,10 +24,20 @@ import {
   logAuditForSession,
 } from "@/lib/audit/log-event";
 import { getContentTitleValidationError } from "@/lib/content-constraints";
+import type { TutorialSectionKey } from "@/lib/section-tutorials";
 
 function validateTitlePayload(data: { title?: unknown }) {
   const error = getContentTitleValidationError(data.title);
   return error ? { success: false as const, error } : null;
+}
+
+function activityTutorialKey(
+  activityType: CampaignActivity["activityType"] | undefined
+): TutorialSectionKey {
+  if (activityType === "magazine" || activityType === "newspaper") {
+    return "pressPublications";
+  }
+  return "activities";
 }
 
 async function revalidateExtended(slug?: string) {
@@ -82,6 +96,16 @@ export async function saveSocialPostAction(data: Partial<SocialMediaPost> & { id
     return { success: false, error: "Database required" };
   }
 
+  const tutorialKey = isSitePublication({ platform: data.platform ?? "other" })
+    ? "sitePublications"
+    : "socialPosts";
+  const tutorialDenied = await assertTutorialForPossibleCreate(
+    tutorialKey,
+    "social_media_posts",
+    data.id
+  );
+  if (tutorialDenied) return tutorialDenied;
+
   const result = await pgExt.pgSaveSocialPost(payload);
   await auditContentChange({
     isUpdate: Boolean(data.id),
@@ -130,6 +154,13 @@ export async function saveSocialPlatformStatAction(data: Partial<SocialPlatformS
       return { success: false, error: "دسترسی ندارید" };
     }
   }
+
+  const tutorialDenied = await assertTutorialForPossibleCreate(
+    "socialAnalytics",
+    "social_platform_stats",
+    data.id
+  );
+  if (tutorialDenied) return tutorialDenied;
 
   const payload = await withSaveOwnerScope(session, data);
 
@@ -185,6 +216,13 @@ export async function saveBroadcastReportAction(data: Partial<BroadcastReport> &
     return { success: false, error: "Database required" };
   }
 
+  const tutorialDenied = await assertTutorialForPossibleCreate(
+    "broadcast",
+    "broadcast_reports",
+    data.id
+  );
+  if (tutorialDenied) return tutorialDenied;
+
   const result = await pgExt.pgSaveBroadcastReport(payload);
   await auditContentChange({
     isUpdate: Boolean(data.id),
@@ -225,6 +263,13 @@ export async function saveCampaignActivityAction(data: Partial<CampaignActivity>
   if (!isPostgresConfigured()) {
     return { success: false, error: "Database required" };
   }
+
+  const tutorialDenied = await assertTutorialForPossibleCreate(
+    activityTutorialKey(data.activityType),
+    "campaign_activities",
+    data.id
+  );
+  if (tutorialDenied) return tutorialDenied;
 
   const result = await pgExt.pgSaveCampaignActivity(payload);
   await auditContentChange({
@@ -271,6 +316,13 @@ export async function saveMeetingAction(
   if (!isPostgresConfigured()) {
     return { success: false, error: "Database required" };
   }
+
+  const tutorialDenied = await assertTutorialForPossibleCreate(
+    "meetings",
+    "campaign_meetings",
+    data.id
+  );
+  if (tutorialDenied) return tutorialDenied;
 
   const result = await pgExt.pgSaveMeetingWithTasks(payload, tasks, decisions);
   await auditContentChange({

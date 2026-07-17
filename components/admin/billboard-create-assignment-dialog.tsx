@@ -42,8 +42,14 @@ import {
   parseProvinceFromBillboard,
 } from "@/lib/billboard-form-utils";
 import { normalizePlanLabels, type ContentTopic } from "@/lib/content-topics";
+import {
+  isDefaultBillboardTitle,
+  isPlaceholderBillboardImage,
+  type EditSuggestionMissingField,
+} from "@/lib/edit-suggestions";
 import { getLocationCenter, resolveLocationNames } from "@/lib/iran-location-center";
 import type { Billboard, BillboardDisplayPeriod } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 interface ContributorProfile {
   province?: string | null;
@@ -62,6 +68,7 @@ interface BillboardCreateAssignmentDialogProps {
   mode: "admin" | "client";
   contributorProfile?: ContributorProfile | null;
   editingBillboard?: Billboard | null;
+  highlightFields?: EditSuggestionMissingField[];
   onCreated?: () => void;
 }
 
@@ -105,6 +112,7 @@ export function BillboardCreateAssignmentDialog({
   mode,
   contributorProfile = null,
   editingBillboard = null,
+  highlightFields = [],
   onCreated,
 }: BillboardCreateAssignmentDialogProps) {
   const [isPending, startTransition] = useTransition();
@@ -126,6 +134,19 @@ export function BillboardCreateAssignmentDialog({
   const [editScore, setEditScore] = useState<number | null | undefined>(null);
 
   const isEditing = Boolean(editingBillboard);
+
+  const hasPeriodMedia = periods.some(
+    (period) =>
+      Boolean(period.billboardImageFile) ||
+      Boolean(period.existingBillboardImageUrl?.trim() && !isPlaceholderBillboardImage(period.existingBillboardImageUrl))
+  );
+  const highlightTitle =
+    highlightFields.includes("title") &&
+    (!axis.trim() || isDefaultBillboardTitle(axis));
+  const highlightCity = highlightFields.includes("city") && !city.trim();
+  const highlightLocation = highlightFields.includes("location") && !address.trim();
+  const highlightDescription = highlightFields.includes("description") && !address.trim();
+  const highlightMedia = highlightFields.includes("media") && !hasPeriodMedia;
 
   useEffect(() => {
     if (!open) return;
@@ -289,17 +310,33 @@ export function BillboardCreateAssignmentDialog({
             </Select>
           </div>
 
-          <ProvinceCityFields
-            province={province}
-            city={city}
-            onProvinceChange={setProvince}
-            onCityChange={setCity}
-            onLocationCenterChange={handleLocationCenterChange}
-          />
+          <div
+            className={cn(
+              highlightCity && "rounded-lg border border-destructive bg-destructive/5 p-3"
+            )}
+          >
+            <ProvinceCityFields
+              province={province}
+              city={city}
+              onProvinceChange={setProvince}
+              onCityChange={setCity}
+              onLocationCenterChange={handleLocationCenterChange}
+            />
+            {highlightCity && (
+              <p className="mt-2 text-xs text-destructive">شهر انتخاب نشده است؛ لطفاً تکمیل کنید.</p>
+            )}
+          </div>
 
           <div className="space-y-2">
-            <Label>محور / خیابان / بزرگراه *</Label>
-            <Input value={axis} onChange={(event) => setAxis(event.target.value)} />
+            <Label className={cn(highlightTitle && "text-destructive")}>محور / خیابان / بزرگراه *</Label>
+            <Input
+              value={axis}
+              onChange={(event) => setAxis(event.target.value)}
+              className={cn(highlightTitle && "border-destructive focus-visible:ring-destructive")}
+            />
+            {highlightTitle && (
+              <p className="text-xs text-destructive">عنوان پیش‌فرض یا خالی است؛ یک عنوان اختصاصی وارد کنید.</p>
+            )}
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -314,8 +351,23 @@ export function BillboardCreateAssignmentDialog({
               />
             </div>
             <div className="space-y-2">
-              <Label>آدرس توصیفی</Label>
-              <Input value={address} onChange={(event) => setAddress(event.target.value)} />
+              <Label className={cn((highlightLocation || highlightDescription) && "text-destructive")}>
+                آدرس توصیفی
+              </Label>
+              <Input
+                value={address}
+                onChange={(event) => setAddress(event.target.value)}
+                className={cn(
+                  (highlightLocation || highlightDescription) &&
+                    "border-destructive focus-visible:ring-destructive"
+                )}
+              />
+              {highlightLocation && (
+                <p className="text-xs text-destructive">آدرس/موقعیت خالی است؛ بهتر است تکمیل شود.</p>
+              )}
+              {highlightDescription && !highlightLocation && (
+                <p className="text-xs text-destructive">توضیحات خالی است؛ بهتر است تکمیل شود.</p>
+              )}
             </div>
           </div>
 
@@ -358,6 +410,7 @@ export function BillboardCreateAssignmentDialog({
             periods={periods}
             onChange={setPeriods}
             requireBillboardImage
+            highlightMedia={highlightMedia}
           />
 
           <Button type="button" className="w-full" disabled={isPending} onClick={handleSubmit}>
