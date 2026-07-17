@@ -16,7 +16,8 @@ const PERIOD_CONFIG: Record<TimeOfDayPeriod, Omit<TimeOfDayConfig, "period">> = 
   noon: {
     label: "ظهر",
     greeting: "روز بخیر",
-    backgroundSrc: "/images/login/noon.webp",
+    // Daytime shares the morning artwork until a dedicated noon asset exists.
+    backgroundSrc: "/images/login/morning.webp",
   },
   evening: {
     label: "عصر",
@@ -26,7 +27,8 @@ const PERIOD_CONFIG: Record<TimeOfDayPeriod, Omit<TimeOfDayConfig, "period">> = 
   night: {
     label: "شب",
     greeting: "شب بخیر",
-    backgroundSrc: "/images/login/night.webp",
+    // Night shares the evening artwork until a dedicated night asset exists.
+    backgroundSrc: "/images/login/evening.webp",
   },
 };
 

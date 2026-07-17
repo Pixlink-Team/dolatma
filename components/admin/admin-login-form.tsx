@@ -30,9 +30,7 @@ const MAX_CARD_ROTATION = 8;
 
 const ALL_PERIOD_BACKGROUNDS = [
   "/images/login/morning.webp",
-  "/images/login/noon.webp",
   "/images/login/evening.webp",
-  "/images/login/night.webp",
 ] as const;
 
 function getBoundedMotion(value: number, max: number) {
