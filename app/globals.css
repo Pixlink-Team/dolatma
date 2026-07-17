@@ -126,25 +126,23 @@
   100% { background-position: 200% 0; }
 }
 
+/* Opacity-only: a leftover transform on ancestors breaks native image lazy-load
+   for cards mounted later via "show more". */
 @keyframes apple-fade-up {
   from {
     opacity: 0;
-    transform: translateY(10px);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
   }
 }
 
 @keyframes apple-soft-pop {
   from {
     opacity: 0;
-    transform: scale(0.97);
   }
   to {
     opacity: 1;
-    transform: scale(1);
   }
 }
 
@@ -162,7 +160,6 @@
     box-shadow var(--duration-apple) var(--ease-apple),
     border-color var(--duration-apple-fast) var(--ease-apple-soft),
     background-color var(--duration-apple-fast) var(--ease-apple-soft);
-  will-change: transform;
 }
 
 .apple-lift:hover {
@@ -195,7 +192,6 @@
 
 .apple-media-zoom {
   transition: transform var(--duration-apple-slow) var(--ease-apple);
-  will-change: transform;
 }
 
 .group:hover .apple-media-zoom {

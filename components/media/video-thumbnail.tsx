@@ -31,16 +31,15 @@ export function VideoThumbnail({
       <Image
         src={coverUrl}
         alt={alt}
-        width={640}
-        height={360}
+        fill
         loading="lazy"
         decoding="async"
         quality={60}
         sizes={sizes}
-        className={cn("h-full w-full", className)}
+        className={cn("object-cover", className)}
       />
     );
   }
 
-  return <MediaPlaceholder kind="video" className={cn("h-full w-full", className)} />;
+  return <MediaPlaceholder kind="video" className={cn("absolute inset-0 h-full w-full", className)} />;
 }

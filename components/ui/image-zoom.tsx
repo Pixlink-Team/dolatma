@@ -55,7 +55,7 @@ export function ImageZoom({
           setOpen(true);
         }}
         className={cn(
-          "group relative block overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+          "group relative block h-full w-full overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
           className
         )}
         aria-label="بزرگ‌نمایی تصویر"
@@ -63,13 +63,12 @@ export function ImageZoom({
         <Image
           src={src}
           alt={alt}
-          width={800}
-          height={600}
+          fill
           loading="lazy"
           decoding="async"
           quality={quality}
           sizes={sizes}
-          className={cn("h-full w-full object-cover", imgClassName)}
+          className={cn("object-cover", imgClassName)}
         />
         {showHint && (
           <span className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition-opacity group-hover:bg-black/25 group-hover:opacity-100">

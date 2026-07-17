@@ -53,16 +53,18 @@ function RawMediaList({ items }: { items: RawMediaUpload[] }) {
             ownerName={item.ownerName}
             media={
               item.mediaKind === "video" ? (
-                <VideoThumbnail
-                  videoUrl={item.fileUrl}
-                  alt={item.title}
-                  className="object-cover"
-                />
+                <div className="relative h-full w-full">
+                  <VideoThumbnail
+                    videoUrl={item.fileUrl}
+                    alt={item.title}
+                    className="object-cover"
+                  />
+                </div>
               ) : (
                 <ImageZoom
                   src={item.fileUrl}
                   alt={item.title}
-                  className="h-full w-full"
+                  className="absolute inset-0 h-full w-full"
                   imgClassName="object-cover"
                   sizes="(max-width: 640px) 100vw, 280px"
                 />
