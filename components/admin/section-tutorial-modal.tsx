@@ -10,6 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { ImageZoom } from "@/components/ui/image-zoom";
 import type { TutorialStep } from "@/lib/section-tutorials";
 import { formatPersianNumber } from "@/lib/utils";
 
@@ -49,7 +50,7 @@ export function SectionTutorialModal({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-h-[90vh] max-w-xl overflow-y-auto">
+      <DialogContent className="max-h-[92vh] max-w-lg overflow-y-auto sm:max-w-xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <BookOpen className="h-5 w-5 shrink-0" />
@@ -66,20 +67,24 @@ export function SectionTutorialModal({
           <p className="text-sm leading-7 text-muted-foreground">{unavailableMessage}</p>
         ) : currentStep ? (
           <div className="space-y-4">
-            <div>
-              <h3 className="text-base font-semibold">{currentStep.title}</h3>
-              <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-muted-foreground">
-                {currentStep.body}
-              </p>
-            </div>
             {currentStep.imageUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
+              <ImageZoom
                 src={currentStep.imageUrl}
                 alt={currentStep.title}
-                className="max-h-64 w-full rounded-lg border object-contain bg-muted/30"
+                className="aspect-square w-full rounded-xl border bg-muted/30"
+                imgClassName="object-cover object-center"
+                sizes="(max-width: 640px) 90vw, 36rem"
+                quality={80}
               />
             ) : null}
+            <div>
+              <h3 className="text-base font-semibold">{currentStep.title}</h3>
+              {currentStep.body ? (
+                <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-muted-foreground">
+                  {currentStep.body}
+                </p>
+              ) : null}
+            </div>
           </div>
         ) : null}
 
