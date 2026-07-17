@@ -579,6 +579,7 @@ export function SocialPostsAdmin({
                   onChange={(value) => form.setValue("mediaUrl", value)}
                   kind="video"
                   accept="video/*"
+                  coverImageUrl={form.watch("coverImageUrl")}
                   onAutoCoverGenerated={(coverUrl) => {
                     const currentCover = form.getValues("coverImageUrl")?.trim() ?? "";
                     if (!currentCover) {

@@ -13,9 +13,13 @@ import {
   resolveVideoThumbnail,
 } from "@/lib/media-utils";
 import { cn } from "@/lib/utils";
-import { captureAndUploadVideoCover } from "@/lib/client/video-cover";
+import {
+  captureAndUploadVideoCover,
+  captureAndUploadVideoCoverFromUrl,
+  videoNeedsAutoCover,
+} from "@/lib/client/video-cover";
 import { Loader2, Trash2, Upload } from "lucide-react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 interface MediaUploadProps {
@@ -28,8 +32,13 @@ interface MediaUploadProps {
     fileSize: number;
     mimeType: string;
   }) => void;
-  /** Fired after a video file upload when an auto WebP cover was generated from second ~3. */
+  /** Fired after a video upload when an auto WebP cover was generated from second ~3. */
   onAutoCoverGenerated?: (coverUrl: string) => void;
+  /** When set, auto cover is skipped if this already has a value. */
+  coverImageUrl?: string | null;
+  onCoverImageUrlChange?: (url: string) => void;
+  /** Auto-generate cover from second 3 for direct video uploads (default: true for video). */
+  autoVideoCover?: boolean;
   label?: string;
   kind?: "image" | "video" | "audio";
   uploadKind?: "image" | "video" | "audio" | "activity-video" | "raw-image" | "raw-video";
@@ -45,6 +54,9 @@ export function MediaUpload({
   onUploaded,
   onUploadedMeta,
   onAutoCoverGenerated,
+  coverImageUrl,
+  onCoverImageUrlChange,
+  autoVideoCover,
   label,
   kind = "image",
   uploadKind,
@@ -54,10 +66,78 @@ export function MediaUpload({
   maxFileSizeBytes,
 }: MediaUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const processedVideoCoverRef = useRef<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [generatingCover, setGeneratingCover] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [showLinkEditor, setShowLinkEditor] = useState(false);
+  const shouldAutoVideoCover = autoVideoCover ?? kind === "video";
+
+  const applyGeneratedCover = (coverUrl: string) => {
+    if (!coverImageUrl?.trim()) {
+      onCoverImageUrlChange?.(coverUrl);
+    }
+    onAutoCoverGenerated?.(coverUrl);
+    toast.success("کاور از ثانیه ۳ ویدیو ساخته شد");
+  };
+
+  const tryGenerateCoverFromFile = async (file: File, videoUrl: string) => {
+    if (!shouldAutoVideoCover || kind !== "video") return;
+    if (!file.type.startsWith("video/")) return;
+    if (!onAutoCoverGenerated && !onCoverImageUrlChange) return;
+    if (coverImageUrl?.trim()) return;
+
+    processedVideoCoverRef.current = videoUrl;
+    setGeneratingCover(true);
+    try {
+      const coverUrl = await captureAndUploadVideoCover(file);
+      applyGeneratedCover(coverUrl);
+    } catch (error) {
+      processedVideoCoverRef.current = null;
+      console.warn("Auto video cover failed:", error);
+    } finally {
+      setGeneratingCover(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!shouldAutoVideoCover || kind !== "video") return;
+    if (!onAutoCoverGenerated && !onCoverImageUrlChange) return;
+
+    const trimmed = value.trim();
+    if (!trimmed || !isDirectVideoUrl(trimmed) || isAparatVideoInput(trimmed)) return;
+    if (coverImageUrl?.trim()) return;
+    if (!videoNeedsAutoCover(trimmed, coverImageUrl)) return;
+    if (processedVideoCoverRef.current === trimmed) return;
+
+    let cancelled = false;
+    processedVideoCoverRef.current = trimmed;
+    setGeneratingCover(true);
+
+    void captureAndUploadVideoCoverFromUrl(trimmed)
+      .then((coverUrl) => {
+        if (cancelled) return;
+        applyGeneratedCover(coverUrl);
+      })
+      .catch((error) => {
+        processedVideoCoverRef.current = null;
+        console.warn("Auto video cover from URL failed:", error);
+      })
+      .finally(() => {
+        if (!cancelled) setGeneratingCover(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    value,
+    kind,
+    shouldAutoVideoCover,
+    coverImageUrl,
+    onAutoCoverGenerated,
+    onCoverImageUrlChange,
+  ]);
 
   const handleUpload = async (file: File) => {
     if (maxFileSizeBytes && file.size > maxFileSizeBytes) {
@@ -104,16 +184,8 @@ export function MediaUpload({
       setShowLinkEditor(false);
       toast.success("فایل با موفقیت آپلود شد");
 
-      if (kind === "video" && onAutoCoverGenerated && file.type.startsWith("video/")) {
-        setGeneratingCover(true);
-        try {
-          const coverUrl = await captureAndUploadVideoCover(file);
-          onAutoCoverGenerated(coverUrl);
-        } catch (error) {
-          console.warn("Auto video cover failed:", error);
-        } finally {
-          setGeneratingCover(false);
-        }
+      if (kind === "video" && file.type.startsWith("video/")) {
+        await tryGenerateCoverFromFile(file, data.url);
       }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "آپلود ناموفق بود");

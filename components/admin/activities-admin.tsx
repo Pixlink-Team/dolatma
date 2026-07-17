@@ -37,6 +37,7 @@ import {
 } from "@/components/admin/section-bulk-edit";
 import { MediaUpload } from "@/components/ui/media-upload";
 import { PersianDateField } from "@/components/ui/persian-date-input";
+import { applyVideoCoverToMediaItems } from "@/lib/client/activity-media-cover";
 import { fieldActivityTypeOptions, getActivityTypeLabel } from "@/lib/activity-types";
 import { deleteCampaignActivityAction, saveCampaignActivityAction } from "@/lib/actions/extended-actions";
 import { normalizePlanLabels, type ContentTopic } from "@/lib/content-topics";
@@ -459,6 +460,25 @@ export function ActivitiesAdmin({
                     }
                     fileOnly={item.type === "video" || item.type === "audio"}
                     maxFileSizeBytes={item.type === "video" ? ACTIVITY_VIDEO_MAX_BYTES : undefined}
+                    coverImageUrl={
+                      item.type === "video"
+                        ? mediaItems.find((media) => media.type === "image" && media.url.trim())?.url
+                        : undefined
+                    }
+                    onAutoCoverGenerated={
+                      item.type === "video"
+                        ? (coverUrl) => {
+                            setMediaItems((prev) => {
+                              const { mediaItems: next, applied } = applyVideoCoverToMediaItems(
+                                prev,
+                                coverUrl,
+                                MAX_MEDIA_ITEMS
+                              );
+                              return applied ? next : prev;
+                            });
+                          }
+                        : undefined
+                    }
                     accept={
                       item.type === "image"
                         ? "image/*"

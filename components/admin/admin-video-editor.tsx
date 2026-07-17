@@ -303,6 +303,7 @@ export function AdminVideoEditor({
                 kind="video"
                 value={videoUrl}
                 onChange={setVideoUrl}
+                coverImageUrl={thumbnailUrl}
                 onAutoCoverGenerated={(coverUrl) => {
                   setThumbnailUrl((current) => (current.trim() ? current : coverUrl));
                 }}
