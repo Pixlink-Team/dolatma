@@ -12,7 +12,7 @@ const contentSecurityPolicy = [
   "img-src 'self' data: blob: https://www.aparat.com https://aparat.com https://*.supabase.co https://billboard.pixlink.ir https://*.pixlink.ir https://*.darkube.ir",
   "media-src 'self' blob:",
   "font-src 'self' data:",
-  "connect-src 'self' https://*.supabase.co https://billboard.pixlink.ir https://*.pixlink.ir https://*.darkube.ir",
+  "connect-src 'self' https://*.supabase.co https://*.pixlink.ir https://*.darkube.ir",
   "frame-src 'self' https://www.aparat.com https://aparat.com https://*.darkube.ir",
   "upgrade-insecure-requests",
 ].join("; ");

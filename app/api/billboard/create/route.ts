@@ -5,8 +5,10 @@ import { assertTutorialForPossibleCreate } from "@/lib/auth/require-tutorial-com
 import { resolveDefaultAdminOwnerUserId } from "@/lib/admin-content-owner";
 import { pgGetCampaignById } from "@/lib/db/repository";
 import { pgGetUserById } from "@/lib/db/repository-extended";
-import type { BillboardDisplayPeriodInput } from "@/lib/services/billboard-assignment-api";
-import { createLocalBillboard } from "@/lib/services/local-billboard-create";
+import {
+  createLocalBillboard,
+  type BillboardDisplayPeriodInput,
+} from "@/lib/services/local-billboard-create";
 import type { BillboardCategory } from "@/lib/billboard-categories";
 
 function parseRequiredPeriods(formData: FormData): BillboardDisplayPeriodInput[] {

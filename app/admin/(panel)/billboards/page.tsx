@@ -5,11 +5,7 @@ import { getAuthSession, getOwnerFilter, isFullAdmin } from "@/lib/auth/get-sess
 import { canScoreContent } from "@/lib/auth/access";
 import { requireContributorAccess } from "@/lib/auth/require-contributor-access";
 import { pgGetUserById } from "@/lib/db/repository-extended";
-import {
-  hasExternalBillboardConnection,
-  resolveAdminBillboards,
-  getExternalCampaignSlug,
-} from "@/lib/billboards";
+import { resolveAdminBillboards } from "@/lib/billboards";
 import { BillboardsAdmin } from "@/components/admin/billboards-admin";
 import type { Billboard, CampaignSettings } from "@/lib/types";
 
@@ -46,7 +42,7 @@ export default async function BillboardsPage({ searchParams }: PageProps) {
   const dbBillboards = (data.billboards ?? []) as Billboard[];
   const settings = data.settings as CampaignSettings | null;
   const billboards = settings
-    ? await resolveAdminBillboards(settings, dbBillboards, users, ownerUserId)
+    ? await resolveAdminBillboards(settings, dbBillboards, ownerUserId)
     : ownerUserId
       ? dbBillboards.filter((billboard) => billboard.ownerUserId === ownerUserId)
       : dbBillboards;
@@ -58,9 +54,6 @@ export default async function BillboardsPage({ searchParams }: PageProps) {
       contentPlans={settings?.contentPlans ?? []}
       contentTopics={settings?.contentTopics ?? []}
       canScore={canScore}
-      liveApiEnabled={Boolean(settings && hasExternalBillboardConnection(settings))}
-      externalCampaignSlug={settings ? getExternalCampaignSlug(settings) : null}
-      externalCampaignId={settings?.billboardConfig?.externalCampaignId ?? null}
       isFullAdmin={fullAdmin}
       users={fullAdmin ? users : []}
       contributorProfile={contributorProfile}

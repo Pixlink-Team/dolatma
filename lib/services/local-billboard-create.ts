@@ -1,9 +1,20 @@
 import { saveBillboard } from "@/lib/data-access/admin";
 import { pgReplaceBillboardPeriods } from "@/lib/db/repository";
 import { saveUploadedImageFile } from "@/lib/services/save-uploaded-file";
-import type { BillboardDisplayPeriodInput } from "@/lib/services/billboard-assignment-api";
 import { generateId, formatPersianDateShort } from "@/lib/utils";
 import type { BillboardCategory } from "@/lib/billboard-categories";
+
+export interface BillboardDisplayPeriodInput {
+  id?: string;
+  title?: string;
+  startDate: string;
+  endDate: string;
+  sortOrder: number;
+  image?: Blob | null;
+  billboardImage?: Blob | null;
+  billboardImageUrl?: string | null;
+  confirmationImageUrl?: string | null;
+}
 
 export interface CreateLocalBillboardInput {
   campaignId: string;

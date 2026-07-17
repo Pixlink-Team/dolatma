@@ -1,6 +1,18 @@
 {
   "entries": [
     {
+      "hash": "13069b9553dd510922368f675516adaa2eb5fc26",
+      "committedAt": "2026-07-17T21:57:42+03:30",
+      "title": "افزودن تصاویر جداگانه ظهر و شب برای صفحه ورود",
+      "subject": "Add dedicated noon and night login backgrounds"
+    },
+    {
+      "hash": "87059947dc9cd6f412e27bda12155588c4e81bfe",
+      "committedAt": "2026-07-17T21:46:39+03:30",
+      "title": "به‌روزرسانی تصاویر پس‌زمینه صفحه ورود",
+      "subject": "Update login backgrounds from new morning and evening art"
+    },
+    {
       "hash": "ca6129d31fc5907baf3939173339d80c271921d9",
       "committedAt": "2026-07-17T21:02:24+03:30",
       "title": "تغییر نام پروژه به دولتما",

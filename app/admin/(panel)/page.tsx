@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { DashboardCompletenessCards } from "@/components/admin/dashboard-completeness-cards";
 import { DashboardDirectivesPanel } from "@/components/admin/dashboard-directives-panel";
 import { EditSuggestionsPanel } from "@/components/admin/edit-suggestions-panel";
-import { getAdminData, getAllUsers } from "@/lib/data-access/admin";
+import { getAdminData } from "@/lib/data-access/admin";
 import { resolveAdminCampaignId } from "@/lib/admin-campaign";
 import { DASHBOARD_STAT_DEFINITIONS } from "@/lib/admin-dashboard-stats";
 import { resolveAdminBillboards } from "@/lib/billboards";
@@ -95,12 +95,10 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
       defaultContributorPermissions();
   }
 
-  const users = await getAllUsers();
   const billboards = data.settings
     ? await resolveAdminBillboards(
         data.settings as CampaignSettings,
         (data.billboards ?? []) as Billboard[],
-        users,
         ownerUserId
       )
     : [];

@@ -61,25 +61,8 @@ export interface AnalyticsConfig {
   social: ChannelAnalyticsConfig;
 }
 
-export interface BillboardConfig {
-  externalCampaignId?: string | null;
-  externalCampaignSlug?: string | null;
-}
-
-export interface MapBilboardApiSettings {
-  baseUrl?: string | null;
-  email?: string | null;
-  password?: string | null;
-  token?: string | null;
-}
-
-export interface MapBilboardApiSettingsPublic {
-  baseUrl: string;
-  email: string;
-  hasPassword: boolean;
-  hasToken: boolean;
-  configured: boolean;
-}
+/** Reserved for future campaign billboard settings. */
+export type BillboardConfig = Record<string, unknown>;
 
 export type SmsProviderId = "none" | "kavenegar" | "melipayamak" | "custom";
 

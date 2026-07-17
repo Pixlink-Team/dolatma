@@ -16,7 +16,7 @@ interface BillboardThumbnailProps {
 
 /**
  * Use a plain img for billboards: next/image optimization often fails for
- * signed /api/files URLs and for remote map-bilboard hosts the server cannot reach.
+ * signed /api/files URLs and for remote image hosts the server cannot reach.
  */
 export function BillboardThumbnail({
   billboard,

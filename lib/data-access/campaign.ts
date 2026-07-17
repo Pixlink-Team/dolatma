@@ -1,6 +1,5 @@
 import { getMockStore, getMockStoreForCampaign } from "@/lib/mock-data";
 import { resolvePublicBillboards } from "@/lib/billboards";
-import { getAllUsers } from "@/lib/data-access/admin";
 import type {
   AnalyticsChannel,
   AnalyticsMetric,
@@ -561,19 +560,15 @@ export async function getPublicCampaignData(slug: string): Promise<PublicCampaig
       // Backfill: publish older contributor drafts that never reached the public page.
       await pg.pgPublishContributorUploads(settings.id);
       const campaignStore = await pg.pgGetPublicCampaignData(settings.id);
-      const [siteMetrics, users] = await Promise.all([
-        resolveChannelAnalyticsMetrics(
-          settings,
-          campaignStore.analytics,
-          "site",
-          settings.analyticsConfig.site
-        ),
-        getAllUsers(),
-      ]);
+      const siteMetrics = await resolveChannelAnalyticsMetrics(
+        settings,
+        campaignStore.analytics,
+        "site",
+        settings.analyticsConfig.site
+      );
       const billboards = await resolvePublicBillboards(
         settings,
-        campaignStore.billboards,
-        users
+        campaignStore.billboards
       );
       return assemblePublicData(
         settings,
@@ -662,7 +657,7 @@ export async function getPublicCampaignData(slug: string): Promise<PublicCampaig
     return assemblePublicData(
       settings,
       campaignStore,
-      await resolvePublicBillboards(settings, campaignStore.billboards, await getAllUsers())
+      await resolvePublicBillboards(settings, campaignStore.billboards)
     );
   } catch {
     return getMockPublicDataBySlug(slug);
