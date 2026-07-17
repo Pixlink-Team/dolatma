@@ -9,7 +9,7 @@ import { ContentScoreControl } from "@/components/admin/content-score-control";
 import { PublicContentCard } from "@/components/public/public-content-card";
 import { useContentScoreAccess } from "@/lib/context/content-score-context";
 import type { VideoVersion } from "@/lib/types";
-import { downloadMedia, getFilenameFromUrl, hasDistinctThumbnail, resolveDisplayVersion } from "@/lib/media-utils";
+import { downloadMedia, getFilenameFromUrl, resolveDisplayVersion } from "@/lib/media-utils";
 import { formatPersianDate } from "@/lib/utils";
 
 interface VideoCardProps {
@@ -51,18 +51,10 @@ export function VideoCard({
     );
   };
 
-  const handleDownloadCover = (event: React.MouseEvent) => {
-    event.stopPropagation();
-    if (!hasDistinctThumbnail(displayVersion.thumbnailUrl, displayVersion.videoUrl)) return;
-    void downloadMedia(
-      displayVersion.thumbnailUrl,
-      getFilenameFromUrl(displayVersion.thumbnailUrl, `${title}-cover.jpg`)
-    );
-  };
-
   return (
     <>
       <PublicContentCard
+        onClick={() => setModalOpen(true)}
         title={title}
         date={displayVersion.date ? formatPersianDate(displayVersion.date) : null}
         category={category}
@@ -96,7 +88,14 @@ export function VideoCard({
         }
         actions={
           <>
-            <Button variant="outline" size="sm" onClick={() => setModalOpen(true)}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={(event) => {
+                event.stopPropagation();
+                setModalOpen(true);
+              }}
+            >
               <Eye className="h-4 w-4" />
               مشاهده
             </Button>
@@ -104,17 +103,6 @@ export function VideoCard({
               <Download className="h-4 w-4" />
               دانلود
             </Button>
-            {hasDistinctThumbnail(displayVersion.thumbnailUrl, displayVersion.videoUrl) && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="col-span-2"
-                onClick={handleDownloadCover}
-              >
-                <Download className="h-4 w-4" />
-                دانلود کاور
-              </Button>
-            )}
           </>
         }
       />

@@ -18,6 +18,7 @@ interface PublicContentCardProps {
   score?: ReactNode;
   actions?: ReactNode;
   className?: string;
+  onClick?: () => void;
 }
 
 export function PublicContentCard({
@@ -31,11 +32,19 @@ export function PublicContentCard({
   score,
   actions,
   className,
+  onClick,
 }: PublicContentCardProps) {
   const normalizedTopics = [...new Set(topics.map((topic) => topic?.trim()).filter(Boolean))] as string[];
 
   return (
-    <Card className={cn("flex h-full min-w-0 flex-col gap-0 overflow-hidden py-0", className)}>
+    <Card
+      className={cn(
+        "flex h-full min-w-0 flex-col gap-0 overflow-hidden py-0",
+        onClick && "cursor-pointer",
+        className
+      )}
+      onClick={onClick}
+    >
       <div className="relative aspect-square w-full shrink-0 overflow-hidden bg-muted">
         {media}
       </div>
