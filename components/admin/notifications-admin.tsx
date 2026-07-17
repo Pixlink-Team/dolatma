@@ -2,9 +2,11 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Check, ExternalLink } from "lucide-react";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
+import { AdminContentPreviewDialog } from "@/components/admin/admin-content-preview-dialog";
 import { ContentScoreControl } from "@/components/admin/content-score-control";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -47,6 +49,33 @@ import type {
 } from "@/lib/types";
 import { formatPersianDate, formatPersianDateTime, formatPersianNumber } from "@/lib/utils";
 
+function getNotificationDescription(
+  item: NotificationFeedItem,
+  sources: {
+    posters: Poster[];
+    videos: Video[];
+    billboards: Billboard[];
+    activities: CampaignActivity[];
+    socialPosts: SocialMediaPost[];
+  }
+): string | null {
+  switch (item.contentType) {
+    case "poster":
+      return sources.posters.find((row) => row.id === item.contentId)?.description ?? null;
+    case "video":
+      return sources.videos.find((row) => row.id === item.contentId)?.description ?? null;
+    case "billboard":
+      return sources.billboards.find((row) => row.id === item.contentId)?.description ?? null;
+    case "activity":
+      return sources.activities.find((row) => row.id === item.contentId)?.description ?? null;
+    case "social_post":
+    case "site_publication":
+      return sources.socialPosts.find((row) => row.id === item.contentId)?.description ?? null;
+    default:
+      return null;
+  }
+}
+
 type NotificationFilterView = NotificationView | "unscored";
 
 interface NotificationsAdminProps {
@@ -68,6 +97,7 @@ function NotificationCard({
   canScore,
   selected,
   onToggleSelect,
+  onOpen,
   showConfirm,
   confirming,
   onConfirm,
@@ -78,6 +108,7 @@ function NotificationCard({
   canScore: boolean;
   selected: boolean;
   onToggleSelect: () => void;
+  onOpen: () => void;
   showConfirm?: boolean;
   confirming?: boolean;
   onConfirm?: () => void;
@@ -95,9 +126,10 @@ function NotificationCard({
         />
         <span className="text-xs text-muted-foreground">انتخاب</span>
       </div>
-      <Link
-        href={item.adminPath}
-        className="flex flex-1 flex-col focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      <button
+        type="button"
+        onClick={onOpen}
+        className="flex flex-1 flex-col text-right focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         <div className="relative aspect-[4/3] w-full overflow-hidden bg-muted">
           {item.thumbnailUrl ? (
@@ -139,7 +171,7 @@ function NotificationCard({
             {formatPersianDateTime(item.eventAt)}
           </p>
         </div>
-      </Link>
+      </button>
 
       {canScore && (
         <div className="border-t px-3 py-2" onClick={(event) => event.stopPropagation()}>
@@ -169,7 +201,7 @@ function NotificationCard({
             تأیید مشاهده
           </Button>
           <Button type="button" variant="ghost" size="icon" className="shrink-0" asChild>
-            <Link href={item.adminPath} title="مشاهده در پنل">
+            <Link href={item.adminPath} title="ویرایش در پنل">
               <ExternalLink className="h-4 w-4" />
             </Link>
           </Button>
@@ -191,6 +223,7 @@ export function NotificationsAdmin({
   posterVersions = [],
   videoVersions = [],
 }: NotificationsAdminProps) {
+  const router = useRouter();
   const [view, setView] = useState<NotificationFilterView>("new");
   const [range, setRange] = useState<NotificationRange>("week");
   const [sort, setSort] = useState<NotificationSort>("upload");
@@ -202,7 +235,19 @@ export function NotificationsAdmin({
   const [scoreOverrides, setScoreOverrides] = useState<Record<string, number | null>>({});
   const [readsLoaded, setReadsLoaded] = useState(false);
   const [confirmingKey, setConfirmingKey] = useState<string | null>(null);
+  const [previewItem, setPreviewItem] = useState<NotificationFeedItem | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  const previewDescription = useMemo(() => {
+    if (!previewItem) return null;
+    return getNotificationDescription(previewItem, {
+      posters,
+      videos,
+      billboards,
+      activities,
+      socialPosts,
+    });
+  }, [previewItem, posters, videos, billboards, activities, socialPosts]);
 
   useEffect(() => {
     void getNotificationReadsAction().then((keys) => {
@@ -468,6 +513,7 @@ export function NotificationsAdmin({
                     canScore={canScore}
                     selected={selectedKeys.has(item.key)}
                     onToggleSelect={() => toggleSelect(item.key)}
+                    onOpen={() => setPreviewItem(item)}
                     showConfirm={view === "new" || view === "unscored"}
                     confirming={confirmingKey === item.key}
                     onConfirm={() => handleConfirmItem(item.key)}
@@ -481,6 +527,62 @@ export function NotificationsAdmin({
           ))}
         </div>
       )}
+
+      <AdminContentPreviewDialog
+        open={Boolean(previewItem)}
+        onOpenChange={(open) => !open && setPreviewItem(null)}
+        title={previewItem?.title ?? "پیش‌نمایش اعلان"}
+        description={previewDescription}
+        imageUrl={previewItem?.thumbnailUrl}
+        meta={
+          previewItem ? (
+            <div className="flex flex-wrap gap-1.5">
+              <Badge variant="outline" className="text-[10px]">
+                {previewItem.typeLabel}
+              </Badge>
+              {previewItem.score == null ? (
+                <Badge variant="warning" className="text-[10px]">
+                  بدون امتیاز
+                </Badge>
+              ) : (
+                <Badge variant="secondary" className="text-[10px]">
+                  امتیاز {formatPersianNumber(previewItem.score)}
+                </Badge>
+              )}
+              {!previewItem.published && (
+                <Badge variant="outline" className="text-[10px]">
+                  منتشر نشده
+                </Badge>
+              )}
+            </div>
+          ) : null
+        }
+        details={
+          previewItem
+            ? [
+                { label: "کاربر", value: previewItem.ownerName ?? "—" },
+                {
+                  label: "موقعیت",
+                  value:
+                    [previewItem.ownerProvince, previewItem.ownerCity].filter(Boolean).join(" / ") ||
+                    "—",
+                },
+                { label: "موضوع", value: previewItem.planLabel ?? "—" },
+                { label: "تاریخ رویداد", value: formatPersianDateTime(previewItem.eventAt) },
+                { label: "تاریخ روز", value: formatPersianDate(previewItem.date) },
+              ]
+            : []
+        }
+        onEdit={
+          previewItem
+            ? () => {
+                const path = previewItem.adminPath;
+                setPreviewItem(null);
+                router.push(path);
+              }
+            : undefined
+        }
+      />
     </div>
   );
 }
