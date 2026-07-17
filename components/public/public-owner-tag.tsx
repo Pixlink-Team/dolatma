@@ -9,7 +9,7 @@ interface PublicOwnerTagProps {
 
 /** Shows the uploader name on public campaign cards (instead of owner grouping). */
 export function PublicOwnerTag({ ownerUserId, ownerName, className }: PublicOwnerTagProps) {
-  if (!ownerUserId) return null;
+  if (!ownerUserId && !ownerName?.trim()) return null;
 
   const label = ownerName?.trim() || "کاربر";
 

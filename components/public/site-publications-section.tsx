@@ -13,10 +13,16 @@ import { flattenOwnerGroupsInSortOrder, shouldRenderChronologically } from "@/li
 import { useOwnerLocationFilter } from "@/lib/context/owner-location-filter-context";
 import { ShowMoreButton } from "@/components/public/show-more-button";
 import { useSectionPagination } from "@/lib/hooks/use-section-pagination";
-import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { ImageZoom } from "@/components/ui/image-zoom";
-import { PublicOwnerTag } from "@/components/public/public-owner-tag";
-import { filterGroupsByDisplayContent, socialPostHasDisplayContent } from "@/lib/public-media-section";
+import { PublicContentCard } from "@/components/public/public-content-card";
+import {
+  filterGroupsByDisplayContent,
+  PUBLIC_MEDIA_GRID_CLASS,
+  socialPostHasDisplayContent,
+} from "@/lib/public-media-section";
+import { ContentScoreControl } from "@/components/admin/content-score-control";
+import { useContentScoreAccess } from "@/lib/context/content-score-context";
 
 const PUBLICATIONS_ITEMS_PER_ROW = 1;
 
@@ -26,55 +32,59 @@ interface SitePublicationsSectionProps {
 }
 
 function PublicationList({ items }: { items: SocialMediaPost[] }) {
+  const { canScore, campaignId } = useContentScoreAccess();
+
   return (
-    <div className="space-y-3">
+    <div className={PUBLIC_MEDIA_GRID_CLASS}>
       {items.map((item) => (
-        <article
+        <PublicContentCard
           key={item.id}
-          className="rounded-xl border bg-card p-4 flex flex-col sm:flex-row gap-4"
-        >
-          {item.coverImageUrl && (
-            <div className="relative w-full sm:w-40 h-28 shrink-0 rounded-lg overflow-hidden bg-muted">
+          title={item.title}
+          date={formatPersianDate(item.publishedDate)}
+          category="انتشار در سایت"
+          topics={item.planLabels ?? (item.planLabel ? [item.planLabel] : [])}
+          ownerUserId={item.ownerUserId}
+          ownerName={item.ownerName}
+          description={item.description}
+          media={
+            item.coverImageUrl ? (
               <ImageZoom
                 src={item.coverImageUrl}
                 alt={item.title}
                 className="h-full w-full"
                 imgClassName="object-cover"
-                sizes="160px"
+                sizes="(max-width: 640px) 100vw, 280px"
                 quality={60}
               />
-            </div>
-          )}
-
-          <div className="flex-1 space-y-2 min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="secondary" className="gap-1">
-                <Globe className="h-3.5 w-3.5" />
-                منتشرشده در سایت
-              </Badge>
-              <PublicOwnerTag ownerUserId={item.ownerUserId} ownerName={item.ownerName} />
-              <span className="text-sm text-muted-foreground">{formatPersianDate(item.publishedDate)}</span>
-            </div>
-
-            {item.link ? (
-              <a
-                href={item.link}
-                target="_blank"
-                rel="noreferrer"
-                className="font-semibold text-primary hover:underline inline-flex items-center gap-1.5 break-words"
-              >
-                {item.title}
-                <ExternalLink className="h-4 w-4 shrink-0" />
-              </a>
             ) : (
-              <h3 className="font-semibold">{item.title}</h3>
-            )}
-
-            {item.description && (
-              <p className="text-sm text-muted-foreground leading-relaxed">{item.description}</p>
-            )}
-          </div>
-        </article>
+              <div className="flex h-full items-center justify-center bg-muted">
+                <Globe className="h-12 w-12 text-muted-foreground" />
+              </div>
+            )
+          }
+          score={
+            canScore || item.score != null ? (
+              <ContentScoreControl
+                campaignId={campaignId || item.campaignId}
+                contentType="site_publication"
+                contentId={item.id}
+                score={item.score}
+                canScore={canScore}
+                compact
+              />
+            ) : null
+          }
+          actions={
+            item.link ? (
+              <Button variant="outline" size="sm" asChild>
+                <a href={item.link} target="_blank" rel="noreferrer">
+                  <ExternalLink className="h-4 w-4" />
+                  مشاهده
+                </a>
+              </Button>
+            ) : undefined
+          }
+        />
       ))}
     </div>
   );

@@ -13,7 +13,7 @@ import { SectionTopCompaniesBox } from "@/components/public/section-top-companie
 import { VideoThumbnail } from "@/components/media/video-thumbnail";
 import { ImageZoom } from "@/components/ui/image-zoom";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { ExternalLink, Music } from "lucide-react";
 import { PUBLIC_MEDIA_GRID_CLASS, filterGroupsByDisplayContent, socialPostHasDisplayContent } from "@/lib/public-media-section";
 import { usePublicMediaPagination } from "@/lib/hooks/use-public-media-pagination";
@@ -23,7 +23,9 @@ import { flattenOwnerGroupsInSortOrder, shouldRenderChronologically } from "@/li
 import { useOwnerLocationFilter } from "@/lib/context/owner-location-filter-context";
 import { isDirectAudioUrl, isDirectVideoUrl, resolveAbsoluteMediaUrl } from "@/lib/media-utils";
 import { ShowMoreButton } from "@/components/public/show-more-button";
-import { PublicOwnerTag } from "@/components/public/public-owner-tag";
+import { PublicContentCard } from "@/components/public/public-content-card";
+import { ContentScoreControl } from "@/components/admin/content-score-control";
+import { useContentScoreAccess } from "@/lib/context/content-score-context";
 
 interface SocialPostsSectionProps {
   posts: SocialMediaPost[];
@@ -91,25 +93,25 @@ function SocialPostCover({ post }: { post: SocialMediaPost }) {
 }
 
 function SocialPostCard({ post }: { post: SocialMediaPost }) {
-  const titleContent = post.link ? (
-    <a
-      href={post.link}
-      target="_blank"
-      rel="noreferrer"
-      className="hover:text-primary hover:underline"
-    >
-      {post.title}
-    </a>
-  ) : (
-    post.title
-  );
+  const { canScore, campaignId } = useContentScoreAccess();
+  const platformLabel =
+    post.platform === "site"
+      ? getStatusLabel(post.platform)
+      : getSocialPlatformLabel(post.platform as SocialPlatform);
 
   return (
-    <Card className="h-full w-full overflow-hidden py-0 gap-0">
-      <div className="group relative aspect-video overflow-hidden bg-muted">
-        <SocialPostCover post={post} />
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-2 pt-6">
-          <div className="flex flex-wrap items-center gap-1">
+    <PublicContentCard
+      title={post.title}
+      date={formatPersianDate(post.publishedDate)}
+      category={`${platformLabel} — ${getStatusLabel(post.contentType)}`}
+      topics={post.planLabels ?? (post.planLabel ? [post.planLabel] : [])}
+      ownerUserId={post.ownerUserId}
+      ownerName={post.ownerName}
+      description={`بازدید: ${formatPersianNumber(post.views)} — لایک: ${formatPersianNumber(post.likes)}`}
+      media={
+        <div className="group relative h-full w-full">
+          <SocialPostCover post={post} />
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-2 pt-8">
             <Badge variant="secondary" className="gap-1 text-[10px] px-1.5 py-0 text-white bg-white/20 border-0">
               {post.platform !== "site" ? (
                 <SocialPlatformIcon
@@ -118,40 +120,34 @@ function SocialPostCard({ post }: { post: SocialMediaPost }) {
                   className="h-3.5 w-3.5 rounded"
                 />
               ) : null}
-              {post.platform === "site"
-                ? getStatusLabel(post.platform)
-                : getSocialPlatformLabel(post.platform as SocialPlatform)}
-            </Badge>
-            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 text-white bg-white/20 border-0">
-              {getStatusLabel(post.contentType)}
+              {platformLabel}
             </Badge>
           </div>
         </div>
-        {post.link && (
-          <a
-            href={post.link}
-            target="_blank"
-            rel="noreferrer"
-            className="absolute top-2 left-2 rounded-md bg-black/50 p-1.5 text-white opacity-0 transition-opacity group-hover:opacity-100"
-            aria-label="مشاهده پست"
-          >
-            <ExternalLink className="h-3.5 w-3.5" />
-          </a>
-        )}
-      </div>
-
-      <CardContent className="space-y-1 p-2.5">
-        <div className="flex flex-wrap items-start gap-1">
-          <h3 className="line-clamp-2 text-xs font-semibold leading-snug">{titleContent}</h3>
-          <PublicOwnerTag ownerUserId={post.ownerUserId} ownerName={post.ownerName} />
-        </div>
-        <p className="text-[10px] text-muted-foreground">{formatPersianDate(post.publishedDate)}</p>
-        <div className="grid grid-cols-2 gap-x-2 gap-y-0.5 text-[10px] text-muted-foreground">
-          <span>بازدید: {formatPersianNumber(post.views)}</span>
-          <span>لایک: {formatPersianNumber(post.likes)}</span>
-        </div>
-      </CardContent>
-    </Card>
+      }
+      score={
+        canScore || post.score != null ? (
+          <ContentScoreControl
+            campaignId={campaignId || post.campaignId}
+            contentType={post.platform === "site" ? "site_publication" : "social_post"}
+            contentId={post.id}
+            score={post.score}
+            canScore={canScore}
+            compact
+          />
+        ) : null
+      }
+      actions={
+        post.link ? (
+          <Button variant="outline" size="sm" asChild>
+            <a href={post.link} target="_blank" rel="noreferrer">
+              <ExternalLink className="h-4 w-4" />
+              مشاهده
+            </a>
+          </Button>
+        ) : undefined
+      }
+    />
   );
 }
 

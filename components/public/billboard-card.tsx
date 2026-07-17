@@ -1,13 +1,12 @@
 "use client";
 
-import { Eye, MapPin } from "lucide-react";
+import { Download, Eye, MapPin } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { ImageZoom } from "@/components/ui/image-zoom";
 import { ContentScoreControl } from "@/components/admin/content-score-control";
 import { BillboardThumbnail } from "@/components/public/billboard-thumbnail";
-import { PublicOwnerTag } from "@/components/public/public-owner-tag";
+import { PublicContentCard } from "@/components/public/public-content-card";
 import { useContentScoreAccess } from "@/lib/context/content-score-context";
 import { resolveBillboardCategoryDisplay } from "@/lib/billboard-categories";
 import {
@@ -16,6 +15,7 @@ import {
 } from "@/lib/billboards";
 import { getBillboardDisplayImage, hasBillboardDisplayImage } from "@/lib/billboard-media";
 import { parseProvinceFromBillboard } from "@/lib/billboard-form-utils";
+import { downloadMedia, getFilenameFromUrl } from "@/lib/media-utils";
 import type { Billboard } from "@/lib/types";
 import { formatPersianDate, formatPersianNumber } from "@/lib/utils";
 
@@ -43,68 +43,57 @@ export function BillboardCard({ billboard, onView }: BillboardCardProps) {
   const dateLabel = getBillboardDateLabel(billboard);
   const displayDays = getBillboardDisplayDays(billboard);
   const canZoom = hasBillboardDisplayImage(billboard);
+  const displayImage = getBillboardDisplayImage(billboard);
+
+  const handleDownload = () => {
+    if (!canZoom) return;
+    void downloadMedia(displayImage, getFilenameFromUrl(displayImage, `${billboard.title}.jpg`));
+  };
 
   return (
-    <Card className="group flex h-full w-full max-w-sm flex-col overflow-hidden">
-      <div className="relative aspect-[4/3] shrink-0 overflow-hidden bg-muted">
-        {canZoom ? (
-          <ImageZoom
-            src={getBillboardDisplayImage(billboard)}
-            alt={billboard.title}
-            className="absolute inset-0 h-full w-full"
-            imgClassName="transition-transform group-hover:scale-105"
-            sizes="(max-width: 768px) 100vw, 320px"
-          />
-        ) : (
-          <BillboardThumbnail
-            billboard={billboard}
-            alt={billboard.title}
-            sizes="(max-width: 768px) 100vw, 320px"
-            imageClassName="transition-transform group-hover:scale-105"
-          />
-        )}
-        {showCity && (
-          <div className="absolute top-1.5 right-1.5 flex max-w-[calc(100%-0.75rem)] flex-wrap gap-1 justify-end">
-            <Badge variant="outline" className="bg-background/90 text-[10px] px-1.5 py-0 shadow-sm">
+    <PublicContentCard
+      title={billboard.title}
+      date={dateLabel || formatPersianDate(billboard.date)}
+      category={categoryLabel}
+      topics={billboard.planLabels ?? (billboard.planLabel ? [billboard.planLabel] : [])}
+      ownerUserId={billboard.ownerUserId}
+      ownerName={billboard.ownerName}
+      description={`${province}${showCity ? ` — ${city}` : ""} | ${address}${
+        displayDays != null && displayDays > 0
+          ? ` | ${formatPersianNumber(displayDays)} روز نمایش`
+          : ""
+      }`}
+      media={
+        <div className="group relative h-full w-full">
+          {canZoom ? (
+            <ImageZoom
+              src={displayImage}
+              alt={billboard.title}
+              className="absolute inset-0 h-full w-full"
+              imgClassName="object-cover transition-transform group-hover:scale-105"
+              sizes="(max-width: 768px) 100vw, 320px"
+            />
+          ) : (
+            <BillboardThumbnail
+              billboard={billboard}
+              alt={billboard.title}
+              sizes="(max-width: 768px) 100vw, 320px"
+              imageClassName="transition-transform group-hover:scale-105"
+            />
+          )}
+          {showCity && (
+            <Badge
+              variant="outline"
+              className="absolute right-2 top-2 bg-background/90 text-[10px] shadow-sm"
+            >
+              <MapPin className="h-3 w-3" />
               {city}
             </Badge>
-          </div>
-        )}
-      </div>
-
-      <CardContent className="flex flex-1 flex-col space-y-3 p-4">
-        <div className="flex flex-wrap items-start gap-1.5">
-          <h3 className="line-clamp-2 min-h-[2.5rem] font-semibold leading-tight">{billboard.title}</h3>
-          <PublicOwnerTag ownerUserId={billboard.ownerUserId} ownerName={billboard.ownerName} />
-        </div>
-
-        {categoryLabel && (
-          <div className="flex flex-wrap gap-1.5">
-            <Badge variant="secondary" className="text-xs">
-              {categoryLabel}
-            </Badge>
-          </div>
-        )}
-
-        <div className="space-y-1.5 text-sm text-muted-foreground">
-          <div className="flex items-start gap-1">
-            <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-            <span>
-              {province}
-              {showCity ? ` — ${city}` : ""}
-            </span>
-          </div>
-          <p className="line-clamp-2 pr-5 text-xs leading-relaxed">{address}</p>
-        </div>
-
-        <div className="mt-auto space-y-1 text-xs text-muted-foreground">
-          <p>{dateLabel || formatPersianDate(billboard.date)}</p>
-          {displayDays != null && displayDays > 0 && (
-            <p>{formatPersianNumber(displayDays)} روز نمایش</p>
           )}
         </div>
-
-        {(canScore || billboard.score != null) && (
+      }
+      score={
+        canScore || billboard.score != null ? (
           <ContentScoreControl
             campaignId={campaignId || billboard.campaignId}
             contentType="billboard"
@@ -113,15 +102,22 @@ export function BillboardCard({ billboard, onView }: BillboardCardProps) {
             canScore={canScore}
             compact
           />
-        )}
-      </CardContent>
-
-      <CardFooter className="mt-auto p-4 pt-0">
-        <Button variant="outline" size="sm" className="w-full" onClick={() => onView(billboard)}>
-          <Eye className="h-4 w-4" />
-          مشاهده بیلبورد
-        </Button>
-      </CardFooter>
-    </Card>
+        ) : null
+      }
+      actions={
+        <>
+          <Button variant="outline" size="sm" onClick={() => onView(billboard)}>
+            <Eye className="h-4 w-4" />
+            مشاهده
+          </Button>
+          {canZoom && (
+            <Button variant="outline" size="sm" onClick={handleDownload}>
+              <Download className="h-4 w-4" />
+              دانلود
+            </Button>
+          )}
+        </>
+      }
+    />
   );
 }

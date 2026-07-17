@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Download, FileArchive, Film, HardDrive, ImageIcon, Loader2 } from "lucide-react";
+import { Download, Eye, FileArchive, HardDrive, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { CollapsibleSection } from "@/components/public/collapsible-section";
@@ -14,8 +14,16 @@ import { useOwnerLocationFilter } from "@/lib/context/owner-location-filter-cont
 import { ShowMoreButton } from "@/components/public/show-more-button";
 import { useSectionPagination } from "@/lib/hooks/use-section-pagination";
 import { formatStorageBytes } from "@/lib/raw-media-storage";
-import { PublicOwnerTag } from "@/components/public/public-owner-tag";
-import { fileHasDisplayContent, filterGroupsByDisplayContent } from "@/lib/public-media-section";
+import { PublicContentCard } from "@/components/public/public-content-card";
+import {
+  fileHasDisplayContent,
+  filterGroupsByDisplayContent,
+  PUBLIC_MEDIA_GRID_CLASS,
+} from "@/lib/public-media-section";
+import { ContentScoreControl } from "@/components/admin/content-score-control";
+import { useContentScoreAccess } from "@/lib/context/content-score-context";
+import { VideoThumbnail } from "@/components/media/video-thumbnail";
+import { ImageZoom } from "@/components/ui/image-zoom";
 import type { DataOwnerGroup, RawMediaStorageSummary, RawMediaUpload } from "@/lib/types";
 import { formatPersianDateTime, formatPersianNumber } from "@/lib/utils";
 
@@ -29,42 +37,71 @@ interface RawMediaSectionProps {
 }
 
 function RawMediaList({ items }: { items: RawMediaUpload[] }) {
+  const { canScore, campaignId } = useContentScoreAccess();
+
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+    <div className={PUBLIC_MEDIA_GRID_CLASS}>
       {items.map((item) => {
-        const Icon = item.mediaKind === "video" ? Film : ImageIcon;
         return (
-          <div
+          <PublicContentCard
             key={item.id}
-            className="flex items-start justify-between gap-3 rounded-xl border bg-card p-4"
-          >
-            <div className="flex min-w-0 items-start gap-3">
-              <div className="rounded-lg bg-muted p-2">
-                <Icon className="h-5 w-5 text-primary" />
-              </div>
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <p className="font-medium">{item.title}</p>
-                  <PublicOwnerTag ownerUserId={item.ownerUserId} ownerName={item.ownerName} />
-                </div>
-                {item.description && (
-                  <p className="mt-1 text-sm text-muted-foreground">{item.description}</p>
-                )}
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {item.fileName} — {formatStorageBytes(item.fileSize)}
-                </p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {formatPersianDateTime(item.createdAt)}
-                </p>
-              </div>
-            </div>
-            <Button variant="outline" size="sm" asChild className="shrink-0">
-              <a href={item.fileUrl} target="_blank" rel="noopener noreferrer" download={item.fileName}>
-                <Download className="h-4 w-4" />
-                دانلود
-              </a>
-            </Button>
-          </div>
+            title={item.title}
+            date={formatPersianDateTime(item.createdAt)}
+            category={item.mediaKind === "video" ? "ویدیو خام" : "تصویر خام"}
+            topics={item.planLabels ?? (item.planLabel ? [item.planLabel] : [])}
+            ownerUserId={item.ownerUserId}
+            ownerName={item.ownerName}
+            description={
+              [item.description, `${item.fileName} — ${formatStorageBytes(item.fileSize)}`]
+                .filter(Boolean)
+                .join(" — ")
+            }
+            media={
+              item.mediaKind === "video" ? (
+                <VideoThumbnail
+                  videoUrl={item.fileUrl}
+                  alt={item.title}
+                  className="object-cover"
+                />
+              ) : (
+                <ImageZoom
+                  src={item.fileUrl}
+                  alt={item.title}
+                  className="h-full w-full"
+                  imgClassName="object-cover"
+                  sizes="(max-width: 640px) 100vw, 280px"
+                />
+              )
+            }
+            score={
+              canScore || item.score != null ? (
+                <ContentScoreControl
+                  campaignId={campaignId || item.campaignId}
+                  contentType="raw_media"
+                  contentId={item.id}
+                  score={item.score}
+                  canScore={canScore}
+                  compact
+                />
+              ) : null
+            }
+            actions={
+              <>
+                <Button variant="outline" size="sm" asChild>
+                  <a href={item.fileUrl} target="_blank" rel="noopener noreferrer">
+                    <Eye className="h-4 w-4" />
+                    مشاهده
+                  </a>
+                </Button>
+                <Button variant="outline" size="sm" asChild>
+                  <a href={item.fileUrl} download={item.fileName}>
+                    <Download className="h-4 w-4" />
+                    دانلود
+                  </a>
+                </Button>
+              </>
+            }
+          />
         );
       })}
     </div>

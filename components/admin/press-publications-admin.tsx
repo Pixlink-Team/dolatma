@@ -4,6 +4,10 @@ import { useMemo, useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import {
+  CONTENT_TITLE_MAX_LENGTH,
+  CONTENT_TITLE_MAX_LENGTH_MESSAGE,
+} from "@/lib/content-constraints";
 import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -34,7 +38,10 @@ const ACTIVITY_VIDEO_MAX_BYTES = 50 * 1024 * 1024;
 const MAX_MEDIA_ITEMS = 10;
 
 const schema = z.object({
-  title: z.string().min(1, "عنوان الزامی است"),
+  title: z
+    .string()
+    .min(1, "عنوان الزامی است")
+    .max(CONTENT_TITLE_MAX_LENGTH, CONTENT_TITLE_MAX_LENGTH_MESSAGE),
   activityType: z.enum(["magazine", "newspaper"]),
   activityDate: z.string(),
   location: z.string().optional(),
@@ -277,7 +284,7 @@ export function PressPublicationsAdmin({
           <form onSubmit={onSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label>عنوان</Label>
-              <Input {...form.register("title")} />
+              <Input {...form.register("title")} maxLength={CONTENT_TITLE_MAX_LENGTH} />
             </div>
             <div className="space-y-2">
               <Label>نوع</Label>

@@ -25,6 +25,10 @@ import {
   type ContentTopic,
 } from "@/lib/content-topics";
 import { DEFAULT_ADMIN_OWNER_LABEL } from "@/lib/owner-groups";
+import {
+  CONTENT_TITLE_MAX_LENGTH,
+  CONTENT_TITLE_MAX_LENGTH_MESSAGE,
+} from "@/lib/content-constraints";
 import type { AnalyticsConfig, CampaignFeatures, CampaignSettings, ChannelAnalyticsConfig } from "@/lib/types";
 import type { ExternalCampaign } from "@/lib/models/billboard-api";
 
@@ -60,7 +64,7 @@ const channelSchema = z.object({
 });
 
 const schema = z.object({
-  title: z.string().min(1),
+  title: z.string().min(1).max(CONTENT_TITLE_MAX_LENGTH, CONTENT_TITLE_MAX_LENGTH_MESSAGE),
   slug: z.string().min(1),
   description: z.string().min(1),
   status: z.enum(["live", "completed", "draft"]),
@@ -411,7 +415,10 @@ export function SettingsAdmin({
         <CardHeader><CardTitle className="text-base">اطلاعات کمپین</CardTitle></CardHeader>
         <CardContent>
           <form onSubmit={onSubmit} className="space-y-4">
-            <div><Label>عنوان</Label><Input {...form.register("title")} /></div>
+            <div>
+              <Label>عنوان</Label>
+              <Input {...form.register("title")} maxLength={CONTENT_TITLE_MAX_LENGTH} />
+            </div>
             <div><Label>اسلاگ (URL)</Label><Input {...form.register("slug")} dir="ltr" /></div>
             <div><Label>توضیحات</Label><Textarea {...form.register("description")} rows={4} /></div>
             <div>

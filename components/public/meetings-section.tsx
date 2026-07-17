@@ -2,11 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import Image from "next/image";
+import { Download, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent } from "@/components/ui/card";
+import { PublicContentCard } from "@/components/public/public-content-card";
 import { MeetingDetailDialog } from "@/components/public/meeting-detail-dialog";
 import { CollapsibleSection } from "@/components/public/collapsible-section";
 import { OwnerGroupedSection } from "@/components/public/owner-grouped-section";
@@ -26,11 +27,14 @@ import {
 } from "@/lib/client/meetings-unlock-storage";
 import type { DataOwnerGroup, MeetingPublicDetail, MeetingPublicPreview } from "@/lib/types";
 import { formatPersianDate } from "@/lib/utils";
-import { PublicOwnerTag } from "@/components/public/public-owner-tag";
-import { filterGroupsByDisplayContent, meetingHasDisplayContent } from "@/lib/public-media-section";
+import {
+  filterGroupsByDisplayContent,
+  meetingHasDisplayContent,
+  PUBLIC_MEDIA_GRID_CLASS,
+} from "@/lib/public-media-section";
+import { downloadMedia, getFilenameFromUrl } from "@/lib/media-utils";
 
 const MEETINGS_ITEMS_PER_ROW = 4;
-const MEETINGS_GRID_CLASS = "grid grid-cols-2 md:grid-cols-4 gap-4";
 
 interface MeetingsSectionProps {
   campaignSlug: string;
@@ -46,10 +50,24 @@ function MeetingPreviewCard({
   meeting: MeetingPublicPreview;
   onOpen: () => void;
 }) {
+  const handleDownload = () => {
+    if (!meeting.imageUrl) return;
+    void downloadMedia(
+      meeting.imageUrl,
+      getFilenameFromUrl(meeting.imageUrl, `${meeting.title}.jpg`)
+    );
+  };
+
   return (
-    <Card className="overflow-hidden h-full flex flex-col">
-      <div className="relative aspect-[4/3] bg-muted">
-        {meeting.imageUrl ? (
+    <PublicContentCard
+      title={meeting.title}
+      date={formatPersianDate(meeting.meetingDate)}
+      category="جلسه و مصوبه"
+      ownerUserId={meeting.ownerUserId}
+      ownerName={meeting.ownerName}
+      description={meeting.summaryPreview}
+      media={
+        meeting.imageUrl ? (
           <Image
             src={meeting.imageUrl}
             alt={meeting.title}
@@ -61,27 +79,23 @@ function MeetingPreviewCard({
           <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
             بدون تصویر
           </div>
-        )}
-      </div>
-
-      <CardContent className="p-4 flex flex-col gap-3 flex-1">
-        <div className="space-y-1">
-          <div className="flex flex-wrap items-start gap-1.5">
-            <h3 className="font-semibold text-sm line-clamp-2">{meeting.title}</h3>
-            <PublicOwnerTag ownerUserId={meeting.ownerUserId} ownerName={meeting.ownerName} />
-          </div>
-          <p className="text-xs text-muted-foreground">{formatPersianDate(meeting.meetingDate)}</p>
-        </div>
-
-        {meeting.summaryPreview && (
-          <p className="text-sm text-muted-foreground line-clamp-3 flex-1">{meeting.summaryPreview}</p>
-        )}
-
-        <Button variant="outline" size="sm" className="w-full mt-auto" onClick={onOpen} data-export-hide>
-          مشاهده جزئیات
-        </Button>
-      </CardContent>
-    </Card>
+        )
+      }
+      actions={
+        <>
+          <Button variant="outline" size="sm" onClick={onOpen} data-export-hide>
+            <Eye className="h-4 w-4" />
+            مشاهده
+          </Button>
+          {meeting.imageUrl && (
+            <Button variant="outline" size="sm" onClick={handleDownload} data-export-hide>
+              <Download className="h-4 w-4" />
+              دانلود
+            </Button>
+          )}
+        </>
+      }
+    />
   );
 }
 
@@ -173,7 +187,7 @@ function MeetingsGrid({
   return (
     <>
       <div className="space-y-4">
-        <div className={MEETINGS_GRID_CLASS}>
+        <div className={PUBLIC_MEDIA_GRID_CLASS}>
           {visibleMeetings.map((meeting) => (
             <MeetingPreviewCard
               key={meeting.id}

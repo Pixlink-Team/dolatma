@@ -5,6 +5,10 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import {
+  CONTENT_TITLE_MAX_LENGTH,
+  CONTENT_TITLE_MAX_LENGTH_MESSAGE,
+} from "@/lib/content-constraints";
 import { toast } from "sonner";
 import Link from "next/link";
 import { ExternalLink, FolderKanban, Plus } from "lucide-react";
@@ -42,7 +46,10 @@ const featuresSchema = z.object({
 });
 
 const schema = z.object({
-  title: z.string().min(1, "عنوان الزامی است"),
+  title: z
+    .string()
+    .min(1, "عنوان الزامی است")
+    .max(CONTENT_TITLE_MAX_LENGTH, CONTENT_TITLE_MAX_LENGTH_MESSAGE),
   slug: z.string().min(1, "اسلاگ الزامی است"),
   description: z.string().min(1),
   status: z.enum(["live", "completed", "draft"]),
@@ -276,6 +283,7 @@ export function CampaignsAdmin({ initialCampaigns }: CampaignsAdminProps) {
               <Label>عنوان</Label>
               <Input
                 {...form.register("title")}
+                maxLength={CONTENT_TITLE_MAX_LENGTH}
                 onBlur={() => {
                   if (!editing && !form.getValues("slug")) {
                     form.setValue("slug", slugify(form.getValues("title")));

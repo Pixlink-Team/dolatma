@@ -20,11 +20,15 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { saveCategoryAction } from "@/lib/actions/admin-actions";
+import {
+  CONTENT_TITLE_MAX_LENGTH,
+  CONTENT_TITLE_MAX_LENGTH_MESSAGE,
+} from "@/lib/content-constraints";
 import type { MediaCategory, MediaCategoryType } from "@/lib/types";
 import { formatPersianNumber } from "@/lib/utils";
 
 const categorySchema = z.object({
-  title: z.string().min(1),
+  title: z.string().min(1).max(CONTENT_TITLE_MAX_LENGTH, CONTENT_TITLE_MAX_LENGTH_MESSAGE),
   description: z.string().optional(),
   sortOrder: z.coerce.number(),
 });
@@ -140,7 +144,7 @@ export function AdminMediaCategories({
           <form onSubmit={onSubmit} className="space-y-4">
             <div>
               <Label>عنوان</Label>
-              <Input {...form.register("title")} />
+              <Input {...form.register("title")} maxLength={CONTENT_TITLE_MAX_LENGTH} />
             </div>
             <div>
               <Label>توضیحات</Label>

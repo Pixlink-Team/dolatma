@@ -43,6 +43,12 @@ import type {
 import { isPostgresConfigured } from "@/lib/utils";
 import { resolveSaveOwnerUserId } from "@/lib/admin-content-owner";
 import { auditContentChange, auditContentDelete, logAuditFromCurrentSession } from "@/lib/audit/log-event";
+import { getContentTitleValidationError } from "@/lib/content-constraints";
+
+function validateTitlePayload(data: { title?: unknown }) {
+  const error = getContentTitleValidationError(data.title);
+  return error ? { success: false as const, error } : null;
+}
 
 async function revalidateAll(slug?: string) {
   revalidatePath("/");
@@ -105,6 +111,8 @@ async function assertContributorOwnsBillboard(
 }
 
 export async function saveCampaignAction(data: Partial<CampaignSettings> & { id?: string }) {
+  const validationError = validateTitlePayload(data);
+  if (validationError) return validationError;
   const result = await saveCampaign(data);
   await auditContentChange({
     isUpdate: Boolean(data.id),
@@ -129,6 +137,8 @@ export async function deleteCampaignAction(id: string) {
 }
 
 export async function updateSettingsAction(data: Partial<CampaignSettings>) {
+  const validationError = validateTitlePayload(data);
+  if (validationError) return validationError;
   const result = await updateCampaignSettings(data);
   await logAuditFromCurrentSession({
     category: "admin",
@@ -142,6 +152,8 @@ export async function updateSettingsAction(data: Partial<CampaignSettings>) {
 }
 
 export async function saveBillboardAction(data: Partial<Billboard> & { id?: string }) {
+  const validationError = validateTitlePayload(data);
+  if (validationError) return validationError;
   if (data.id) {
     const denied = await assertContributorOwnsBillboard(data.id);
     if (denied) return denied;
@@ -168,6 +180,8 @@ export async function deleteBillboardAction(id: string) {
 }
 
 export async function saveCategoryAction(data: Partial<MediaCategory> & { id?: string }) {
+  const validationError = validateTitlePayload(data);
+  if (validationError) return validationError;
   const result = await saveMediaCategory(data);
   await auditContentChange({
     isUpdate: Boolean(data.id),
@@ -192,6 +206,8 @@ export async function deleteCategoryAction(id: string, type: "poster" | "video")
 }
 
 export async function savePosterAction(data: Partial<Poster> & { id?: string }) {
+  const validationError = validateTitlePayload(data);
+  if (validationError) return validationError;
   const result = await savePoster(await withOwnerScope(data));
   await auditContentChange({
     isUpdate: Boolean(data.id),
@@ -234,6 +250,8 @@ export async function deletePosterVersionAction(id: string) {
 }
 
 export async function saveVideoAction(data: Partial<Video> & { id?: string }) {
+  const validationError = validateTitlePayload(data);
+  if (validationError) return validationError;
   const result = await saveVideo(await withOwnerScope(data));
   await auditContentChange({
     isUpdate: Boolean(data.id),
@@ -320,6 +338,8 @@ export async function deleteSubmissionAction(id: string) {
 }
 
 export async function saveCampaignFileAction(data: Partial<CampaignFile> & { id?: string }) {
+  const validationError = validateTitlePayload(data);
+  if (validationError) return validationError;
   const result = await saveCampaignFile(await withOwnerScope(data));
   await auditContentChange({
     isUpdate: Boolean(data.id),
@@ -340,6 +360,8 @@ export async function deleteCampaignFileAction(id: string) {
 }
 
 export async function saveRawMediaUploadAction(data: Partial<RawMediaUpload> & { id?: string }) {
+  const validationError = validateTitlePayload(data);
+  if (validationError) return validationError;
   const result = await saveRawMediaUpload(await withOwnerScope(data));
   await auditContentChange({
     isUpdate: Boolean(data.id),

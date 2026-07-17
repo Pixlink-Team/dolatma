@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Image from "next/image";
-import { MapPin, Music, Play } from "lucide-react";
+import { Download, Eye, Music, Play } from "lucide-react";
 import { getActivityTypeLabel } from "@/lib/activity-types";
 import { useFilteredOwnerGroups } from "@/lib/hooks/use-filtered-owner-groups";
 import { useCampaignSectionVisibility } from "@/lib/hooks/use-campaign-section-visibility";
@@ -13,12 +13,14 @@ import { usePublicMediaPagination } from "@/lib/hooks/use-public-media-paginatio
 import type { CampaignActivity, DataOwnerGroup } from "@/lib/types";
 import { formatPersianDate } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { CollapsibleSection } from "@/components/public/collapsible-section";
 import { OwnerGroupedSection } from "@/components/public/owner-grouped-section";
 import { SectionTopCompaniesBox } from "@/components/public/section-top-companies-box";
 import { ActivityMediaDialog } from "@/components/public/activity-media-dialog";
-import { PublicOwnerTag } from "@/components/public/public-owner-tag";
+import { PublicContentCard } from "@/components/public/public-content-card";
+import { ContentScoreControl } from "@/components/admin/content-score-control";
+import { useContentScoreAccess } from "@/lib/context/content-score-context";
 import {
   activityHasDisplayContent,
   filterGroupsByDisplayContent,
@@ -26,6 +28,7 @@ import {
 } from "@/lib/public-media-section";
 import { VideoThumbnail } from "@/components/media/video-thumbnail";
 import { cn } from "@/lib/utils";
+import { downloadMedia, getFilenameFromUrl } from "@/lib/media-utils";
 
 interface ActivitiesSectionProps {
   activities: CampaignActivity[];
@@ -48,25 +51,34 @@ function ActivityCard({
   activity: CampaignActivity;
   onOpen: () => void;
 }) {
+  const { canScore, campaignId } = useContentScoreAccess();
   const hasMedia = hasActivityMedia(activity);
   const hasVideo = Boolean(activity.videoUrl?.trim());
   const audioOnly =
     !hasVideo &&
     !activity.imageUrl?.trim() &&
     Boolean(activity.mediaItems?.some((item) => item.type === "audio" && item.url.trim()));
+  const primaryMediaUrl =
+    activity.imageUrl?.trim() ||
+    activity.videoUrl?.trim() ||
+    activity.mediaItems?.find((item) => item.url.trim())?.url;
+
+  const handleDownload = () => {
+    if (!primaryMediaUrl) return;
+    void downloadMedia(primaryMediaUrl, getFilenameFromUrl(primaryMediaUrl, activity.title));
+  };
 
   return (
-    <Card className="h-full w-full overflow-hidden py-0 gap-0">
-      <button
-        type="button"
-        onClick={hasMedia ? onOpen : undefined}
-        disabled={!hasMedia}
-        className={cn(
-          "group relative block w-full aspect-video bg-muted text-right",
-          hasMedia && "cursor-pointer"
-        )}
-        aria-label={hasMedia ? `مشاهده ${activity.title}` : undefined}
-      >
+    <PublicContentCard
+      title={activity.title}
+      date={formatPersianDate(activity.activityDate)}
+      category={getActivityTypeLabel(activity.activityType)}
+      topics={activity.planLabels ?? (activity.planLabel ? [activity.planLabel] : [])}
+      ownerUserId={activity.ownerUserId}
+      ownerName={activity.ownerName}
+      description={activity.location || activity.description}
+      media={
+        <div className={cn("group relative h-full w-full", hasMedia && "cursor-pointer")}>
         {hasVideo ? (
           <VideoThumbnail
             videoUrl={activity.videoUrl!}
@@ -107,22 +119,37 @@ function ActivityCard({
             {getActivityTypeLabel(activity.activityType)}
           </Badge>
         </div>
-      </button>
-
-      <CardContent className="space-y-1 p-2.5">
-        <div className="flex flex-wrap items-start gap-1">
-          <h3 className="line-clamp-2 text-xs font-semibold leading-snug">{activity.title}</h3>
-          <PublicOwnerTag ownerUserId={activity.ownerUserId} ownerName={activity.ownerName} />
         </div>
-        <p className="text-[10px] text-muted-foreground">{formatPersianDate(activity.activityDate)}</p>
-        {activity.location && (
-          <p className="inline-flex items-center gap-1 text-[10px] text-muted-foreground">
-            <MapPin className="h-3 w-3 shrink-0" />
-            <span className="line-clamp-1">{activity.location}</span>
-          </p>
-        )}
-      </CardContent>
-    </Card>
+      }
+      score={
+        canScore || activity.score != null ? (
+          <ContentScoreControl
+            campaignId={campaignId || activity.campaignId}
+            contentType="activity"
+            contentId={activity.id}
+            score={activity.score}
+            canScore={canScore}
+            compact
+          />
+        ) : null
+      }
+      actions={
+        hasMedia ? (
+          <>
+            <Button variant="outline" size="sm" onClick={onOpen}>
+              <Eye className="h-4 w-4" />
+              مشاهده
+            </Button>
+            {primaryMediaUrl && (
+              <Button variant="outline" size="sm" onClick={handleDownload}>
+                <Download className="h-4 w-4" />
+                دانلود
+              </Button>
+            )}
+          </>
+        ) : undefined
+      }
+    />
   );
 }
 

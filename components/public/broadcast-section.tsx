@@ -13,9 +13,15 @@ import { useOwnerLocationFilter } from "@/lib/context/owner-location-filter-cont
 import { ShowMoreButton } from "@/components/public/show-more-button";
 import { useSectionPagination } from "@/lib/hooks/use-section-pagination";
 import { Button } from "@/components/ui/button";
-import { Download, FileText } from "lucide-react";
-import { PublicOwnerTag } from "@/components/public/public-owner-tag";
-import { broadcastHasDisplayContent, filterGroupsByDisplayContent } from "@/lib/public-media-section";
+import { Download, Eye, FileText } from "lucide-react";
+import { PublicContentCard } from "@/components/public/public-content-card";
+import {
+  broadcastHasDisplayContent,
+  filterGroupsByDisplayContent,
+  PUBLIC_MEDIA_GRID_CLASS,
+} from "@/lib/public-media-section";
+import { ContentScoreControl } from "@/components/admin/content-score-control";
+import { useContentScoreAccess } from "@/lib/context/content-score-context";
 
 const BROADCAST_ITEMS_PER_ROW = 1;
 
@@ -25,28 +31,53 @@ interface BroadcastSectionProps {
 }
 
 function BroadcastReportCard({ report }: { report: BroadcastReport }) {
+  const { canScore, campaignId } = useContentScoreAccess();
   const { summaryData } = report;
 
   return (
-    <article className="rounded-xl border bg-card p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-      <div className="space-y-2">
-        <div className="flex flex-wrap items-center gap-2">
-          <FileText className="h-4 w-4 text-primary" />
-          <h3 className="font-semibold">{report.title}</h3>
-          <PublicOwnerTag ownerUserId={report.ownerUserId} ownerName={report.ownerName} />
+    <PublicContentCard
+      title={report.title}
+      date={formatPersianDate(report.reportDate)}
+      category="گزارش PDF"
+      topics={report.planLabels ?? (report.planLabel ? [report.planLabel] : [])}
+      ownerUserId={report.ownerUserId}
+      ownerName={report.ownerName}
+      description={summaryData.notes}
+      media={
+        <div className="flex h-full flex-col items-center justify-center gap-3 bg-muted">
+          <FileText className="h-16 w-16 text-primary" />
+          <span className="text-xs text-muted-foreground">PDF</span>
         </div>
-        <p className="text-sm text-muted-foreground">{formatPersianDate(report.reportDate)}</p>
-        {summaryData.notes && (
-          <p className="text-sm text-muted-foreground">{summaryData.notes}</p>
-        )}
-      </div>
-      <Button variant="outline" asChild className="shrink-0">
-        <a href={report.pdfUrl} target="_blank" rel="noreferrer" download={report.fileName}>
-          <Download className="h-4 w-4" />
-          دانلود PDF
-        </a>
-      </Button>
-    </article>
+      }
+      score={
+        canScore || report.score != null ? (
+          <ContentScoreControl
+            campaignId={campaignId || report.campaignId}
+            contentType="broadcast"
+            contentId={report.id}
+            score={report.score}
+            canScore={canScore}
+            compact
+          />
+        ) : null
+      }
+      actions={
+        <>
+          <Button variant="outline" size="sm" asChild>
+            <a href={report.pdfUrl} target="_blank" rel="noreferrer">
+              <Eye className="h-4 w-4" />
+              مشاهده
+            </a>
+          </Button>
+          <Button variant="outline" size="sm" asChild>
+            <a href={report.pdfUrl} download={report.fileName}>
+              <Download className="h-4 w-4" />
+              دانلود
+            </a>
+          </Button>
+        </>
+      }
+    />
   );
 }
 
@@ -105,7 +136,7 @@ export function BroadcastSection({ reports, groups }: BroadcastSectionProps) {
             flatItems={chronological ? visibleItems : null}
           >
             {(groupReports) => (
-              <div className="space-y-4">
+              <div className={PUBLIC_MEDIA_GRID_CLASS}>
                 {groupReports.map((report) => (
                   <BroadcastReportCard key={report.id} report={report} />
                 ))}

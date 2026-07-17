@@ -160,6 +160,8 @@ export function VideosSection({ categories: _categories, videos, groups }: Video
                     score={video.score}
                     ownerUserId={video.ownerUserId}
                     ownerName={video.ownerName}
+                    category={video.category?.title}
+                    topics={video.planLabels ?? (video.planLabel ? [video.planLabel] : [])}
                   />
                 ))}
               </div>

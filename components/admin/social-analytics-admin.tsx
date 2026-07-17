@@ -21,6 +21,10 @@ import {
 } from "@/lib/actions/extended-actions";
 import type { SocialPlatform, SocialPlatformStat } from "@/lib/types";
 import { formatPersianNumber } from "@/lib/utils";
+import {
+  CONTENT_TITLE_MAX_LENGTH,
+  CONTENT_TITLE_MAX_LENGTH_MESSAGE,
+} from "@/lib/content-constraints";
 
 const platformOptions: SocialPlatform[] = [
   "instagram",
@@ -50,7 +54,10 @@ const schema = z.object({
     "bale",
     "other",
   ]),
-  title: z.string().optional(),
+  title: z
+    .string()
+    .max(CONTENT_TITLE_MAX_LENGTH, CONTENT_TITLE_MAX_LENGTH_MESSAGE)
+    .optional(),
   followers: z.coerce.number().min(0),
   posts: z.coerce.number().min(0),
   profileUrl: z.string().optional(),
@@ -240,6 +247,7 @@ export function SocialAnalyticsAdmin({
               <Label>نام کانال (اختیاری)</Label>
               <Input
                 {...form.register("title")}
+                maxLength={CONTENT_TITLE_MAX_LENGTH}
                 placeholder="مثلاً کانال اصلی، کانال خبری، ..."
               />
             </div>

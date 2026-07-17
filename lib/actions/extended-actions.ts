@@ -19,6 +19,12 @@ import {
   auditContentDelete,
   logAuditForSession,
 } from "@/lib/audit/log-event";
+import { getContentTitleValidationError } from "@/lib/content-constraints";
+
+function validateTitlePayload(data: { title?: unknown }) {
+  const error = getContentTitleValidationError(data.title);
+  return error ? { success: false as const, error } : null;
+}
 
 async function revalidateExtended(slug?: string) {
   revalidatePath("/admin/social-posts");
@@ -58,6 +64,8 @@ async function withSaveOwnerScope<T extends { id?: string; ownerUserId?: string 
 }
 
 export async function saveSocialPostAction(data: Partial<SocialMediaPost> & { id?: string }) {
+  const validationError = validateTitlePayload(data);
+  if (validationError) return validationError;
   const session = await getAuthSession();
   if (!session) return { success: false, error: "Unauthorized" };
 
@@ -97,6 +105,8 @@ export async function deleteSocialPostAction(id: string) {
 }
 
 export async function saveSocialPlatformStatAction(data: Partial<SocialPlatformStat> & { id?: string }) {
+  const validationError = validateTitlePayload(data);
+  if (validationError) return validationError;
   const session = await getAuthSession();
   if (!session) return { success: false, error: "Unauthorized" };
 
@@ -157,6 +167,8 @@ export async function deleteSocialPlatformStatAction(id: string) {
 }
 
 export async function saveBroadcastReportAction(data: Partial<BroadcastReport> & { id?: string }) {
+  const validationError = validateTitlePayload(data);
+  if (validationError) return validationError;
   const session = await getAuthSession();
   if (!session) return { success: false, error: "Unauthorized" };
 
@@ -196,6 +208,8 @@ export async function deleteBroadcastReportAction(id: string) {
 }
 
 export async function saveCampaignActivityAction(data: Partial<CampaignActivity> & { id?: string }) {
+  const validationError = validateTitlePayload(data);
+  if (validationError) return validationError;
   const session = await getAuthSession();
   if (!session) return { success: false, error: "Unauthorized" };
 
@@ -240,6 +254,8 @@ export async function saveMeetingAction(
   tasks: MeetingTaskPayload[],
   decisions: MeetingDecisionPayload[] = []
 ) {
+  const validationError = validateTitlePayload(data);
+  if (validationError) return validationError;
   const session = await getAuthSession();
   if (!session) return { success: false, error: "Unauthorized" };
 

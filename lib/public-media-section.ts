@@ -1,16 +1,16 @@
 export const PUBLIC_MEDIA_GRID_CLASS =
-  "grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6";
+  "grid grid-cols-1 items-stretch gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4";
 
 export const PUBLIC_MEDIA_MAX_ROWS = 2;
 
-/** Initial / load-more page size: 2 rows × 6 cards on desktop. */
-export const PUBLIC_MEDIA_PAGE_SIZE = 12;
+/** Initial / load-more page size: 2 rows × 4 cards on desktop. */
+export const PUBLIC_MEDIA_PAGE_SIZE = 8;
 
 export function getPublicMediaColumnCount(width: number): number {
-  if (width >= 1024) return 6;
-  if (width >= 768) return 4;
-  if (width >= 640) return 3;
-  return 2;
+  if (width >= 1280) return 4;
+  if (width >= 1024) return 3;
+  if (width >= 640) return 2;
+  return 1;
 }
 
 export function getPublicMediaPageSize(): number {

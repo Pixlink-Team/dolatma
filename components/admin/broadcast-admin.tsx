@@ -4,6 +4,10 @@ import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import {
+  CONTENT_TITLE_MAX_LENGTH,
+  CONTENT_TITLE_MAX_LENGTH_MESSAGE,
+} from "@/lib/content-constraints";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -21,7 +25,7 @@ import type { BroadcastReport } from "@/lib/types";
 import { formatPersianDate } from "@/lib/utils";
 
 const schema = z.object({
-  title: z.string().min(1),
+  title: z.string().min(1).max(CONTENT_TITLE_MAX_LENGTH, CONTENT_TITLE_MAX_LENGTH_MESSAGE),
   reportDate: z.string(),
   pdfUrl: z.string().min(1),
   fileName: z.string().min(1),
@@ -160,7 +164,11 @@ export function BroadcastAdmin({ campaignId, initialReports }: BroadcastAdminPro
           <form onSubmit={onSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label>عنوان گزارش</Label>
-              <Input {...form.register("title")} placeholder="مثلاً گزارش روزانه پخش" />
+              <Input
+                {...form.register("title")}
+                maxLength={CONTENT_TITLE_MAX_LENGTH}
+                placeholder="مثلاً گزارش روزانه پخش"
+              />
             </div>
 
             <PersianDateField control={form.control} name="reportDate" label="تاریخ گزارش" />

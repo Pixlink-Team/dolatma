@@ -4,6 +4,10 @@ import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import {
+  CONTENT_TITLE_MAX_LENGTH,
+  CONTENT_TITLE_MAX_LENGTH_MESSAGE,
+} from "@/lib/content-constraints";
 import { Check, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -36,7 +40,10 @@ import type { MeetingWithTasks } from "@/lib/types";
 import { cn, formatPersianDate } from "@/lib/utils";
 
 const schema = z.object({
-  title: z.string().min(1, "عنوان الزامی است"),
+  title: z
+    .string()
+    .min(1, "عنوان الزامی است")
+    .max(CONTENT_TITLE_MAX_LENGTH, CONTENT_TITLE_MAX_LENGTH_MESSAGE),
   meetingDate: z.string(),
   location: z.string(),
   imageUrl: z.string().optional(),
@@ -405,7 +412,11 @@ export function MeetingsAdmin({ campaignId, initialMeetings, hasMeetingsPassword
           <form onSubmit={onSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label>عنوان جلسه</Label>
-              <Input {...form.register("title")} placeholder="مثلاً جلسه هماهنگی کمپین" />
+              <Input
+                {...form.register("title")}
+                maxLength={CONTENT_TITLE_MAX_LENGTH}
+                placeholder="مثلاً جلسه هماهنگی کمپین"
+              />
             </div>
 
             <PersianDateField control={form.control} name="meetingDate" label="تاریخ جلسه" />

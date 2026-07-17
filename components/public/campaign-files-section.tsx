@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { Download, FileSpreadsheet, FileText } from "lucide-react";
+import { Download, Eye, FileSpreadsheet, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CollapsibleSection } from "@/components/public/collapsible-section";
 import { OwnerGroupedSection } from "@/components/public/owner-grouped-section";
@@ -12,10 +12,16 @@ import { flattenOwnerGroupsInSortOrder, shouldRenderChronologically } from "@/li
 import { useOwnerLocationFilter } from "@/lib/context/owner-location-filter-context";
 import { ShowMoreButton } from "@/components/public/show-more-button";
 import { useSectionPagination } from "@/lib/hooks/use-section-pagination";
-import { PublicOwnerTag } from "@/components/public/public-owner-tag";
-import { fileHasDisplayContent, filterGroupsByDisplayContent } from "@/lib/public-media-section";
+import { PublicContentCard } from "@/components/public/public-content-card";
+import {
+  fileHasDisplayContent,
+  filterGroupsByDisplayContent,
+  PUBLIC_MEDIA_GRID_CLASS,
+} from "@/lib/public-media-section";
+import { ContentScoreControl } from "@/components/admin/content-score-control";
+import { useContentScoreAccess } from "@/lib/context/content-score-context";
 import type { CampaignFile, DataOwnerGroup } from "@/lib/types";
-import { formatPersianNumber } from "@/lib/utils";
+import { formatPersianDate, formatPersianNumber } from "@/lib/utils";
 
 const FILES_ITEMS_PER_ROW = 2;
 
@@ -25,39 +31,61 @@ interface CampaignFilesSectionProps {
 }
 
 function FileList({ files }: { files: CampaignFile[] }) {
+  const { canScore, campaignId } = useContentScoreAccess();
+
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+    <div className={PUBLIC_MEDIA_GRID_CLASS}>
       {files.map((file) => {
         const Icon = fileIcon(file.mimeType);
         return (
-          <div
+          <PublicContentCard
             key={file.id}
-            className="flex items-start justify-between gap-3 rounded-xl border bg-card p-4"
-          >
-            <div className="flex items-start gap-3">
-              <div className="rounded-lg bg-muted p-2">
-                <Icon className="h-5 w-5 text-primary" />
+            title={file.title}
+            date={formatPersianDate(file.createdAt)}
+            category={file.mimeType.split("/")[1]?.toUpperCase() || "فایل"}
+            topics={file.planLabels ?? (file.planLabel ? [file.planLabel] : [])}
+            ownerUserId={file.ownerUserId}
+            ownerName={file.ownerName}
+            description={
+              [file.description, `${file.fileName} — ${formatFileSize(file.fileSize)}`]
+                .filter(Boolean)
+                .join("\n")
+            }
+            media={
+              <div className="flex h-full flex-col items-center justify-center gap-3 bg-muted p-4 text-center">
+                <Icon className="h-16 w-16 text-primary" />
+                <span className="break-all text-xs text-muted-foreground">{file.fileName}</span>
               </div>
-              <div>
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <p className="font-medium">{file.title}</p>
-                  <PublicOwnerTag ownerUserId={file.ownerUserId} ownerName={file.ownerName} />
-                </div>
-                {file.description && (
-                  <p className="mt-1 text-sm text-muted-foreground">{file.description}</p>
-                )}
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {file.fileName} — {formatFileSize(file.fileSize)}
-                </p>
-              </div>
-            </div>
-            <Button variant="outline" size="sm" asChild>
-              <a href={file.fileUrl} target="_blank" rel="noopener noreferrer" download={file.fileName}>
-                <Download className="h-4 w-4" />
-                دانلود
-              </a>
-            </Button>
-          </div>
+            }
+            score={
+              canScore || file.score != null ? (
+                <ContentScoreControl
+                  campaignId={campaignId || file.campaignId}
+                  contentType="file"
+                  contentId={file.id}
+                  score={file.score}
+                  canScore={canScore}
+                  compact
+                />
+              ) : null
+            }
+            actions={
+              <>
+                <Button variant="outline" size="sm" asChild>
+                  <a href={file.fileUrl} target="_blank" rel="noopener noreferrer">
+                    <Eye className="h-4 w-4" />
+                    مشاهده
+                  </a>
+                </Button>
+                <Button variant="outline" size="sm" asChild>
+                  <a href={file.fileUrl} download={file.fileName}>
+                    <Download className="h-4 w-4" />
+                    دانلود
+                  </a>
+                </Button>
+              </>
+            }
+          />
         );
       })}
     </div>

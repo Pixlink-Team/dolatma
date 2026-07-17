@@ -12,11 +12,12 @@ import { useOwnerLocationFilter } from "@/lib/context/owner-location-filter-cont
 import { ShowMoreButton } from "@/components/public/show-more-button";
 import { useSectionPagination } from "@/lib/hooks/use-section-pagination";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { PublicContentCard } from "@/components/public/public-content-card";
+import { PUBLIC_MEDIA_GRID_CLASS } from "@/lib/public-media-section";
 import type { CampaignSubmission, DataOwnerGroup, SubmissionSummary } from "@/lib/types";
 import { formatPersianDate, getStatusLabel } from "@/lib/utils";
-import { CheckCircle, Clock, FileText, Users, XCircle } from "lucide-react";
-import { PublicOwnerTag } from "@/components/public/public-owner-tag";
+import { CheckCircle, Clock, Download, Eye, FileText, Users, XCircle } from "lucide-react";
 
 const SUBMISSIONS_ITEMS_PER_ROW = 4;
 
@@ -28,11 +29,21 @@ interface SubmissionsSectionProps {
 
 function SubmissionCards({ submissions }: { submissions: CampaignSubmission[] }) {
   return (
-    <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+    <div className={PUBLIC_MEDIA_GRID_CLASS}>
       {submissions.map((sub) => (
-        <Card key={sub.id} className="overflow-hidden">
-          {sub.mediaUrl && (
-            <div className="relative aspect-video bg-muted">
+        <PublicContentCard
+          key={sub.id}
+          title={sub.title}
+          date={formatPersianDate(sub.createdAt)}
+          category={`${sub.submissionType} — ${getStatusLabel(sub.status)}`}
+          topics={sub.planLabels ?? (sub.planLabel ? [sub.planLabel] : [])}
+          ownerUserId={sub.ownerUserId}
+          ownerName={sub.ownerName}
+          description={`${sub.text} — ${
+            sub.participantName === "ناشناس" ? "کاربر ناشناس" : sub.participantName
+          }`}
+          media={
+            sub.mediaUrl ? (
               <Image
                 src={sub.mediaUrl}
                 alt={sub.title}
@@ -40,24 +51,31 @@ function SubmissionCards({ submissions }: { submissions: CampaignSubmission[] })
                 className="object-cover"
                 sizes="(max-width: 1024px) 50vw, 25vw"
               />
-            </div>
-          )}
-          <CardContent className="p-4 space-y-2">
-            <div className="flex items-start justify-between gap-2">
-              <h3 className="font-semibold text-sm line-clamp-2">{sub.title}</h3>
-              <Badge status={sub.status}>{getStatusLabel(sub.status)}</Badge>
-            </div>
-            <PublicOwnerTag ownerUserId={sub.ownerUserId} ownerName={sub.ownerName} />
-            <p className="text-xs text-muted-foreground">{sub.submissionType}</p>
-            <p className="text-sm line-clamp-2">{sub.text}</p>
-            <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t">
-              <span className="truncate">
-                {sub.participantName === "ناشناس" ? "کاربر ناشناس" : sub.participantName}
-              </span>
-              <span className="shrink-0">{formatPersianDate(sub.createdAt)}</span>
-            </div>
-          </CardContent>
-        </Card>
+            ) : (
+              <div className="flex h-full items-center justify-center bg-muted">
+                <Badge status={sub.status}>{getStatusLabel(sub.status)}</Badge>
+              </div>
+            )
+          }
+          actions={
+            sub.mediaUrl ? (
+              <>
+                <Button variant="outline" size="sm" asChild>
+                  <a href={sub.mediaUrl} target="_blank" rel="noreferrer">
+                    <Eye className="h-4 w-4" />
+                    مشاهده
+                  </a>
+                </Button>
+                <Button variant="outline" size="sm" asChild>
+                  <a href={sub.mediaUrl} download>
+                    <Download className="h-4 w-4" />
+                    دانلود
+                  </a>
+                </Button>
+              </>
+            ) : undefined
+          }
+        />
       ))}
     </div>
   );

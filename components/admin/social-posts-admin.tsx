@@ -43,10 +43,14 @@ import { SocialPlatformIcon, getSocialPlatformLabel } from "@/components/public/
 import type { AdminUser, SocialContentType, SocialMediaPost, SocialPlatform } from "@/lib/types";
 import { getStatusLabel } from "@/lib/utils";
 import { GenerateMissingVideoCoversButton } from "@/components/admin/generate-missing-video-covers-button";
+import {
+  CONTENT_TITLE_MAX_LENGTH,
+  CONTENT_TITLE_MAX_LENGTH_MESSAGE,
+} from "@/lib/content-constraints";
 
 const schema = z.object({
   platform: z.enum(["instagram", "x", "telegram", "linkedin", "youtube", "aparat", "rubika", "eitaa", "soroush", "bale", "other"]),
-  title: z.string().min(1),
+  title: z.string().min(1).max(CONTENT_TITLE_MAX_LENGTH, CONTENT_TITLE_MAX_LENGTH_MESSAGE),
   coverImageUrl: z.string().optional(),
   views: z.coerce.number().min(0),
   likes: z.coerce.number().min(0),
@@ -438,7 +442,7 @@ export function SocialPostsAdmin({
 
             <div className="space-y-2">
               <Label>عنوان / نام کاور</Label>
-              <Input {...form.register("title")} />
+              <Input {...form.register("title")} maxLength={CONTENT_TITLE_MAX_LENGTH} />
             </div>
 
             <PlanLabelSelect
