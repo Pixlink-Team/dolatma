@@ -14,6 +14,7 @@ import {
   Users,
 } from "lucide-react";
 import { toast } from "sonner";
+import { DirectiveCtaButton } from "@/components/admin/directive-cta-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -40,6 +41,13 @@ import {
   CONTENT_TITLE_MAX_LENGTH,
   CONTENT_TITLE_MAX_LENGTH_MESSAGE,
 } from "@/lib/content-constraints";
+import {
+  DIRECTIVE_INTERNAL_TARGET_OPTIONS,
+  getDefaultInternalCtaLabel,
+  mapDirectiveCtaKind,
+  type DirectiveCtaKind,
+  type DirectiveInternalTarget,
+} from "@/lib/directive-cta";
 import type {
   CampaignDirective,
   DirectiveAudienceType,
@@ -60,6 +68,10 @@ const schema = z.object({
   audienceRegion: z.enum(["north", "south", "east", "west"]).nullable().optional(),
   audienceMinistryId: z.string().nullable().optional(),
   audienceOrganizationId: z.string().nullable().optional(),
+  ctaKind: z.enum(["none", "external", "internal"]),
+  ctaLabel: z.string().optional(),
+  ctaUrl: z.string().optional(),
+  ctaTarget: z.string().nullable().optional(),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -289,12 +301,18 @@ export function DirectivesAdmin({
       audienceRegion: null,
       audienceMinistryId: null,
       audienceOrganizationId: null,
+      ctaKind: "none",
+      ctaLabel: "",
+      ctaUrl: "",
+      ctaTarget: null,
     },
   });
 
   const audienceType = form.watch("audienceType");
   const audienceMinistryId = form.watch("audienceMinistryId");
   const audienceOrganizationId = form.watch("audienceOrganizationId");
+  const ctaKind = form.watch("ctaKind");
+  const ctaTarget = form.watch("ctaTarget");
 
   const audienceOrganizations = useMemo(() => {
     if (!audienceMinistryId) return [] as NonNullable<Ministry["organizations"]>;
@@ -339,6 +357,10 @@ export function DirectivesAdmin({
       audienceRegion: null,
       audienceMinistryId: null,
       audienceOrganizationId: null,
+      ctaKind: "none",
+      ctaLabel: "",
+      ctaUrl: "",
+      ctaTarget: null,
     });
     setOpen(true);
   };
@@ -354,6 +376,7 @@ export function DirectivesAdmin({
     setAttachmentDrafts(toAttachmentDrafts(item));
     setSelectedUserIds([]);
     setSelectedProvinces(item.audienceProvinces ?? []);
+    const kind = mapDirectiveCtaKind(item.ctaKind);
     form.reset({
       title: item.title,
       body: item.body,
@@ -364,6 +387,10 @@ export function DirectivesAdmin({
       audienceRegion: item.audienceRegion,
       audienceMinistryId: item.audienceMinistryId ?? null,
       audienceOrganizationId: item.audienceOrganizationId ?? null,
+      ctaKind: kind,
+      ctaLabel: item.ctaLabel ?? "",
+      ctaUrl: item.ctaUrl ?? "",
+      ctaTarget: item.ctaTarget ?? null,
     });
 
     if (item.audienceType === "users") {
@@ -441,6 +468,10 @@ export function DirectivesAdmin({
           data.audienceType === "ministry_city" ? data.audienceOrganizationId ?? null : null,
         audienceProvinces: data.audienceType === "ministry_city" ? selectedProvinces : undefined,
         selectedUserIds: data.audienceType === "users" ? selectedUserIds : undefined,
+        ctaKind: data.ctaKind,
+        ctaLabel: data.ctaLabel,
+        ctaUrl: data.ctaUrl,
+        ctaTarget: data.ctaTarget,
         sendSmsOnPublish: true,
       });
 
@@ -802,6 +833,110 @@ export function DirectivesAdmin({
               )}
             </div>
 
+            <div className="space-y-3 rounded-lg border p-3">
+              <div>
+                <Label>دکمه اقدام (اختیاری)</Label>
+                <p className="text-xs text-muted-foreground">
+                  در صفحه جزئیات یک دکمه برای هدایت کاربر به لینک خارجی یا بخش پنل نمایش داده می‌شود
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label>نوع دکمه</Label>
+                <Select
+                  value={ctaKind}
+                  onValueChange={(value) => {
+                    const next = value as DirectiveCtaKind;
+                    form.setValue("ctaKind", next);
+                    if (next === "none") {
+                      form.setValue("ctaLabel", "");
+                      form.setValue("ctaUrl", "");
+                      form.setValue("ctaTarget", null);
+                      return;
+                    }
+                    if (next === "internal") {
+                      const target =
+                        (form.getValues("ctaTarget") as DirectiveInternalTarget | null) ??
+                        "profile";
+                      form.setValue("ctaTarget", target);
+                      if (!form.getValues("ctaLabel")?.trim()) {
+                        form.setValue("ctaLabel", getDefaultInternalCtaLabel(target));
+                      }
+                      form.setValue("ctaUrl", "");
+                      return;
+                    }
+                    form.setValue("ctaTarget", null);
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">بدون دکمه</SelectItem>
+                    <SelectItem value="external">لینک خارجی (سایت / آدرس)</SelectItem>
+                    <SelectItem value="internal">بخش سیستمی پنل</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {ctaKind !== "none" && (
+                <div className="space-y-2">
+                  <Label>متن دکمه</Label>
+                  <Input
+                    {...form.register("ctaLabel")}
+                    placeholder={
+                      ctaKind === "internal" && ctaTarget
+                        ? getDefaultInternalCtaLabel(ctaTarget as DirectiveInternalTarget)
+                        : "مثلاً بروید به سایت و ثبت‌نام کنید"
+                    }
+                  />
+                </div>
+              )}
+
+              {ctaKind === "external" && (
+                <div className="space-y-2">
+                  <Label>آدرس لینک</Label>
+                  <Input
+                    dir="ltr"
+                    className="text-left"
+                    {...form.register("ctaUrl")}
+                    placeholder="https://example.com"
+                  />
+                </div>
+              )}
+
+              {ctaKind === "internal" && (
+                <div className="space-y-2">
+                  <Label>بخش مقصد</Label>
+                  <Select
+                    value={ctaTarget ?? ""}
+                    onValueChange={(value) => {
+                      const target = value as DirectiveInternalTarget;
+                      form.setValue("ctaTarget", target);
+                      const currentLabel = form.getValues("ctaLabel")?.trim() ?? "";
+                      const previousDefaults = new Set(
+                        DIRECTIVE_INTERNAL_TARGET_OPTIONS.map((option) => option.label)
+                      );
+                      if (!currentLabel || previousDefaults.has(currentLabel)) {
+                        form.setValue("ctaLabel", getDefaultInternalCtaLabel(target));
+                      }
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="انتخاب بخش" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {DIRECTIVE_INTERNAL_TARGET_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+
             <div className="space-y-2">
               <Label>مخاطب</Label>
               <Select
@@ -1023,6 +1158,7 @@ export function DirectivesAdmin({
                   <h3 className="mb-2 text-sm font-medium">فایل‌های اقدام</h3>
                   <ActionFilesPreview item={detailItem} />
                 </div>
+                <DirectiveCtaButton item={detailItem} />
                 {showingInbox && !detailItem.confirmed && (
                   <Button disabled={isPending} onClick={() => confirmSeen(detailItem)}>
                     <Check className="h-4 w-4" />

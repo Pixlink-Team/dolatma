@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { confirmDirectiveSeenAction } from "@/lib/actions/directive-actions";
 import type { CampaignDirective } from "@/lib/types";
 import { adminHref, cn, formatPersianDate, formatPersianDateTime, formatPersianNumber } from "@/lib/utils";
+import { DirectiveCtaButton } from "@/components/admin/directive-cta-button";
 
 interface DashboardDirectivesPanelProps {
   campaignId: string;
@@ -239,6 +240,7 @@ export function DashboardDirectivesPanel({
                   <p className="text-sm font-medium">نامه رسمی</p>
                   <OfficialLetterPreview item={detailItem} />
                 </div>
+                <DirectiveCtaButton item={detailItem} />
                 {!detailItem.confirmed && (
                   <Button
                     className="w-full sm:w-auto"

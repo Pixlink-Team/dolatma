@@ -7,6 +7,10 @@ import * as pgExt from "@/lib/db/repository-extended";
 import * as pgDirectives from "@/lib/db/repository-directives";
 import { getContentTitleValidationError } from "@/lib/content-constraints";
 import {
+  normalizeDirectiveCtaInput,
+  type DirectiveCtaKind,
+} from "@/lib/directive-cta";
+import {
   buildDirectiveSmsText,
   sendSms,
 } from "@/lib/sms/provider";
@@ -139,6 +143,10 @@ export async function saveDirectiveAction(input: {
   letterFileName?: string | null;
   letterMimeType?: string | null;
   letterFileSize?: number;
+  ctaKind?: DirectiveCtaKind | null;
+  ctaLabel?: string | null;
+  ctaUrl?: string | null;
+  ctaTarget?: string | null;
   attachments?: Array<{
     id?: string;
     title: string;
@@ -171,6 +179,16 @@ export async function saveDirectiveAction(input: {
 
   if (!input.letterFileUrl?.trim()) {
     return { success: false as const, error: "آپلود نامه رسمی (PDF یا تصویر) الزامی است" };
+  }
+
+  const cta = normalizeDirectiveCtaInput({
+    ctaKind: input.ctaKind,
+    ctaLabel: input.ctaLabel,
+    ctaUrl: input.ctaUrl,
+    ctaTarget: input.ctaTarget,
+  });
+  if (!cta.ok) {
+    return { success: false as const, error: cta.error };
   }
 
   const access = await assertDirectivesAccess(input.campaignId);
@@ -253,6 +271,10 @@ export async function saveDirectiveAction(input: {
     letterFileName: cleaned.letterFileName,
     letterMimeType: cleaned.letterMimeType,
     letterFileSize: cleaned.letterFileSize,
+    ctaKind: cta.ctaKind,
+    ctaLabel: cta.ctaLabel,
+    ctaUrl: cta.ctaUrl,
+    ctaTarget: cta.ctaTarget,
     attachments,
     audienceType: cleaned.audienceType,
     audienceRegion: cleaned.audienceRegion,

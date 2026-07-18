@@ -445,6 +445,11 @@ export interface CampaignDirective {
   letterFileName?: string | null;
   letterMimeType?: string | null;
   letterFileSize?: number;
+  /** Optional action button: none | external URL | internal panel section. */
+  ctaKind?: import("./directive-cta").DirectiveCtaKind;
+  ctaLabel?: string | null;
+  ctaUrl?: string | null;
+  ctaTarget?: import("./directive-cta").DirectiveInternalTarget | null;
   audienceType: DirectiveAudienceType;
   audienceRegion?: import("./user-regions").UserRegion | null;
   /** Target ministry when audienceType is ministry_city. */

@@ -840,6 +840,16 @@ ALTER TABLE campaign_directives
 ALTER TABLE campaign_directives
   ADD COLUMN IF NOT EXISTS audience_cities TEXT[] NOT NULL DEFAULT '{}';
 
+ALTER TABLE campaign_directives ADD COLUMN IF NOT EXISTS cta_kind TEXT NOT NULL DEFAULT 'none';
+ALTER TABLE campaign_directives ADD COLUMN IF NOT EXISTS cta_label TEXT;
+ALTER TABLE campaign_directives ADD COLUMN IF NOT EXISTS cta_url TEXT;
+ALTER TABLE campaign_directives ADD COLUMN IF NOT EXISTS cta_target TEXT;
+
+ALTER TABLE campaign_directives DROP CONSTRAINT IF EXISTS campaign_directives_cta_kind_check;
+ALTER TABLE campaign_directives
+  ADD CONSTRAINT campaign_directives_cta_kind_check
+  CHECK (cta_kind IN ('none', 'external', 'internal'));
+
 CREATE INDEX IF NOT EXISTS idx_campaign_directives_audience_ministry
   ON campaign_directives(audience_ministry_id);
 CREATE INDEX IF NOT EXISTS idx_campaign_directives_audience_organization

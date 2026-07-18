@@ -1,4 +1,10 @@
 import { getSql } from "@/lib/db/client";
+import {
+  isDirectiveInternalTarget,
+  mapDirectiveCtaKind,
+  type DirectiveCtaKind,
+  type DirectiveInternalTarget,
+} from "@/lib/directive-cta";
 import type {
   CampaignDirective,
   DirectiveAttachment,
@@ -75,6 +81,10 @@ function mapSmsStatus(value: unknown): DirectiveSmsStatus {
   return "pending";
 }
 
+function mapCtaTarget(value: unknown): DirectiveInternalTarget | null {
+  return isDirectiveInternalTarget(value) ? value : null;
+}
+
 function mapDirectiveRow(
   row: Record<string, unknown>,
   attachments: DirectiveAttachment[]
@@ -92,6 +102,7 @@ function mapDirectiveRow(
           letterFileSize: attachments[0].fileSize,
         }
       : null;
+  const ctaKind = mapDirectiveCtaKind(row.cta_kind);
 
   return {
     id: String(row.id),
@@ -115,6 +126,10 @@ function mapDirectiveRow(
       row.letter_file_size != null
         ? Number(row.letter_file_size)
         : letterFromAttachment?.letterFileSize ?? 0,
+    ctaKind,
+    ctaLabel: row.cta_label ? String(row.cta_label) : null,
+    ctaUrl: row.cta_url ? String(row.cta_url) : null,
+    ctaTarget: mapCtaTarget(row.cta_target),
     audienceType: mapAudienceType(row.audience_type),
     audienceRegion: mapRegion(row.audience_region),
     audienceMinistryId: row.audience_ministry_id ? String(row.audience_ministry_id) : null,
@@ -412,6 +427,10 @@ export interface SaveDirectiveInput {
   letterFileName?: string | null;
   letterMimeType?: string | null;
   letterFileSize?: number;
+  ctaKind?: DirectiveCtaKind;
+  ctaLabel?: string | null;
+  ctaUrl?: string | null;
+  ctaTarget?: string | null;
   audienceType: DirectiveAudienceType;
   audienceRegion?: UserRegion | null;
   audienceMinistryId?: string | null;
@@ -440,6 +459,13 @@ export async function pgSaveDirective(input: SaveDirectiveInput): Promise<{ id: 
   const letterFileName = input.letterFileName?.trim() || null;
   const letterMimeType = input.letterMimeType?.trim() || null;
   const letterFileSize = letterFileUrl ? Number(input.letterFileSize ?? 0) : 0;
+  const ctaKind = mapDirectiveCtaKind(input.ctaKind);
+  const ctaLabel = ctaKind === "none" ? null : input.ctaLabel?.trim() || null;
+  const ctaUrl = ctaKind === "external" ? input.ctaUrl?.trim() || null : null;
+  const ctaTarget =
+    ctaKind === "internal" && isDirectiveInternalTarget(input.ctaTarget)
+      ? input.ctaTarget
+      : null;
   const audienceRegion =
     input.audienceType === "region" ? (input.audienceRegion ?? null) : null;
   const audienceMinistryId =
@@ -468,6 +494,7 @@ export async function pgSaveDirective(input: SaveDirectiveInput): Promise<{ id: 
     INSERT INTO campaign_directives (
       id, campaign_id, created_by_user_id, title, body, priority, due_date,
       start_date, end_date, letter_file_url, letter_file_name, letter_mime_type, letter_file_size,
+      cta_kind, cta_label, cta_url, cta_target,
       audience_type, audience_region, audience_ministry_id, audience_organization_id, audience_cities,
       published, published_at, sort_order, created_at, updated_at
     ) VALUES (
@@ -484,6 +511,10 @@ export async function pgSaveDirective(input: SaveDirectiveInput): Promise<{ id: 
       ${letterFileName},
       ${letterMimeType},
       ${letterFileSize},
+      ${ctaKind},
+      ${ctaLabel},
+      ${ctaUrl},
+      ${ctaTarget},
       ${input.audienceType},
       ${audienceRegion},
       ${audienceMinistryId},
@@ -506,6 +537,10 @@ export async function pgSaveDirective(input: SaveDirectiveInput): Promise<{ id: 
       letter_file_name = EXCLUDED.letter_file_name,
       letter_mime_type = EXCLUDED.letter_mime_type,
       letter_file_size = EXCLUDED.letter_file_size,
+      cta_kind = EXCLUDED.cta_kind,
+      cta_label = EXCLUDED.cta_label,
+      cta_url = EXCLUDED.cta_url,
+      cta_target = EXCLUDED.cta_target,
       audience_type = EXCLUDED.audience_type,
       audience_region = EXCLUDED.audience_region,
       audience_ministry_id = EXCLUDED.audience_ministry_id,
