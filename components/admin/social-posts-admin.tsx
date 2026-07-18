@@ -419,6 +419,7 @@ export function SocialPostsAdmin({
         onChange={setContentFilter}
         users={isFullAdmin ? filterUsers : []}
         plans={contentPlans}
+        items={rows}
       />
 
       <SectionBulkEditBar

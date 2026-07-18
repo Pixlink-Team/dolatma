@@ -4,7 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus } from "lucide-react";
+import { Filter, Plus, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { ProvinceCityFields } from "@/components/admin/province-city-fields";
 import { AdminDataTable } from "@/components/admin/admin-data-table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -37,6 +38,7 @@ import type { AdminRole, AdminUser, CampaignSettings, Ministry } from "@/lib/typ
 const NO_MINISTRY = "__none__";
 const NO_ORGANIZATION = "__none__";
 const NO_PARENT = "__none__";
+const FILTER_ALL = "all";
 
 const schema = z.object({
   email: z.string().min(1, "نام کاربری یا ایمیل الزامی است"),
@@ -86,6 +88,10 @@ export function UsersAdmin({
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [rows, setRows] = useState(initialUsers);
+  const [filterMinistryId, setFilterMinistryId] = useState(FILTER_ALL);
+  const [filterOrganizationId, setFilterOrganizationId] = useState(FILTER_ALL);
+  const [filterProvince, setFilterProvince] = useState(FILTER_ALL);
+  const [filterCity, setFilterCity] = useState(FILTER_ALL);
   const [campaignPermissions, setCampaignPermissions] = useState<Record<string, ContributorPermissions>>({});
   const [isPending, startTransition] = useTransition();
 
@@ -93,6 +99,84 @@ export function UsersAdmin({
     () => rows.filter((user) => user.role === "ministry_parent"),
     [rows]
   );
+
+  const filterMinistryOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const user of rows) {
+      if (user.ministryId) {
+        map.set(user.ministryId, user.ministryName?.trim() || "وزارتخانه");
+      }
+    }
+    for (const ministry of ministries) {
+      map.set(ministry.id, ministry.name);
+    }
+    return [...map.entries()]
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name, "fa"));
+  }, [rows, ministries]);
+
+  const filterOrganizationOptions = useMemo(() => {
+    if (filterMinistryId === FILTER_ALL) return [] as { id: string; name: string }[];
+    const map = new Map<string, string>();
+    for (const user of rows) {
+      if (user.ministryId === filterMinistryId && user.organizationId) {
+        map.set(user.organizationId, user.organizationName?.trim() || "زیرمجموعه");
+      }
+    }
+    const ministryOrgs =
+      ministries.find((ministry) => ministry.id === filterMinistryId)?.organizations ?? [];
+    for (const org of ministryOrgs) {
+      map.set(org.id, org.name);
+    }
+    return [...map.entries()]
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name, "fa"));
+  }, [rows, ministries, filterMinistryId]);
+
+  const filterProvinceOptions = useMemo(() => {
+    const set = new Set<string>();
+    for (const user of rows) {
+      const province = user.province?.trim();
+      if (province) set.add(province);
+    }
+    return [...set].sort((a, b) => a.localeCompare(b, "fa"));
+  }, [rows]);
+
+  const filterCityOptions = useMemo(() => {
+    if (filterProvince === FILTER_ALL) return [] as string[];
+    const set = new Set<string>();
+    for (const user of rows) {
+      if (user.province?.trim() !== filterProvince) continue;
+      const city = user.city?.trim();
+      if (city) set.add(city);
+    }
+    return [...set].sort((a, b) => a.localeCompare(b, "fa"));
+  }, [rows, filterProvince]);
+
+  const filteredRows = useMemo(() => {
+    return rows.filter((user) => {
+      if (filterMinistryId !== FILTER_ALL && user.ministryId !== filterMinistryId) return false;
+      if (filterOrganizationId !== FILTER_ALL && user.organizationId !== filterOrganizationId) {
+        return false;
+      }
+      if (filterProvince !== FILTER_ALL && user.province?.trim() !== filterProvince) return false;
+      if (filterCity !== FILTER_ALL && user.city?.trim() !== filterCity) return false;
+      return true;
+    });
+  }, [rows, filterMinistryId, filterOrganizationId, filterProvince, filterCity]);
+
+  const usersFilterActive =
+    filterMinistryId !== FILTER_ALL ||
+    filterOrganizationId !== FILTER_ALL ||
+    filterProvince !== FILTER_ALL ||
+    filterCity !== FILTER_ALL;
+
+  const resetUsersFilters = () => {
+    setFilterMinistryId(FILTER_ALL);
+    setFilterOrganizationId(FILTER_ALL);
+    setFilterProvince(FILTER_ALL);
+    setFilterCity(FILTER_ALL);
+  };
 
   const form = useForm({
     resolver: zodResolver(schema),
@@ -356,8 +440,88 @@ export function UsersAdmin({
             </div>
           )}
 
+          <div className="flex flex-col gap-3 rounded-xl border bg-card/60 p-4">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <Filter className="h-4 w-4 text-primary shrink-0" />
+                فیلتر کاربران
+              </div>
+              {usersFilterActive && (
+                <Button type="button" variant="outline" size="sm" onClick={resetUsersFilters} className="gap-2">
+                  <RotateCcw className="h-4 w-4" />
+                  ریست فیلتر
+                </Button>
+              )}
+            </div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <SearchableSelect
+                value={filterMinistryId}
+                onValueChange={(value) => {
+                  setFilterMinistryId(value);
+                  setFilterOrganizationId(FILTER_ALL);
+                }}
+                options={[
+                  { value: FILTER_ALL, label: "همه وزارتخانه‌ها" },
+                  ...filterMinistryOptions.map((ministry) => ({
+                    value: ministry.id,
+                    label: ministry.name,
+                  })),
+                ]}
+                placeholder="وزارتخانه"
+                searchPlaceholder="جستجوی وزارتخانه..."
+              />
+              <SearchableSelect
+                value={filterOrganizationId}
+                onValueChange={setFilterOrganizationId}
+                options={[
+                  { value: FILTER_ALL, label: "همه زیرمجموعه‌ها" },
+                  ...filterOrganizationOptions.map((org) => ({
+                    value: org.id,
+                    label: org.name,
+                  })),
+                ]}
+                placeholder={
+                  filterMinistryId === FILTER_ALL
+                    ? "ابتدا وزارتخانه را انتخاب کنید"
+                    : "زیرمجموعه"
+                }
+                searchPlaceholder="جستجوی زیرمجموعه..."
+                disabled={filterMinistryId === FILTER_ALL}
+              />
+              <SearchableSelect
+                value={filterProvince}
+                onValueChange={(value) => {
+                  setFilterProvince(value);
+                  setFilterCity(FILTER_ALL);
+                }}
+                options={[
+                  { value: FILTER_ALL, label: "همه استان‌ها" },
+                  ...filterProvinceOptions.map((province) => ({
+                    value: province,
+                    label: province,
+                  })),
+                ]}
+                placeholder="استان"
+                searchPlaceholder="جستجوی استان..."
+              />
+              <SearchableSelect
+                value={filterCity}
+                onValueChange={setFilterCity}
+                options={[
+                  { value: FILTER_ALL, label: "همه شهرها" },
+                  ...filterCityOptions.map((city) => ({ value: city, label: city })),
+                ]}
+                placeholder={
+                  filterProvince === FILTER_ALL ? "ابتدا استان را انتخاب کنید" : "شهر"
+                }
+                searchPlaceholder="جستجوی شهر..."
+                disabled={filterProvince === FILTER_ALL}
+              />
+            </div>
+          </div>
+
           <AdminDataTable
-            data={rows}
+            data={filteredRows}
             selectable={isFullMode}
             searchKeys={[
               "name",

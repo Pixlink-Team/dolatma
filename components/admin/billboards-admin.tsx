@@ -162,6 +162,7 @@ export function BillboardsAdmin({
         onChange={setContentFilter}
         users={isFullAdmin ? filterUsers : []}
         plans={contentPlans}
+        items={billboards}
       />
 
       <SectionBulkEditBar

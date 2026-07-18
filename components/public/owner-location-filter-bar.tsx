@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowUpDown, Building2, CalendarRange, MapPin, RotateCcw, X } from "lucide-react";
+import { ArrowUpDown, Building2, CalendarRange, Landmark, MapPin, RotateCcw, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PersianDateInput } from "@/components/ui/persian-date-input";
@@ -18,6 +18,8 @@ import { useOwnerLocationFilter } from "@/lib/context/owner-location-filter-cont
 import {
   OWNER_DATE_ALL,
   OWNER_LOCATION_ALL,
+  OWNER_MINISTRY_ALL,
+  OWNER_ORGANIZATION_ALL,
   OWNER_USER_ALL,
   type CampaignContentSort,
   type CampaignDatePreset,
@@ -26,6 +28,8 @@ import {
 export function OwnerLocationFilterBar() {
   const {
     filter,
+    setMinistryId,
+    setOrganizationId,
     setProvince,
     setCity,
     setUserKey,
@@ -38,11 +42,15 @@ export function OwnerLocationFilterBar() {
     resetFilters,
     provinces,
     cities,
+    ministries,
+    organizations,
     plans,
     users,
   } = useOwnerLocationFilter();
 
   const userLocked = filter.userKey !== OWNER_USER_ALL;
+  const ministryLocked = userLocked && filter.ministryId !== OWNER_MINISTRY_ALL;
+  const organizationLocked = userLocked && filter.organizationId !== OWNER_ORGANIZATION_ALL;
   const provinceLocked = userLocked && filter.province !== OWNER_LOCATION_ALL;
   const cityLocked = userLocked && filter.city !== OWNER_LOCATION_ALL;
 
@@ -54,8 +62,23 @@ export function OwnerLocationFilterBar() {
     ...users.map((user) => ({
       value: user.key,
       label: user.label,
-      keywords: `${user.province ?? ""} ${user.city ?? ""}`,
+      keywords: [
+        user.province ?? "",
+        user.city ?? "",
+        user.ministryName ?? "",
+        user.organizationName ?? "",
+      ].join(" "),
     })),
+  ];
+
+  const ministryOptions = [
+    { value: OWNER_MINISTRY_ALL, label: "همه وزارتخانه‌ها" },
+    ...ministries.map((ministry) => ({ value: ministry.id, label: ministry.name })),
+  ];
+
+  const organizationOptions = [
+    { value: OWNER_ORGANIZATION_ALL, label: "همه زیرمجموعه‌ها" },
+    ...organizations.map((org) => ({ value: org.id, label: org.name })),
   ];
 
   const provinceOptions = [
@@ -95,6 +118,33 @@ export function OwnerLocationFilterBar() {
       </div>
 
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 xl:grid-cols-3">
+        {ministries.length > 0 && (
+          <SearchableSelect
+            value={filter.ministryId}
+            onValueChange={setMinistryId}
+            options={ministryOptions}
+            placeholder="وزارتخانه"
+            searchPlaceholder="جستجوی وزارتخانه..."
+            disabled={ministryLocked}
+            leadingIcon={<Landmark className="h-4 w-4 shrink-0 text-muted-foreground" />}
+          />
+        )}
+
+        {ministries.length > 0 && (
+          <SearchableSelect
+            value={filter.organizationId}
+            onValueChange={setOrganizationId}
+            options={organizationOptions}
+            placeholder={
+              filter.ministryId === OWNER_MINISTRY_ALL
+                ? "ابتدا وزارتخانه را انتخاب کنید"
+                : "زیرمجموعه"
+            }
+            searchPlaceholder="جستجوی زیرمجموعه..."
+            disabled={filter.ministryId === OWNER_MINISTRY_ALL || organizationLocked}
+          />
+        )}
+
         {users.length > 0 && (
           <SearchableSelect
             value={filter.userKey}

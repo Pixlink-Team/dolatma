@@ -35,6 +35,10 @@ export function groupByOwner<T extends Ownable>(
       ownerUserId,
       ownerProvince: ownerUserId ? (item.ownerProvince ?? null) : null,
       ownerCity: ownerUserId ? (item.ownerCity ?? null) : null,
+      ownerMinistryId: ownerUserId ? (item.ownerMinistryId ?? null) : null,
+      ownerMinistryName: ownerUserId ? (item.ownerMinistryName ?? null) : null,
+      ownerOrganizationId: ownerUserId ? (item.ownerOrganizationId ?? null) : null,
+      ownerOrganizationName: ownerUserId ? (item.ownerOrganizationName ?? null) : null,
       items: [item],
     });
   }
@@ -91,6 +95,10 @@ export function groupByOwnerPreservingOrder<T extends Ownable>(
       ownerUserId,
       ownerProvince: ownerUserId ? (item.ownerProvince ?? null) : null,
       ownerCity: ownerUserId ? (item.ownerCity ?? null) : null,
+      ownerMinistryId: ownerUserId ? (item.ownerMinistryId ?? null) : null,
+      ownerMinistryName: ownerUserId ? (item.ownerMinistryName ?? null) : null,
+      ownerOrganizationId: ownerUserId ? (item.ownerOrganizationId ?? null) : null,
+      ownerOrganizationName: ownerUserId ? (item.ownerOrganizationName ?? null) : null,
       items: [item],
     });
   }

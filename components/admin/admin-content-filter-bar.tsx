@@ -1,6 +1,7 @@
 "use client";
 
-import { Filter, RotateCcw, UserRound, X } from "lucide-react";
+import { useMemo } from "react";
+import { Filter, Landmark, RotateCcw, UserRound, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SearchableSelect } from "@/components/ui/searchable-select";
@@ -11,18 +12,30 @@ export const ADMIN_FILTER_ALL = "all";
 
 export interface AdminContentFilterState {
   userKey: string;
+  ministryId: string;
+  organizationId: string;
+  province: string;
+  city: string;
   /** Empty array means all plan labels. */
   planLabels: string[];
 }
 
 export const DEFAULT_ADMIN_CONTENT_FILTER: AdminContentFilterState = {
   userKey: ADMIN_FILTER_ALL,
+  ministryId: ADMIN_FILTER_ALL,
+  organizationId: ADMIN_FILTER_ALL,
+  province: ADMIN_FILTER_ALL,
+  city: ADMIN_FILTER_ALL,
   planLabels: [],
 };
 
 export interface AdminFilterUserOption {
   key: string;
   label: string;
+  ministryId?: string | null;
+  organizationId?: string | null;
+  province?: string | null;
+  city?: string | null;
 }
 
 interface AdminContentFilterBarProps {
@@ -30,6 +43,7 @@ interface AdminContentFilterBarProps {
   onChange: (next: AdminContentFilterState) => void;
   users: AdminFilterUserOption[];
   plans: string[];
+  items?: Ownable[];
 }
 
 export function matchesAdminContentFilter<T extends Ownable>(
@@ -41,6 +55,22 @@ export function matchesAdminContentFilter<T extends Ownable>(
     if (key !== filter.userKey) return false;
   }
 
+  if (filter.ministryId !== ADMIN_FILTER_ALL) {
+    if ((item.ownerMinistryId ?? "") !== filter.ministryId) return false;
+  }
+
+  if (filter.organizationId !== ADMIN_FILTER_ALL) {
+    if ((item.ownerOrganizationId ?? "") !== filter.organizationId) return false;
+  }
+
+  if (filter.province !== ADMIN_FILTER_ALL) {
+    if ((item.ownerProvince ?? "") !== filter.province) return false;
+  }
+
+  if (filter.city !== ADMIN_FILTER_ALL) {
+    if ((item.ownerCity ?? "") !== filter.city) return false;
+  }
+
   if (!matchesAnyPlanLabelFilter(item.planLabels, item.planLabel, filter.planLabels)) {
     return false;
   }
@@ -49,18 +79,69 @@ export function matchesAdminContentFilter<T extends Ownable>(
 }
 
 export function collectAdminFilterUsers(items: Ownable[]): AdminFilterUserOption[] {
-  const map = new Map<string, string>();
+  const map = new Map<string, AdminFilterUserOption>();
 
   for (const item of items) {
     const key = item.ownerUserId ?? item.ownerEmail;
     if (!key) continue;
     const label = item.ownerName?.trim() || item.ownerEmail?.trim() || "کاربر";
-    if (!map.has(key)) map.set(key, label);
+    const existing = map.get(key);
+    map.set(key, {
+      key,
+      label,
+      ministryId: item.ownerMinistryId ?? existing?.ministryId ?? null,
+      organizationId: item.ownerOrganizationId ?? existing?.organizationId ?? null,
+      province: item.ownerProvince ?? existing?.province ?? null,
+      city: item.ownerCity ?? existing?.city ?? null,
+    });
   }
 
-  return [...map.entries()]
-    .map(([key, label]) => ({ key, label }))
-    .sort((a, b) => a.label.localeCompare(b.label, "fa"));
+  return [...map.values()].sort((a, b) => a.label.localeCompare(b.label, "fa"));
+}
+
+function collectFromItems(items: Ownable[]) {
+  const ministryMap = new Map<string, string>();
+  const organizationMap = new Map<string, { id: string; name: string; ministryId: string }>();
+  const provinceSet = new Set<string>();
+  const citiesByProvince = new Map<string, Set<string>>();
+
+  for (const item of items) {
+    const ministryId = item.ownerMinistryId?.trim();
+    if (ministryId) {
+      ministryMap.set(ministryId, item.ownerMinistryName?.trim() || "وزارتخانه");
+    }
+
+    const organizationId = item.ownerOrganizationId?.trim();
+    if (organizationId && ministryId) {
+      organizationMap.set(organizationId, {
+        id: organizationId,
+        name: item.ownerOrganizationName?.trim() || "زیرمجموعه",
+        ministryId,
+      });
+    }
+
+    const province = item.ownerProvince?.trim();
+    if (province) {
+      provinceSet.add(province);
+      if (!citiesByProvince.has(province)) citiesByProvince.set(province, new Set());
+      const city = item.ownerCity?.trim();
+      if (city) citiesByProvince.get(province)?.add(city);
+    }
+  }
+
+  return {
+    ministries: [...ministryMap.entries()]
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name, "fa")),
+    organizations: [...organizationMap.values()].sort((a, b) => a.name.localeCompare(b.name, "fa")),
+    provinces: [...provinceSet].sort((a, b) => a.localeCompare(b, "fa")),
+    citiesByProvince: Object.fromEntries(
+      [...citiesByProvince.entries()].map(([province, cities]) => [
+        province,
+        [...cities].sort((a, b) => a.localeCompare(b, "fa")),
+      ])
+    ) as Record<string, string[]>,
+  };
 }
 
 export function AdminContentFilterBar({
@@ -68,11 +149,50 @@ export function AdminContentFilterBar({
   onChange,
   users,
   plans,
+  items = [],
 }: AdminContentFilterBarProps) {
-  const active =
-    filter.userKey !== ADMIN_FILTER_ALL || filter.planLabels.length > 0;
+  const meta = useMemo(() => collectFromItems(items), [items]);
 
-  if (users.length === 0 && plans.length === 0) return null;
+  const visibleUsers = useMemo(
+    () =>
+      users.filter((user) => {
+        if (filter.ministryId !== ADMIN_FILTER_ALL && user.ministryId !== filter.ministryId) {
+          return false;
+        }
+        if (
+          filter.organizationId !== ADMIN_FILTER_ALL &&
+          user.organizationId !== filter.organizationId
+        ) {
+          return false;
+        }
+        if (filter.province !== ADMIN_FILTER_ALL && user.province !== filter.province) {
+          return false;
+        }
+        if (filter.city !== ADMIN_FILTER_ALL && user.city !== filter.city) return false;
+        return true;
+      }),
+    [users, filter.ministryId, filter.organizationId, filter.province, filter.city]
+  );
+
+  const organizationOptions = useMemo(() => {
+    if (filter.ministryId === ADMIN_FILTER_ALL) return [];
+    return meta.organizations.filter((org) => org.ministryId === filter.ministryId);
+  }, [meta.organizations, filter.ministryId]);
+
+  const cityOptions = useMemo(() => {
+    if (filter.province === ADMIN_FILTER_ALL) return [];
+    return meta.citiesByProvince[filter.province] ?? [];
+  }, [meta.citiesByProvince, filter.province]);
+
+  const active =
+    filter.userKey !== ADMIN_FILTER_ALL ||
+    filter.ministryId !== ADMIN_FILTER_ALL ||
+    filter.organizationId !== ADMIN_FILTER_ALL ||
+    filter.province !== ADMIN_FILTER_ALL ||
+    filter.city !== ADMIN_FILTER_ALL ||
+    filter.planLabels.length > 0;
+
+  if (users.length === 0 && plans.length === 0 && meta.ministries.length === 0) return null;
 
   const togglePlan = (plan: string) => {
     const exists = filter.planLabels.includes(plan);
@@ -86,7 +206,27 @@ export function AdminContentFilterBar({
 
   const userOptions = [
     { value: ADMIN_FILTER_ALL, label: "همه کاربران" },
-    ...users.map((user) => ({ value: user.key, label: user.label })),
+    ...visibleUsers.map((user) => ({ value: user.key, label: user.label })),
+  ];
+
+  const ministryOptions = [
+    { value: ADMIN_FILTER_ALL, label: "همه وزارتخانه‌ها" },
+    ...meta.ministries.map((ministry) => ({ value: ministry.id, label: ministry.name })),
+  ];
+
+  const orgSelectOptions = [
+    { value: ADMIN_FILTER_ALL, label: "همه زیرمجموعه‌ها" },
+    ...organizationOptions.map((org) => ({ value: org.id, label: org.name })),
+  ];
+
+  const provinceOptions = [
+    { value: ADMIN_FILTER_ALL, label: "همه استان‌ها" },
+    ...meta.provinces.map((province) => ({ value: province, label: province })),
+  ];
+
+  const citySelectOptions = [
+    { value: ADMIN_FILTER_ALL, label: "همه شهرها" },
+    ...cityOptions.map((city) => ({ value: city, label: city })),
   ];
 
   const planOptions = plans
@@ -104,6 +244,75 @@ export function AdminContentFilterBar({
           <Filter className="h-4 w-4 text-primary" />
           فیلتر محتوا
         </div>
+
+        {meta.ministries.length > 0 && (
+          <SearchableSelect
+            value={filter.ministryId}
+            onValueChange={(ministryId) =>
+              onChange({
+                ...filter,
+                ministryId,
+                organizationId: ADMIN_FILTER_ALL,
+                userKey: ADMIN_FILTER_ALL,
+              })
+            }
+            options={ministryOptions}
+            placeholder="وزارتخانه"
+            searchPlaceholder="جستجوی وزارتخانه..."
+            className="w-full sm:w-56"
+            leadingIcon={<Landmark className="h-4 w-4 shrink-0 text-muted-foreground" />}
+          />
+        )}
+
+        {meta.ministries.length > 0 && (
+          <SearchableSelect
+            value={filter.organizationId}
+            onValueChange={(organizationId) =>
+              onChange({ ...filter, organizationId, userKey: ADMIN_FILTER_ALL })
+            }
+            options={orgSelectOptions}
+            placeholder={
+              filter.ministryId === ADMIN_FILTER_ALL
+                ? "ابتدا وزارتخانه را انتخاب کنید"
+                : "زیرمجموعه"
+            }
+            searchPlaceholder="جستجوی زیرمجموعه..."
+            className="w-full sm:w-56"
+            disabled={filter.ministryId === ADMIN_FILTER_ALL}
+          />
+        )}
+
+        {meta.provinces.length > 0 && (
+          <SearchableSelect
+            value={filter.province}
+            onValueChange={(province) =>
+              onChange({
+                ...filter,
+                province,
+                city: ADMIN_FILTER_ALL,
+                userKey: ADMIN_FILTER_ALL,
+              })
+            }
+            options={provinceOptions}
+            placeholder="استان"
+            searchPlaceholder="جستجوی استان..."
+            className="w-full sm:w-48"
+          />
+        )}
+
+        {meta.provinces.length > 0 && (
+          <SearchableSelect
+            value={filter.city}
+            onValueChange={(city) => onChange({ ...filter, city, userKey: ADMIN_FILTER_ALL })}
+            options={citySelectOptions}
+            placeholder={
+              filter.province === ADMIN_FILTER_ALL ? "ابتدا استان را انتخاب کنید" : "شهر"
+            }
+            searchPlaceholder="جستجوی شهر..."
+            className="w-full sm:w-48"
+            disabled={filter.province === ADMIN_FILTER_ALL}
+          />
+        )}
 
         {users.length > 0 && (
           <SearchableSelect

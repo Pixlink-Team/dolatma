@@ -213,6 +213,7 @@ export function PostersAdmin({
         onChange={setContentFilter}
         users={isFullAdmin ? filterUsers : []}
         plans={contentPlans}
+        items={posters}
       />
 
       <SectionBulkEditBar

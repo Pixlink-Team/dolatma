@@ -6,6 +6,10 @@ export interface OwnerFilterOption {
   label: string;
   province?: string | null;
   city?: string | null;
+  ministryId?: string | null;
+  ministryName?: string | null;
+  organizationId?: string | null;
+  organizationName?: string | null;
 }
 
 function addOwnerOption(
@@ -16,6 +20,10 @@ function addOwnerOption(
   const location = {
     province: item.ownerProvince?.trim() || null,
     city: item.ownerCity?.trim() || null,
+    ministryId: item.ownerMinistryId?.trim() || null,
+    ministryName: item.ownerMinistryName?.trim() || null,
+    organizationId: item.ownerOrganizationId?.trim() || null,
+    organizationName: item.ownerOrganizationName?.trim() || null,
   };
 
   if (item.ownerUserId) {
@@ -25,6 +33,10 @@ function addOwnerOption(
       label,
       province: location.province ?? existing?.province ?? null,
       city: location.city ?? existing?.city ?? null,
+      ministryId: location.ministryId ?? existing?.ministryId ?? null,
+      ministryName: location.ministryName ?? existing?.ministryName ?? null,
+      organizationId: location.organizationId ?? existing?.organizationId ?? null,
+      organizationName: location.organizationName ?? existing?.organizationName ?? null,
     });
     return;
   }
@@ -37,6 +49,10 @@ function addOwnerOption(
       label,
       province: location.province ?? existing?.province ?? null,
       city: location.city ?? existing?.city ?? null,
+      ministryId: location.ministryId ?? existing?.ministryId ?? null,
+      ministryName: location.ministryName ?? existing?.ministryName ?? null,
+      organizationId: location.organizationId ?? existing?.organizationId ?? null,
+      organizationName: location.organizationName ?? existing?.organizationName ?? null,
     });
   }
 }
@@ -49,6 +65,10 @@ function collectFromGroups<T extends Ownable>(groups: DataOwnerGroup<T>[], map: 
       label: group.ownerLabel,
       province: group.ownerProvince?.trim() || null,
       city: group.ownerCity?.trim() || null,
+      ministryId: group.ownerMinistryId?.trim() || null,
+      ministryName: group.ownerMinistryName?.trim() || null,
+      organizationId: group.ownerOrganizationId?.trim() || null,
+      organizationName: group.ownerOrganizationName?.trim() || null,
     });
     for (const item of group.items) {
       addOwnerOption(map, item);

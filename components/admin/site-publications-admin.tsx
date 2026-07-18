@@ -303,6 +303,7 @@ export function SitePublicationsAdmin({
         onChange={setContentFilter}
         users={isFullAdmin ? filterUsers : []}
         plans={contentPlans}
+        items={rows}
       />
 
       <SectionBulkEditBar

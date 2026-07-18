@@ -8,6 +8,8 @@ export const OWNER_LOCATION_ALL = "all";
 export const OWNER_USER_ALL = "all";
 export const OWNER_DATE_ALL = "all";
 export const OWNER_PLAN_ALL = "all";
+export const OWNER_MINISTRY_ALL = "all";
+export const OWNER_ORGANIZATION_ALL = "all";
 export const OWNER_TOP_SCORED = "top_scored";
 
 export type CampaignDatePreset = "all" | "this_week" | "this_month" | "custom";
@@ -20,6 +22,8 @@ export interface CampaignDateFilter {
 }
 
 export interface OwnerLocationFilter extends CampaignDateFilter {
+  ministryId: string;
+  organizationId: string;
   province: string;
   city: string;
   userKey: string;
@@ -29,6 +33,8 @@ export interface OwnerLocationFilter extends CampaignDateFilter {
 }
 
 export const DEFAULT_OWNER_LOCATION_FILTER: OwnerLocationFilter = {
+  ministryId: OWNER_MINISTRY_ALL,
+  organizationId: OWNER_ORGANIZATION_ALL,
   province: OWNER_LOCATION_ALL,
   city: OWNER_LOCATION_ALL,
   userKey: OWNER_USER_ALL,
@@ -43,6 +49,14 @@ export function isOwnerLocationFilterActive(filter: OwnerLocationFilter): boolea
   return filter.province !== OWNER_LOCATION_ALL;
 }
 
+export function isOwnerMinistryFilterActive(filter: OwnerLocationFilter): boolean {
+  return filter.ministryId !== OWNER_MINISTRY_ALL;
+}
+
+export function isOwnerOrganizationFilterActive(filter: OwnerLocationFilter): boolean {
+  return filter.organizationId !== OWNER_ORGANIZATION_ALL;
+}
+
 export function isOwnerUserFilterActive(filter: OwnerLocationFilter): boolean {
   return filter.userKey !== OWNER_USER_ALL;
 }
@@ -52,7 +66,13 @@ export function isOwnerPlanFilterActive(filter: OwnerLocationFilter): boolean {
 }
 
 export function isOwnerFilterActive(filter: OwnerLocationFilter): boolean {
-  return isOwnerLocationFilterActive(filter) || isOwnerUserFilterActive(filter) || isOwnerPlanFilterActive(filter);
+  return (
+    isOwnerLocationFilterActive(filter) ||
+    isOwnerMinistryFilterActive(filter) ||
+    isOwnerOrganizationFilterActive(filter) ||
+    isOwnerUserFilterActive(filter) ||
+    isOwnerPlanFilterActive(filter)
+  );
 }
 
 function matchesPlanLabel(item: Ownable, filter: OwnerLocationFilter): boolean {
@@ -96,6 +116,24 @@ function resolveItemCity(item: Ownable): string | null {
   return geoCity || null;
 }
 
+function resolveItemMinistryId(item: Ownable): string | null {
+  return item.ownerMinistryId?.trim() || null;
+}
+
+function resolveItemOrganizationId(item: Ownable): string | null {
+  return item.ownerOrganizationId?.trim() || null;
+}
+
+function matchesOwnerMinistry(item: Ownable, filter: OwnerLocationFilter): boolean {
+  if (filter.ministryId === OWNER_MINISTRY_ALL) return true;
+  return resolveItemMinistryId(item) === filter.ministryId;
+}
+
+function matchesOwnerOrganization(item: Ownable, filter: OwnerLocationFilter): boolean {
+  if (filter.organizationId === OWNER_ORGANIZATION_ALL) return true;
+  return resolveItemOrganizationId(item) === filter.organizationId;
+}
+
 export function matchesOwnerLocation(
   item: Ownable,
   filter: OwnerLocationFilter,
@@ -103,6 +141,8 @@ export function matchesOwnerLocation(
 ): boolean {
   if (!matchesPlanLabel(item, filter)) return false;
   if (!matchesOwnerUser(item, filter)) return false;
+  if (!matchesOwnerMinistry(item, filter)) return false;
+  if (!matchesOwnerOrganization(item, filter)) return false;
 
   if (filter.province === OWNER_LOCATION_ALL) {
     return matchesDateFilter(item, filter, getItemDate);
@@ -140,12 +180,27 @@ export function filterItemsByOwnerLocation<T extends Ownable>(
   );
 }
 
+export interface OwnerMinistryOption {
+  id: string;
+  name: string;
+}
+
+export interface OwnerOrganizationOption {
+  id: string;
+  name: string;
+  ministryId: string;
+}
+
 export function collectOwnerLocations(groups: DataOwnerGroup<Ownable>[]): {
   provinces: string[];
   citiesByProvince: Record<string, string[]>;
+  ministries: OwnerMinistryOption[];
+  organizations: OwnerOrganizationOption[];
 } {
   const provinceSet = new Set<string>();
   const citiesByProvince = new Map<string, Set<string>>();
+  const ministryMap = new Map<string, string>();
+  const organizationMap = new Map<string, OwnerOrganizationOption>();
 
   const addLocation = (provinceRaw?: string | null, cityRaw?: string | null) => {
     const province = provinceRaw?.trim();
@@ -160,10 +215,44 @@ export function collectOwnerLocations(groups: DataOwnerGroup<Ownable>[]): {
     }
   };
 
+  const addMinistry = (id?: string | null, name?: string | null) => {
+    const ministryId = id?.trim();
+    if (!ministryId) return;
+    const ministryName = name?.trim() || "وزارتخانه";
+    if (!ministryMap.has(ministryId)) {
+      ministryMap.set(ministryId, ministryName);
+    }
+  };
+
+  const addOrganization = (
+    id?: string | null,
+    name?: string | null,
+    ministryId?: string | null
+  ) => {
+    const organizationId = id?.trim();
+    const orgMinistryId = ministryId?.trim();
+    if (!organizationId || !orgMinistryId) return;
+    if (!organizationMap.has(organizationId)) {
+      organizationMap.set(organizationId, {
+        id: organizationId,
+        name: name?.trim() || "زیرمجموعه",
+        ministryId: orgMinistryId,
+      });
+    }
+  };
+
   for (const group of groups) {
     addLocation(group.ownerProvince, group.ownerCity);
+    addMinistry(group.ownerMinistryId, group.ownerMinistryName);
+    addOrganization(group.ownerOrganizationId, group.ownerOrganizationName, group.ownerMinistryId);
     for (const item of group.items) {
       addLocation(resolveItemProvince(item), resolveItemCity(item));
+      addMinistry(resolveItemMinistryId(item), item.ownerMinistryName);
+      addOrganization(
+        resolveItemOrganizationId(item),
+        item.ownerOrganizationName,
+        resolveItemMinistryId(item)
+      );
     }
   }
 
@@ -176,5 +265,13 @@ export function collectOwnerLocations(groups: DataOwnerGroup<Ownable>[]): {
     );
   }
 
-  return { provinces, citiesByProvince: citiesRecord };
+  const ministries = [...ministryMap.entries()]
+    .map(([id, name]) => ({ id, name }))
+    .sort((a, b) => a.name.localeCompare(b.name, "fa"));
+
+  const organizations = [...organizationMap.values()].sort((a, b) =>
+    a.name.localeCompare(b.name, "fa")
+  );
+
+  return { provinces, citiesByProvince: citiesRecord, ministries, organizations };
 }

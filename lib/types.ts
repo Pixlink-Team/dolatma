@@ -156,6 +156,10 @@ export interface Ownable {
   ownerEmail?: string | null;
   ownerProvince?: string | null;
   ownerCity?: string | null;
+  ownerMinistryId?: string | null;
+  ownerMinistryName?: string | null;
+  ownerOrganizationId?: string | null;
+  ownerOrganizationName?: string | null;
   /** Legacy single topic — prefer planLabels. */
   planLabel?: string | null;
   /** Multiple topic/subtopic tokens (e.g. "مهتاب" or "مهتاب|هفته اول"). */
@@ -673,6 +677,10 @@ export interface DataOwnerGroup<T> {
   ownerUserId: string | null;
   ownerProvince?: string | null;
   ownerCity?: string | null;
+  ownerMinistryId?: string | null;
+  ownerMinistryName?: string | null;
+  ownerOrganizationId?: string | null;
+  ownerOrganizationName?: string | null;
   items: T[];
 }
 

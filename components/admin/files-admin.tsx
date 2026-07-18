@@ -282,6 +282,7 @@ export function FilesAdmin({
         onChange={setContentFilter}
         users={isFullAdmin ? filterUsers : []}
         plans={contentPlans}
+        items={files}
       />
 
       <SectionBulkEditBar

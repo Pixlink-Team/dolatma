@@ -248,6 +248,7 @@ export function VideosAdmin({
         onChange={setContentFilter}
         users={isFullAdmin ? filterUsers : []}
         plans={contentPlans}
+        items={videos}
       />
 
       <SectionBulkEditBar

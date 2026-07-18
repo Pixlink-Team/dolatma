@@ -379,6 +379,7 @@ export function RawMediaAdmin({
         onChange={setContentFilter}
         users={isFullAdmin ? filterUsers : []}
         plans={contentPlans}
+        items={items}
       />
 
       <SectionBulkEditBar

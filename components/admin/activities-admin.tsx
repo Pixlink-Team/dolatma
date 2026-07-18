@@ -381,6 +381,7 @@ export function ActivitiesAdmin({
         onChange={setContentFilter}
         users={isFullAdmin ? filterUsers : []}
         plans={contentPlans}
+        items={rows}
       />
 
       <SectionBulkEditBar
