@@ -29,8 +29,10 @@ services:
       AUTH_SECRET: ${AUTH_SECRET:-change-this-secret-in-production}
       NEXT_PUBLIC_USE_MOCK_DATA: ${NEXT_PUBLIC_USE_MOCK_DATA:-false}
       UPLOAD_DIR: ${UPLOAD_DIR:-/app/data/uploads}
+      BACKUP_DIR: ${BACKUP_DIR:-/app/data/backups}
     volumes:
       - uploads_data:/app/data/uploads
+      - backups_data:/app/data/backups
     depends_on:
       db:
         condition: service_healthy
@@ -38,3 +40,4 @@ services:
 volumes:
   postgres_data:
   uploads_data:
+  backups_data:

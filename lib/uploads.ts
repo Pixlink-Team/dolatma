@@ -7,6 +7,10 @@ export function getUploadsDir(): string {
   return process.env.UPLOAD_DIR ?? path.join(process.cwd(), "data", "uploads");
 }
 
+export function getBackupsDir(): string {
+  return process.env.BACKUP_DIR ?? path.join(process.cwd(), "data", "backups");
+}
+
 export function getUploadPublicUrl(filename: string): string {
   return `/api/files/${filename}`;
 }

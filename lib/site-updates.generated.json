@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "e2ea3dcddf3ded3b2e91bc6ab948c50a7d4986a2",
+      "committedAt": "2026-07-18T17:15:05+03:30",
+      "title": "نمایش نام خیابان‌ها روی نقشه تبلیغات محیطی با زوم نزدیک‌تر",
+      "subject": "Show street names on billboard map when zoomed in"
+    },
+    {
       "hash": "61ac795ea23b1dc8d7f5f59726a9f0bea2145811",
       "committedAt": "2026-07-18T17:11:28+03:30",
       "title": "امکان انتخاب همه بخش‌ها در افزودن گروهی محتوا",

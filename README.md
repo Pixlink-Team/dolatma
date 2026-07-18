@@ -68,7 +68,8 @@ Or run `database/schema.sql` manually in PostgreSQL.
 | `ADMIN_EMAIL` | Yes | `admin@example.com` |
 | `ADMIN_PASSWORD` | Yes | strong password |
 | `AUTH_SECRET` | Yes | random 32+ chars |
-| `CRON_SECRET` | Yes (for daily auto-refresh) | random 32+ chars |
+| `CRON_SECRET` | Yes (for daily auto-refresh / backups) | random 32+ chars |
+| `BACKUP_DIR` | No | `/app/data/backups` |
 | `NODE_ENV` | Yes | `production` |
 
 ### 5. Daily link metrics refresh (Coolify Scheduled Job)
@@ -93,7 +94,26 @@ What it updates:
 - **Aparat videos**: views, likes, comments (and empty title/description/cover)
 - **Site publications** + **magazine/newspaper** with a link: Open Graph title/description/cover when empty
 
-### 6. Local Docker test
+### 6. Daily campaign ZIP backups (Coolify Scheduled Job)
+
+Campaign backups are stored on the server under `BACKUP_DIR` (default `/app/data/backups`) and can be downloaded from the admin dashboard (**خروجی و پشتیبان‌گیری**).
+
+`GET|POST /api/cron/create-backups`
+
+1. In Coolify, open the app → **Scheduled Tasks**.
+2. Schedule for noon Iran time. If the scheduler uses UTC: `30 8 * * *` (12:00 Asia/Tehran). If the job TZ is `Asia/Tehran`: `0 12 * * *`.
+3. Command:
+
+```bash
+curl -fsS -X POST "$APP_URL/api/cron/create-backups" \
+  -H "Authorization: Bearer $CRON_SECRET"
+```
+
+Also set a persistent volume for `BACKUP_DIR` (Compose already mounts `backups_data`). Older ZIPs are pruned per campaign (`BACKUP_RETENTION_COUNT`, default 14).
+
+Admins can also click **ساخت پشتیبان (ذخیره روی سایت)** any time, then **دانلود آخرین پشتیبان**.
+
+### 7. Local Docker test
 
 Create a `.env` next to `docker-compose.yml` with strong `POSTGRES_PASSWORD`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, and `AUTH_SECRET`, then:
 

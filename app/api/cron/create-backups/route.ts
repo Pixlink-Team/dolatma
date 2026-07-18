@@ -1,6 +1,6 @@
 import { revalidatePath } from "next/cache";
 import { authorizeCron } from "@/lib/auth/cron";
-import { runDailyLinkMetricsRefresh } from "@/lib/services/link-metrics/refresh-all";
+import { runDailyCampaignBackups } from "@/lib/services/campaign-backup";
 import { isPostgresConfigured } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -25,15 +25,14 @@ async function handleCron(request: Request) {
     );
   }
 
-  const summary = await runDailyLinkMetricsRefresh();
+  const summary = await runDailyCampaignBackups();
 
-  revalidatePath("/admin/social-posts");
-  revalidatePath("/admin/site-publications");
-  revalidatePath("/admin/press-publications");
-  revalidatePath("/campaign");
+  revalidatePath("/admin");
 
   return Response.json({
     success: true,
+    createdCount: summary.created.length,
+    failedCount: summary.failed.length,
     summary,
   });
 }
