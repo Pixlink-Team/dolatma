@@ -1,6 +1,8 @@
+// Voyager includes clear street/place labels at higher zoom (unlike minimal Positron).
 const DEFAULT_UPSTREAMS = [
+  "https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png",
+  "https://b.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png",
   "https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
-  "https://b.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
   "https://tile.openstreetmap.de/{z}/{x}/{y}.png",
   "https://a.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png",
 ] as const;
@@ -32,7 +34,7 @@ export function parseTileYParam(rawY: string): number | null {
 }
 
 export function isValidTileCoordinate(z: number, x: number, y: number): boolean {
-  if (!Number.isInteger(z) || z < 0 || z > 19) return false;
+  if (!Number.isInteger(z) || z < 0 || z > 20) return false;
   if (!Number.isInteger(x) || !Number.isInteger(y)) return false;
 
   const maxIndex = 2 ** z;

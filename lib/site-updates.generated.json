@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "61ac795ea23b1dc8d7f5f59726a9f0bea2145811",
+      "committedAt": "2026-07-18T17:11:28+03:30",
+      "title": "امکان انتخاب همه بخش‌ها در افزودن گروهی محتوا",
+      "subject": "Support all content sections in bulk import type switcher"
+    },
+    {
       "hash": "db43f0523a62b20b28d9308dcf432b1dd5c8761a",
       "committedAt": "2026-07-18T17:00:23+03:30",
       "title": "امکان تغییر بخش مقصد در افزودن گروهی محتوا",

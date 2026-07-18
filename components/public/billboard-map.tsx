@@ -57,9 +57,10 @@ export function BillboardMap({
       }
 
       const first = mappableBillboards[0];
+      // Zoom 15+ so street names from the basemap are readable by default.
       const map = L.map(containerRef.current, {
         scrollWheelZoom,
-      }).setView([first.latitude!, first.longitude!], 12);
+      }).setView([first.latitude!, first.longitude!], 15);
 
       addLeafletTileLayer(L, map);
 
@@ -99,7 +100,7 @@ export function BillboardMap({
         const bounds = L.latLngBounds(
           mappableBillboards.map((billboard) => [billboard.latitude!, billboard.longitude!])
         );
-        map.fitBounds(bounds, { padding: [32, 32] });
+        map.fitBounds(bounds, { padding: [32, 32], maxZoom: 16 });
       }
 
       mapRef.current = map;
