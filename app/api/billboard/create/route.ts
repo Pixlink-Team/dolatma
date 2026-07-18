@@ -76,7 +76,7 @@ export async function POST(request: Request) {
   const longitude = Number(formData.get("longitude"));
 
   if (!campaignId) {
-    return NextResponse.json({ error: "شناسه کمپین الزامی است" }, { status: 400 });
+    return NextResponse.json({ error: "شناسه اقدام الزامی است" }, { status: 400 });
   }
   if (axis.length < 2) {
     return NextResponse.json({ error: "محور باید حداقل ۲ کاراکتر باشد" }, { status: 400 });
@@ -87,7 +87,7 @@ export async function POST(request: Request) {
 
   const settings = await pgGetCampaignById(campaignId);
   if (!settings) {
-    return NextResponse.json({ error: "کمپین یافت نشد" }, { status: 404 });
+    return NextResponse.json({ error: "اقدام یافت نشد" }, { status: 404 });
   }
 
   const fullAdmin = session ? isFullAdmin(session) : true;

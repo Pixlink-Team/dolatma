@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import type { CampaignSettings } from "@/lib/types";
 import { withFileAccessToken } from "@/lib/uploads";
 
-export const DEFAULT_SITE_TITLE = "گزارش زنده کمپین";
-export const DEFAULT_SITE_DESCRIPTION = "گزارش زنده پیشرفت کمپین تبلیغاتی";
+export const DEFAULT_SITE_TITLE = "گزارش زنده اقدام";
+export const DEFAULT_SITE_DESCRIPTION = "گزارش زنده پیشرفت اقدام تبلیغاتی";
 export const DEFAULT_FAVICON_URL = "/images/dolat.webp";
 
 function resolveSiteBaseUrl(): string {

@@ -65,7 +65,7 @@ const allNavItems: {
 }[] = [
   { href: "/admin", label: "داشبورد", icon: LayoutDashboard },
   { href: "/admin/profile", label: "پروفایل من", icon: UserCircle },
-  { href: "/admin/settings", label: "تنظیمات کمپین", icon: Settings, adminOrClientOnly: true },
+  { href: "/admin/settings", label: "تنظیمات اقدام", icon: Settings, adminOrClientOnly: true },
   { href: "/admin/tutorials", label: "آموزش بخش‌ها", icon: GraduationCap, adminOnly: true },
   { href: "/admin/ministries", label: "وزارتخانه‌ها", icon: Building2, adminOnly: true },
   { href: "/admin/billboards", label: "تبلیغات محیطی", icon: LayoutGrid, permissionKey: "billboards" },
@@ -162,10 +162,10 @@ export function AdminSidebar() {
         <Link href="/admin" className="font-bold text-lg block">پنل مدیریت</Link>
         {campaigns.length > 0 && (
           <div className="space-y-1.5">
-            <p className="text-xs text-muted-foreground">کمپین فعال</p>
+            <p className="text-xs text-muted-foreground">اقدام فعال</p>
             <Select value={campaignId} onValueChange={setCampaignId}>
               <SelectTrigger className="h-9 text-xs">
-                <SelectValue placeholder="انتخاب کمپین" />
+                <SelectValue placeholder="انتخاب اقدام" />
               </SelectTrigger>
               <SelectContent>
                 {campaigns.map((c) => (

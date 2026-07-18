@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "a5a24a4e5254cf6416d3e9bce783a7a6763268b5",
+      "committedAt": "2026-07-18T11:52:39+03:30",
+      "title": "تعریف وزارتخانه‌ها و زیرمجموعه‌ها و اتصال کاربران به آن‌ها",
+      "subject": "Add ministry organizations hierarchy for users and filters"
+    },
+    {
       "hash": "54bf99844ec5da320dd12991d6662108a2101de1",
       "committedAt": "2026-07-18T11:28:31+03:30",
       "title": "رفع نمایش فاویکون و تصویر اشتراک در لینک کمپین",

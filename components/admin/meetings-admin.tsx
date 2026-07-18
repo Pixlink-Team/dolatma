@@ -481,7 +481,7 @@ export function MeetingsAdmin({ campaignId, initialMeetings, hasMeetingsPassword
               <Input
                 {...form.register("title")}
                 maxLength={CONTENT_TITLE_MAX_LENGTH}
-                placeholder="مثلاً جلسه هماهنگی کمپین"
+                placeholder="مثلاً جلسه هماهنگی اقدام"
                 className={cn(highlightTitle && "border-destructive focus-visible:ring-destructive")}
               />
               {highlightTitle && (
@@ -591,7 +591,7 @@ export function MeetingsAdmin({ campaignId, initialMeetings, hasMeetingsPassword
                 value={bulkText}
                 onChange={(event) => setBulkText(event.target.value)}
                 rows={5}
-                placeholder={`ثبت مصوبات جلسات داخل کمپین\nگزارش‌گیری اسنپ\nگزارش شبکه‌های اجتماعی`}
+                placeholder={`ثبت مصوبات جلسات داخل اقدام\nگزارش‌گیری اسنپ\nگزارش شبکه‌های اجتماعی`}
                 dir="rtl"
               />
               <Button type="button" variant="secondary" onClick={addBulkTasks} disabled={!bulkText.trim()}>

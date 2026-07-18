@@ -97,7 +97,7 @@ const featureLabels: { key: keyof CampaignFeatures; label: string }[] = [
   { key: "activities", label: "اقدامات" },
   { key: "pressPublications", label: "مجله و روزنامه" },
   { key: "submissions", label: "مشارکت کاربران" },
-  { key: "files", label: "فایل‌های کمپین" },
+  { key: "files", label: "فایل‌های اقدام" },
   { key: "rawMedia", label: "راش تصویر" },
 ];
 
@@ -318,40 +318,40 @@ export function SettingsAdmin({
       }
       setPagePassword("");
       setPagePasswordConfigured(!removePassword);
-      toast.success(removePassword ? "رمز صفحه کمپین حذف شد" : "رمز صفحه کمپین ذخیره شد");
+      toast.success(removePassword ? "رمز صفحه اقدام حذف شد" : "رمز صفحه اقدام ذخیره شد");
     });
   };
 
   return (
     <div className="space-y-6 max-w-2xl">
       <div>
-        <h1 className="text-2xl font-bold">تنظیمات کمپین</h1>
+        <h1 className="text-2xl font-bold">تنظیمات اقدام</h1>
         <p className="text-sm text-muted-foreground">
           {canEditFullSettings
             ? "اطلاعات، پیامک، آمار سایت و شبکه‌های اجتماعی"
-            : "رمز دسترسی به صفحه نمایش کمپین"}
+            : "رمز دسترسی به صفحه نمایش اقدام"}
         </p>
         {canEditFullSettings && (
           <Link href="/admin/campaigns" className="text-sm text-primary hover:underline inline-block mt-1">
-            ساخت یا حذف کمپین ← مدیریت کمپین‌ها
+            ساخت یا حذف اقدام ← مدیریت اقدامات
           </Link>
         )}
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">رمز صفحه نمایش کمپین</CardTitle>
+          <CardTitle className="text-base">رمز صفحه نمایش اقدام</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-sm text-muted-foreground">
-            با تنظیم رمز، بازدیدکنندگان عمومی فقط بعد از وارد کردن رمز می‌توانند صفحه کمپین را ببینند.
+            با تنظیم رمز، بازدیدکنندگان عمومی فقط بعد از وارد کردن رمز می‌توانند صفحه اقدام را ببینند.
             ادمین و کارفرما وقتی وارد پنل هستند بدون رمز صفحه را می‌بینند.
           </p>
           <Input
             type="password"
             value={pagePassword}
             onChange={(event) => setPagePassword(event.target.value)}
-            placeholder={pagePasswordConfigured ? "رمز جدید (برای تغییر)" : "رمز صفحه کمپین"}
+            placeholder={pagePasswordConfigured ? "رمز جدید (برای تغییر)" : "رمز صفحه اقدام"}
             dir="ltr"
             className="text-left"
             autoComplete="new-password"
@@ -385,11 +385,11 @@ export function SettingsAdmin({
 
       {canEditFullSettings && (
       <Card>
-        <CardHeader><CardTitle className="text-base">اطلاعات کمپین</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-base">اطلاعات اقدام</CardTitle></CardHeader>
         <CardContent>
           <form onSubmit={onSubmit} className="space-y-4">
             <div>
-              <Label>عنوان سایت / کمپین</Label>
+              <Label>عنوان سایت / اقدام</Label>
               <Input {...form.register("title")} maxLength={CONTENT_TITLE_MAX_LENGTH} />
               <p className="mt-1 text-xs text-muted-foreground">
                 در تب مرورگر، عنوان صفحه و پیش‌نمایش اشتراک لینک استفاده می‌شود.
@@ -400,7 +400,7 @@ export function SettingsAdmin({
               <Label>تگ‌لاین</Label>
               <Input
                 {...form.register("tagline")}
-                placeholder="مثلاً گزارش زنده پیشرفت کمپین تبلیغاتی"
+                placeholder="مثلاً گزارش زنده پیشرفت اقدام تبلیغاتی"
               />
               <p className="mt-1 text-xs text-muted-foreground">
                 متن کوتاه زیر عنوان؛ برای توضیح اشتراک در تلگرام، واتساپ و شبکه‌های اجتماعی اولویت دارد.
@@ -417,13 +417,13 @@ export function SettingsAdmin({
               <Label>برچسب محتوای مدیریت</Label>
               <Input {...form.register("adminOwnerLabel")} placeholder={DEFAULT_ADMIN_OWNER_LABEL} />
               <p className="mt-1 text-xs text-muted-foreground">
-                نام گروه محتوایی که توسط ادمین (بدون کاربر) ثبت شده — در صفحه عمومی کمپین نمایش داده می‌شود.
+                نام گروه محتوایی که توسط ادمین (بدون کاربر) ثبت شده — در صفحه عمومی اقدام نمایش داده می‌شود.
               </p>
             </div>
 
             <div className="space-y-3 rounded-lg border p-4">
               <div>
-                <Label>موضوع‌های کمپین</Label>
+                <Label>موضوع‌های اقدام</Label>
                 <p className="mt-1 text-xs text-muted-foreground">
                   موضوع و زیرموضوع تعریف کنید (مثلاً مهتاب ← هفته اول) تا هنگام آپلود محتوا و فیلتر صفحه اصلی استفاده شوند.
                 </p>
@@ -551,7 +551,7 @@ export function SettingsAdmin({
                 onChange={(url) => form.setValue("coverImageUrl", url)}
               />
               <p className="text-xs text-muted-foreground">
-                تصویر پیش‌نمایش هنگام اشتراک لینک کمپین در تلگرام، واتساپ و شبکه‌های اجتماعی.
+                تصویر پیش‌نمایش هنگام اشتراک لینک اقدام در تلگرام، واتساپ و شبکه‌های اجتماعی.
               </p>
             </div>
             <div className="space-y-2">

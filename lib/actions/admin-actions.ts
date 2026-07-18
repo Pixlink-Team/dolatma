@@ -155,7 +155,7 @@ export async function deleteCampaignAction(id: string) {
     return result;
   } catch (error) {
     console.error("deleteCampaignAction failed:", error);
-    return { success: false, error: "حذف کمپین با خطا مواجه شد" };
+    return { success: false, error: "حذف اقدام با خطا مواجه شد" };
   }
 }
 
@@ -171,7 +171,7 @@ export async function updateSettingsAction(data: Partial<CampaignSettings>) {
     action: "admin.settings_update",
     entityType: "campaign",
     entityId: cleaned.id,
-    label: cleaned.title ?? "به‌روزرسانی تنظیمات کمپین",
+    label: cleaned.title ?? "به‌روزرسانی تنظیمات اقدام",
   });
   await revalidateAll(cleaned.slug);
   return result;

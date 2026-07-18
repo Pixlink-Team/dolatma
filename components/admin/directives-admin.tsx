@@ -814,7 +814,7 @@ export function DirectivesAdmin({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">همه کاربران این کمپین</SelectItem>
+                  <SelectItem value="all">همه کاربران این اقدام</SelectItem>
                   <SelectItem value="ministry_city">وزارتخانه و استان</SelectItem>
                   <SelectItem value="region">منطقه جغرافیایی</SelectItem>
                   <SelectItem value="users">افراد انتخابی</SelectItem>
@@ -954,7 +954,7 @@ export function DirectivesAdmin({
                 <Label>انتخاب کاربران</Label>
                 <div className="max-h-48 space-y-2 overflow-y-auto rounded-lg border p-3">
                   {campaignUsers.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">کاربری در این کمپین نیست</p>
+                    <p className="text-sm text-muted-foreground">کاربری در این اقدام نیست</p>
                   ) : (
                     campaignUsers.map((user) => (
                       <label key={user.id} className="flex items-center gap-2 text-sm">

@@ -21,8 +21,8 @@ interface CampaignProgressWidgetProps {
 }
 
 function getProgressLabel(progress: CampaignProgressSummary): string {
-  if (progress.phase === "not_started") return "کمپین هنوز شروع نشده";
-  if (progress.phase === "completed") return "کمپین به پایان رسیده";
+  if (progress.phase === "not_started") return "اقدام هنوز شروع نشده";
+  if (progress.phase === "completed") return "اقدام به پایان رسیده";
   return `${formatPersianNumber(progress.daysRemaining)} روز تا پایان`;
 }
 
@@ -32,7 +32,7 @@ export function CampaignProgressWidget({ progress }: CampaignProgressWidgetProps
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-base">
           <TrendingUp className="h-4 w-4 text-primary" />
-          پیشرفت کمپین
+          پیشرفت اقدام
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">

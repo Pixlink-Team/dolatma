@@ -24,18 +24,18 @@ export function AnalyticsSection({ analytics }: AnalyticsSectionProps) {
   return (
     <CollapsibleSection
       id="analytics"
-      title="آمار سایت کمپین"
+      title="آمار سایت اقدام"
       description={
         hasMetabaseDashboard
-          ? "داشبورد زنده آمار بازدید سایت کمپین از Metabase"
-          : "آمار ترافیک و بازدیدکنندگان سایت کمپین"
+          ? "داشبورد زنده آمار بازدید سایت اقدام از Metabase"
+          : "آمار ترافیک و بازدیدکنندگان سایت اقدام"
       }
       lazyMount
     >
       {hasMetabaseDashboard && analytics.metabaseEmbedUrl && (
         <MetabaseDashboardEmbed
           embedUrl={analytics.metabaseEmbedUrl}
-          title="آمار سایت کمپین"
+          title="آمار سایت اقدام"
         />
       )}
 

@@ -44,7 +44,7 @@ export function UsersImportPanel({ campaigns, onImported }: UsersImportPanelProp
 
   const handleImport = async (file: File) => {
     if (campaignIds.length === 0) {
-      toast.error("حداقل یک کمپین انتخاب کنید");
+      toast.error("حداقل یک اقدام انتخاب کنید");
       return;
     }
 
@@ -105,7 +105,7 @@ export function UsersImportPanel({ campaigns, onImported }: UsersImportPanelProp
         </p>
 
         <div className="space-y-2">
-          <Label>دسترسی به کمپین‌ها</Label>
+          <Label>دسترسی به اقدامات</Label>
           <div className="rounded-lg border p-3 space-y-2 max-h-48 overflow-y-auto">
             {campaigns.map((campaign) => (
               <label key={campaign.id} className="flex items-center gap-2 text-sm">

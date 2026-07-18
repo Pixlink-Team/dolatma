@@ -112,7 +112,7 @@ export function SubmissionsSection({ groups, summary }: SubmissionsSectionProps)
     <CollapsibleSection
       id="submissions"
       title="مشارکت کاربران"
-      description="مشارکت‌کنندگان و ارسال‌های تأییدشده در کمپین"
+      description="مشارکت‌کنندگان و ارسال‌های تأییدشده در اقدام"
     >
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">

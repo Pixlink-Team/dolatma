@@ -131,7 +131,7 @@ export function PostersSection({ categories: _categories, posters, groups }: Pos
     <CollapsibleSection
       id="posters"
       title="پوسترها"
-      description="گالری پوسترهای کمپین"
+      description="گالری پوسترهای اقدام"
       controls={controls}
     >
       <SectionTopCompaniesBox groups={filteredGroups} />

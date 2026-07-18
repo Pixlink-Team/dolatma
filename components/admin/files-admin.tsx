@@ -267,7 +267,7 @@ export function FilesAdmin({
       {tutorialModal}
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">فایل‌های کمپین</h1>
+          <h1 className="text-2xl font-bold">فایل‌های اقدام</h1>
           <p className="text-sm text-muted-foreground">
             PDF، Word، Excel و سایر فایل‌های قابل دانلود — با + فایل جدید آپلود کنید
           </p>
@@ -438,7 +438,7 @@ export function FilesAdmin({
           <DialogHeader>
             <DialogTitle>{editingId ? "ویرایش فایل" : "افزودن فایل"}</DialogTitle>
             <DialogDescription className="sr-only">
-              آپلود فایل PDF، Word، Excel یا متنی برای کمپین
+              آپلود فایل PDF، Word، Excel یا متنی برای اقدام
             </DialogDescription>
           </DialogHeader>
 

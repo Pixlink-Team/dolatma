@@ -35,7 +35,7 @@ export async function POST(request: Request) {
   }
 
   if (!Array.isArray(campaignIds) || campaignIds.length === 0) {
-    return NextResponse.json({ error: "حداقل یک کمپین انتخاب کنید" }, { status: 400 });
+    return NextResponse.json({ error: "حداقل یک اقدام انتخاب کنید" }, { status: 400 });
   }
 
   let permissions = defaultContributorPermissions();

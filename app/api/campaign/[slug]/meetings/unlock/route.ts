@@ -34,7 +34,7 @@ export async function POST(request: Request, { params }: RouteParams) {
   const result = await pgUnlockCampaignMeetings(slug, password);
 
   if (result.status === "not_found") {
-    return NextResponse.json({ error: "کمپین یافت نشد" }, { status: 404 });
+    return NextResponse.json({ error: "اقدام یافت نشد" }, { status: 404 });
   }
 
   if (result.status === "wrong_password") {

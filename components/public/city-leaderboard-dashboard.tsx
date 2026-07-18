@@ -276,7 +276,7 @@ export function CityLeaderboardDashboard({ data, slug }: CityLeaderboardDashboar
               className="group mb-1 flex items-center gap-1 text-xs text-muted-foreground transition-colors duration-[var(--duration-apple-fast)] ease-[var(--ease-apple-soft)] hover:text-foreground"
             >
               <ArrowRight className="h-3 w-3 transition-transform duration-[var(--duration-apple)] ease-[var(--ease-apple)] group-hover:translate-x-0.5" />
-              بازگشت به گزارش کمپین
+              بازگشت به گزارش اقدام
             </Link>
             <h1 className="text-lg font-bold">
               {isProvinceView

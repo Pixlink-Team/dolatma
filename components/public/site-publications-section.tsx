@@ -163,7 +163,7 @@ export function SitePublicationsSection({ publications, groups }: SitePublicatio
     <CollapsibleSection
       id="site-publications"
       title="انتشار در سایت"
-      description="مطالب منتشرشده در سایت کمپین — عنوان هر مورد لینک مستقیم به صفحه است"
+      description="مطالب منتشرشده در سایت اقدام — عنوان هر مورد لینک مستقیم به صفحه است"
     >
       <SectionTopCompaniesBox groups={filteredGroups} />
       {filteredPublications.length === 0 ? (

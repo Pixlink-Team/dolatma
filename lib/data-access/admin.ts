@@ -234,7 +234,7 @@ export async function deleteCampaign(id: string): Promise<{ success: boolean; er
     try {
       return await pg.pgDeleteCampaign(id);
     } catch {
-      return { success: false, error: "شناسه کمپین نامعتبر است یا حذف ممکن نیست" };
+      return { success: false, error: "شناسه اقدام نامعتبر است یا حذف ممکن نیست" };
     }
   }
   if (!isSupabaseConfigured()) {

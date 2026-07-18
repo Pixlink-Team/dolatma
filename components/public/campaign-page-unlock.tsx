@@ -45,7 +45,7 @@ export function CampaignPageUnlock({ slug, title }: CampaignPageUnlockProps) {
       <header className="border-b bg-background/80 backdrop-blur">
         <div className="mx-auto flex max-w-lg items-center justify-between px-4 py-4">
           <div>
-            <p className="text-xs text-muted-foreground">صفحه کمپین</p>
+            <p className="text-xs text-muted-foreground">صفحه اقدام</p>
             <h1 className="text-lg font-semibold">{title}</h1>
           </div>
           <ThemeToggle />
@@ -56,7 +56,7 @@ export function CampaignPageUnlock({ slug, title }: CampaignPageUnlockProps) {
         <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-full border bg-card">
           <Lock className="h-6 w-6 text-muted-foreground" />
         </div>
-        <h2 className="text-xl font-semibold">این کمپین با رمز محافظت شده است</h2>
+        <h2 className="text-xl font-semibold">این اقدام با رمز محافظت شده است</h2>
         <p className="mt-2 text-sm text-muted-foreground">
           برای مشاهده محتوا، رمز عبور را وارد کنید.
         </p>
@@ -71,7 +71,7 @@ export function CampaignPageUnlock({ slug, title }: CampaignPageUnlockProps) {
             onKeyDown={(event) => {
               if (event.key === "Enter") handleUnlock();
             }}
-            placeholder="رمز صفحه کمپین"
+            placeholder="رمز صفحه اقدام"
             autoFocus
             dir="ltr"
             className="text-left"
@@ -81,7 +81,7 @@ export function CampaignPageUnlock({ slug, title }: CampaignPageUnlockProps) {
             onClick={handleUnlock}
             disabled={isPending || !password.trim()}
           >
-            {isPending ? "در حال بررسی..." : "ورود به کمپین"}
+            {isPending ? "در حال بررسی..." : "ورود به اقدام"}
           </Button>
         </div>
       </main>

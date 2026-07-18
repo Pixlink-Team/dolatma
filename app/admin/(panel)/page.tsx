@@ -64,7 +64,7 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
         <h1 className="text-2xl font-bold">داشبورد</h1>
         <Card>
           <CardContent className="p-6 text-sm text-muted-foreground">
-            کمپینی برای حساب شما تعریف نشده است. با مدیر تماس بگیرید.
+            اقدامی برای حساب شما تعریف نشده است. با مدیر تماس بگیرید.
           </CardContent>
         </Card>
       </div>
@@ -79,7 +79,7 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
         <h1 className="text-2xl font-bold">داشبورد</h1>
         <Card>
           <CardContent className="p-6 text-sm text-muted-foreground">
-            کمپین انتخاب‌شده در دسترس نیست. با مدیر تماس بگیرید.
+            اقدام انتخاب‌شده در دسترس نیست. با مدیر تماس بگیرید.
           </CardContent>
         </Card>
       </div>
@@ -176,7 +176,7 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
             <Link href="/admin/campaigns">
               <Button variant="outline" size="sm" className="gap-1.5">
                 <FolderKanban className="h-3.5 w-3.5" />
-                مدیریت کمپین‌ها
+                مدیریت اقدامات
               </Button>
             </Link>
             <Link href={adminHref("/admin/settings", campaignId)}>
@@ -236,8 +236,8 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
         <Card>
           <CardContent className="p-6 text-sm text-muted-foreground">
             {canManageAll
-              ? "هیچ بخشی برای این کمپین فعال نیست. از تنظیمات کمپین بخش‌های مورد نظر را فعال کنید."
-              : "هیچ بخشی برای شما در این کمپین فعال نیست. با مدیر تماس بگیرید."}
+              ? "هیچ بخشی برای این اقدام فعال نیست. از تنظیمات اقدام بخش‌های مورد نظر را فعال کنید."
+              : "هیچ بخشی برای شما در این اقدام فعال نیست. با مدیر تماس بگیرید."}
           </CardContent>
         </Card>
       )}

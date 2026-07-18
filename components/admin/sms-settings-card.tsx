@@ -97,7 +97,7 @@ export function SmsSettingsCard() {
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           <p className="text-sm text-muted-foreground">
             برای ارسال پیامک هنگام انتشار دستورکار، ارائه‌دهنده و کلید API را تنظیم کنید.
-            این تنظیمات سراسری است و برای همه کمپین‌ها اعمال می‌شود.
+            این تنظیمات سراسری است و برای همه اقدامات اعمال می‌شود.
           </p>
 
           <div className="flex items-center justify-between gap-3 rounded-lg border p-3">

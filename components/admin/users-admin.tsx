@@ -333,7 +333,7 @@ export function UsersAdmin({
         </h1>
         <p className="text-sm text-muted-foreground">
           {isFullMode
-            ? "تعریف وزارتخانه، یوزر مادر، کاربر زیرمجموعه، دسترسی کمپین و بخش‌های پنل"
+            ? "تعریف وزارتخانه، یوزر مادر، کاربر زیرمجموعه، دسترسی اقدام و بخش‌های پنل"
             : isSubUsersMode
               ? "ایجاد و مدیریت کاربران زیرمجموعه با استان، شهر و شماره موبایل"
               : "تعیین وزارتخانه کاربران"}
@@ -402,7 +402,7 @@ export function UsersAdmin({
                 ? [
                     {
                       key: "campaignIds" as const,
-                      label: "کمپین‌ها",
+                      label: "اقدامات",
                       render: (item: AdminUser) =>
                         (item.campaignIds ?? [])
                           .map((id) => campaigns.find((campaign) => campaign.id === id)?.title ?? id)
@@ -662,7 +662,7 @@ export function UsersAdmin({
                 )}
 
                 <div className="space-y-2">
-                  <Label>دسترسی به کمپین‌ها</Label>
+                  <Label>دسترسی به اقدامات</Label>
                   <div className="space-y-2 rounded-lg border p-3">
                     {campaigns.map((campaign) => (
                       <label key={campaign.id} className="flex items-center gap-2 text-sm">
@@ -679,7 +679,7 @@ export function UsersAdmin({
 
                 {rolesWithCampaignAccess.includes(selectedRole) && selectedCampaignIds.length > 0 && (
                   <div className="space-y-3">
-                    <Label>دسترسی به بخش‌های پنل (برای هر کمپین)</Label>
+                    <Label>دسترسی به بخش‌های پنل (برای هر اقدام)</Label>
                     {selectedCampaignIds.map((campaignId) => {
                       const campaign = campaigns.find((item) => item.id === campaignId);
                       const permissions = normalizeContributorPermissions(

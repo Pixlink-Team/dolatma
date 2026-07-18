@@ -92,7 +92,7 @@ function CampaignDashboardBody({
               data-export-hide
             >
               <ArrowRight className="h-3 w-3 transition-transform duration-[var(--duration-apple)] ease-[var(--ease-apple)] group-hover:translate-x-0.5" />
-              همه کمپین‌ها
+              همه اقدامات
             </Link>
             <h1 className="text-lg font-bold">{settings.title}</h1>
             {settings.tagline?.trim() ? (
@@ -125,7 +125,7 @@ function CampaignDashboardBody({
 
         {sections.analytics && !contentFilterActive && (
           <DeferredSection minHeight={320} forceRender={forceRender}>
-            <section data-export-section data-export-label="آمار سایت کمپین">
+            <section data-export-section data-export-label="آمار سایت اقدام">
               <AnalyticsSection analytics={data.analytics} />
             </section>
           </DeferredSection>
@@ -275,7 +275,7 @@ function CampaignDashboardBody({
       </main>
 
       <footer className="border-t py-6 text-center text-sm text-muted-foreground">
-        <p>گزارش زنده کمپین — {settings.title}</p>
+        <p>گزارش زنده اقدام — {settings.title}</p>
       </footer>
 
       {!exportMode && <ScrollToTopButton />}

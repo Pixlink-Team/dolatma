@@ -40,7 +40,7 @@ export function CampaignTools({ isFullAdmin }: CampaignToolsProps) {
         return;
       }
 
-      toast.success("کمپین با موفقیت import شد");
+      toast.success("اقدام با موفقیت import شد");
       window.location.reload();
     });
   };

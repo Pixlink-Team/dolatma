@@ -148,13 +148,13 @@ export function CampaignsAdmin({ initialCampaigns }: CampaignsAdminProps) {
               : c
           )
         );
-        toast.success("کمپین ویرایش شد");
+        toast.success("اقدام ویرایش شد");
       } else {
         setCampaigns((prev) => [
           ...prev,
           { id: crypto.randomUUID(), updatedAt: new Date().toISOString(), ...data } as CampaignSettings,
         ]);
-        toast.success("کمپین ایجاد شد");
+        toast.success("اقدام ایجاد شد");
       }
       setOpen(false);
       router.refresh();
@@ -172,7 +172,7 @@ export function CampaignsAdmin({ initialCampaigns }: CampaignsAdminProps) {
     { key: "pressPublications", label: "مجله و روزنامه" },
     { key: "meetings", label: "جلسات و مصوبات" },
     { key: "submissions", label: "مشارکت کاربران" },
-    { key: "files", label: "فایل‌های کمپین" },
+    { key: "files", label: "فایل‌های اقدام" },
     { key: "rawMedia", label: "راش تصویر" },
   ];
 
@@ -182,15 +182,15 @@ export function CampaignsAdmin({ initialCampaigns }: CampaignsAdminProps) {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <FolderKanban className="h-6 w-6 text-primary" />
-            <h1 className="text-2xl font-bold">مدیریت کمپین‌ها</h1>
+            <h1 className="text-2xl font-bold">مدیریت اقدامات</h1>
           </div>
           <p className="text-sm text-muted-foreground">
-            کمپین جدید بسازید، ویرایش کنید یا حذف کنید — سپس از منوی کناری بخش‌های هر کمپین را پر کنید
+            اقدام جدید بسازید، ویرایش کنید یا حذف کنید — سپس از منوی کناری بخش‌های هر اقدام را پر کنید
           </p>
         </div>
         <Button onClick={openCreate}>
           <Plus className="h-4 w-4" />
-          افزودن کمپین جدید
+          افزودن اقدام جدید
         </Button>
       </div>
 
@@ -198,14 +198,14 @@ export function CampaignsAdmin({ initialCampaigns }: CampaignsAdminProps) {
         <div className="text-center py-16 border rounded-xl bg-muted/20 space-y-4">
           <FolderKanban className="h-12 w-12 mx-auto text-muted-foreground" />
           <div>
-            <p className="font-medium">هنوز کمپینی تعریف نشده</p>
+            <p className="font-medium">هنوز اقدامی تعریف نشده</p>
             <p className="text-sm text-muted-foreground mt-1">
-              برای شروع، اولین کمپین خود را بسازید
+              برای شروع، اولین اقدام خود را بسازید
             </p>
           </div>
           <Button onClick={openCreate}>
             <Plus className="h-4 w-4" />
-            ساخت اولین کمپین
+            ساخت اولین اقدام
           </Button>
         </div>
       ) : (
@@ -263,11 +263,11 @@ export function CampaignsAdmin({ initialCampaigns }: CampaignsAdminProps) {
             startTransition(async () => {
               const result = await deleteCampaignAction(c.id);
               if (!result.success) {
-                toast.error(result.error ?? "حذف کمپین ناموفق بود");
+                toast.error(result.error ?? "حذف اقدام ناموفق بود");
                 return;
               }
               setCampaigns((prev) => prev.filter((x) => x.id !== c.id));
-              toast.success("کمپین حذف شد");
+              toast.success("اقدام حذف شد");
               router.refresh();
             });
           }}
@@ -277,7 +277,7 @@ export function CampaignsAdmin({ initialCampaigns }: CampaignsAdminProps) {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editing ? "ویرایش کمپین" : "افزودن کمپین جدید"}</DialogTitle>
+            <DialogTitle>{editing ? "ویرایش اقدام" : "افزودن اقدام جدید"}</DialogTitle>
           </DialogHeader>
           <form onSubmit={onSubmit} className="space-y-4">
             <div>
@@ -333,7 +333,7 @@ export function CampaignsAdmin({ initialCampaigns }: CampaignsAdminProps) {
               <Label>منتشر در صفحه عمومی</Label>
             </div>
             <div className="space-y-3 border rounded-lg p-4">
-              <Label className="text-sm font-semibold">بخش‌های فعال کمپین</Label>
+              <Label className="text-sm font-semibold">بخش‌های فعال اقدام</Label>
               <p className="text-xs text-muted-foreground">
                 فقط بخش‌هایی که فعال و دارای داده باشند در صفحه عمومی نمایش داده می‌شوند
               </p>
@@ -348,7 +348,7 @@ export function CampaignsAdmin({ initialCampaigns }: CampaignsAdminProps) {
               ))}
             </div>
             <Button type="submit" className="w-full" disabled={isPending}>
-              {isPending ? "در حال ذخیره..." : editing ? "ذخیره تغییرات" : "ایجاد کمپین"}
+              {isPending ? "در حال ذخیره..." : editing ? "ذخیره تغییرات" : "ایجاد اقدام"}
             </Button>
           </form>
         </DialogContent>
