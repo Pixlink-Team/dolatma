@@ -2,7 +2,16 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { ArrowRight, MapPin, Medal, Star, Trophy, Users } from "lucide-react";
+import {
+  ArrowRight,
+  Building2,
+  Landmark,
+  MapPin,
+  Medal,
+  Star,
+  Trophy,
+  Users,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,6 +22,9 @@ import { UserContentScoreModal } from "@/components/public/user-content-score-mo
 import { ThemeToggle } from "@/components/theme-toggle";
 import { ScrollToTopButton } from "@/components/ui/scroll-to-top-button";
 import {
+  buildMinistryContributorLeaderboard,
+  buildMinistryLeaderboard,
+  buildOrganizationLeaderboard,
   buildProvinceContributorLeaderboard,
   buildProvinceLeaderboard,
   buildUserLeaderboard,
@@ -20,6 +32,8 @@ import {
   collectLeaderboardBillboards,
   collectUserContentItems,
   getProvinceRankBadge,
+  type MinistryLeaderboardEntry,
+  type OrganizationLeaderboardEntry,
   type ProvinceLeaderboardEntry,
   type ProvinceLeaderboardMetrics,
   type UserLeaderboardEntry,
@@ -27,7 +41,7 @@ import {
 import type { PublicCampaignData } from "@/lib/types";
 import { formatPersianDate, formatPersianNumber } from "@/lib/utils";
 
-type LeaderboardView = "province" | "user" | "rating";
+type LeaderboardView = "ministry" | "organization" | "user" | "rating" | "province";
 
 interface CityLeaderboardDashboardProps {
   data: PublicCampaignData;
@@ -48,6 +62,8 @@ const BILLBOARD_METRIC_LABELS = new Set(["تبلیغات محیطی", "مترا�
 interface BillboardModalScope {
   title: string;
   provinceKey?: string;
+  ministryKey?: string;
+  organizationKey?: string;
   userKey?: string;
 }
 
@@ -126,7 +142,15 @@ function MetricsBreakdown({
   );
 }
 
-function ProvincePodiumCard({ entry }: { entry: ProvinceLeaderboardEntry }) {
+function NamedPodiumCard({
+  entry,
+  title,
+  subtitle,
+}: {
+  entry: ProvinceLeaderboardMetrics & { rank: number };
+  title: string;
+  subtitle?: string;
+}) {
   const heightClass =
     entry.rank === 1 ? "min-h-[220px]" : entry.rank === 2 ? "min-h-[190px]" : "min-h-[170px]";
 
@@ -134,7 +158,8 @@ function ProvincePodiumCard({ entry }: { entry: ProvinceLeaderboardEntry }) {
     <Card className={`${heightClass} flex flex-col justify-end border-primary/20 bg-gradient-to-b from-primary/5 to-card`}>
       <CardContent className="space-y-3 p-5 text-center">
         <div className="text-3xl">{getProvinceRankBadge(entry.rank)}</div>
-        <p className="font-bold">{entry.province}</p>
+        <p className="font-bold">{title}</p>
+        {subtitle ? <p className="text-xs text-muted-foreground">{subtitle}</p> : null}
         <div className="flex flex-wrap justify-center gap-2">
           <Badge variant="secondary">{formatPersianNumber(entry.score)} امتیاز</Badge>
           <Badge variant="outline">{formatPersianNumber(entry.totalUploads)} محتوا</Badge>
@@ -160,7 +185,10 @@ function UserPodiumCard({
       <CardContent className="space-y-3 p-5 text-center">
         <div className="text-3xl">{getProvinceRankBadge(entry.rank)}</div>
         <p className="font-bold">{entry.userName}</p>
-        <p className="text-xs text-muted-foreground">{entry.province}</p>
+        <p className="text-xs text-muted-foreground">{entry.ministry}</p>
+        {entry.province && entry.province !== "نامشخص" ? (
+          <p className="text-[11px] text-muted-foreground/80">{entry.province}</p>
+        ) : null}
         <div className="flex flex-wrap justify-center gap-2">
           <Badge variant="secondary">{formatPersianNumber(scoreValue)} امتیاز</Badge>
           <Badge variant="outline">{formatPersianNumber(entry.totalUploads)} محتوا</Badge>
@@ -182,11 +210,20 @@ function LeaderboardViewToggle({
       <Button
         type="button"
         size="sm"
-        variant={view === "province" ? "default" : "outline"}
-        onClick={() => onChange("province")}
+        variant={view === "ministry" ? "default" : "outline"}
+        onClick={() => onChange("ministry")}
       >
-        <MapPin className="h-4 w-4" />
-        بر اساس استان
+        <Landmark className="h-4 w-4" />
+        بر اساس وزارتخانه
+      </Button>
+      <Button
+        type="button"
+        size="sm"
+        variant={view === "organization" ? "default" : "outline"}
+        onClick={() => onChange("organization")}
+      >
+        <Building2 className="h-4 w-4" />
+        بر اساس زیرمجموعه
       </Button>
       <Button
         type="button"
@@ -206,22 +243,157 @@ function LeaderboardViewToggle({
         <Star className="h-4 w-4" />
         بر اساس امتیاز
       </Button>
+      <Button
+        type="button"
+        size="sm"
+        variant={view === "province" ? "default" : "outline"}
+        onClick={() => onChange("province")}
+      >
+        <MapPin className="h-4 w-4" />
+        بر اساس استان
+      </Button>
     </div>
   );
 }
 
+function getViewTitle(view: LeaderboardView): string {
+  switch (view) {
+    case "ministry":
+      return "رتبه‌بندی وزارتخانه‌ها";
+    case "organization":
+      return "رتبه‌بندی زیرمجموعه‌ها";
+    case "rating":
+      return "رتبه‌بندی بر اساس امتیاز";
+    case "province":
+      return "رتبه‌بندی استان‌ها";
+    default:
+      return "رتبه‌بندی کاربران";
+  }
+}
+
+function getViewComparisonTitle(view: LeaderboardView): string {
+  switch (view) {
+    case "ministry":
+      return "مقایسه عملکرد وزارتخانه‌ها";
+    case "organization":
+      return "مقایسه عملکرد زیرمجموعه‌ها";
+    case "rating":
+      return "مقایسه امتیاز محتوایی کاربران";
+    case "province":
+      return "مقایسه عملکرد استان‌ها";
+    default:
+      return "مقایسه عملکرد کاربران";
+  }
+}
+
+function getViewDescription(view: LeaderboardView): string {
+  switch (view) {
+    case "ministry":
+      return "رتبه‌بندی وزارتخانه‌ها بر اساس امتیاز فعالیت و حجم محتوای ثبت‌شده";
+    case "organization":
+      return "رتبه‌بندی زیرمجموعه‌ها بر اساس امتیاز فعالیت و حجم محتوای ثبت‌شده";
+    case "rating":
+      return "رتبه‌بندی کاربران بر اساس مجموع امتیازهای ثبت‌شده روی محتوا";
+    case "province":
+      return "رتبه‌بندی استان‌ها بر اساس امتیاز فعالیت کاربران و حجم محتوای ثبت‌شده";
+    default:
+      return "رتبه‌بندی کاربران بر اساس امتیاز فعالیت و حجم محتوای ثبت‌شده";
+  }
+}
+
+function getEntityLabel(view: LeaderboardView): string {
+  switch (view) {
+    case "ministry":
+      return "وزارتخانه";
+    case "organization":
+      return "زیرمجموعه";
+    case "province":
+      return "استان";
+    default:
+      return "کاربر";
+  }
+}
+
+function getEntityPlural(view: LeaderboardView): string {
+  switch (view) {
+    case "ministry":
+      return "وزارتخانه‌ها";
+    case "organization":
+      return "زیرمجموعه‌ها";
+    case "province":
+      return "استان‌ها";
+    default:
+      return "کاربران";
+  }
+}
+
+function getEntryLabel(
+  view: LeaderboardView,
+  entry:
+    | MinistryLeaderboardEntry
+    | OrganizationLeaderboardEntry
+    | ProvinceLeaderboardEntry
+    | UserLeaderboardEntry
+): string {
+  switch (view) {
+    case "ministry":
+      return (entry as MinistryLeaderboardEntry).ministry;
+    case "organization":
+      return (entry as OrganizationLeaderboardEntry).organization;
+    case "province":
+      return (entry as ProvinceLeaderboardEntry).province;
+    default:
+      return (entry as UserLeaderboardEntry).userName;
+  }
+}
+
+function getEntryKey(
+  view: LeaderboardView,
+  entry:
+    | MinistryLeaderboardEntry
+    | OrganizationLeaderboardEntry
+    | ProvinceLeaderboardEntry
+    | UserLeaderboardEntry
+): string {
+  switch (view) {
+    case "ministry":
+      return (entry as MinistryLeaderboardEntry).ministryKey;
+    case "organization":
+      return (entry as OrganizationLeaderboardEntry).organizationKey;
+    case "province":
+      return (entry as ProvinceLeaderboardEntry).provinceKey;
+    default:
+      return (entry as UserLeaderboardEntry).userKey;
+  }
+}
+
 export function CityLeaderboardDashboard({ data, slug }: CityLeaderboardDashboardProps) {
   const { settings } = data;
-  const [view, setView] = useState<LeaderboardView>("province");
+  const [view, setView] = useState<LeaderboardView>("ministry");
   const [selectedUser, setSelectedUser] = useState<UserLeaderboardEntry | null>(null);
   const [billboardScope, setBillboardScope] = useState<BillboardModalScope | null>(null);
 
+  const ministries = useMemo(() => buildMinistryLeaderboard(data), [data]);
+  const organizations = useMemo(() => buildOrganizationLeaderboard(data), [data]);
   const provinces = useMemo(() => buildProvinceLeaderboard(data), [data]);
   const users = useMemo(() => buildUserLeaderboard(data), [data]);
   const ratingUsers = useMemo(() => buildUserRatingLeaderboard(data), [data]);
-  const contributors = useMemo(() => buildProvinceContributorLeaderboard(data), [data]);
+  const ministryContributors = useMemo(() => buildMinistryContributorLeaderboard(data), [data]);
+  const provinceContributors = useMemo(() => buildProvinceContributorLeaderboard(data), [data]);
 
-  const activeEntries = view === "province" ? provinces : view === "rating" ? ratingUsers : users;
+  const activeEntries =
+    view === "ministry"
+      ? ministries
+      : view === "organization"
+        ? organizations
+        : view === "province"
+          ? provinces
+          : view === "rating"
+            ? ratingUsers
+            : users;
+
+  const isMinistryView = view === "ministry";
+  const isOrganizationView = view === "organization";
   const isProvinceView = view === "province";
   const isUserLikeView = view === "user" || view === "rating";
 
@@ -235,6 +407,8 @@ export function CityLeaderboardDashboard({ data, slug }: CityLeaderboardDashboar
       billboardScope
         ? collectLeaderboardBillboards(data, {
             provinceKey: billboardScope.provinceKey,
+            ministryKey: billboardScope.ministryKey,
+            organizationKey: billboardScope.organizationKey,
             userKey: billboardScope.userKey,
           })
         : [],
@@ -244,27 +418,24 @@ export function CityLeaderboardDashboard({ data, slug }: CityLeaderboardDashboar
   const chartData = useMemo(
     () =>
       activeEntries.slice(0, 10).map((entry) => ({
-        label: isProvinceView
-          ? (entry as ProvinceLeaderboardEntry).province
-          : (entry as UserLeaderboardEntry).userName,
+        label: getEntryLabel(view, entry),
         value: view === "rating" ? entry.ratingScore : entry.score,
       })),
-    [activeEntries, isProvinceView, view]
+    [activeEntries, view]
   );
 
   const uploadChartData = useMemo(
     () =>
       activeEntries.slice(0, 10).map((entry) => ({
-        label: isProvinceView
-          ? (entry as ProvinceLeaderboardEntry).province
-          : (entry as UserLeaderboardEntry).userName,
+        label: getEntryLabel(view, entry),
         value: entry.totalUploads,
       })),
-    [activeEntries, isProvinceView]
+    [activeEntries, view]
   );
 
   const podium = activeEntries.slice(0, 3);
   const orderedPodium = podium.length === 3 ? [podium[1], podium[0], podium[2]] : podium;
+  const contributors = isMinistryView ? ministryContributors : provinceContributors;
 
   return (
     <div className="min-h-screen">
@@ -278,43 +449,21 @@ export function CityLeaderboardDashboard({ data, slug }: CityLeaderboardDashboar
               <ArrowRight className="h-3 w-3 transition-transform duration-[var(--duration-apple)] ease-[var(--ease-apple)] group-hover:translate-x-0.5" />
               بازگشت به گزارش اقدام
             </Link>
-            <h1 className="text-lg font-bold">
-              {isProvinceView
-                ? "رتبه‌بندی استان‌ها"
-                : view === "rating"
-                  ? "رتبه‌بندی بر اساس امتیاز"
-                  : "رتبه‌بندی کاربران"}
-            </h1>
+            <h1 className="text-lg font-bold">{getViewTitle(view)}</h1>
             <p className="text-sm text-muted-foreground">{settings.title}</p>
           </div>
           <div className="flex items-center gap-2">
             <ThemeToggle />
             <Badge variant="outline" className="gap-1">
               <Trophy className="h-3.5 w-3.5" />
-              {formatPersianNumber(activeEntries.length)}{" "}
-              {isProvinceView ? "استان" : "کاربر"}
+              {formatPersianNumber(activeEntries.length)} {getEntityLabel(view)}
             </Badge>
           </div>
         </div>
       </header>
 
       <main className="container mx-auto max-w-[1280px] space-y-8 px-4 py-8">
-        <SectionHeader
-          title={
-            isProvinceView
-              ? "مقایسه عملکرد استان‌ها"
-              : view === "rating"
-                ? "مقایسه امتیاز محتوایی کاربران"
-                : "مقایسه عملکرد کاربران"
-          }
-          description={
-            isProvinceView
-              ? "رتبه‌بندی استان‌ها بر اساس امتیاز فعالیت کاربران و حجم محتوای ثبت‌شده"
-              : view === "rating"
-                ? "رتبه‌بندی کاربران بر اساس مجموع امتیازهای ثبت‌شده روی محتوا"
-                : "رتبه‌بندی کاربران بر اساس امتیاز فعالیت و حجم محتوای ثبت‌شده"
-          }
-        >
+        <SectionHeader title={getViewComparisonTitle(view)} description={getViewDescription(view)}>
           <Badge status={settings.status}>
             {settings.status === "live" ? "زنده" : settings.status === "completed" ? "پایان‌یافته" : "پیش‌نویس"}
           </Badge>
@@ -329,9 +478,7 @@ export function CityLeaderboardDashboard({ data, slug }: CityLeaderboardDashboar
         {activeEntries.length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center text-muted-foreground">
-              {isProvinceView
-                ? "هنوز داده‌ای برای مقایسه استان‌ها ثبت نشده است."
-                : "هنوز داده‌ای برای مقایسه کاربران ثبت نشده است."}
+              هنوز داده‌ای برای مقایسه {getEntityPlural(view)} ثبت نشده است.
             </CardContent>
           </Card>
         ) : (
@@ -340,23 +487,34 @@ export function CityLeaderboardDashboard({ data, slug }: CityLeaderboardDashboar
               <section className="space-y-4">
                 <h2 className="flex items-center gap-2 text-base font-semibold">
                   <Medal className="h-5 w-5 text-primary" />
-                  {isProvinceView ? "سکوی برترین استان‌ها" : "سکوی برترین کاربران"}
+                  سکوی برترین {getEntityPlural(view)}
                 </h2>
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                  {orderedPodium.map((entry) =>
-                    isProvinceView ? (
-                      <ProvincePodiumCard
-                        key={(entry as ProvinceLeaderboardEntry).provinceKey}
-                        entry={entry as ProvinceLeaderboardEntry}
+                  {orderedPodium.map((entry) => {
+                    if (isUserLikeView) {
+                      return (
+                        <UserPodiumCard
+                          key={(entry as UserLeaderboardEntry).userKey}
+                          entry={entry as UserLeaderboardEntry}
+                          showRating={view === "rating"}
+                        />
+                      );
+                    }
+
+                    const orgEntry = entry as OrganizationLeaderboardEntry;
+                    return (
+                      <NamedPodiumCard
+                        key={getEntryKey(view, entry)}
+                        entry={entry}
+                        title={getEntryLabel(view, entry)}
+                        subtitle={
+                          isOrganizationView && orgEntry.ministry !== orgEntry.organization
+                            ? orgEntry.ministry
+                            : undefined
+                        }
                       />
-                    ) : (
-                      <UserPodiumCard
-                        key={(entry as UserLeaderboardEntry).userKey}
-                        entry={entry as UserLeaderboardEntry}
-                        showRating={view === "rating"}
-                      />
-                    )
-                  )}
+                    );
+                  })}
                 </div>
               </section>
             )}
@@ -365,11 +523,15 @@ export function CityLeaderboardDashboard({ data, slug }: CityLeaderboardDashboar
               <BarChartCard
                 data={chartData}
                 title={
-                  isProvinceView
-                    ? "امتیاز استان‌ها (۱۰ استان برتر)"
-                    : view === "rating"
-                      ? "مجموع امتیاز محتوا (۱۰ نفر برتر)"
-                      : "امتیاز کاربران (۱۰ نفر برتر)"
+                  isMinistryView
+                    ? "امتیاز وزارتخانه‌ها (۱۰ وزارتخانه برتر)"
+                    : isOrganizationView
+                      ? "امتیاز زیرمجموعه‌ها (۱۰ زیرمجموعه برتر)"
+                      : isProvinceView
+                        ? "امتیاز استان‌ها (۱۰ استان برتر)"
+                        : view === "rating"
+                          ? "مجموع امتیاز محتوا (۱۰ نفر برتر)"
+                          : "امتیاز کاربران (۱۰ نفر برتر)"
                 }
                 color="#2563eb"
               />
@@ -377,43 +539,33 @@ export function CityLeaderboardDashboard({ data, slug }: CityLeaderboardDashboar
             </div>
 
             <section className="space-y-4">
-              <h2 className="text-base font-semibold">
-                {isProvinceView
-                  ? "جدول رتبه‌بندی استان‌ها"
-                  : view === "rating"
-                    ? "جدول رتبه‌بندی بر اساس امتیاز محتوا"
-                    : "جدول رتبه‌بندی کاربران"}
-              </h2>
+              <h2 className="text-base font-semibold">جدول {getViewTitle(view)}</h2>
               <div className="space-y-3">
                 {activeEntries.map((entry) => {
                   const userEntry = entry as UserLeaderboardEntry;
                   const clickable = isUserLikeView;
                   return (
                     <Card
-                      key={
-                        isProvinceView
-                          ? (entry as ProvinceLeaderboardEntry).provinceKey
-                          : userEntry.userKey
-                      }
+                      key={getEntryKey(view, entry)}
                       className={clickable ? "cursor-pointer hover:border-primary/60" : undefined}
-                      onClick={
-                        clickable
-                          ? () => setSelectedUser(userEntry)
-                          : undefined
-                      }
+                      onClick={clickable ? () => setSelectedUser(userEntry) : undefined}
                     >
                       <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
                         <div className="space-y-2">
                           <div className="flex flex-wrap items-center gap-2">
                             <span className="text-lg">{getProvinceRankBadge(entry.rank)}</span>
-                            <p className="font-semibold">
-                              {isProvinceView
-                                ? (entry as ProvinceLeaderboardEntry).province
-                                : userEntry.userName}
-                            </p>
+                            <p className="font-semibold">{getEntryLabel(view, entry)}</p>
+                            {isOrganizationView && (
+                              <span className="text-sm text-muted-foreground">
+                                — {(entry as OrganizationLeaderboardEntry).ministry}
+                              </span>
+                            )}
                             {isUserLikeView && (
                               <span className="text-sm text-muted-foreground">
-                                — {userEntry.province}
+                                — {userEntry.ministry}
+                                {userEntry.province && userEntry.province !== "نامشخص"
+                                  ? ` · ${userEntry.province}`
+                                  : ""}
                               </span>
                             )}
                             {entry.todayUploads > 0 && (
@@ -426,6 +578,22 @@ export function CityLeaderboardDashboard({ data, slug }: CityLeaderboardDashboar
                             entry={entry}
                             slug={slug}
                             onOpenBillboards={() => {
+                              if (isMinistryView) {
+                                const ministryEntry = entry as MinistryLeaderboardEntry;
+                                setBillboardScope({
+                                  title: ministryEntry.ministry,
+                                  ministryKey: ministryEntry.ministryKey,
+                                });
+                                return;
+                              }
+                              if (isOrganizationView) {
+                                const organizationEntry = entry as OrganizationLeaderboardEntry;
+                                setBillboardScope({
+                                  title: organizationEntry.organization,
+                                  organizationKey: organizationEntry.organizationKey,
+                                });
+                                return;
+                              }
                               if (isProvinceView) {
                                 const provinceEntry = entry as ProvinceLeaderboardEntry;
                                 setBillboardScope({
@@ -458,29 +626,44 @@ export function CityLeaderboardDashboard({ data, slug }: CityLeaderboardDashboar
               </div>
             </section>
 
-            {isProvinceView && (
+            {(isMinistryView || isProvinceView) && (
               <section className="space-y-4">
-                <h2 className="text-base font-semibold">برترین کاربران در هر استان</h2>
+                <h2 className="text-base font-semibold">
+                  {isMinistryView
+                    ? "برترین کاربران در هر وزارتخانه"
+                    : "برترین کاربران در هر استان"}
+                </h2>
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                  {contributors.slice(0, 12).map((contributor) => (
-                    <Card key={`${contributor.provinceKey}-${contributor.userName}-${contributor.rank}`}>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="flex items-center justify-between gap-2 text-sm">
-                          <span>{contributor.userName}</span>
-                          <span>{getProvinceRankBadge(contributor.rank)}</span>
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-2 text-sm text-muted-foreground">
-                        <p>{contributor.province}</p>
-                        <div className="flex flex-wrap gap-2">
-                          <Badge variant="outline">{formatPersianNumber(contributor.score)} امتیاز</Badge>
-                          <Badge variant="secondary">
-                            {formatPersianNumber(contributor.totalUploads)} محتوا
-                          </Badge>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                  {contributors.slice(0, 12).map((contributor) => {
+                    const groupLabel = isMinistryView
+                      ? (contributor as { ministry: string }).ministry
+                      : (contributor as { province: string }).province;
+                    const groupKey = isMinistryView
+                      ? (contributor as { ministryKey: string }).ministryKey
+                      : (contributor as { provinceKey: string }).provinceKey;
+
+                    return (
+                      <Card key={`${groupKey}-${contributor.userName}-${contributor.rank}`}>
+                        <CardHeader className="pb-2">
+                          <CardTitle className="flex items-center justify-between gap-2 text-sm">
+                            <span>{contributor.userName}</span>
+                            <span>{getProvinceRankBadge(contributor.rank)}</span>
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-2 text-sm text-muted-foreground">
+                          <p>{groupLabel}</p>
+                          <div className="flex flex-wrap gap-2">
+                            <Badge variant="outline">
+                              {formatPersianNumber(contributor.score)} امتیاز
+                            </Badge>
+                            <Badge variant="secondary">
+                              {formatPersianNumber(contributor.totalUploads)} محتوا
+                            </Badge>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
                 </div>
               </section>
             )}

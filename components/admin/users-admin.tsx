@@ -540,8 +540,6 @@ export function UsersAdmin({
                 label: "نام کاربری",
                 render: (item) => getLoginUsernameFromEmail(item.email),
               },
-              { key: "province", label: "استان", render: (item) => item.province || "—" },
-              { key: "city", label: "شهر", render: (item) => item.city || "—" },
               {
                 key: "ministryName",
                 label: "وزارتخانه",
@@ -552,6 +550,8 @@ export function UsersAdmin({
                 label: "زیرمجموعه",
                 render: (item) => item.organizationName || "—",
               },
+              { key: "province", label: "استان", render: (item) => item.province || "—" },
+              { key: "city", label: "شهر", render: (item) => item.city || "—" },
               {
                 key: "accountManagerName",
                 label: "مسئول اکانت",
@@ -650,12 +650,6 @@ export function UsersAdmin({
                   <Input {...form.register("email")} dir="ltr" placeholder="BAZARBAYJAN" />
                   <p className="text-xs text-muted-foreground">فقط نام کاربری — بدون @example.com</p>
                 </div>
-                <ProvinceCityFields
-                  province={selectedProvince ?? ""}
-                  city={selectedCity ?? ""}
-                  onProvinceChange={(value) => form.setValue("province", value)}
-                  onCityChange={(value) => form.setValue("city", value)}
-                />
                 <div className="space-y-2">
                   <Label>شماره موبایل (برای پیامک)</Label>
                   <Input
@@ -758,6 +752,15 @@ export function UsersAdmin({
                   </SelectContent>
                 </Select>
               </div>
+            )}
+
+            {canManageUsers && (
+              <ProvinceCityFields
+                province={selectedProvince ?? ""}
+                city={selectedCity ?? ""}
+                onProvinceChange={(value) => form.setValue("province", value)}
+                onCityChange={(value) => form.setValue("city", value)}
+              />
             )}
 
             {canManageUsers && (

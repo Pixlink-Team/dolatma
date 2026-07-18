@@ -282,6 +282,18 @@ export function AdminContentFilterBar({
           />
         )}
 
+        {users.length > 0 && (
+          <SearchableSelect
+            value={filter.userKey}
+            onValueChange={(userKey) => onChange({ ...filter, userKey })}
+            options={userOptions}
+            placeholder="کاربر"
+            searchPlaceholder="جستجوی کاربر..."
+            className="w-full sm:w-64"
+            leadingIcon={<UserRound className="h-4 w-4 shrink-0 text-muted-foreground" />}
+          />
+        )}
+
         {meta.provinces.length > 0 && (
           <SearchableSelect
             value={filter.province}
@@ -311,18 +323,6 @@ export function AdminContentFilterBar({
             searchPlaceholder="جستجوی شهر..."
             className="w-full sm:w-48"
             disabled={filter.province === ADMIN_FILTER_ALL}
-          />
-        )}
-
-        {users.length > 0 && (
-          <SearchableSelect
-            value={filter.userKey}
-            onValueChange={(userKey) => onChange({ ...filter, userKey })}
-            options={userOptions}
-            placeholder="کاربر"
-            searchPlaceholder="جستجوی کاربر..."
-            className="w-full sm:w-64"
-            leadingIcon={<UserRound className="h-4 w-4 shrink-0 text-muted-foreground" />}
           />
         )}
 

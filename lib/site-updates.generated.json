@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "ea140c23009abb899b341c879db2fff96740b25b",
+      "committedAt": "2026-07-18T12:20:29+03:30",
+      "title": "حفظ فاویکون WebP پیش‌فرض با پشتیبانی بهتر مرورگرها",
+      "subject": "Keep default favicon as dolat.webp with PNG fallback"
+    },
+    {
       "hash": "9d8d5897c0ecdce6c82c7717cc2cbd040f188364",
       "committedAt": "2026-07-18T12:14:13+03:30",
       "title": "رفع نمایش آیکون سایت در تب مرورگر",

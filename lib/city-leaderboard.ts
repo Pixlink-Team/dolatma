@@ -30,6 +30,19 @@ export interface ProvinceLeaderboardEntry extends ProvinceLeaderboardMetrics {
   provinceKey: string;
 }
 
+export interface MinistryLeaderboardEntry extends ProvinceLeaderboardMetrics {
+  rank: number;
+  ministry: string;
+  ministryKey: string;
+}
+
+export interface OrganizationLeaderboardEntry extends ProvinceLeaderboardMetrics {
+  rank: number;
+  organization: string;
+  organizationKey: string;
+  ministry: string;
+}
+
 export interface ProvinceContributorEntry {
   rank: number;
   userName: string;
@@ -40,11 +53,22 @@ export interface ProvinceContributorEntry {
   ratingScore?: number;
 }
 
+export interface MinistryContributorEntry {
+  rank: number;
+  userName: string;
+  ministry: string;
+  ministryKey: string;
+  totalUploads: number;
+  score: number;
+  ratingScore?: number;
+}
+
 export interface UserLeaderboardEntry extends ProvinceLeaderboardMetrics {
   rank: number;
   userName: string;
   userKey: string;
   province: string;
+  ministry: string;
 }
 
 const SCORE_WEIGHTS = {
@@ -68,24 +92,61 @@ function resolveProvince(item: Ownable & { province?: string | null }): string {
   return (normalizeImportedProvince(raw) ?? raw) || "نامشخص";
 }
 
+function resolveMinistry(item: Ownable): { ministryKey: string; ministry: string } {
+  const ministryId = item.ownerMinistryId?.trim();
+  const ministryName = item.ownerMinistryName?.trim() || "بدون وزارتخانه";
+  return {
+    ministryKey: ministryId || `name:${ministryName}`,
+    ministry: ministryName,
+  };
+}
+
+function resolveOrganization(item: Ownable): {
+  organizationKey: string;
+  organization: string;
+  ministry: string;
+} {
+  const { ministryKey, ministry } = resolveMinistry(item);
+  const organizationId = item.ownerOrganizationId?.trim();
+  const organizationName = item.ownerOrganizationName?.trim();
+
+  if (!organizationId && !organizationName) {
+    return {
+      organizationKey: `ministry:${ministryKey}`,
+      organization: ministry,
+      ministry,
+    };
+  }
+
+  return {
+    organizationKey: organizationId || `${ministryKey}::${organizationName}`,
+    organization: organizationName || "زیرمجموعه",
+    ministry,
+  };
+}
+
 function resolveUserKey(item: Ownable): { userKey: string; userName: string } {
   const userName = item.ownerName?.trim() || "کاربر";
   const userKey = item.ownerUserId ?? item.ownerEmail ?? userName;
   return { userKey, userName };
 }
 
-function resolvePrimaryProvince(counts: Map<string, number>): string {
-  let province = "نامشخص";
+function resolvePrimaryLabel(counts: Map<string, number>, fallback = "نامشخص"): string {
+  let label = fallback;
   let maxCount = 0;
 
   for (const [name, count] of counts) {
     if (count > maxCount) {
-      province = name;
+      label = name;
       maxCount = count;
     }
   }
 
-  return province;
+  return label;
+}
+
+function resolvePrimaryProvince(counts: Map<string, number>): string {
+  return resolvePrimaryLabel(counts, "نامشخص");
 }
 
 function emptyMetrics(): ProvinceLeaderboardMetrics {
@@ -126,6 +187,49 @@ function addItem<T extends Ownable & { createdAt?: string | null; province?: str
     province,
   };
 
+  applyMetric(current, item, field);
+  map.set(province, current);
+}
+
+function addMinistryItem<T extends Ownable & { createdAt?: string | null }>(
+  map: Map<string, ProvinceLeaderboardMetrics & { ministry: string }>,
+  item: T,
+  field: MetricField
+) {
+  const { ministryKey, ministry } = resolveMinistry(item);
+  const current = map.get(ministryKey) ?? {
+    ...emptyMetrics(),
+    ministry,
+  };
+
+  applyMetric(current, item, field);
+  map.set(ministryKey, current);
+}
+
+function addOrganizationItem<T extends Ownable & { createdAt?: string | null }>(
+  map: Map<
+    string,
+    ProvinceLeaderboardMetrics & { organization: string; ministry: string }
+  >,
+  item: T,
+  field: MetricField
+) {
+  const { organizationKey, organization, ministry } = resolveOrganization(item);
+  const current = map.get(organizationKey) ?? {
+    ...emptyMetrics(),
+    organization,
+    ministry,
+  };
+
+  applyMetric(current, item, field);
+  map.set(organizationKey, current);
+}
+
+function applyMetric<T extends Ownable & { createdAt?: string | null }>(
+  current: ProvinceLeaderboardMetrics,
+  item: T,
+  field: MetricField
+) {
   current[field]++;
   current.totalUploads++;
   current.score += SCORE_WEIGHTS[field];
@@ -143,8 +247,6 @@ function addItem<T extends Ownable & { createdAt?: string | null; province?: str
   if (countsAsTodayUpload(item, field)) {
     current.todayUploads++;
   }
-
-  map.set(province, current);
 }
 
 function addContributor<T extends Ownable & { createdAt?: string | null; province?: string | null }>(
@@ -174,9 +276,37 @@ function addContributor<T extends Ownable & { createdAt?: string | null; provinc
   map.set(contributorKey, current);
 }
 
+function addMinistryContributor<T extends Ownable & { createdAt?: string | null }>(
+  map: Map<string, MinistryContributorEntry>,
+  item: T,
+  field: MetricField
+) {
+  const { ministryKey, ministry } = resolveMinistry(item);
+  const userName = item.ownerName?.trim() || "کاربر";
+  const contributorKey = `${ministryKey}::${item.ownerUserId ?? item.ownerEmail ?? userName}`;
+
+  const current = map.get(contributorKey) ?? {
+    rank: 0,
+    userName,
+    ministry,
+    ministryKey,
+    totalUploads: 0,
+    score: 0,
+    ratingScore: 0,
+  };
+
+  current.totalUploads++;
+  current.score += SCORE_WEIGHTS[field];
+  if (typeof item.score === "number" && Number.isFinite(item.score)) {
+    current.ratingScore = (current.ratingScore ?? 0) + item.score;
+  }
+  map.set(contributorKey, current);
+}
+
 type UserAccumulator = ProvinceLeaderboardMetrics & {
   userName: string;
   provinceCounts: Map<string, number>;
+  ministryCounts: Map<string, number>;
 };
 
 function addUserItem<T extends Ownable & { createdAt?: string | null; province?: string | null }>(
@@ -186,31 +316,17 @@ function addUserItem<T extends Ownable & { createdAt?: string | null; province?:
 ) {
   const { userKey, userName } = resolveUserKey(item);
   const province = resolveProvince(item);
+  const { ministry } = resolveMinistry(item);
   const current = map.get(userKey) ?? {
     ...emptyMetrics(),
     userName,
     provinceCounts: new Map<string, number>(),
+    ministryCounts: new Map<string, number>(),
   };
 
-  current[field]++;
-  current.totalUploads++;
-  current.score += SCORE_WEIGHTS[field];
-  if (typeof item.score === "number" && Number.isFinite(item.score)) {
-    current.ratingScore += item.score;
-  }
-
-  if (field === "billboards") {
-    const area = Number((item as { areaSqm?: number | null }).areaSqm || 0);
-    if (Number.isFinite(area) && area > 0) {
-      current.totalAreaSqm += area;
-    }
-  }
-
-  if (countsAsTodayUpload(item, field)) {
-    current.todayUploads++;
-  }
-
+  applyMetric(current, item, field);
   current.provinceCounts.set(province, (current.provinceCounts.get(province) ?? 0) + 1);
+  current.ministryCounts.set(ministry, (current.ministryCounts.get(ministry) ?? 0) + 1);
   map.set(userKey, current);
 }
 
@@ -262,6 +378,70 @@ export function buildProvinceLeaderboard(data: PublicCampaignData): ProvinceLead
     .map((entry, index) => ({ ...entry, rank: index + 1 }));
 }
 
+export function buildMinistryLeaderboard(data: PublicCampaignData): MinistryLeaderboardEntry[] {
+  const map = new Map<string, ProvinceLeaderboardMetrics & { ministry: string }>();
+
+  collectLeaderboardItems(data, (items, field) => {
+    for (const item of items) addMinistryItem(map, item, field);
+  });
+
+  return [...map.entries()]
+    .map(([ministryKey, metrics]) => ({
+      ministryKey,
+      ministry: metrics.ministry,
+      billboards: metrics.billboards,
+      posters: metrics.posters,
+      videos: metrics.videos,
+      socialPosts: metrics.socialPosts,
+      sitePublications: metrics.sitePublications,
+      activities: metrics.activities,
+      files: metrics.files,
+      todayUploads: metrics.todayUploads,
+      totalUploads: metrics.totalUploads,
+      score: metrics.score,
+      ratingScore: metrics.ratingScore,
+      totalAreaSqm: metrics.totalAreaSqm,
+      rank: 0,
+    }))
+    .sort((a, b) => b.score - a.score || b.totalUploads - a.totalUploads)
+    .map((entry, index) => ({ ...entry, rank: index + 1 }));
+}
+
+export function buildOrganizationLeaderboard(
+  data: PublicCampaignData
+): OrganizationLeaderboardEntry[] {
+  const map = new Map<
+    string,
+    ProvinceLeaderboardMetrics & { organization: string; ministry: string }
+  >();
+
+  collectLeaderboardItems(data, (items, field) => {
+    for (const item of items) addOrganizationItem(map, item, field);
+  });
+
+  return [...map.entries()]
+    .map(([organizationKey, metrics]) => ({
+      organizationKey,
+      organization: metrics.organization,
+      ministry: metrics.ministry,
+      billboards: metrics.billboards,
+      posters: metrics.posters,
+      videos: metrics.videos,
+      socialPosts: metrics.socialPosts,
+      sitePublications: metrics.sitePublications,
+      activities: metrics.activities,
+      files: metrics.files,
+      todayUploads: metrics.todayUploads,
+      totalUploads: metrics.totalUploads,
+      score: metrics.score,
+      ratingScore: metrics.ratingScore,
+      totalAreaSqm: metrics.totalAreaSqm,
+      rank: 0,
+    }))
+    .sort((a, b) => b.score - a.score || b.totalUploads - a.totalUploads)
+    .map((entry, index) => ({ ...entry, rank: index + 1 }));
+}
+
 export function buildUserLeaderboard(data: PublicCampaignData): UserLeaderboardEntry[] {
   const map = new Map<string, UserAccumulator>();
 
@@ -274,6 +454,7 @@ export function buildUserLeaderboard(data: PublicCampaignData): UserLeaderboardE
       userKey,
       userName: metrics.userName,
       province: resolvePrimaryProvince(metrics.provinceCounts),
+      ministry: resolvePrimaryLabel(metrics.ministryCounts, "بدون وزارتخانه"),
       billboards: metrics.billboards,
       posters: metrics.posters,
       videos: metrics.videos,
@@ -368,12 +549,26 @@ export function collectUserContentItems(
 
 export function collectLeaderboardBillboards(
   data: PublicCampaignData,
-  filter: { provinceKey?: string; userKey?: string }
+  filter: {
+    provinceKey?: string;
+    ministryKey?: string;
+    organizationKey?: string;
+    userKey?: string;
+  }
 ): Billboard[] {
   if (!data.sections.billboards) return [];
 
   return data.billboards.filter((item) => {
     if (filter.provinceKey && resolveProvince(item) !== filter.provinceKey) return false;
+    if (filter.ministryKey && resolveMinistry(item).ministryKey !== filter.ministryKey) {
+      return false;
+    }
+    if (
+      filter.organizationKey &&
+      resolveOrganization(item).organizationKey !== filter.organizationKey
+    ) {
+      return false;
+    }
     if (filter.userKey && !resolveUserKeyMatch(item, filter.userKey)) return false;
     return true;
   });
@@ -392,6 +587,20 @@ export function buildProvinceContributorLeaderboard(
   };
 
   collectLeaderboardItems(data, addAll);
+
+  return [...map.values()]
+    .sort((a, b) => b.score - a.score || b.totalUploads - a.totalUploads)
+    .map((entry, index) => ({ ...entry, rank: index + 1 }));
+}
+
+export function buildMinistryContributorLeaderboard(
+  data: PublicCampaignData
+): MinistryContributorEntry[] {
+  const map = new Map<string, MinistryContributorEntry>();
+
+  collectLeaderboardItems(data, (items, field) => {
+    for (const item of items) addMinistryContributor(map, item, field);
+  });
 
   return [...map.values()]
     .sort((a, b) => b.score - a.score || b.totalUploads - a.totalUploads)
