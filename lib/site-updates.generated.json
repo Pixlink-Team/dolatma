@@ -1,6 +1,18 @@
 {
   "entries": [
     {
+      "hash": "e6e3f0c936a70e17bfdeb3761393179aeef279b2",
+      "committedAt": "2026-07-17T23:20:04+03:30",
+      "title": "ارسال دستورکار وزارتخانه‌ای بر اساس استان مخاطب",
+      "subject": "Match directive recipients by province for ministry audience"
+    },
+    {
+      "hash": "0a80029f74a57e3887820ad546b0f802cf582d01",
+      "committedAt": "2026-07-17T23:18:52+03:30",
+      "title": "انتخاب مخاطب دستورکار بر اساس استان به جای شهر",
+      "subject": "Target directive audience by province instead of city"
+    },
+    {
       "hash": "5529aaab0b4cedd3e917c3902ab7b7534035c2bf",
       "committedAt": "2026-07-17T23:06:10+03:30",
       "title": "امکان افزودن چند فایل اقدام با عنوان در دستورکارها",
