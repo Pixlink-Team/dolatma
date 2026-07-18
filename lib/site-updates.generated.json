@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "b6f6f49738d0832c977bedbf9c21c3d829261d9d",
+      "committedAt": "2026-07-18T09:39:33+03:30",
+      "title": "امکان مشاهده گزارش‌های قبلی و پاسخ ادمین به مشکلات",
+      "subject": "Let users see past problem reports and admin replies"
+    },
+    {
       "hash": "439fbccb2281cd33b9451c529593d6c9bea4a5a5",
       "committedAt": "2026-07-18T09:22:21+03:30",
       "title": "حذف تیرگی پس‌زمینه صفحه ورود",
