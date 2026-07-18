@@ -10,8 +10,11 @@ import type {
 } from "@/lib/audit/problem-types";
 import { PROBLEM_REPORT_CATEGORY_LABELS, PROBLEM_REPORT_STATUS_LABELS } from "@/lib/audit/problem-types";
 import { pgGetUserById } from "@/lib/db/repository-extended";
+import type { ProblemReport } from "@/lib/audit/problem-types";
 import {
   pgInsertProblemReport,
+  pgListProblemReportsByReporter,
+  pgUpdateProblemReportAdminNote,
   pgUpdateProblemReportStatus,
 } from "@/lib/db/problem-reports-repository";
 import { isPostgresConfigured } from "@/lib/utils";
@@ -103,6 +106,28 @@ export async function submitProblemReportAction(
   return { success: true };
 }
 
+export async function listMyProblemReportsAction(): Promise<{
+  success: boolean;
+  reports?: ProblemReport[];
+  error?: string;
+}> {
+  const session = await getAuthSession();
+  if (!session) {
+    return { success: false, error: "برای مشاهده گزارش‌ها باید وارد شوید" };
+  }
+  if (!isPostgresConfigured()) {
+    return { success: false, error: "دیتابیس فعال نیست" };
+  }
+
+  const reports = await pgListProblemReportsByReporter({
+    reporterUserId: session.userId,
+    reporterType: session.type === "env_admin" ? "env_admin" : null,
+    limit: 50,
+  });
+
+  return { success: true, reports };
+}
+
 export async function updateProblemReportStatusAction(input: {
   id: string;
   status: ProblemReportStatus;
@@ -151,5 +176,53 @@ export async function updateProblemReportStatusAction(input: {
   } catch (error) {
     console.error("updateProblemReportStatusAction failed:", error);
     return { success: false, error: "خطا در به‌روزرسانی گزارش" };
+  }
+}
+
+export async function replyToProblemReportAction(input: {
+  id: string;
+  adminNote: string;
+}): Promise<{ success: boolean; error?: string }> {
+  try {
+    const session = await getAuthSession();
+    if (!session || !isFullAdmin(session)) {
+      return { success: false, error: "فقط ادمین می‌تواند پاسخ دهد" };
+    }
+    if (!isPostgresConfigured()) {
+      return { success: false, error: "دیتابیس فعال نیست" };
+    }
+    if (!input.id?.trim()) {
+      return { success: false, error: "شناسه گزارش نامعتبر است" };
+    }
+
+    const note = input.adminNote?.trim() ?? "";
+    if (note.length < 2) {
+      return { success: false, error: "متن پاسخ را بنویسید" };
+    }
+
+    const updated = await pgUpdateProblemReportAdminNote({
+      id: input.id.trim(),
+      adminNote: note.slice(0, 4000),
+      markInProgressIfPending: true,
+    });
+
+    if (!updated) {
+      return { success: false, error: "گزارش یافت نشد یا به‌روزرسانی نشد" };
+    }
+
+    await logAuditForSession(session, {
+      category: "admin",
+      action: "problem.reply",
+      entityType: "problem_report",
+      entityId: updated.id,
+      label: updated.title,
+      metadata: { status: updated.status },
+    });
+
+    revalidatePath("/admin/audit");
+    return { success: true };
+  } catch (error) {
+    console.error("replyToProblemReportAction failed:", error);
+    return { success: false, error: "خطا در ارسال پاسخ" };
   }
 }

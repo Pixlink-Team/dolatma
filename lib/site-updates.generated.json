@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "439fbccb2281cd33b9451c529593d6c9bea4a5a5",
+      "committedAt": "2026-07-18T09:22:21+03:30",
+      "title": "حذف تیرگی پس‌زمینه صفحه ورود",
+      "subject": "Remove dark overlay from login background"
+    },
+    {
       "hash": "e6e3f0c936a70e17bfdeb3761393179aeef279b2",
       "committedAt": "2026-07-17T23:20:04+03:30",
       "title": "ارسال دستورکار وزارتخانه‌ای بر اساس استان مخاطب",

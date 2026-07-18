@@ -122,6 +122,41 @@ export async function pgCountOpenProblemReports(): Promise<number> {
   return Number(rows[0]?.count ?? 0);
 }
 
+export async function pgListProblemReportsByReporter(options: {
+  reporterUserId?: string | null;
+  reporterType?: ProblemReport["reporterType"] | null;
+  limit?: number;
+}): Promise<ProblemReport[]> {
+  if (!isPostgresConfigured()) return [];
+
+  const reporterUserId = options.reporterUserId?.trim() || null;
+  const reporterType = options.reporterType ?? null;
+  if (!reporterUserId && !reporterType) return [];
+
+  const sql = getSql();
+  const limit = Math.min(Math.max(options.limit ?? 50, 1), 100);
+
+  const rows = await sql`
+    SELECT *
+    FROM user_problem_reports
+    WHERE
+      (
+        ${reporterUserId}::uuid IS NOT NULL
+        AND reporter_user_id = ${reporterUserId}::uuid
+      )
+      OR (
+        ${reporterUserId}::uuid IS NULL
+        AND ${reporterType}::text IS NOT NULL
+        AND reporter_type = ${reporterType}
+        AND reporter_user_id IS NULL
+      )
+    ORDER BY created_at DESC
+    LIMIT ${limit}
+  `;
+
+  return rows.map((row) => mapReportRow(row as Record<string, unknown>));
+}
+
 export async function pgUpdateProblemReportStatus(input: {
   id: string;
   status: ProblemReportStatus;
@@ -166,6 +201,40 @@ export async function pgUpdateProblemReportStatus(input: {
     return rows[0] ? mapReportRow(rows[0] as Record<string, unknown>) : null;
   } catch (error) {
     console.error("pgUpdateProblemReportStatus failed:", error);
+    throw error;
+  }
+}
+
+export async function pgUpdateProblemReportAdminNote(input: {
+  id: string;
+  adminNote: string;
+  /** When true, pending reports move to in_progress. */
+  markInProgressIfPending?: boolean;
+}): Promise<ProblemReport | null> {
+  if (!isPostgresConfigured()) return null;
+
+  const sql = getSql();
+  const adminNote = input.adminNote.trim();
+  if (!adminNote) return null;
+
+  try {
+    const rows = await sql`
+      UPDATE user_problem_reports
+      SET
+        admin_note = ${adminNote},
+        status = CASE
+          WHEN ${input.markInProgressIfPending ?? true}
+            AND status = 'pending'
+          THEN 'in_progress'
+          ELSE status
+        END,
+        updated_at = now()
+      WHERE id = ${input.id}::uuid
+      RETURNING *
+    `;
+    return rows[0] ? mapReportRow(rows[0] as Record<string, unknown>) : null;
+  } catch (error) {
+    console.error("pgUpdateProblemReportAdminNote failed:", error);
     throw error;
   }
 }

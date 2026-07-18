@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { updateProblemReportStatusAction } from "@/lib/actions/problem-report-actions";
+import { updateProblemReportStatusAction, replyToProblemReportAction } from "@/lib/actions/problem-report-actions";
 import {
   PROBLEM_REPORT_CATEGORY_LABELS,
   PROBLEM_REPORT_STATUS_LABELS,
@@ -92,6 +92,28 @@ export function AuditProblemsPanel({
     } catch (error) {
       console.error("handleStatus failed:", error);
       toast.error("خطا در به‌روزرسانی گزارش");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const handleReply = async (id: string, fallbackNote?: string) => {
+    const note = (notes[id] ?? fallbackNote ?? "").trim();
+    if (note.length < 2) {
+      toast.error("متن پاسخ را بنویسید");
+      return;
+    }
+    setBusyId(id);
+    try {
+      const result = await replyToProblemReportAction({ id, adminNote: note });
+      if (!result.success) {
+        toast.error(result.error ?? "ارسال پاسخ ناموفق بود");
+        return;
+      }
+      toast.success("پاسخ برای کاربر ارسال شد");
+    } catch (error) {
+      console.error("handleReply failed:", error);
+      toast.error("خطا در ارسال پاسخ");
     } finally {
       setBusyId(null);
     }
@@ -230,15 +252,15 @@ export function AuditProblemsPanel({
                 )}
 
                 {report.adminNote && (
-                  <div className="rounded-md bg-muted/50 px-3 py-2 text-sm">
-                    <span className="font-medium">یادداشت ادمین: </span>
+                  <div className="rounded-md bg-primary/5 border border-primary/10 px-3 py-2 text-sm">
+                    <span className="font-medium">پاسخ به کاربر: </span>
                     {report.adminNote}
                   </div>
                 )}
 
                 <div className="space-y-2">
                   <Textarea
-                    placeholder="یادداشت رسیدگی (اختیاری)…"
+                    placeholder="پاسخ به کاربر (برای گزارش‌دهنده قابل مشاهده است)…"
                     value={notes[report.id] ?? report.adminNote ?? ""}
                     onChange={(event) =>
                       setNotes((prev) => ({ ...prev, [report.id]: event.target.value }))
@@ -246,6 +268,19 @@ export function AuditProblemsPanel({
                     className="min-h-[70px]"
                   />
                   <div className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      disabled={busyId === report.id}
+                      onClick={() => handleReply(report.id, report.adminNote ?? "")}
+                      data-audit-label="ارسال پاسخ گزارش مشکل"
+                    >
+                      {busyId === report.id ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : null}
+                      ارسال پاسخ
+                    </Button>
                     <Button
                       type="button"
                       size="sm"

@@ -26,6 +26,7 @@ const ACTION_LABELS: Record<string, string> = {
   "profile.update": "ویرایش پروفایل",
   "problem.report": "گزارش مشکل",
   "problem.triage": "رسیدگی به گزارش مشکل",
+  "problem.reply": "پاسخ به گزارش مشکل",
 };
 
 const ENTITY_LABELS: Record<string, string> = {
