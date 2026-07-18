@@ -3,6 +3,7 @@ import { getPublicCampaignData } from "@/lib/data-access/campaign";
 import { CityLeaderboardDashboard } from "@/components/public/city-leaderboard-dashboard";
 import { CampaignPageUnlock } from "@/components/public/campaign-page-unlock";
 import { canScoreContent } from "@/lib/auth/access";
+import { resolveCampaignAuthViewer } from "@/lib/auth/campaign-viewer";
 import { getAuthSession } from "@/lib/auth/get-session";
 import { isCampaignPageUnlocked } from "@/lib/campaign-page-unlock";
 import { pgGetPublishedCampaignBySlug } from "@/lib/db/repository";
@@ -28,6 +29,7 @@ export default async function CityLeaderboardPage({ params }: CityLeaderboardPag
   }
 
   const session = await getAuthSession();
+  const authViewer = await resolveCampaignAuthViewer(session);
   const canBypassPassword = Boolean(session && canScoreContent(session));
   const unlocked =
     !pagePasswordHash ||
@@ -35,11 +37,11 @@ export default async function CityLeaderboardPage({ params }: CityLeaderboardPag
     (await isCampaignPageUnlocked(slug, pagePasswordHash));
 
   if (pagePasswordHash && !unlocked) {
-    return <CampaignPageUnlock slug={slug} title={lockedTitle} />;
+    return <CampaignPageUnlock slug={slug} title={lockedTitle} authViewer={authViewer} />;
   }
 
   const data = await getPublicCampaignData(slug);
   if (!data) notFound();
 
-  return <CityLeaderboardDashboard data={data} slug={slug} />;
+  return <CityLeaderboardDashboard data={data} slug={slug} authViewer={authViewer} />;
 }

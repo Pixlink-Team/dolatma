@@ -8,13 +8,20 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { CampaignAuthChip } from "@/components/public/campaign-auth-chip";
+import type { CampaignAuthViewer } from "@/lib/auth/campaign-viewer";
 
 interface CampaignPageUnlockProps {
   slug: string;
   title: string;
+  authViewer?: CampaignAuthViewer | null;
 }
 
-export function CampaignPageUnlock({ slug, title }: CampaignPageUnlockProps) {
+export function CampaignPageUnlock({
+  slug,
+  title,
+  authViewer = null,
+}: CampaignPageUnlockProps) {
   const router = useRouter();
   const [password, setPassword] = useState("");
   const [isPending, startTransition] = useTransition();
@@ -48,7 +55,10 @@ export function CampaignPageUnlock({ slug, title }: CampaignPageUnlockProps) {
             <p className="text-xs text-muted-foreground">صفحه اقدام</p>
             <h1 className="text-lg font-semibold">{title}</h1>
           </div>
-          <ThemeToggle />
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <CampaignAuthChip viewer={authViewer} returnPath={`/campaign/${slug}`} />
+          </div>
         </div>
       </header>
 

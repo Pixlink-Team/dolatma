@@ -5,7 +5,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowRight, RefreshCw, Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { CampaignAuthChip } from "@/components/public/campaign-auth-chip";
 import { CampaignOverviewSection } from "@/components/public/campaign-overview-section";
+import type { CampaignAuthViewer } from "@/lib/auth/campaign-viewer";
 import { BillboardSection } from "@/components/public/billboard-section";
 import { PostersSection } from "@/components/public/posters-section";
 import { VideosSection } from "@/components/public/videos-section";
@@ -41,6 +43,7 @@ interface CampaignDashboardProps {
   slug: string;
   exportMode?: boolean;
   canScore?: boolean;
+  authViewer?: CampaignAuthViewer | null;
 }
 
 function collectAllOwnerGroups(data: PublicCampaignData): DataOwnerGroup<Ownable>[] {
@@ -66,6 +69,7 @@ function CampaignDashboardBody({
   lastRefresh,
   isRefreshing,
   onRefresh,
+  authViewer,
 }: {
   data: PublicCampaignData;
   slug: string;
@@ -73,6 +77,7 @@ function CampaignDashboardBody({
   lastRefresh: Date;
   isRefreshing: boolean;
   onRefresh: () => void;
+  authViewer: CampaignAuthViewer | null;
 }) {
   const { settings, sections } = data;
   const { filter } = useOwnerLocationFilter();
@@ -106,6 +111,7 @@ function CampaignDashboardBody({
             <span data-export-hide>
               <ThemeToggle />
             </span>
+            <CampaignAuthChip viewer={authViewer} returnPath={`/campaign/${slug}`} />
             <Button variant="outline" size="sm" asChild data-export-hide>
               <Link href={`/campaign/${slug}/cities`}>
                 <Trophy className="h-4 w-4" />
@@ -288,6 +294,7 @@ export function CampaignDashboard({
   slug,
   exportMode = false,
   canScore = false,
+  authViewer = null,
 }: CampaignDashboardProps) {
   const [data, setData] = useState(initialData);
   const [lastRefresh, setLastRefresh] = useState(() => new Date(initialData.lastUpdated));
@@ -338,6 +345,7 @@ export function CampaignDashboard({
               lastRefresh={lastRefresh}
               isRefreshing={isRefreshing}
               onRefresh={refreshData}
+              authViewer={authViewer}
             />
           </OwnerLocationFilterProvider>
         </ContentScoreProvider>

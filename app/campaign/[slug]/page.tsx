@@ -4,6 +4,7 @@ import { getPublicCampaignData } from "@/lib/data-access/campaign";
 import { CampaignDashboard } from "@/components/public/campaign-dashboard";
 import { CampaignPageUnlock } from "@/components/public/campaign-page-unlock";
 import { canScoreContent } from "@/lib/auth/access";
+import { resolveCampaignAuthViewer } from "@/lib/auth/campaign-viewer";
 import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
 import { isCampaignPageUnlocked } from "@/lib/campaign-page-unlock";
 import { buildCampaignMetadata } from "@/lib/campaign-metadata";
@@ -56,6 +57,7 @@ export default async function CampaignPage({ params, searchParams }: CampaignPag
   }
 
   const session = await getAuthSession();
+  const authViewer = await resolveCampaignAuthViewer(session);
   const canBypassPassword = Boolean(session && canScoreContent(session));
   const unlocked =
     !pagePasswordHash ||
@@ -63,7 +65,7 @@ export default async function CampaignPage({ params, searchParams }: CampaignPag
     (await isCampaignPageUnlocked(slug, pagePasswordHash));
 
   if (pagePasswordHash && !unlocked) {
-    return <CampaignPageUnlock slug={slug} title={lockedTitle} />;
+    return <CampaignPageUnlock slug={slug} title={lockedTitle} authViewer={authViewer} />;
   }
 
   const data = await getPublicCampaignData(slug);
@@ -79,6 +81,7 @@ export default async function CampaignPage({ params, searchParams }: CampaignPag
       slug={slug}
       exportMode={exportMode}
       canScore={canScore}
+      authViewer={authViewer}
     />
   );
 }

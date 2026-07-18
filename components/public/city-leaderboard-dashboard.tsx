@@ -20,7 +20,9 @@ import { SectionHeader } from "@/components/public/section-header";
 import { LeaderboardBillboardsModal } from "@/components/public/leaderboard-billboards-modal";
 import { UserContentScoreModal } from "@/components/public/user-content-score-modal";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { CampaignAuthChip } from "@/components/public/campaign-auth-chip";
 import { ScrollToTopButton } from "@/components/ui/scroll-to-top-button";
+import type { CampaignAuthViewer } from "@/lib/auth/campaign-viewer";
 import {
   buildMinistryContributorLeaderboard,
   buildMinistryLeaderboard,
@@ -46,6 +48,7 @@ type LeaderboardView = "ministry" | "organization" | "user" | "rating" | "provin
 interface CityLeaderboardDashboardProps {
   data: PublicCampaignData;
   slug: string;
+  authViewer?: CampaignAuthViewer | null;
 }
 
 const SECTION_HREF_BY_METRIC_LABEL: Record<string, string> = {
@@ -367,7 +370,11 @@ function getEntryKey(
   }
 }
 
-export function CityLeaderboardDashboard({ data, slug }: CityLeaderboardDashboardProps) {
+export function CityLeaderboardDashboard({
+  data,
+  slug,
+  authViewer = null,
+}: CityLeaderboardDashboardProps) {
   const { settings } = data;
   const [view, setView] = useState<LeaderboardView>("ministry");
   const [selectedUser, setSelectedUser] = useState<UserLeaderboardEntry | null>(null);
@@ -454,6 +461,7 @@ export function CityLeaderboardDashboard({ data, slug }: CityLeaderboardDashboar
           </div>
           <div className="flex items-center gap-2">
             <ThemeToggle />
+            <CampaignAuthChip viewer={authViewer} returnPath={`/campaign/${slug}/cities`} />
             <Badge variant="outline" className="gap-1">
               <Trophy className="h-3.5 w-3.5" />
               {formatPersianNumber(activeEntries.length)} {getEntityLabel(view)}

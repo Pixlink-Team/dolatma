@@ -4,7 +4,14 @@ import {
   getAdminSessionCookieName,
   verifyAdminSessionToken,
 } from "@/lib/auth/admin-session";
+import { getSafeRedirectPath } from "@/lib/auth/safe-redirect";
 import { isPostgresConfigured, isSupabaseConfigured } from "@/lib/utils";
+
+function redirectAuthenticatedAwayFromLogin(request: NextRequest) {
+  const next = getSafeRedirectPath(request.nextUrl.searchParams.get("next"));
+  const url = new URL(next, request.nextUrl.origin);
+  return NextResponse.redirect(url);
+}
 
 function handleEnvAdminAuth(request: NextRequest) {
   return verifyAdminSessionToken(request.cookies.get(getAdminSessionCookieName())?.value).then(
@@ -20,9 +27,7 @@ function handleEnvAdminAuth(request: NextRequest) {
       }
 
       if (request.nextUrl.pathname === "/admin/login" && isAuthenticated) {
-        const url = request.nextUrl.clone();
-        url.pathname = "/admin";
-        return NextResponse.redirect(url);
+        return redirectAuthenticatedAwayFromLogin(request);
       }
 
       return NextResponse.next({ request });
@@ -71,9 +76,7 @@ export async function updateSession(request: NextRequest) {
   }
 
   if (request.nextUrl.pathname === "/admin/login" && user) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/admin";
-    return NextResponse.redirect(url);
+    return redirectAuthenticatedAwayFromLogin(request);
   }
 
   return supabaseResponse;
