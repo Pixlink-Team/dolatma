@@ -105,7 +105,8 @@ export async function POST(request: Request) {
     province = province || user.province || null;
     city = city || user.city || null;
   } else if (fullAdmin && !billboardId) {
-    ownerUserId = await resolveDefaultAdminOwnerUserId();
+    const explicitOwner = String(formData.get("ownerUserId") ?? "").trim();
+    ownerUserId = explicitOwner || (await resolveDefaultAdminOwnerUserId());
   }
 
   const address = String(formData.get("address") ?? "").trim() || undefined;

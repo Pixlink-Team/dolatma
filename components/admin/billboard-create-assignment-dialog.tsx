@@ -58,6 +58,21 @@ interface ContributorProfile {
   name: string;
 }
 
+export interface BillboardCreateInitialValues {
+  axis?: string;
+  address?: string;
+  province?: string;
+  city?: string;
+  notes?: string;
+  category?: BillboardCategory;
+  periods?: Array<{
+    title?: string;
+    startDate: string;
+    endDate: string;
+    existingBillboardImageUrl?: string | null;
+  }>;
+}
+
 interface BillboardCreateAssignmentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -68,8 +83,17 @@ interface BillboardCreateAssignmentDialogProps {
   mode: "admin" | "client";
   contributorProfile?: ContributorProfile | null;
   editingBillboard?: Billboard | null;
+  /** Prefill for create mode (e.g. bulk Excel import). Ignored when editing. */
+  initialValues?: BillboardCreateInitialValues | null;
+  /** Stable key so advancing bulk queue reloads the form. */
+  initialValuesKey?: string | null;
+  /** Admin-only: assign content to this user on create. */
+  ownerUserId?: string | null;
   highlightFields?: EditSuggestionMissingField[];
   onCreated?: () => void;
+  /** Optional skip control for bulk import queue. */
+  onSkip?: () => void;
+  skipLabel?: string;
 }
 
 function periodsToDrafts(periods: BillboardDisplayPeriod[]): DisplayPeriodDraft[] {
@@ -112,8 +136,13 @@ export function BillboardCreateAssignmentDialog({
   mode,
   contributorProfile = null,
   editingBillboard = null,
+  initialValues = null,
+  initialValuesKey = null,
+  ownerUserId = null,
   highlightFields = [],
   onCreated,
+  onSkip,
+  skipLabel = "رد کردن",
 }: BillboardCreateAssignmentDialogProps) {
   const [isPending, startTransition] = useTransition();
   const [province, setProvince] = useState("");
@@ -192,27 +221,43 @@ export function BillboardCreateAssignmentDialog({
         return;
       }
 
-      const profileProvince = contributorProfile?.province ?? "";
-      const profileCity = contributorProfile?.city ?? "";
+      const profileProvince = initialValues?.province || contributorProfile?.province || "";
+      const profileCity = initialValues?.city || contributorProfile?.city || "";
       const resolved = resolveLocationNames(profileProvince, profileCity);
       const center = getLocationCenter(resolved.province, resolved.city);
 
       setProvince(resolved.province);
       setCity(resolved.city);
-      setCategory("billboard");
-      setAxis("");
+      setCategory(initialValues?.category || "billboard");
+      setAxis(initialValues?.axis?.trim() || "");
       setAreaSqm("");
-      setAddress("");
-      setNotes("");
+      setAddress(initialValues?.address?.trim() || "");
+      setNotes(initialValues?.notes?.trim() || "");
       setPlanLabels([]);
       setEditScore(null);
       setCoords({ latitude: center.lat, longitude: center.lng });
       setMapCenter({ lat: center.lat, lng: center.lng, revision: Date.now() });
-      setPeriods([createDisplayPeriod()]);
+
+      if (initialValues?.periods && initialValues.periods.length > 0) {
+        setPeriods(
+          initialValues.periods.map((period) => ({
+            id: crypto.randomUUID(),
+            title: period.title ?? "",
+            startDate: period.startDate,
+            endDate: period.endDate,
+            imageFile: null,
+            billboardImageFile: null,
+            existingBillboardImageUrl: period.existingBillboardImageUrl ?? null,
+            existingConfirmationImageUrl: null,
+          }))
+        );
+      } else {
+        setPeriods([createDisplayPeriod()]);
+      }
     };
 
     void loadForm();
-  }, [open, contributorProfile, editingBillboard]);
+  }, [open, contributorProfile, editingBillboard, initialValues, initialValuesKey]);
 
   const handleLocationCenterChange = (center: { lat: number; lng: number }) => {
     setMapCenter({ lat: center.lat, lng: center.lng, revision: Date.now() });
@@ -254,6 +299,9 @@ export function BillboardCreateAssignmentDialog({
       if (resolvedProvince) formData.append("province", resolvedProvince);
       if (resolvedCity) formData.append("city", resolvedCity);
       if (notes.trim()) formData.append("notes", notes.trim());
+      if (!editingBillboard?.id && ownerUserId) {
+        formData.append("ownerUserId", ownerUserId);
+      }
       formData.append("published", "true");
       formData.append("status", "published");
       for (const label of planLabels) {
@@ -275,8 +323,8 @@ export function BillboardCreateAssignmentDialog({
       }
 
       toast.success(isEditing ? "تبلیغات محیطی ویرایش شد" : "تبلیغات محیطی جدید ثبت شد");
-      onOpenChange(false);
       onCreated?.();
+      onOpenChange(false);
     });
   };
 
@@ -286,9 +334,11 @@ export function BillboardCreateAssignmentDialog({
         <DialogHeader>
           <DialogTitle>{isEditing ? "ویرایش تبلیغات محیطی" : "ثبت تبلیغات محیطی جدید"}</DialogTitle>
           <p className="text-sm text-muted-foreground">
-            {contributorProfile?.province && contributorProfile?.city && !isEditing
-              ? `استان و شهر از پروفایل ${contributorProfile.name} پر شده‌اند.`
-              : "استان و شهر را انتخاب کنید تا نقشه به همان موقعیت برود."}
+            {initialValues
+              ? "داده‌های Excel پر شده‌اند؛ بقیه فیلدها (مثل موقعیت دقیق روی نقشه) را تکمیل کنید."
+              : contributorProfile?.province && contributorProfile?.city && !isEditing
+                ? `استان و شهر از پروفایل ${contributorProfile.name} پر شده‌اند.`
+                : "استان و شهر را انتخاب کنید تا نقشه به همان موقعیت برود."}
             {" "}می‌توانید چند دوره نمایش اضافه کنید.
           </p>
         </DialogHeader>
@@ -422,18 +472,31 @@ export function BillboardCreateAssignmentDialog({
             highlightMedia={highlightMedia}
           />
 
-          <Button type="button" className="w-full" disabled={isPending} onClick={handleSubmit}>
-            {isPending ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                در حال ذخیره...
-              </>
-            ) : isEditing ? (
-              "ذخیره تغییرات"
-            ) : (
-              "ثبت تبلیغات محیطی"
-            )}
-          </Button>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            {onSkip ? (
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full sm:w-auto"
+                disabled={isPending}
+                onClick={onSkip}
+              >
+                {skipLabel}
+              </Button>
+            ) : null}
+            <Button type="button" className="w-full" disabled={isPending} onClick={handleSubmit}>
+              {isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  در حال ذخیره...
+                </>
+              ) : isEditing ? (
+                "ذخیره تغییرات"
+              ) : (
+                "ثبت تبلیغات محیطی"
+              )}
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

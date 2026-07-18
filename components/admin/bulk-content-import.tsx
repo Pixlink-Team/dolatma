@@ -2,14 +2,11 @@
 
 import { useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { FileSpreadsheet, Layers, Loader2, SkipForward, Upload } from "lucide-react";
+import { FileSpreadsheet, Layers, Loader2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -18,58 +15,32 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useAdminCampaign } from "@/components/admin/admin-campaign-provider";
-import { MediaUpload } from "@/components/ui/media-upload";
-import { PersianDateInput } from "@/components/ui/persian-date-input";
-import { saveBillboardAction } from "@/lib/actions/admin-actions";
-import { saveCampaignActivityAction, saveSocialPostAction } from "@/lib/actions/extended-actions";
-import { getActivityTypeLabel } from "@/lib/activity-types";
-import { getSocialPlatformLabel } from "@/components/public/social-platform-icon";
+import { BillboardCreateAssignmentDialog } from "@/components/admin/billboard-create-assignment-dialog";
+import { SocialPostFormDialog } from "@/components/admin/social-post-form-dialog";
+import { ActivityFormDialog } from "@/components/admin/activity-form-dialog";
 import type { ContentPackageDraftItem } from "@/lib/services/content-package-parser";
-import type { AdminUser, SocialPlatform, SocialPostPlatform } from "@/lib/types";
+import type { AdminUser } from "@/lib/types";
 import { stripFileAccessToken } from "@/lib/uploads";
-
-const socialPlatforms: SocialPostPlatform[] = [
-  "instagram",
-  "x",
-  "telegram",
-  "linkedin",
-  "youtube",
-  "aparat",
-  "rubika",
-  "eitaa",
-  "soroush",
-  "bale",
-  "site",
-  "other",
-];
-
-const contentTypeLabels: Record<ContentPackageDraftItem["contentType"], string> = {
-  billboard: "تبلیغات محیطی",
-  social: "شبکه اجتماعی / سایت",
-  activity: "اقدام",
-};
 
 interface BulkContentImportProps {
   users: AdminUser[];
 }
 
-type EditableDraft = ContentPackageDraftItem;
-
 export function BulkContentImport({ users }: BulkContentImportProps) {
   const router = useRouter();
   const { campaignId, currentCampaign } = useAdminCampaign();
   const zipRef = useRef<HTMLInputElement>(null);
+  const closingByFinishRef = useRef(false);
+  const advancingRef = useRef(false);
 
   const [ownerUserId, setOwnerUserId] = useState("");
   const [parsing, setParsing] = useState(false);
-  const [drafts, setDrafts] = useState<EditableDraft[]>([]);
+  const [drafts, setDrafts] = useState<ContentPackageDraftItem[]>([]);
   const [index, setIndex] = useState(0);
   const [reviewOpen, setReviewOpen] = useState(false);
-  const [current, setCurrent] = useState<EditableDraft | null>(null);
   const [savedCount, setSavedCount] = useState(0);
   const [skippedCount, setSkippedCount] = useState(0);
   const [isPending, startTransition] = useTransition();
-  const closingByFinishRef = useRef(false);
 
   const ownerOptions = useMemo(
     () =>
@@ -78,15 +49,28 @@ export function BulkContentImport({ users }: BulkContentImportProps) {
   );
 
   const selectedOwner = ownerOptions.find((user) => user.id === ownerUserId) ?? null;
+  const current = reviewOpen && drafts[index] ? drafts[index] : null;
+  const queueLabel = current ? `مورد ${index + 1} از ${drafts.length}` : undefined;
 
   const resetWizard = () => {
     setDrafts([]);
     setIndex(0);
-    setCurrent(null);
     setReviewOpen(false);
     setSavedCount(0);
     setSkippedCount(0);
     if (zipRef.current) zipRef.current.value = "";
+  };
+
+  const finishIfDone = (nextSaved: number, nextSkipped: number, nextIndex: number) => {
+    if (nextIndex >= drafts.length) {
+      closingByFinishRef.current = true;
+      setReviewOpen(false);
+      toast.success(`افزودن گروهی تمام شد — ثبت: ${nextSaved} | رد شده: ${nextSkipped}`);
+      startTransition(() => router.refresh());
+      resetWizard();
+      return;
+    }
+    setIndex(nextIndex);
   };
 
   const handleParseZip = async (file: File) => {
@@ -113,7 +97,7 @@ export function BulkContentImport({ users }: BulkContentImportProps) {
         return;
       }
 
-      const items = (result.drafts ?? []) as EditableDraft[];
+      const items = (result.drafts ?? []) as ContentPackageDraftItem[];
       if (items.length === 0) {
         toast.error("موردی برای ورود پیدا نشد");
         return;
@@ -127,9 +111,8 @@ export function BulkContentImport({ users }: BulkContentImportProps) {
       setSavedCount(0);
       setSkippedCount(0);
       setIndex(0);
-      setCurrent({ ...items[0] });
       setReviewOpen(true);
-      toast.success(`${items.length} مورد آماده تأیید شد`);
+      toast.success(`${items.length} مورد آماده تأیید شد — مودال بخش مربوطه باز می‌شود`);
     } catch {
       toast.error("خطا در آپلود ZIP");
     } finally {
@@ -138,110 +121,37 @@ export function BulkContentImport({ users }: BulkContentImportProps) {
     }
   };
 
-  const finishIfDone = (nextSaved: number, nextSkipped: number, nextIndex: number) => {
-    if (nextIndex >= drafts.length) {
-      closingByFinishRef.current = true;
-      setReviewOpen(false);
-      setCurrent(null);
-      toast.success(`افزودن گروهی تمام شد — ثبت: ${nextSaved} | رد شده: ${nextSkipped}`);
-      startTransition(() => router.refresh());
-      resetWizard();
-      return;
-    }
-    setIndex(nextIndex);
-    setCurrent({ ...drafts[nextIndex] });
-  };
-
   const handleSkip = () => {
+    advancingRef.current = true;
     const nextSkipped = skippedCount + 1;
     setSkippedCount(nextSkipped);
     finishIfDone(savedCount, nextSkipped, index + 1);
   };
 
-  const handleSave = () => {
-    if (!current || !ownerUserId || !campaignId) return;
+  const handleSaved = () => {
+    advancingRef.current = true;
+    const nextSaved = savedCount + 1;
+    setSavedCount(nextSaved);
+    finishIfDone(nextSaved, skippedCount, index + 1);
+  };
 
-    const title = current.title.trim();
-    if (!title) {
-      toast.error("عنوان الزامی است");
+  const handleDialogOpenChange = (open: boolean) => {
+    if (open) {
+      setReviewOpen(true);
       return;
     }
-    if (!current.imageUrl.trim()) {
-      toast.error("تصویر الزامی است");
+    if (closingByFinishRef.current || advancingRef.current) {
+      closingByFinishRef.current = false;
+      advancingRef.current = false;
       return;
     }
-
-    startTransition(async () => {
-      const imageUrl = stripFileAccessToken(current.imageUrl);
-      const location = current.location.trim();
-      const displayTitle = location ? `${title} — ${location}` : title;
-
-      let result: { success?: boolean; error?: string } | undefined;
-
-      if (current.contentType === "billboard") {
-        result = await saveBillboardAction({
-          campaignId,
-          ownerUserId,
-          title: displayTitle,
-          description: current.description.trim() || "نصب طرح گرافیکی",
-          province: current.province.trim() || null,
-          city: current.city.trim() || selectedOwner?.city || "تهران",
-          location: location || current.city || "تهران",
-          date: current.date,
-          thumbnailUrl: imageUrl,
-          imageUrl,
-          externalUrl: "",
-          status: "published",
-          tags: current.device ? [current.device] : [],
-          published: true,
-        });
-      } else if (current.contentType === "social") {
-        const platform = current.platform ?? "other";
-        result = await saveSocialPostAction({
-          campaignId,
-          ownerUserId,
-          platform,
-          title: displayTitle,
-          coverImageUrl: imageUrl,
-          mediaUrl: imageUrl,
-          description: current.description.trim() || location || null,
-          link: "",
-          contentType: "image",
-          views: 0,
-          likes: 0,
-          comments: 0,
-          shares: 0,
-          publishedDate: current.date,
-          published: true,
-        });
-      } else {
-        result = await saveCampaignActivityAction({
-          campaignId,
-          ownerUserId,
-          title: displayTitle,
-          activityType: "field",
-          activityDate: current.date,
-          location: location || current.city || "تهران",
-          imageUrl,
-          mediaItems: [{ id: crypto.randomUUID(), type: "image", url: imageUrl }],
-          description: current.description.trim() || "انتشار طرح گرافیکی",
-          published: true,
-        });
-      }
-
-      if (!result?.success) {
-        toast.error(result?.error ?? "ثبت مورد ناموفق بود");
-        return;
-      }
-
-      const nextSaved = savedCount + 1;
-      setSavedCount(nextSaved);
-      toast.success(`ثبت شد (${nextSaved} از ${drafts.length})`);
-      finishIfDone(nextSaved, skippedCount, index + 1);
-    });
+    toast.message("افزودن گروهی لغو شد");
+    resetWizard();
   };
 
   if (!currentCampaign) return null;
+
+  const imageUrl = current ? stripFileAccessToken(current.imageUrl) : "";
 
   return (
     <>
@@ -255,8 +165,9 @@ export function BulkContentImport({ users }: BulkContentImportProps) {
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">
             یک ZIP شامل <span className="font-medium">فهرست.xlsx</span> و پوشه{" "}
-            <span className="font-medium">images</span> آپلود کنید. برای هر ردیف مودال تأیید باز
-            می‌شود تا ویرایش یا رد کنید، بعد ثبت شود.
+            <span className="font-medium">images</span> آپلود کنید. برای هر ردیف، مودال همان بخش
+            (تبلیغات محیطی / شبکه اجتماعی / اقدام) باز می‌شود؛ فیلدهای Excel از قبل پر هستند و بقیه را
+            تکمیل می‌کنید.
           </p>
 
           <div className="space-y-2">
@@ -308,169 +219,82 @@ export function BulkContentImport({ users }: BulkContentImportProps) {
         </CardContent>
       </Card>
 
-      <Dialog
-        open={reviewOpen && Boolean(current)}
-        onOpenChange={(open) => {
-          if (!open) {
-            if (closingByFinishRef.current) {
-              closingByFinishRef.current = false;
-              return;
-            }
-            toast.message("افزودن گروهی لغو شد");
-            resetWizard();
-          }
-        }}
-      >
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          {current && (
-            <>
-              <DialogHeader>
-                <DialogTitle>
-                  تأیید مورد {index + 1} از {drafts.length}
-                </DialogTitle>
-              </DialogHeader>
+      {current?.contentType === "billboard" ? (
+        <BillboardCreateAssignmentDialog
+          open={reviewOpen}
+          onOpenChange={handleDialogOpenChange}
+          campaignId={campaignId}
+          contentPlans={currentCampaign.contentPlans}
+          contentTopics={currentCampaign.contentTopics}
+          mode="admin"
+          ownerUserId={ownerUserId}
+          initialValuesKey={current.key}
+          initialValues={{
+            axis: current.title,
+            address: current.location,
+            province: current.province || selectedOwner?.province || "تهران",
+            city: current.city || selectedOwner?.city || "تهران",
+            notes: current.description || current.device || "",
+            periods: [
+              {
+                title: current.location || current.title,
+                startDate: current.date,
+                endDate: current.date,
+                existingBillboardImageUrl: imageUrl,
+              },
+            ],
+          }}
+          onCreated={handleSaved}
+          onSkip={handleSkip}
+          skipLabel="رد کردن این مورد"
+        />
+      ) : null}
 
-              <div className="space-y-4">
-                <div className="rounded-lg border bg-muted/30 px-3 py-2 text-sm">
-                  <span className="text-muted-foreground">نوع: </span>
-                  {contentTypeLabels[current.contentType]}
-                  {current.contentType === "activity" ? ` (${getActivityTypeLabel("field")})` : ""}
-                  {selectedOwner ? (
-                    <>
-                      <span className="mx-2 text-muted-foreground">|</span>
-                      <span className="text-muted-foreground">مالک: </span>
-                      {selectedOwner.name}
-                    </>
-                  ) : null}
-                </div>
+      {current?.contentType === "social" ? (
+        <SocialPostFormDialog
+          open={reviewOpen}
+          onOpenChange={handleDialogOpenChange}
+          campaignId={campaignId}
+          ownerUserId={ownerUserId}
+          initialValuesKey={current.key}
+          contentPlans={currentCampaign.contentPlans}
+          contentTopics={currentCampaign.contentTopics}
+          queueLabel={queueLabel}
+          initialValues={{
+            platform: current.platform || "other",
+            title: current.title,
+            coverImageUrl: imageUrl,
+            mediaUrl: imageUrl,
+            description: current.description || current.location,
+            publishedDate: current.date,
+          }}
+          onSaved={handleSaved}
+          onSkip={handleSkip}
+        />
+      ) : null}
 
-                <div className="space-y-2">
-                  <Label>عنوان</Label>
-                  <Input
-                    value={current.title}
-                    onChange={(event) =>
-                      setCurrent((prev) => (prev ? { ...prev, title: event.target.value } : prev))
-                    }
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <Label>مکان</Label>
-                    <Input
-                      value={current.location}
-                      onChange={(event) =>
-                        setCurrent((prev) =>
-                          prev ? { ...prev, location: event.target.value } : prev
-                        )
-                      }
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>تاریخ</Label>
-                    <PersianDateInput
-                      value={current.date}
-                      onChange={(value) =>
-                        setCurrent((prev) => (prev ? { ...prev, date: value } : prev))
-                      }
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <Label>استان</Label>
-                    <Input
-                      value={current.province}
-                      onChange={(event) =>
-                        setCurrent((prev) =>
-                          prev ? { ...prev, province: event.target.value } : prev
-                        )
-                      }
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>شهر</Label>
-                    <Input
-                      value={current.city}
-                      onChange={(event) =>
-                        setCurrent((prev) => (prev ? { ...prev, city: event.target.value } : prev))
-                      }
-                    />
-                  </div>
-                </div>
-
-                {current.contentType === "social" && (
-                  <div className="space-y-2">
-                    <Label>پلتفرم</Label>
-                    <Select
-                      value={current.platform ?? "other"}
-                      onValueChange={(value) =>
-                        setCurrent((prev) =>
-                          prev
-                            ? { ...prev, platform: value as SocialPostPlatform }
-                            : prev
-                        )
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {socialPlatforms.map((platform) => (
-                          <SelectItem key={platform} value={platform}>
-                            {platform === "site"
-                              ? "سایت / پورتال"
-                              : getSocialPlatformLabel(platform as SocialPlatform)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-
-                <div className="space-y-2">
-                  <Label>توضیح</Label>
-                  <Textarea
-                    value={current.description}
-                    onChange={(event) =>
-                      setCurrent((prev) =>
-                        prev ? { ...prev, description: event.target.value } : prev
-                      )
-                    }
-                    rows={3}
-                  />
-                </div>
-
-                <MediaUpload
-                  label="تصویر"
-                  kind="image"
-                  value={current.imageUrl}
-                  onChange={(url) =>
-                    setCurrent((prev) => (prev ? { ...prev, imageUrl: url } : prev))
-                  }
-                />
-
-                <div className="flex flex-wrap justify-end gap-2 pt-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    disabled={isPending}
-                    onClick={handleSkip}
-                  >
-                    <SkipForward className="h-4 w-4" />
-                    رد کردن
-                  </Button>
-                  <Button type="button" disabled={isPending} onClick={handleSave}>
-                    {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                    تأیید و ثبت
-                  </Button>
-                </div>
-              </div>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
+      {current?.contentType === "activity" ? (
+        <ActivityFormDialog
+          open={reviewOpen}
+          onOpenChange={handleDialogOpenChange}
+          campaignId={campaignId}
+          ownerUserId={ownerUserId}
+          initialValuesKey={current.key}
+          contentPlans={currentCampaign.contentPlans}
+          contentTopics={currentCampaign.contentTopics}
+          queueLabel={queueLabel}
+          initialValues={{
+            title: current.title,
+            activityType: "field",
+            activityDate: current.date,
+            location: current.location,
+            description: current.description,
+            imageUrl,
+          }}
+          onSaved={handleSaved}
+          onSkip={handleSkip}
+        />
+      ) : null}
     </>
   );
 }
