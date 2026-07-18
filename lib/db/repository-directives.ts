@@ -121,6 +121,12 @@ function mapDirectiveRow(
     audienceMinistryName: row.audience_ministry_name
       ? String(row.audience_ministry_name)
       : null,
+    audienceOrganizationId: row.audience_organization_id
+      ? String(row.audience_organization_id)
+      : null,
+    audienceOrganizationName: row.audience_organization_name
+      ? String(row.audience_organization_name)
+      : null,
     audienceProvinces: mapAudienceProvinces(row.audience_cities),
     published: Boolean(row.published),
     publishedAt: toIsoString(row.published_at),
@@ -170,16 +176,20 @@ export async function pgListCampaignUsersForDirectives(campaignId: string): Prom
     city: string | null;
     ministryId: string | null;
     ministryName: string | null;
+    organizationId: string | null;
+    organizationName: string | null;
   }>
 > {
   const sql = getSql();
   const rows = await sql`
     SELECT
       u.id, u.name, u.email, u.role, u.region, u.phone,
-      u.province, u.city, u.ministry_id, m.name AS ministry_name
+      u.province, u.city, u.ministry_id, m.name AS ministry_name,
+      u.organization_id, o.name AS organization_name
     FROM users u
     INNER JOIN user_campaign_access uca ON uca.user_id = u.id
     LEFT JOIN ministries m ON m.id = u.ministry_id
+    LEFT JOIN ministry_organizations o ON o.id = u.organization_id
     WHERE uca.campaign_id = ${campaignId}
       AND u.role IN ('contributor', 'client', 'ministry_parent', 'sub_user')
     ORDER BY u.name ASC
@@ -196,6 +206,9 @@ export async function pgListCampaignUsersForDirectives(campaignId: string): Prom
     city: typeof row.city === "string" && row.city.trim() ? String(row.city).trim() : null,
     ministryId: row.ministry_id ? String(row.ministry_id) : null,
     ministryName: typeof row.ministry_name === "string" ? String(row.ministry_name) : null,
+    organizationId: row.organization_id ? String(row.organization_id) : null,
+    organizationName:
+      typeof row.organization_name === "string" ? String(row.organization_name) : null,
   }));
 }
 
@@ -204,6 +217,7 @@ export async function pgResolveDirectiveAudienceUserIds(input: {
   audienceType: DirectiveAudienceType;
   audienceRegion?: UserRegion | null;
   audienceMinistryId?: string | null;
+  audienceOrganizationId?: string | null;
   audienceProvinces?: string[];
   selectedUserIds?: string[];
 }): Promise<string[]> {
@@ -222,6 +236,7 @@ export async function pgResolveDirectiveAudienceUserIds(input: {
 
   if (input.audienceType === "ministry_city") {
     const ministryId = input.audienceMinistryId?.trim();
+    const organizationId = input.audienceOrganizationId?.trim() || null;
     const provinces = (input.audienceProvinces ?? [])
       .map((province) => province.trim())
       .filter(Boolean);
@@ -231,7 +246,10 @@ export async function pgResolveDirectiveAudienceUserIds(input: {
     return users
       .filter((user) => {
         if (user.ministryId !== ministryId) return false;
-        // Parent of the ministry always receives ministry-scoped directives.
+        if (organizationId && user.organizationId !== organizationId) {
+          // Parent of the ministry still receives ministry/org-scoped directives.
+          if (user.role !== "ministry_parent") return false;
+        }
         if (user.role === "ministry_parent") return true;
         return Boolean(user.province && provinceSet.has(user.province.toLowerCase()));
       })
@@ -250,12 +268,14 @@ export async function pgListDirectivesForCampaign(
       d.*,
       creator.name AS created_by_name,
       ministry.name AS audience_ministry_name,
+      org.name AS audience_organization_name,
       COALESCE(stats.recipient_count, 0)::int AS recipient_count,
       COALESCE(stats.seen_count, 0)::int AS seen_count,
       COALESCE(stats.unseen_count, 0)::int AS unseen_count
     FROM campaign_directives d
     LEFT JOIN users creator ON creator.id = d.created_by_user_id
     LEFT JOIN ministries ministry ON ministry.id = d.audience_ministry_id
+    LEFT JOIN ministry_organizations org ON org.id = d.audience_organization_id
     LEFT JOIN LATERAL (
       SELECT
         COUNT(*)::int AS recipient_count,
@@ -286,12 +306,14 @@ export async function pgListDirectivesForUserInbox(
       d.*,
       creator.name AS created_by_name,
       ministry.name AS audience_ministry_name,
+      org.name AS audience_organization_name,
       r.confirmed,
       r.seen_at
     FROM campaign_directives d
     INNER JOIN directive_recipients r ON r.directive_id = d.id AND r.user_id = ${userId}
     LEFT JOIN users creator ON creator.id = d.created_by_user_id
     LEFT JOIN ministries ministry ON ministry.id = d.audience_ministry_id
+    LEFT JOIN ministry_organizations org ON org.id = d.audience_organization_id
     WHERE d.campaign_id = ${campaignId}
       AND d.published = true
     ORDER BY d.created_at DESC
@@ -312,12 +334,14 @@ export async function pgGetDirectiveById(id: string): Promise<CampaignDirective 
       d.*,
       creator.name AS created_by_name,
       ministry.name AS audience_ministry_name,
+      org.name AS audience_organization_name,
       COALESCE(stats.recipient_count, 0)::int AS recipient_count,
       COALESCE(stats.seen_count, 0)::int AS seen_count,
       COALESCE(stats.unseen_count, 0)::int AS unseen_count
     FROM campaign_directives d
     LEFT JOIN users creator ON creator.id = d.created_by_user_id
     LEFT JOIN ministries ministry ON ministry.id = d.audience_ministry_id
+    LEFT JOIN ministry_organizations org ON org.id = d.audience_organization_id
     LEFT JOIN LATERAL (
       SELECT
         COUNT(*)::int AS recipient_count,
@@ -391,6 +415,7 @@ export interface SaveDirectiveInput {
   audienceType: DirectiveAudienceType;
   audienceRegion?: UserRegion | null;
   audienceMinistryId?: string | null;
+  audienceOrganizationId?: string | null;
   audienceProvinces?: string[];
   published?: boolean;
   attachments?: Array<{
@@ -419,6 +444,10 @@ export async function pgSaveDirective(input: SaveDirectiveInput): Promise<{ id: 
     input.audienceType === "region" ? (input.audienceRegion ?? null) : null;
   const audienceMinistryId =
     input.audienceType === "ministry_city" ? (input.audienceMinistryId?.trim() || null) : null;
+  const audienceOrganizationId =
+    input.audienceType === "ministry_city"
+      ? (input.audienceOrganizationId?.trim() || null)
+      : null;
   const audienceProvinces =
     input.audienceType === "ministry_city"
       ? (input.audienceProvinces ?? []).map((province) => province.trim()).filter(Boolean)
@@ -439,7 +468,7 @@ export async function pgSaveDirective(input: SaveDirectiveInput): Promise<{ id: 
     INSERT INTO campaign_directives (
       id, campaign_id, created_by_user_id, title, body, priority, due_date,
       start_date, end_date, letter_file_url, letter_file_name, letter_mime_type, letter_file_size,
-      audience_type, audience_region, audience_ministry_id, audience_cities,
+      audience_type, audience_region, audience_ministry_id, audience_organization_id, audience_cities,
       published, published_at, sort_order, created_at, updated_at
     ) VALUES (
       ${id},
@@ -458,6 +487,7 @@ export async function pgSaveDirective(input: SaveDirectiveInput): Promise<{ id: 
       ${input.audienceType},
       ${audienceRegion},
       ${audienceMinistryId},
+      ${audienceOrganizationId},
       ${audienceProvinces},
       ${published},
       ${publishedAt},
@@ -479,6 +509,7 @@ export async function pgSaveDirective(input: SaveDirectiveInput): Promise<{ id: 
       audience_type = EXCLUDED.audience_type,
       audience_region = EXCLUDED.audience_region,
       audience_ministry_id = EXCLUDED.audience_ministry_id,
+      audience_organization_id = EXCLUDED.audience_organization_id,
       audience_cities = EXCLUDED.audience_cities,
       published = EXCLUDED.published,
       published_at = COALESCE(campaign_directives.published_at, EXCLUDED.published_at),
@@ -523,6 +554,7 @@ export async function pgSaveDirective(input: SaveDirectiveInput): Promise<{ id: 
         audienceType: input.audienceType,
         audienceRegion,
         audienceMinistryId,
+        audienceOrganizationId,
         audienceProvinces,
         selectedUserIds: input.selectedUserIds,
       })

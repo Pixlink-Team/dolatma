@@ -35,6 +35,7 @@ import { getRoleLabel } from "@/lib/user-roles";
 import type { AdminRole, AdminUser, CampaignSettings, Ministry } from "@/lib/types";
 
 const NO_MINISTRY = "__none__";
+const NO_ORGANIZATION = "__none__";
 const NO_PARENT = "__none__";
 
 const schema = z.object({
@@ -46,6 +47,7 @@ const schema = z.object({
   city: z.string().optional(),
   phone: z.string().optional(),
   ministryId: z.string().nullable().optional(),
+  organizationId: z.string().nullable().optional(),
   parentUserId: z.string().nullable().optional(),
   campaignIds: z.array(z.string()),
 });
@@ -66,6 +68,7 @@ interface UsersAdminProps {
   /** full = admin; ministry = client can only set ministry; sub_users = ministry parent manages children */
   mode?: "full" | "ministry" | "sub_users";
   parentUserId?: string;
+  parentMinistryId?: string | null;
 }
 
 export function UsersAdmin({
@@ -74,6 +77,7 @@ export function UsersAdmin({
   ministries = [],
   mode = "full",
   parentUserId,
+  parentMinistryId = null,
 }: UsersAdminProps) {
   const isFullMode = mode === "full";
   const isSubUsersMode = mode === "sub_users";
@@ -101,6 +105,7 @@ export function UsersAdmin({
       city: "",
       phone: "",
       ministryId: null as string | null,
+      organizationId: null as string | null,
       parentUserId: parentUserId ?? null,
       campaignIds: [] as string[],
     },
@@ -111,7 +116,14 @@ export function UsersAdmin({
   const selectedProvince = form.watch("province");
   const selectedCity = form.watch("city");
   const selectedMinistryId = form.watch("ministryId");
+  const selectedOrganizationId = form.watch("organizationId");
   const selectedParentUserId = form.watch("parentUserId");
+
+  const organizationOptions = useMemo(() => {
+    const ministryId = selectedMinistryId || (isSubUsersMode ? parentMinistryId : null);
+    if (!ministryId) return [] as NonNullable<Ministry["organizations"]>;
+    return ministries.find((ministry) => ministry.id === ministryId)?.organizations ?? [];
+  }, [ministries, selectedMinistryId, isSubUsersMode, parentMinistryId]);
 
   const toggleCampaign = (campaignId: string) => {
     const current = form.getValues("campaignIds");
@@ -144,24 +156,34 @@ export function UsersAdmin({
     if (isMinistryOnlyMode) {
       if (!editingId) return;
       startTransition(async () => {
+        const organizationId = data.organizationId ?? null;
         const result = await saveUserMinistryAction({
           userId: editingId,
           ministryId: data.ministryId ?? null,
+          organizationId,
         });
         if (!result.success) {
           toast.error("error" in result ? result.error : "ذخیره نشد");
           return;
         }
-        const ministryName =
-          ministries.find((item) => item.id === data.ministryId)?.name ?? null;
+        const ministry = ministries.find((item) => item.id === data.ministryId);
+        const ministryName = ministry?.name ?? null;
+        const organizationName =
+          ministry?.organizations?.find((item) => item.id === organizationId)?.name ?? null;
         setRows((prev) =>
           prev.map((row) =>
             row.id === editingId
-              ? { ...row, ministryId: data.ministryId ?? null, ministryName }
+              ? {
+                  ...row,
+                  ministryId: data.ministryId ?? null,
+                  ministryName,
+                  organizationId,
+                  organizationName,
+                }
               : row
           )
         );
-        toast.success("وزارتخانه ذخیره شد");
+        toast.success("وزارتخانه / زیرمجموعه ذخیره شد");
         setOpen(false);
       });
       return;
@@ -173,7 +195,9 @@ export function UsersAdmin({
     }
 
     const role: AdminRole = isSubUsersMode ? "sub_user" : data.role;
-    const ministryId = data.ministryId ?? null;
+    const ministryId =
+      (isSubUsersMode ? parentMinistryId : null) || data.ministryId || null;
+    const organizationId = data.organizationId ?? null;
     const nextParentUserId = isSubUsersMode
       ? parentUserId ?? null
       : role === "sub_user"
@@ -199,6 +223,7 @@ export function UsersAdmin({
         city: data.city?.trim() || null,
         phone: data.phone?.trim() || null,
         ministryId,
+        organizationId,
         parentUserId: nextParentUserId,
         campaignPermissions: rolesWithCampaignAccess.includes(role) ? campaignPermissions : undefined,
       });
@@ -209,8 +234,12 @@ export function UsersAdmin({
 
       const savedId = "id" in result ? result.id : (editingId ?? crypto.randomUUID());
       const existing = rows.find((row) => row.id === editingId);
-      const ministryName =
-        ministries.find((item) => item.id === ministryId)?.name ?? existing?.ministryName ?? null;
+      const ministry = ministries.find((item) => item.id === ministryId);
+      const ministryName = ministry?.name ?? existing?.ministryName ?? null;
+      const organizationName =
+        ministry?.organizations?.find((item) => item.id === organizationId)?.name ??
+        existing?.organizationName ??
+        null;
       const parentName =
         parentOptions.find((item) => item.id === nextParentUserId)?.name ??
         existing?.parentUserName ??
@@ -227,6 +256,8 @@ export function UsersAdmin({
         accountManagerName: existing?.accountManagerName ?? null,
         ministryId,
         ministryName,
+        organizationId,
+        organizationName,
         parentUserId: nextParentUserId,
         parentUserName: parentName,
         campaignIds: data.campaignIds,
@@ -255,6 +286,7 @@ export function UsersAdmin({
       city: "",
       phone: "",
       ministryId: null,
+      organizationId: null,
       parentUserId: parentUserId ?? null,
       campaignIds: [],
     });
@@ -286,6 +318,7 @@ export function UsersAdmin({
       city: normalizedCity,
       phone: user.phone ?? "",
       ministryId: user.ministryId ?? null,
+      organizationId: user.organizationId ?? null,
       parentUserId: user.parentUserId ?? parentUserId ?? null,
       campaignIds: user.campaignIds ?? [],
     });
@@ -326,7 +359,16 @@ export function UsersAdmin({
           <AdminDataTable
             data={rows}
             selectable={isFullMode}
-            searchKeys={["name", "email", "role", "province", "city", "accountManagerName"]}
+            searchKeys={[
+              "name",
+              "email",
+              "role",
+              "province",
+              "city",
+              "accountManagerName",
+              "ministryName",
+              "organizationName",
+            ]}
             columns={[
               { key: "name", label: "نام" },
               {
@@ -340,6 +382,11 @@ export function UsersAdmin({
                 key: "ministryName",
                 label: "وزارتخانه",
                 render: (item) => item.ministryName || "—",
+              },
+              {
+                key: "organizationName",
+                label: "زیرمجموعه",
+                render: (item) => item.organizationName || "—",
               },
               {
                 key: "accountManagerName",
@@ -469,23 +516,79 @@ export function UsersAdmin({
             )}
 
             {!isSubUsersMode && (
+              <>
+                <div className="space-y-2">
+                  <Label>وزارتخانه</Label>
+                  <Select
+                    value={selectedMinistryId ?? NO_MINISTRY}
+                    onValueChange={(value) => {
+                      form.setValue("ministryId", value === NO_MINISTRY ? null : value);
+                      form.setValue("organizationId", null);
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="انتخاب وزارتخانه" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={NO_MINISTRY}>بدون وزارتخانه</SelectItem>
+                      {ministries.map((ministry) => (
+                        <SelectItem key={ministry.id} value={ministry.id}>
+                          {ministry.name}
+                          {ministry.fullName ? ` — ${ministry.fullName}` : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>زیرمجموعه (اختیاری)</Label>
+                  <Select
+                    value={selectedOrganizationId ?? NO_ORGANIZATION}
+                    onValueChange={(value) =>
+                      form.setValue(
+                        "organizationId",
+                        value === NO_ORGANIZATION ? null : value
+                      )
+                    }
+                    disabled={!selectedMinistryId}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="خود وزارتخانه یا یک زیرمجموعه" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={NO_ORGANIZATION}>خود وزارتخانه</SelectItem>
+                      {organizationOptions.map((org) => (
+                        <SelectItem key={org.id} value={org.id}>
+                          {org.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    اگر زیرمجموعه انتخاب نشود، کاربر به خود وزارتخانه وصل می‌شود.
+                  </p>
+                </div>
+              </>
+            )}
+
+            {isSubUsersMode && organizationOptions.length > 0 && (
               <div className="space-y-2">
-                <Label>وزارتخانه</Label>
+                <Label>زیرمجموعه (اختیاری)</Label>
                 <Select
-                  value={selectedMinistryId ?? NO_MINISTRY}
+                  value={selectedOrganizationId ?? NO_ORGANIZATION}
                   onValueChange={(value) =>
-                    form.setValue("ministryId", value === NO_MINISTRY ? null : value)
+                    form.setValue("organizationId", value === NO_ORGANIZATION ? null : value)
                   }
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="انتخاب وزارتخانه" />
+                    <SelectValue placeholder="خود وزارتخانه یا یک زیرمجموعه" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={NO_MINISTRY}>بدون وزارتخانه</SelectItem>
-                    {ministries.map((ministry) => (
-                      <SelectItem key={ministry.id} value={ministry.id}>
-                        {ministry.name}
-                        {ministry.fullName ? ` — ${ministry.fullName}` : ""}
+                    <SelectItem value={NO_ORGANIZATION}>خود وزارتخانه</SelectItem>
+                    {organizationOptions.map((org) => (
+                      <SelectItem key={org.id} value={org.id}>
+                        {org.name}
                       </SelectItem>
                     ))}
                   </SelectContent>

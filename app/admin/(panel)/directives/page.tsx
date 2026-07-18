@@ -52,7 +52,7 @@ export default async function DirectivesPage({ searchParams }: PageProps) {
       ? pgListDirectivesForUserInbox(campaignId, session.userId)
       : Promise.resolve([]),
     canManage ? pgListCampaignUsersForDirectives(campaignId) : Promise.resolve([]),
-    canManage ? pgListMinistries() : Promise.resolve([]),
+    canManage ? pgListMinistries({ includeOrganizations: true }) : Promise.resolve([]),
   ]);
 
   const initialDirectives = canManage ? manageDirectives : inboxDirectives;

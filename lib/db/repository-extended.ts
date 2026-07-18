@@ -117,9 +117,14 @@ export async function pgGetUserAuthByLogin(identifier: string) {
 export async function pgGetUserById(id: string) {
   const sql = getSql();
   const rows = await sql`
-    SELECT u.*, m.name AS ministry_name, p.name AS parent_user_name
+    SELECT
+      u.*,
+      m.name AS ministry_name,
+      o.name AS organization_name,
+      p.name AS parent_user_name
     FROM users u
     LEFT JOIN ministries m ON m.id = u.ministry_id
+    LEFT JOIN ministry_organizations o ON o.id = u.organization_id
     LEFT JOIN users p ON p.id = u.parent_user_id
     WHERE u.id = ${id}
     LIMIT 1
@@ -167,9 +172,14 @@ export async function pgGetUserPermissionsForCampaign(userId: string, campaignId
 export async function pgGetAllUsers(): Promise<AdminUser[]> {
   const sql = getSql();
   const rows = await sql`
-    SELECT u.*, m.name AS ministry_name, p.name AS parent_user_name
+    SELECT
+      u.*,
+      m.name AS ministry_name,
+      o.name AS organization_name,
+      p.name AS parent_user_name
     FROM users u
     LEFT JOIN ministries m ON m.id = u.ministry_id
+    LEFT JOIN ministry_organizations o ON o.id = u.organization_id
     LEFT JOIN users p ON p.id = u.parent_user_id
     ORDER BY u.created_at DESC
   `;
@@ -186,9 +196,14 @@ export async function pgGetAllUsers(): Promise<AdminUser[]> {
 export async function pgGetSubUsersForParent(parentUserId: string): Promise<AdminUser[]> {
   const sql = getSql();
   const rows = await sql`
-    SELECT u.*, m.name AS ministry_name, p.name AS parent_user_name
+    SELECT
+      u.*,
+      m.name AS ministry_name,
+      o.name AS organization_name,
+      p.name AS parent_user_name
     FROM users u
     LEFT JOIN ministries m ON m.id = u.ministry_id
+    LEFT JOIN ministry_organizations o ON o.id = u.organization_id
     LEFT JOIN users p ON p.id = u.parent_user_id
     WHERE u.parent_user_id = ${parentUserId}
       AND u.role = 'sub_user'
@@ -214,6 +229,7 @@ export async function pgSaveUser(data: {
   phone?: string | null;
   accountManagerName?: string | null;
   ministryId?: string | null;
+  organizationId?: string | null;
   parentUserId?: string | null;
   campaignIds?: string[];
   campaignPermissions?: Record<string, ContributorPermissions>;
@@ -233,8 +249,28 @@ export async function pgSaveUser(data: {
       : null;
   const phone = data.phone?.trim() || null;
   const accountManagerName = data.accountManagerName?.trim() || null;
-  const ministryId = data.ministryId?.trim() || null;
+  let ministryId = data.ministryId?.trim() || null;
+  let organizationId = data.organizationId?.trim() || null;
   const parentUserId = data.parentUserId?.trim() || null;
+
+  if (organizationId) {
+    const orgRows = await sql`
+      SELECT ministry_id FROM ministry_organizations WHERE id = ${organizationId} LIMIT 1
+    `;
+    const orgMinistryId = orgRows[0]?.ministry_id ? String(orgRows[0].ministry_id) : null;
+    if (!orgMinistryId) {
+      return { success: false as const, error: "زیرمجموعه انتخاب‌شده معتبر نیست" };
+    }
+    if (ministryId && ministryId !== orgMinistryId) {
+      return {
+        success: false as const,
+        error: "زیرمجموعه باید متعلق به وزارتخانه انتخاب‌شده باشد",
+      };
+    }
+    ministryId = orgMinistryId;
+  } else {
+    organizationId = null;
+  }
 
   try {
   if (data.id) {
@@ -251,6 +287,7 @@ export async function pgSaveUser(data: {
           phone = ${phone},
           account_manager_name = ${accountManagerName},
           ministry_id = ${ministryId},
+          organization_id = ${organizationId},
           parent_user_id = ${parentUserId},
           password_hash = ${passwordHash}
         WHERE id = ${id}
@@ -267,6 +304,7 @@ export async function pgSaveUser(data: {
           phone = ${phone},
           account_manager_name = ${accountManagerName},
           ministry_id = ${ministryId},
+          organization_id = ${organizationId},
           parent_user_id = ${parentUserId}
         WHERE id = ${id}
       `;
@@ -279,11 +317,12 @@ export async function pgSaveUser(data: {
     await sql`
       INSERT INTO users (
         id, email, password_hash, name, role, province, city, region, phone,
-        account_manager_name, ministry_id, parent_user_id, created_at
+        account_manager_name, ministry_id, organization_id, parent_user_id, created_at
       )
       VALUES (
         ${id}, ${email}, ${passwordHash}, ${data.name}, ${data.role}, ${province}, ${city},
-        ${region}, ${phone}, ${accountManagerName}, ${ministryId}, ${parentUserId}, ${now}
+        ${region}, ${phone}, ${accountManagerName}, ${ministryId}, ${organizationId},
+        ${parentUserId}, ${now}
       )
     `;
   }
@@ -326,10 +365,40 @@ export async function pgUpdateUserRegion(userId: string, region: string | null) 
   return { success: true as const };
 }
 
-export async function pgUpdateUserMinistry(userId: string, ministryId: string | null) {
+export async function pgUpdateUserMinistry(
+  userId: string,
+  ministryId: string | null,
+  organizationId?: string | null
+) {
   const sql = getSql();
-  const normalized = ministryId?.trim() || null;
-  await sql`UPDATE users SET ministry_id = ${normalized} WHERE id = ${userId}`;
+  let normalizedMinistry = ministryId?.trim() || null;
+  let normalizedOrg = organizationId?.trim() || null;
+
+  if (normalizedOrg) {
+    const orgRows = await sql`
+      SELECT ministry_id FROM ministry_organizations WHERE id = ${normalizedOrg} LIMIT 1
+    `;
+    const orgMinistryId = orgRows[0]?.ministry_id ? String(orgRows[0].ministry_id) : null;
+    if (!orgMinistryId) {
+      return { success: false as const, error: "زیرمجموعه انتخاب‌شده معتبر نیست" };
+    }
+    if (normalizedMinistry && normalizedMinistry !== orgMinistryId) {
+      return {
+        success: false as const,
+        error: "زیرمجموعه باید متعلق به وزارتخانه انتخاب‌شده باشد",
+      };
+    }
+    normalizedMinistry = orgMinistryId;
+  } else {
+    normalizedOrg = null;
+  }
+
+  await sql`
+    UPDATE users SET
+      ministry_id = ${normalizedMinistry},
+      organization_id = ${normalizedOrg}
+    WHERE id = ${userId}
+  `;
   return { success: true as const };
 }
 

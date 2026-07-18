@@ -801,7 +801,21 @@ ALTER TABLE ministries ADD COLUMN IF NOT EXISTS full_name TEXT;
 ALTER TABLE ministries ADD COLUMN IF NOT EXISTS description TEXT;
 ALTER TABLE ministries ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT true;
 
+CREATE TABLE IF NOT EXISTS ministry_organizations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  ministry_id UUID NOT NULL REFERENCES ministries(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  full_name TEXT,
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (ministry_id, name)
+);
+
+CREATE INDEX IF NOT EXISTS idx_ministry_organizations_ministry
+  ON ministry_organizations(ministry_id);
+
 ALTER TABLE users ADD COLUMN IF NOT EXISTS ministry_id UUID REFERENCES ministries(id) ON DELETE SET NULL;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS organization_id UUID REFERENCES ministry_organizations(id) ON DELETE SET NULL;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS parent_user_id UUID REFERENCES users(id) ON DELETE SET NULL;
 
 ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
@@ -809,6 +823,7 @@ ALTER TABLE users ADD CONSTRAINT users_role_check
   CHECK (role IN ('admin', 'contributor', 'client', 'ministry_parent', 'sub_user'));
 
 CREATE INDEX IF NOT EXISTS idx_users_ministry ON users(ministry_id);
+CREATE INDEX IF NOT EXISTS idx_users_organization ON users(organization_id);
 CREATE INDEX IF NOT EXISTS idx_users_parent ON users(parent_user_id);
 
 ALTER TABLE campaign_directives
@@ -820,10 +835,14 @@ ALTER TABLE campaign_directives
 ALTER TABLE campaign_directives
   ADD COLUMN IF NOT EXISTS audience_ministry_id UUID REFERENCES ministries(id) ON DELETE SET NULL;
 ALTER TABLE campaign_directives
+  ADD COLUMN IF NOT EXISTS audience_organization_id UUID REFERENCES ministry_organizations(id) ON DELETE SET NULL;
+ALTER TABLE campaign_directives
   ADD COLUMN IF NOT EXISTS audience_cities TEXT[] NOT NULL DEFAULT '{}';
 
 CREATE INDEX IF NOT EXISTS idx_campaign_directives_audience_ministry
   ON campaign_directives(audience_ministry_id);
+CREATE INDEX IF NOT EXISTS idx_campaign_directives_audience_organization
+  ON campaign_directives(audience_organization_id);
 
 ALTER TABLE ministries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ministries NO FORCE ROW LEVEL SECURITY;
@@ -833,19 +852,14 @@ CREATE POLICY ministries_app_access ON ministries
   USING (true)
   WITH CHECK (true);
 
--- Seed default ministries (idempotent by unique name)
-INSERT INTO ministries (id, name, full_name, description, is_active, created_at)
-VALUES
-  (gen_random_uuid(), 'بهداشت و درمان', 'وزارت بهداشت، درمان و آموزش پزشکی', 'رصد تهدیدات زیستی/درمانی دشمن و ثبت اقدامات دفاعی، امدادی و مستقل حوزه سلامت.', true, now()),
-  (gen_random_uuid(), 'دفاع و نیروهای مسلح', 'ستاد کل نیروهای مسلح / وزارت دفاع', 'اقدامات نظامی دشمن، پدافند، پاسخ عملیاتی و آماده‌باش نیروهای مسلح.', true, now()),
-  (gen_random_uuid(), 'امور خارجه', 'وزارت امور خارجه', 'دیپلماسی، محکومیت‌ها، مذاکرات و رایزنی‌های منطقه‌ای و بین‌المللی.', true, now()),
-  (gen_random_uuid(), 'نفت و انرژی', 'وزارت نفت', 'تهدیدات انرژی، حفاظت تأسیسات نفتی و مدیریت مسیرهای صادرات.', true, now()),
-  (gen_random_uuid(), 'ارتباطات و فناوری', 'وزارت ارتباطات و فناوری اطلاعات', 'حملات سایبری دشمن و اقدامات دفاع سایبری و بازیابی سرویس‌ها.', true, now()),
-  (gen_random_uuid(), 'کشور', 'وزارت کشور', 'امنیت داخلی، مدیریت بحران استانی و هماهنگی استانداری‌ها.', true, now()),
-  (gen_random_uuid(), 'اطلاعات', 'وزارت اطلاعات', 'عملیات اطلاعاتی دشمن و اقدامات مقابله‌ای و رصد امنیتی.', true, now()),
-  (gen_random_uuid(), 'راه و شهرسازی', 'وزارت راه و شهرسازی', 'تهدید زیرساخت حمل‌ونقل و اقدامات ایمن‌سازی مسیرها و بنادر.', true, now())
-ON CONFLICT (name) DO UPDATE SET
-  full_name = EXCLUDED.full_name,
-  description = EXCLUDED.description,
-  is_active = EXCLUDED.is_active;
+ALTER TABLE ministry_organizations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ministry_organizations NO FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS ministry_organizations_app_access ON ministry_organizations;
+CREATE POLICY ministry_organizations_app_access ON ministry_organizations
+  FOR ALL
+  USING (true)
+  WITH CHECK (true);
+
+-- Seed data for ministries and organizations is applied at runtime via
+-- pgEnsureDefaultMinistries() from lib/ministry-seed.ts (idempotent by name).
 

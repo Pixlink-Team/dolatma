@@ -35,6 +35,19 @@ export interface Ministry {
   description?: string | null;
   isActive?: boolean;
   createdAt: string;
+  /** Subordinate organizations under this ministry (when loaded). */
+  organizations?: MinistryOrganization[];
+}
+
+/** Subordinate organization / agency under a ministry. */
+export interface MinistryOrganization {
+  id: string;
+  ministryId: string;
+  ministryName?: string | null;
+  name: string;
+  fullName?: string | null;
+  isActive?: boolean;
+  createdAt: string;
 }
 
 export interface CampaignFeatures {
@@ -366,6 +379,12 @@ export interface AdminUser {
   /** Government ministry this user belongs to (parent + sub-users). */
   ministryId?: string | null;
   ministryName?: string | null;
+  /**
+   * Optional subordinate organization under the ministry.
+   * Null means the user is attached to the ministry itself.
+   */
+  organizationId?: string | null;
+  organizationName?: string | null;
   /** Parent ministry user for sub_user rows. */
   parentUserId?: string | null;
   parentUserName?: string | null;
@@ -427,6 +446,12 @@ export interface CampaignDirective {
   /** Target ministry when audienceType is ministry_city. */
   audienceMinistryId?: string | null;
   audienceMinistryName?: string | null;
+  /**
+   * Optional subordinate organization when audienceType is ministry_city.
+   * Null means the whole ministry (all orgs under it).
+   */
+  audienceOrganizationId?: string | null;
+  audienceOrganizationName?: string | null;
   /**
    * Target provinces when audienceType is ministry_city.
    * Stored in DB column `audience_cities` (legacy name).

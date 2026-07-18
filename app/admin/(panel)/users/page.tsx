@@ -3,7 +3,7 @@ import { getAllCampaigns, getAllUsers } from "@/lib/data-access/admin";
 import { isClientUser } from "@/lib/auth/access";
 import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
 import { UsersAdmin } from "@/components/admin/users-admin";
-import { pgGetSubUsersForParent } from "@/lib/db/repository-extended";
+import { pgGetSubUsersForParent, pgGetUserById } from "@/lib/db/repository-extended";
 import { pgEnsureDefaultMinistries, pgListMinistries } from "@/lib/db/repository-ministries";
 import { isMinistryParentRole } from "@/lib/user-roles";
 import { isPostgresConfigured } from "@/lib/utils";
@@ -23,11 +23,14 @@ export default async function UsersPage() {
 
   const [campaigns, ministries] = await Promise.all([
     getAllCampaigns(),
-    isPostgresConfigured() ? pgListMinistries() : Promise.resolve([]),
+    isPostgresConfigured() ? pgListMinistries({ includeOrganizations: true }) : Promise.resolve([]),
   ]);
 
   if (isParent && session.userId) {
-    const subUsers = await pgGetSubUsersForParent(session.userId);
+    const [subUsers, parentUser] = await Promise.all([
+      pgGetSubUsersForParent(session.userId),
+      pgGetUserById(session.userId),
+    ]);
     return (
       <UsersAdmin
         initialUsers={subUsers}
@@ -35,6 +38,7 @@ export default async function UsersPage() {
         ministries={ministries}
         mode="sub_users"
         parentUserId={session.userId}
+        parentMinistryId={parentUser?.ministryId ?? null}
       />
     );
   }

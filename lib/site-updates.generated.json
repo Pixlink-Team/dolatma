@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "54bf99844ec5da320dd12991d6662108a2101de1",
+      "committedAt": "2026-07-18T11:28:31+03:30",
+      "title": "رفع نمایش فاویکون و تصویر اشتراک در لینک کمپین",
+      "subject": "Fix public favicon and OG images blocked by file auth"
+    },
+    {
       "hash": "733dc909d8e28da8e07fa4cb817c08e1c6864ead",
       "committedAt": "2026-07-18T10:43:24+03:30",
       "title": "امکان تنظیم تگ‌لاین، فاویکون و پیش‌نمایش اشتراک از تنظیمات کمپین",

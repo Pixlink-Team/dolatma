@@ -150,6 +150,7 @@ export async function saveDirectiveAction(input: {
   audienceType: DirectiveAudienceType;
   audienceRegion?: UserRegion | null;
   audienceMinistryId?: string | null;
+  audienceOrganizationId?: string | null;
   audienceProvinces?: string[];
   audienceCities?: string[];
   selectedUserIds?: string[];
@@ -256,6 +257,7 @@ export async function saveDirectiveAction(input: {
     audienceType: cleaned.audienceType,
     audienceRegion: cleaned.audienceRegion,
     audienceMinistryId: cleaned.audienceMinistryId,
+    audienceOrganizationId: cleaned.audienceOrganizationId,
     audienceProvinces: cleaned.audienceProvinces ?? cleaned.audienceCities,
     published: true,
     selectedUserIds: cleaned.selectedUserIds,

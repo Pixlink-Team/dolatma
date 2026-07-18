@@ -59,6 +59,7 @@ const schema = z.object({
   audienceType: z.enum(["all", "region", "users", "ministry_city"]),
   audienceRegion: z.enum(["north", "south", "east", "west"]).nullable().optional(),
   audienceMinistryId: z.string().nullable().optional(),
+  audienceOrganizationId: z.string().nullable().optional(),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -120,6 +121,8 @@ interface CampaignUserOption {
   city?: string | null;
   ministryId?: string | null;
   ministryName?: string | null;
+  organizationId?: string | null;
+  organizationName?: string | null;
 }
 
 interface DirectivesAdminProps {
@@ -140,8 +143,10 @@ function formatAudienceLabel(item: CampaignDirective): string {
   if (item.audienceType === "users") return "افراد انتخابی";
   if (item.audienceType === "ministry_city") {
     const ministry = item.audienceMinistryName || "وزارتخانه";
+    const org = item.audienceOrganizationName;
     const provinces = (item.audienceProvinces ?? []).join("، ");
-    return provinces ? `${ministry} — ${provinces}` : ministry;
+    const scope = org ? `${ministry} › ${org}` : ministry;
+    return provinces ? `${scope} — ${provinces}` : scope;
   }
   return "همه کاربران";
 }
@@ -283,22 +288,31 @@ export function DirectivesAdmin({
       audienceType: "all",
       audienceRegion: null,
       audienceMinistryId: null,
+      audienceOrganizationId: null,
     },
   });
 
   const audienceType = form.watch("audienceType");
   const audienceMinistryId = form.watch("audienceMinistryId");
+  const audienceOrganizationId = form.watch("audienceOrganizationId");
+
+  const audienceOrganizations = useMemo(() => {
+    if (!audienceMinistryId) return [] as NonNullable<Ministry["organizations"]>;
+    return (
+      ministries.find((ministry) => ministry.id === audienceMinistryId)?.organizations ?? []
+    );
+  }, [audienceMinistryId, ministries]);
 
   const ministryUserProvinces = useMemo(() => {
     if (!audienceMinistryId) return [] as string[];
     const set = new Set<string>();
     for (const user of campaignUsers) {
-      if (user.ministryId === audienceMinistryId && user.province?.trim()) {
-        set.add(user.province.trim());
-      }
+      if (user.ministryId !== audienceMinistryId) continue;
+      if (audienceOrganizationId && user.organizationId !== audienceOrganizationId) continue;
+      if (user.province?.trim()) set.add(user.province.trim());
     }
     return [...set].sort((a, b) => a.localeCompare(b, "fa"));
-  }, [audienceMinistryId, campaignUsers]);
+  }, [audienceMinistryId, audienceOrganizationId, campaignUsers]);
 
   const showingInbox = !canManage || managerView === "inbox";
 
@@ -324,6 +338,7 @@ export function DirectivesAdmin({
       audienceType: "all",
       audienceRegion: null,
       audienceMinistryId: null,
+      audienceOrganizationId: null,
     });
     setOpen(true);
   };
@@ -348,6 +363,7 @@ export function DirectivesAdmin({
       audienceType: item.audienceType,
       audienceRegion: item.audienceRegion,
       audienceMinistryId: item.audienceMinistryId ?? null,
+      audienceOrganizationId: item.audienceOrganizationId ?? null,
     });
 
     if (item.audienceType === "users") {
@@ -421,6 +437,8 @@ export function DirectivesAdmin({
         audienceRegion: data.audienceType === "region" ? data.audienceRegion ?? null : null,
         audienceMinistryId:
           data.audienceType === "ministry_city" ? data.audienceMinistryId ?? null : null,
+        audienceOrganizationId:
+          data.audienceType === "ministry_city" ? data.audienceOrganizationId ?? null : null,
         audienceProvinces: data.audienceType === "ministry_city" ? selectedProvinces : undefined,
         selectedUserIds: data.audienceType === "users" ? selectedUserIds : undefined,
         sendSmsOnPublish: true,
@@ -835,6 +853,7 @@ export function DirectivesAdmin({
                     value={audienceMinistryId ?? ""}
                     onValueChange={(value) => {
                       form.setValue("audienceMinistryId", value);
+                      form.setValue("audienceOrganizationId", null);
                       setSelectedProvinces([]);
                     }}
                   >
@@ -857,9 +876,36 @@ export function DirectivesAdmin({
                   </Select>
                 </div>
 
+                <div className="space-y-2">
+                  <Label>زیرمجموعه (اختیاری)</Label>
+                  <Select
+                    value={audienceOrganizationId ?? "__all__"}
+                    onValueChange={(value) => {
+                      form.setValue(
+                        "audienceOrganizationId",
+                        value === "__all__" ? null : value
+                      );
+                      setSelectedProvinces([]);
+                    }}
+                    disabled={!audienceMinistryId}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="کل وزارتخانه یا یک زیرمجموعه" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__all__">کل وزارتخانه</SelectItem>
+                      {audienceOrganizations.map((org) => (
+                        <SelectItem key={org.id} value={org.id}>
+                          {org.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 {ministryUserProvinces.length > 0 && (
                   <div className="space-y-2">
-                    <Label>استان‌های کاربران این وزارتخانه</Label>
+                    <Label>استان‌های کاربران این محدوده</Label>
                     <div className="max-h-36 space-y-2 overflow-y-auto rounded-md border p-2">
                       {ministryUserProvinces.map((province) => (
                         <label key={province} className="flex items-center gap-2 text-sm">
@@ -897,7 +943,8 @@ export function DirectivesAdmin({
                   </p>
                 )}
                 <p className="text-xs text-muted-foreground">
-                  یوزر مادر همان وزارتخانه و کاربران زیرمجموعه در استان‌های انتخاب‌شده مخاطب می‌شوند.
+                  یوزر مادر وزارتخانه و کاربران در محدوده انتخاب‌شده (وزارتخانه یا زیرمجموعه + استان)
+                  مخاطب می‌شوند.
                 </p>
               </div>
             )}

@@ -624,6 +624,7 @@ export async function saveUserAction(data: {
   phone?: string | null;
   accountManagerName?: string | null;
   ministryId?: string | null;
+  organizationId?: string | null;
   parentUserId?: string | null;
   campaignIds?: string[];
   campaignPermissions?: Record<string, ContributorPermissions>;
@@ -643,6 +644,7 @@ export async function saveUserAction(data: {
 
   let role = data.role;
   let ministryId = data.ministryId ?? null;
+  let organizationId = data.organizationId ?? null;
   let parentUserId = data.parentUserId ?? null;
   let campaignIds = data.campaignIds;
   let campaignPermissions = data.campaignPermissions;
@@ -656,6 +658,7 @@ export async function saveUserAction(data: {
     role = "sub_user";
     parentUserId = session.userId;
     ministryId = parent.ministryId ?? null;
+    organizationId = data.organizationId ?? parent.organizationId ?? null;
     campaignIds = campaignIds?.length ? campaignIds : parent.campaignIds;
     campaignPermissions = campaignPermissions ?? parent.campaignPermissions;
 
@@ -679,6 +682,9 @@ export async function saveUserAction(data: {
       return { success: false, error: "یوزر مادر معتبر نیست" };
     }
     ministryId = parent.ministryId ?? ministryId;
+    if (!organizationId) {
+      organizationId = parent.organizationId ?? null;
+    }
   } else {
     // admin / client / contributor — ministry is optional categorization
     parentUserId = null;
@@ -702,6 +708,7 @@ export async function saveUserAction(data: {
     ...data,
     role,
     ministryId,
+    organizationId,
     parentUserId,
     campaignIds,
     campaignPermissions,
@@ -714,7 +721,7 @@ export async function saveUserAction(data: {
     entityType: "user",
     entityId: data.id,
     label: data.name,
-    metadata: { role, email: data.email, ministryId, parentUserId },
+    metadata: { role, email: data.email, ministryId, organizationId, parentUserId },
   });
   await revalidateExtended();
   return result;
@@ -738,6 +745,7 @@ export async function saveUserRegionAction(data: {
 export async function saveUserMinistryAction(data: {
   userId: string;
   ministryId: string | null;
+  organizationId?: string | null;
 }) {
   const session = await getAuthSession();
   if (!session || (!isFullAdmin(session) && !isClientUser(session))) {
@@ -745,7 +753,11 @@ export async function saveUserMinistryAction(data: {
   }
   if (!isPostgresConfigured()) return { success: false, error: "Database required" };
 
-  const result = await pgExt.pgUpdateUserMinistry(data.userId, data.ministryId);
+  const result = await pgExt.pgUpdateUserMinistry(
+    data.userId,
+    data.ministryId,
+    data.organizationId
+  );
   await revalidateExtended();
   return result;
 }

@@ -12,7 +12,7 @@ export default async function MinistriesPage() {
   let ministries: Awaited<ReturnType<typeof pgListMinistries>> = [];
   if (isPostgresConfigured()) {
     await pgEnsureDefaultMinistries();
-    ministries = await pgListMinistries();
+    ministries = await pgListMinistries({ includeOrganizations: true });
   }
 
   return <MinistriesAdmin initialMinistries={ministries} />;
