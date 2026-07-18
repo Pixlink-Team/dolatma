@@ -194,7 +194,13 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
 
       <CampaignTools isFullAdmin={canManageAll} />
 
-      {canManageAll ? <BulkContentImport users={bulkImportUsers} /> : null}
+      {canManageAll ? (
+        <BulkContentImport
+          users={bulkImportUsers}
+          posterCategories={data.posterCategories ?? []}
+          videoCategories={data.videoCategories ?? []}
+        />
+      ) : null}
 
       <DashboardDirectivesPanel
         campaignId={campaignId}

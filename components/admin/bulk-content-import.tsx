@@ -18,17 +18,23 @@ import { useAdminCampaign } from "@/components/admin/admin-campaign-provider";
 import { BillboardCreateAssignmentDialog } from "@/components/admin/billboard-create-assignment-dialog";
 import { SocialPostFormDialog } from "@/components/admin/social-post-form-dialog";
 import { ActivityFormDialog } from "@/components/admin/activity-form-dialog";
+import { PosterFormDialog } from "@/components/admin/poster-form-dialog";
+import { VideoFormDialog } from "@/components/admin/video-form-dialog";
+import { SitePublicationFormDialog } from "@/components/admin/site-publication-form-dialog";
+import { PressFormDialog } from "@/components/admin/press-form-dialog";
 import {
   CONTENT_PACKAGE_TYPE_OPTIONS,
   detectSocialPlatformFromText,
   type ContentPackageDraftItem,
   type ContentPackageItemType,
 } from "@/lib/services/content-package-parser";
-import type { AdminUser } from "@/lib/types";
+import type { AdminUser, MediaCategory } from "@/lib/types";
 import { stripFileAccessToken } from "@/lib/uploads";
 
 interface BulkContentImportProps {
   users: AdminUser[];
+  posterCategories?: MediaCategory[];
+  videoCategories?: MediaCategory[];
 }
 
 function BulkContentTypeSwitcher({
@@ -60,7 +66,11 @@ function BulkContentTypeSwitcher({
   );
 }
 
-export function BulkContentImport({ users }: BulkContentImportProps) {
+export function BulkContentImport({
+  users,
+  posterCategories = [],
+  videoCategories = [],
+}: BulkContentImportProps) {
   const router = useRouter();
   const { campaignId, currentCampaign } = useAdminCampaign();
   const zipRef = useRef<HTMLInputElement>(null);
@@ -181,12 +191,15 @@ export function BulkContentImport({ users }: BulkContentImportProps) {
           contentType: nextType,
           platform:
             nextType === "social"
-              ? item.platform ?? detectSocialPlatformFromText(item.location)
-              : null,
+              ? item.platform && item.platform !== "site"
+                ? item.platform
+                : detectSocialPlatformFromText(item.location)
+              : nextType === "site"
+                ? "site"
+                : null,
         };
       })
     );
-    // Ignore Dialog unmount close events from the previous section modal.
     window.setTimeout(() => {
       switchingTypeRef.current = false;
     }, 0);
@@ -216,6 +229,18 @@ export function BulkContentImport({ users }: BulkContentImportProps) {
     <BulkContentTypeSwitcher value={current.contentType} onChange={handleContentTypeChange} />
   ) : null;
 
+  const sharedDialogProps = {
+    open: reviewOpen,
+    onOpenChange: handleDialogOpenChange,
+    campaignId,
+    ownerUserId,
+    contentPlans: currentCampaign.contentPlans,
+    contentTopics: currentCampaign.contentTopics,
+    queueLabel,
+    onSkip: handleSkip,
+    bulkTypeSwitcher: typeSwitcher,
+  };
+
   return (
     <>
       <Card>
@@ -228,9 +253,8 @@ export function BulkContentImport({ users }: BulkContentImportProps) {
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">
             یک ZIP شامل <span className="font-medium">فهرست.xlsx</span> و پوشه{" "}
-            <span className="font-medium">images</span> آپلود کنید. برای هر ردیف، مودال همان بخش
-            (تبلیغات محیطی / شبکه اجتماعی / اقدام) باز می‌شود؛ فیلدهای Excel از قبل پر هستند و بقیه را
-            تکمیل می‌کنید. اگر نوع اشتباه بود، داخل مودال بخش مقصد را عوض کنید.
+            <span className="font-medium">images</span> آپلود کنید. برای هر ردیف، مودال همان بخش باز
+            می‌شود. اگر نوع اشتباه بود، داخل مودال بخش مقصد را عوض کنید.
           </p>
 
           <div className="space-y-2">
@@ -277,20 +301,15 @@ export function BulkContentImport({ users }: BulkContentImportProps) {
 
           <p className="text-xs text-muted-foreground flex items-center gap-1.5">
             <FileSpreadsheet className="h-3.5 w-3.5" />
-            ستون‌ها: عنوان، مکان، نوع (بیلبورد / شبکه اجتماعی / اقدام)، نام_فایل_عکس
+            ستون نوع: تبلیغات محیطی / پوستر / ویدیو / سایت / شبکه اجتماعی / مجله / اقدام
           </p>
         </CardContent>
       </Card>
 
       {current?.contentType === "billboard" ? (
         <BillboardCreateAssignmentDialog
-          open={reviewOpen}
-          onOpenChange={handleDialogOpenChange}
-          campaignId={campaignId}
-          contentPlans={currentCampaign.contentPlans}
-          contentTopics={currentCampaign.contentTopics}
+          {...sharedDialogProps}
           mode="admin"
-          ownerUserId={ownerUserId}
           initialValuesKey={current.key}
           initialValues={{
             axis: current.title,
@@ -308,24 +327,60 @@ export function BulkContentImport({ users }: BulkContentImportProps) {
             ],
           }}
           onCreated={handleSaved}
-          onSkip={handleSkip}
           skipLabel="رد کردن این مورد"
-          bulkTypeSwitcher={typeSwitcher}
+        />
+      ) : null}
+
+      {current?.contentType === "poster" ? (
+        <PosterFormDialog
+          {...sharedDialogProps}
+          categories={posterCategories}
+          initialValuesKey={current.key}
+          initialValues={{
+            title: current.title,
+            description: current.description || current.location,
+            imageUrl,
+            date: current.date,
+          }}
+          onSaved={handleSaved}
+        />
+      ) : null}
+
+      {current?.contentType === "video" ? (
+        <VideoFormDialog
+          {...sharedDialogProps}
+          categories={videoCategories}
+          initialValuesKey={current.key}
+          initialValues={{
+            title: current.title,
+            description: current.description || current.location,
+            thumbnailUrl: imageUrl,
+            date: current.date,
+          }}
+          onSaved={handleSaved}
+        />
+      ) : null}
+
+      {current?.contentType === "site" ? (
+        <SitePublicationFormDialog
+          {...sharedDialogProps}
+          initialValuesKey={current.key}
+          initialValues={{
+            title: current.title,
+            coverImageUrl: imageUrl,
+            description: current.description || current.location,
+            publishedDate: current.date,
+          }}
+          onSaved={handleSaved}
         />
       ) : null}
 
       {current?.contentType === "social" ? (
         <SocialPostFormDialog
-          open={reviewOpen}
-          onOpenChange={handleDialogOpenChange}
-          campaignId={campaignId}
-          ownerUserId={ownerUserId}
+          {...sharedDialogProps}
           initialValuesKey={current.key}
-          contentPlans={currentCampaign.contentPlans}
-          contentTopics={currentCampaign.contentTopics}
-          queueLabel={queueLabel}
           initialValues={{
-            platform: current.platform || "other",
+            platform: current.platform && current.platform !== "site" ? current.platform : "other",
             title: current.title,
             coverImageUrl: imageUrl,
             mediaUrl: imageUrl,
@@ -333,21 +388,29 @@ export function BulkContentImport({ users }: BulkContentImportProps) {
             publishedDate: current.date,
           }}
           onSaved={handleSaved}
-          onSkip={handleSkip}
-          bulkTypeSwitcher={typeSwitcher}
+        />
+      ) : null}
+
+      {current?.contentType === "press" ? (
+        <PressFormDialog
+          {...sharedDialogProps}
+          initialValuesKey={current.key}
+          initialValues={{
+            title: current.title,
+            activityType: "magazine",
+            activityDate: current.date,
+            location: current.location,
+            description: current.description,
+            imageUrl,
+          }}
+          onSaved={handleSaved}
         />
       ) : null}
 
       {current?.contentType === "activity" ? (
         <ActivityFormDialog
-          open={reviewOpen}
-          onOpenChange={handleDialogOpenChange}
-          campaignId={campaignId}
-          ownerUserId={ownerUserId}
+          {...sharedDialogProps}
           initialValuesKey={current.key}
-          contentPlans={currentCampaign.contentPlans}
-          contentTopics={currentCampaign.contentTopics}
-          queueLabel={queueLabel}
           initialValues={{
             title: current.title,
             activityType: "field",
@@ -357,8 +420,6 @@ export function BulkContentImport({ users }: BulkContentImportProps) {
             imageUrl,
           }}
           onSaved={handleSaved}
-          onSkip={handleSkip}
-          bulkTypeSwitcher={typeSwitcher}
         />
       ) : null}
     </>

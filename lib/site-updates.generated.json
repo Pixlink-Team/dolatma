@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "db43f0523a62b20b28d9308dcf432b1dd5c8761a",
+      "committedAt": "2026-07-18T17:00:23+03:30",
+      "title": "امکان تغییر بخش مقصد در افزودن گروهی محتوا",
+      "subject": "Allow changing content section during bulk import"
+    },
+    {
       "hash": "2df1589e7bbd51a2df471bd7ea2be7465be5a6e3",
       "committedAt": "2026-07-18T16:27:14+03:30",
       "title": "امکان تعریف دکمه لینک و هدایت به بخش‌های پنل در دستورکارها",

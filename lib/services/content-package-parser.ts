@@ -1,7 +1,14 @@
 import * as XLSX from "xlsx";
 import type { SocialPostPlatform } from "@/lib/types";
 
-export type ContentPackageItemType = "billboard" | "social" | "activity";
+export type ContentPackageItemType =
+  | "billboard"
+  | "poster"
+  | "video"
+  | "site"
+  | "social"
+  | "press"
+  | "activity";
 
 export interface ContentPackageDraftItem {
   key: string;
@@ -57,7 +64,11 @@ export const CONTENT_PACKAGE_TYPE_OPTIONS: {
   label: string;
 }[] = [
   { value: "billboard", label: "تبلیغات محیطی" },
+  { value: "poster", label: "پوستر" },
+  { value: "video", label: "ویدیو" },
+  { value: "site", label: "انتشار در سایت" },
   { value: "social", label: "شبکه اجتماعی" },
+  { value: "press", label: "مجله و روزنامه" },
   { value: "activity", label: "اقدام" },
 ];
 
@@ -71,14 +82,20 @@ export function mapContentPackageType(raw: string): ContentPackageItemType | nul
   ) {
     return "billboard";
   }
+  if (value.includes("پوستر") || /poster/i.test(value)) return "poster";
+  if (value.includes("ویدیو") || value.includes("ویدئو") || /video/i.test(value)) {
+    return "video";
+  }
+  if (value.includes("سایت") || value.includes("پورتال") || /site/i.test(value)) {
+    return "site";
+  }
+  if (value.includes("شبکه") || /social/i.test(value)) return "social";
   if (
-    value.includes("شبکه") ||
-    value.includes("پوستر") ||
-    value.includes("ویدیو") ||
-    value.includes("ویدئو") ||
-    /social|poster|video/i.test(value)
+    value.includes("مجله") ||
+    value.includes("روزنامه") ||
+    /press|magazine|newspaper/i.test(value)
   ) {
-    return "social";
+    return "press";
   }
   if (value.includes("اقدام") || /activity/i.test(value)) return "activity";
   return null;
@@ -153,7 +170,9 @@ export function parseContentPackageExcel(
         ? platformRaw
           ? detectSocialPlatformFromText(platformRaw)
           : detectSocialPlatformFromText(location)
-        : null;
+        : contentType === "site"
+          ? "site"
+          : null;
 
     rows.push({
       title,
