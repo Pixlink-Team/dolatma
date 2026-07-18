@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "2024987e4dc132b272a9f4ae1a3a2b6f560e2b54",
+      "committedAt": "2026-07-18T16:05:41+03:30",
+      "title": "افزودن ورود گروهی محتوا با تأیید تک‌به‌تک کارت‌ها",
+      "subject": "Add admin bulk content import with per-item confirm"
+    },
+    {
       "hash": "79c6c87c232e1757181cdd8691ca0bb8decc4804",
       "committedAt": "2026-07-18T12:24:32+03:30",
       "title": "اولویت رتبه‌بندی وزارتخانه‌ها و زیرمجموعه‌ها نسبت به استان",

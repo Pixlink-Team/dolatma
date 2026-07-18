@@ -321,4 +321,34 @@ export const DEFAULT_MINISTRIES: readonly MinistrySeed[] = [
       { name: "موزه‌های ملی و ادارات کل استانی" },
     ],
   },
+  {
+    name: "بانک مرکزی",
+    fullName: "بانک مرکزی جمهوری اسلامی ایران",
+    organizations: [],
+  },
+  {
+    name: "سازمان برنامه و بودجه",
+    fullName: "سازمان برنامه و بودجه کشور",
+    organizations: [],
+  },
+  {
+    name: "سازمان اداری و استخدامی",
+    fullName: "سازمان اداری و استخدامی کشور",
+    organizations: [],
+  },
+  {
+    name: "محیط‌زیست",
+    fullName: "سازمان حفاظت محیط زیست",
+    organizations: [],
+  },
+  {
+    name: "انرژی اتمی",
+    fullName: "سازمان انرژی اتمی ایران",
+    organizations: [],
+  },
+  {
+    name: "هلال‌احمر",
+    fullName: "جمعیت هلال‌احمر جمهوری اسلامی ایران",
+    organizations: [],
+  },
 ] as const;
