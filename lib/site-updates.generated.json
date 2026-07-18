@@ -1,6 +1,18 @@
 {
   "entries": [
     {
+      "hash": "0d168228ace4160a90bdb08afa8cca1fe0d642bd",
+      "committedAt": "2026-07-18T16:25:37+03:30",
+      "title": "افزودن ورود و پروفایل کاربر در بالای صفحه کمپین",
+      "subject": "Add login and profile chip to campaign header"
+    },
+    {
+      "hash": "0c6cece4a02f38054d594922c555ae4263d08c3a",
+      "committedAt": "2026-07-18T16:17:35+03:30",
+      "title": "افزودن بانک مرکزی، برنامه و بودجه و چند سازمان ملی به فهرست وزارتخانه‌ها",
+      "subject": "Add independent national orgs to ministry catalog"
+    },
+    {
       "hash": "2024987e4dc132b272a9f4ae1a3a2b6f560e2b54",
       "committedAt": "2026-07-18T16:05:41+03:30",
       "title": "افزودن ورود گروهی محتوا با تأیید تک‌به‌تک کارت‌ها",
