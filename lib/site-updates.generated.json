@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "733dc909d8e28da8e07fa4cb817c08e1c6864ead",
+      "committedAt": "2026-07-18T10:43:24+03:30",
+      "title": "امکان تنظیم تگ‌لاین، فاویکون و پیش‌نمایش اشتراک از تنظیمات کمپین",
+      "subject": "Add editable campaign branding for share meta and favicon"
+    },
+    {
       "hash": "b6f6f49738d0832c977bedbf9c21c3d829261d9d",
       "committedAt": "2026-07-18T09:39:33+03:30",
       "title": "امکان مشاهده گزارش‌های قبلی و پاسخ ادمین به مشکلات",

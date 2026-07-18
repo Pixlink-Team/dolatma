@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import type { CampaignSettings } from "@/lib/types";
+import { withFileAccessToken } from "@/lib/uploads";
 
 export const DEFAULT_SITE_TITLE = "گزارش زنده کمپین";
 export const DEFAULT_SITE_DESCRIPTION = "گزارش زنده پیشرفت کمپین تبلیغاتی";
@@ -22,6 +23,16 @@ export function absolutizeMediaUrl(
   if (!trimmed) return undefined;
   if (/^https?:\/\//i.test(trimmed)) return trimmed;
   return `${baseUrl}${trimmed.startsWith("/") ? "" : "/"}${trimmed}`;
+}
+
+/** Signed absolute URL so browsers (no session) can load /api/files media in <link>/<meta>. */
+function publicMediaUrl(
+  url: string | null | undefined,
+  baseUrl = resolveSiteBaseUrl()
+): string | undefined {
+  const trimmed = url?.trim();
+  if (!trimmed) return undefined;
+  return absolutizeMediaUrl(withFileAccessToken(trimmed), baseUrl);
 }
 
 function iconMimeType(url: string): string | undefined {
@@ -50,9 +61,9 @@ export function buildCampaignMetadata(
     settings?.description?.trim() ||
     DEFAULT_SITE_DESCRIPTION;
   const faviconUrl =
-    absolutizeMediaUrl(settings?.faviconUrl, baseUrl) ||
-    absolutizeMediaUrl(DEFAULT_FAVICON_URL, baseUrl)!;
-  const ogImage = absolutizeMediaUrl(settings?.coverImageUrl, baseUrl);
+    publicMediaUrl(settings?.faviconUrl, baseUrl) ||
+    publicMediaUrl(DEFAULT_FAVICON_URL, baseUrl)!;
+  const ogImage = publicMediaUrl(settings?.coverImageUrl, baseUrl);
   const pagePath = options?.path ?? (settings?.slug ? `/campaign/${settings.slug}` : "/");
   const pageUrl = `${baseUrl}${pagePath.startsWith("/") ? pagePath : `/${pagePath}`}`;
   const faviconType = iconMimeType(faviconUrl);
