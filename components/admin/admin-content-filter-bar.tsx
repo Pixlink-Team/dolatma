@@ -10,6 +10,8 @@ import { formatPlanLabelDisplay, matchesAnyPlanLabelFilter } from "@/lib/content
 
 export const ADMIN_FILTER_ALL = "all";
 
+export type AdminCreativeFilter = "all" | "creative" | "non_creative";
+
 export interface AdminContentFilterState {
   userKey: string;
   ministryId: string;
@@ -18,6 +20,8 @@ export interface AdminContentFilterState {
   city: string;
   /** Empty array means all plan labels. */
   planLabels: string[];
+  /** Activities-only: filter by creative flag. Defaults to all. */
+  creativeFilter: AdminCreativeFilter;
 }
 
 export const DEFAULT_ADMIN_CONTENT_FILTER: AdminContentFilterState = {
@@ -27,6 +31,7 @@ export const DEFAULT_ADMIN_CONTENT_FILTER: AdminContentFilterState = {
   province: ADMIN_FILTER_ALL,
   city: ADMIN_FILTER_ALL,
   planLabels: [],
+  creativeFilter: "all",
 };
 
 export interface AdminFilterUserOption {
@@ -44,6 +49,8 @@ interface AdminContentFilterBarProps {
   users: AdminFilterUserOption[];
   plans: string[];
   items?: Ownable[];
+  /** Show creative-actions filter (activities section). */
+  showCreativeFilter?: boolean;
 }
 
 export function matchesAdminContentFilter<T extends Ownable>(
@@ -73,6 +80,14 @@ export function matchesAdminContentFilter<T extends Ownable>(
 
   if (!matchesAnyPlanLabelFilter(item.planLabels, item.planLabel, filter.planLabels)) {
     return false;
+  }
+
+  const creativeFilter = filter.creativeFilter ?? "all";
+  if (creativeFilter !== "all") {
+    const isCreative =
+      "isCreative" in item && Boolean((item as Ownable & { isCreative?: boolean }).isCreative);
+    if (creativeFilter === "creative" && !isCreative) return false;
+    if (creativeFilter === "non_creative" && isCreative) return false;
   }
 
   return true;
@@ -150,6 +165,7 @@ export function AdminContentFilterBar({
   users,
   plans,
   items = [],
+  showCreativeFilter = false,
 }: AdminContentFilterBarProps) {
   const meta = useMemo(() => collectFromItems(items), [items]);
 
@@ -184,15 +200,25 @@ export function AdminContentFilterBar({
     return meta.citiesByProvince[filter.province] ?? [];
   }, [meta.citiesByProvince, filter.province]);
 
+  const creativeFilter = filter.creativeFilter ?? "all";
+
   const active =
     filter.userKey !== ADMIN_FILTER_ALL ||
     filter.ministryId !== ADMIN_FILTER_ALL ||
     filter.organizationId !== ADMIN_FILTER_ALL ||
     filter.province !== ADMIN_FILTER_ALL ||
     filter.city !== ADMIN_FILTER_ALL ||
-    filter.planLabels.length > 0;
+    filter.planLabels.length > 0 ||
+    (showCreativeFilter && creativeFilter !== "all");
 
-  if (users.length === 0 && plans.length === 0 && meta.ministries.length === 0) return null;
+  if (
+    users.length === 0 &&
+    plans.length === 0 &&
+    meta.ministries.length === 0 &&
+    !showCreativeFilter
+  ) {
+    return null;
+  }
 
   const togglePlan = (plan: string) => {
     const exists = filter.planLabels.includes(plan);
@@ -227,6 +253,12 @@ export function AdminContentFilterBar({
   const citySelectOptions = [
     { value: ADMIN_FILTER_ALL, label: "همه شهرها" },
     ...cityOptions.map((city) => ({ value: city, label: city })),
+  ];
+
+  const creativeOptions = [
+    { value: "all", label: "همه اقدامات" },
+    { value: "creative", label: "فقط خلاقانه" },
+    { value: "non_creative", label: "غیر خلاقانه" },
   ];
 
   const planOptions = plans
@@ -339,6 +371,19 @@ export function AdminContentFilterBar({
             className="w-full sm:w-56"
             clearAfterSelect
             emptyText="موضوعی برای افزودن نیست"
+          />
+        )}
+
+        {showCreativeFilter && (
+          <SearchableSelect
+            value={creativeFilter}
+            onValueChange={(value) =>
+              onChange({ ...filter, creativeFilter: value as AdminCreativeFilter })
+            }
+            options={creativeOptions}
+            placeholder="اقدام خلاقانه"
+            searchPlaceholder="جستجو..."
+            className="w-full sm:w-48"
           />
         )}
 

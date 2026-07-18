@@ -1,5 +1,6 @@
 "use client";
 
+import { Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { AdminItemActions } from "@/components/admin/admin-item-actions";
 import { AdminOwnerBadge } from "@/components/admin/admin-owner-badge";
@@ -56,6 +57,17 @@ export function AdminActivityCompactCard({
               {getActivityTypeLabel(activity.activityType)}
             </Badge>
           </div>
+          {activity.isCreative && (
+            <div className="absolute top-1.5 left-1.5">
+              <Badge
+                variant="overlay"
+                className="gap-0.5 bg-amber-500/90 text-[10px] px-1.5 py-0 text-white"
+              >
+                <Star className="h-2.5 w-2.5 fill-white" />
+                خلاقانه
+              </Badge>
+            </div>
+          )}
         </div>
         <div className="space-y-1 p-2">
           <p className="truncate text-xs font-medium">{activity.title}</p>

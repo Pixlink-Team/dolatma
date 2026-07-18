@@ -593,6 +593,8 @@ export interface CampaignActivity extends Ownable {
   videoUrl?: string | null;
   mediaItems: ActivityMediaItem[];
   description?: string | null;
+  /** Marked as a creative field action for review and filtering. */
+  isCreative: boolean;
   published: boolean;
   sortOrder: number;
   createdAt: string;

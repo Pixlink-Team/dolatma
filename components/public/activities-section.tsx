@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Image from "next/image";
-import { Download, ExternalLink, Eye, Music, Play } from "lucide-react";
+import { Download, ExternalLink, Eye, Music, Play, Star } from "lucide-react";
 import { getActivityTypeLabel } from "@/lib/activity-types";
 import { useFilteredOwnerGroups } from "@/lib/hooks/use-filtered-owner-groups";
 import { useCampaignSectionVisibility } from "@/lib/hooks/use-campaign-section-visibility";
@@ -29,6 +29,8 @@ import {
 import { VideoThumbnail } from "@/components/media/video-thumbnail";
 import { cn } from "@/lib/utils";
 import { downloadMedia, getFilenameFromUrl } from "@/lib/media-utils";
+
+type CreativePublicFilter = "all" | "creative";
 
 interface ActivitiesSectionProps {
   activities: CampaignActivity[];
@@ -114,10 +116,19 @@ function ActivityCard({
           </div>
         )}
 
-        <div className="absolute top-2 right-2">
+        <div className="absolute top-2 right-2 flex flex-col items-end gap-1">
           <Badge variant="overlay" className="text-[10px] px-1.5 py-0">
             {getActivityTypeLabel(activity.activityType)}
           </Badge>
+          {activity.isCreative && (
+            <Badge
+              variant="overlay"
+              className="gap-0.5 bg-amber-500/90 text-[10px] px-1.5 py-0 text-white"
+            >
+              <Star className="h-2.5 w-2.5 fill-white" />
+              خلاقانه
+            </Badge>
+          )}
         </div>
         </div>
       }
@@ -203,20 +214,34 @@ export function ActivitiesSection({
   hasDisplayContent = activityHasDisplayContent,
 }: ActivitiesSectionProps) {
   const { filter } = useOwnerLocationFilter();
+  const [creativeFilter, setCreativeFilter] = useState<CreativePublicFilter>("all");
   const locationFilteredGroups = useFilteredOwnerGroups(groups, (activity) => activity.activityDate);
+  const creativeFilteredGroups = useMemo(() => {
+    if (creativeFilter !== "creative") return locationFilteredGroups;
+    return locationFilteredGroups
+      .map((group) => ({
+        ...group,
+        items: group.items.filter((activity) => activity.isCreative),
+      }))
+      .filter((group) => group.items.length > 0);
+  }, [locationFilteredGroups, creativeFilter]);
   const filteredGroups = useMemo(
-    () => filterGroupsByDisplayContent(locationFilteredGroups, hasDisplayContent),
-    [locationFilteredGroups, hasDisplayContent]
+    () => filterGroupsByDisplayContent(creativeFilteredGroups, hasDisplayContent),
+    [creativeFilteredGroups, hasDisplayContent]
   );
   const filteredActivities = useMemo(
     () => flattenOwnerGroupsInSortOrder(filteredGroups, filter.sortOrder),
     [filteredGroups, filter.sortOrder]
   );
+  const hasAnyCreative = useMemo(
+    () => activities.some((activity) => activity.isCreative),
+    [activities]
+  );
   const sectionVisible = useCampaignSectionVisibility(activities.length, filteredActivities.length);
 
   const { visibleCount, hasMore, loadMore } = usePublicMediaPagination(
     filteredActivities.length,
-    `activities:${filteredActivities.length}`
+    `activities:${creativeFilter}:${filteredActivities.length}`
   );
 
   const chronological = shouldRenderChronologically(filter.sortOrder);
@@ -243,6 +268,28 @@ export function ActivitiesSection({
       description={description}
     >
       <SectionTopCompaniesBox groups={filteredGroups} />
+      {hasAnyCreative && (
+        <div className="mb-4 flex flex-wrap items-center gap-2" dir="rtl">
+          <Button
+            type="button"
+            size="sm"
+            variant={creativeFilter === "all" ? "default" : "outline"}
+            onClick={() => setCreativeFilter("all")}
+          >
+            همه اقدامات
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant={creativeFilter === "creative" ? "default" : "outline"}
+            className="gap-1.5"
+            onClick={() => setCreativeFilter("creative")}
+          >
+            <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-500" />
+            فقط خلاقانه
+          </Button>
+        </div>
+      )}
       <>
           <OwnerGroupedSection
             groups={visibleGroups}

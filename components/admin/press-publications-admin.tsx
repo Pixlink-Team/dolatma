@@ -267,6 +267,7 @@ export function PressPublicationsAdmin({
         mediaItems: filledMedia,
         description: data.description || null,
         published: true,
+        isCreative: false,
         planLabels,
         planLabel: planLabels[0] ?? null,
         sortOrder: rows.length + 1,

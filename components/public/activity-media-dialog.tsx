@@ -1,6 +1,6 @@
 "use client";
 
-import { Download, Music } from "lucide-react";
+import { Download, Music, Star } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -66,6 +66,12 @@ export function ActivityMediaDialog({ activity, open, onOpenChange }: ActivityMe
           <DialogTitle className="flex flex-wrap items-center gap-2 text-base">
             {activity.title}
             <Badge variant="outline">{getActivityTypeLabel(activity.activityType)}</Badge>
+            {activity.isCreative && (
+              <Badge variant="secondary" className="gap-1">
+                <Star className="h-3 w-3 fill-amber-400 text-amber-500" />
+                خلاقانه
+              </Badge>
+            )}
           </DialogTitle>
         </DialogHeader>
 
