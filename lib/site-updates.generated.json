@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "e549042de6a30cfdd475f8240e3b7c01df597fc1",
+      "committedAt": "2026-07-18T12:13:20+03:30",
+      "title": "فیلتر محتوا و کاربران بر اساس وزارتخانه، زیرمجموعه، استان و شهر",
+      "subject": "Add ministry, org, province, and city filters across content"
+    },
+    {
       "hash": "a153374d3be977bb5f516160c1f89d7573c99c82",
       "committedAt": "2026-07-18T12:02:57+03:30",
       "title": "جایگزینی عنوان کمپین با اقدام در سراسر سایت",

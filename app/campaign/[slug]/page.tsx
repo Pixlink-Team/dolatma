@@ -27,11 +27,11 @@ export async function generateMetadata({
   if (isPostgresConfigured()) {
     const settings = await pgGetPublishedCampaignBySlug(slug);
     if (settings) {
-      return buildCampaignMetadata(settings);
+      return await buildCampaignMetadata(settings);
     }
   }
 
-  return buildCampaignMetadata({
+  return await buildCampaignMetadata({
     title: slug,
     tagline: null,
     description: "",

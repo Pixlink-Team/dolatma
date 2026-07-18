@@ -13,7 +13,7 @@ const vazirmatn = Vazirmatn({
 
 export async function generateMetadata(): Promise<Metadata> {
   if (!isPostgresConfigured()) {
-    return buildCampaignMetadata(null, { path: "/" });
+    return await buildCampaignMetadata(null, { path: "/" });
   }
 
   try {
@@ -23,9 +23,9 @@ export async function generateMetadata(): Promise<Metadata> {
       campaigns.find((campaign) => campaign.published) ??
       campaigns[0] ??
       null;
-    return buildCampaignMetadata(primary, { path: "/" });
+    return await buildCampaignMetadata(primary, { path: "/" });
   } catch {
-    return buildCampaignMetadata(null, { path: "/" });
+    return await buildCampaignMetadata(null, { path: "/" });
   }
 }
 

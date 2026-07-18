@@ -43,6 +43,16 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "*.darkube.ir" },
     ],
   },
+  async redirects() {
+    return [
+      // Browsers still request /favicon.ico by default.
+      {
+        source: "/favicon.ico",
+        destination: "/images/dolat-icon.png",
+        permanent: false,
+      },
+    ];
+  },
   async headers() {
     return [
       {

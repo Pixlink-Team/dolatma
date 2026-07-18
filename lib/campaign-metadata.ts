@@ -1,14 +1,32 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import type { CampaignSettings } from "@/lib/types";
 import { withFileAccessToken } from "@/lib/uploads";
 
 export const DEFAULT_SITE_TITLE = "گزارش زنده اقدام";
 export const DEFAULT_SITE_DESCRIPTION = "گزارش زنده پیشرفت اقدام تبلیغاتی";
-export const DEFAULT_FAVICON_URL = "/images/dolat.webp";
+/** PNG favicon — WebP is not reliably supported as a browser tab icon. */
+export const DEFAULT_FAVICON_URL = "/images/dolat-icon.png";
 
-function resolveSiteBaseUrl(): string {
+export async function resolveSiteBaseUrl(): Promise<string> {
   const configured = process.env.NEXT_PUBLIC_APP_URL?.trim();
   if (configured) return configured.replace(/\/$/, "");
+
+  try {
+    const requestHeaders = await headers();
+    const host = (requestHeaders.get("x-forwarded-host") || requestHeaders.get("host") || "")
+      .split(",")[0]
+      ?.trim();
+    if (host) {
+      const forwardedProto = requestHeaders.get("x-forwarded-proto")?.split(",")[0]?.trim();
+      const isLocal = host.startsWith("localhost") || host.startsWith("127.0.0.1");
+      const proto = forwardedProto || (isLocal ? "http" : "https");
+      return `${proto}://${host}`;
+    }
+  } catch {
+    // headers() is unavailable outside a request (e.g. build-time).
+  }
+
   if (process.env.VERCEL_URL?.trim()) {
     return `https://${process.env.VERCEL_URL.trim().replace(/\/$/, "")}`;
   }
@@ -17,7 +35,7 @@ function resolveSiteBaseUrl(): string {
 
 export function absolutizeMediaUrl(
   url: string | null | undefined,
-  baseUrl = resolveSiteBaseUrl()
+  baseUrl: string
 ): string | undefined {
   const trimmed = url?.trim();
   if (!trimmed) return undefined;
@@ -25,14 +43,27 @@ export function absolutizeMediaUrl(
   return `${baseUrl}${trimmed.startsWith("/") ? "" : "/"}${trimmed}`;
 }
 
-/** Signed absolute URL so browsers (no session) can load /api/files media in <link>/<meta>. */
+/** Signed absolute URL so crawlers/browsers can load /api/files media in <meta>. */
 function publicMediaUrl(
   url: string | null | undefined,
-  baseUrl = resolveSiteBaseUrl()
+  baseUrl: string
 ): string | undefined {
   const trimmed = url?.trim();
   if (!trimmed) return undefined;
   return absolutizeMediaUrl(withFileAccessToken(trimmed), baseUrl);
+}
+
+/**
+ * Same-origin icon path (signed when needed). Prefer path-only URLs so
+ * metadataBase (from the request Host / NEXT_PUBLIC_APP_URL) can absolutize
+ * them correctly — never bake in a build-time localhost fallback.
+ */
+function publicIconUrl(url: string | null | undefined): string | undefined {
+  const trimmed = url?.trim();
+  if (!trimmed) return undefined;
+  const signed = withFileAccessToken(trimmed);
+  if (/^https?:\/\//i.test(signed)) return signed;
+  return signed.startsWith("/") ? signed : `/${signed}`;
 }
 
 function iconMimeType(url: string): string | undefined {
@@ -50,19 +81,18 @@ export type CampaignMetadataSource = Pick<
   "title" | "tagline" | "description" | "coverImageUrl" | "faviconUrl" | "slug"
 >;
 
-export function buildCampaignMetadata(
+export async function buildCampaignMetadata(
   settings?: CampaignMetadataSource | null,
   options?: { path?: string }
-): Metadata {
-  const baseUrl = resolveSiteBaseUrl();
+): Promise<Metadata> {
+  const baseUrl = await resolveSiteBaseUrl();
   const title = settings?.title?.trim() || DEFAULT_SITE_TITLE;
   const description =
     settings?.tagline?.trim() ||
     settings?.description?.trim() ||
     DEFAULT_SITE_DESCRIPTION;
   const faviconUrl =
-    publicMediaUrl(settings?.faviconUrl, baseUrl) ||
-    publicMediaUrl(DEFAULT_FAVICON_URL, baseUrl)!;
+    publicIconUrl(settings?.faviconUrl) || publicIconUrl(DEFAULT_FAVICON_URL)!;
   const ogImage = publicMediaUrl(settings?.coverImageUrl, baseUrl);
   const pagePath = options?.path ?? (settings?.slug ? `/campaign/${settings.slug}` : "/");
   const pageUrl = `${baseUrl}${pagePath.startsWith("/") ? pagePath : `/${pagePath}`}`;
