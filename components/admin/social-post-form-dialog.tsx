@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useState, useTransition, type ReactNode } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -104,6 +104,8 @@ interface SocialPostFormDialogProps {
   onSaved?: () => void;
   onSkip?: () => void;
   queueLabel?: string;
+  /** Optional control for bulk import (e.g. switch content section). */
+  bulkTypeSwitcher?: ReactNode;
 }
 
 function platformLabel(platform: SocialPostPlatform): string {
@@ -123,6 +125,7 @@ export function SocialPostFormDialog({
   onSaved,
   onSkip,
   queueLabel,
+  bulkTypeSwitcher,
 }: SocialPostFormDialogProps) {
   const [planLabels, setPlanLabels] = useState<string[]>([]);
   const [isPending, startTransition] = useTransition();
@@ -210,6 +213,8 @@ export function SocialPostFormDialog({
             داده‌های Excel پر شده‌اند؛ بقیه را اصلاح یا تکمیل کنید.
           </p>
         </DialogHeader>
+
+        {bulkTypeSwitcher}
 
         <form onSubmit={onSubmit} className="space-y-4 text-right">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

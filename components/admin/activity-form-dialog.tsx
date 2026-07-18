@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useState, useTransition, type ReactNode } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -70,6 +70,8 @@ interface ActivityFormDialogProps {
   onSaved?: () => void;
   onSkip?: () => void;
   queueLabel?: string;
+  /** Optional control for bulk import (e.g. switch content section). */
+  bulkTypeSwitcher?: ReactNode;
 }
 
 export function ActivityFormDialog({
@@ -84,6 +86,7 @@ export function ActivityFormDialog({
   onSaved,
   onSkip,
   queueLabel,
+  bulkTypeSwitcher,
 }: ActivityFormDialogProps) {
   const [mediaItems, setMediaItems] = useState<ActivityMediaItem[]>([]);
   const [planLabels, setPlanLabels] = useState<string[]>([]);
@@ -165,6 +168,8 @@ export function ActivityFormDialog({
             داده‌های Excel پر شده‌اند؛ بقیه را اصلاح یا تکمیل کنید.
           </p>
         </DialogHeader>
+
+        {bulkTypeSwitcher}
 
         <form onSubmit={onSubmit} className="space-y-4">
           <div className="space-y-2">

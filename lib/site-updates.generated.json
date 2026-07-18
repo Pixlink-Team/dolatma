@@ -1,6 +1,24 @@
 {
   "entries": [
     {
+      "hash": "2df1589e7bbd51a2df471bd7ea2be7465be5a6e3",
+      "committedAt": "2026-07-18T16:27:14+03:30",
+      "title": "امکان تعریف دکمه لینک و هدایت به بخش‌های پنل در دستورکارها",
+      "subject": "Add optional CTA button to campaign directives"
+    },
+    {
+      "hash": "efbca1f9b35ce2e3771c43aaf0872d7891533ae3",
+      "committedAt": "2026-07-18T16:26:33+03:30",
+      "title": "امکان علامت‌گذاری و فیلتر اقدامات خلاقانه با نشان ستاره",
+      "subject": "Add creative flag for field activities with filter and star badge"
+    },
+    {
+      "hash": "800cbbf891e96cf1e6fd4943c672540001ab68f7",
+      "committedAt": "2026-07-18T16:26:06+03:30",
+      "title": "باز شدن مودال واقعی هر بخش هنگام افزودن گروهی محتوا",
+      "subject": "Open real section modals for bulk content import"
+    },
+    {
       "hash": "0d168228ace4160a90bdb08afa8cca1fe0d642bd",
       "committedAt": "2026-07-18T16:25:37+03:30",
       "title": "افزودن ورود و پروفایل کاربر در بالای صفحه کمپین",

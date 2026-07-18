@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useState, useTransition, type ReactNode } from "react";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -94,6 +94,8 @@ interface BillboardCreateAssignmentDialogProps {
   /** Optional skip control for bulk import queue. */
   onSkip?: () => void;
   skipLabel?: string;
+  /** Optional control for bulk import (e.g. switch content section). */
+  bulkTypeSwitcher?: ReactNode;
 }
 
 function periodsToDrafts(periods: BillboardDisplayPeriod[]): DisplayPeriodDraft[] {
@@ -143,6 +145,7 @@ export function BillboardCreateAssignmentDialog({
   onCreated,
   onSkip,
   skipLabel = "رد کردن",
+  bulkTypeSwitcher,
 }: BillboardCreateAssignmentDialogProps) {
   const [isPending, startTransition] = useTransition();
   const [province, setProvince] = useState("");
@@ -342,6 +345,8 @@ export function BillboardCreateAssignmentDialog({
             {" "}می‌توانید چند دوره نمایش اضافه کنید.
           </p>
         </DialogHeader>
+
+        {bulkTypeSwitcher}
 
         <div className="space-y-4">
           <div className="space-y-2">

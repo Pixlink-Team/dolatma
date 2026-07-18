@@ -18,12 +18,46 @@ import { useAdminCampaign } from "@/components/admin/admin-campaign-provider";
 import { BillboardCreateAssignmentDialog } from "@/components/admin/billboard-create-assignment-dialog";
 import { SocialPostFormDialog } from "@/components/admin/social-post-form-dialog";
 import { ActivityFormDialog } from "@/components/admin/activity-form-dialog";
-import type { ContentPackageDraftItem } from "@/lib/services/content-package-parser";
+import {
+  CONTENT_PACKAGE_TYPE_OPTIONS,
+  detectSocialPlatformFromText,
+  type ContentPackageDraftItem,
+  type ContentPackageItemType,
+} from "@/lib/services/content-package-parser";
 import type { AdminUser } from "@/lib/types";
 import { stripFileAccessToken } from "@/lib/uploads";
 
 interface BulkContentImportProps {
   users: AdminUser[];
+}
+
+function BulkContentTypeSwitcher({
+  value,
+  onChange,
+}: {
+  value: ContentPackageItemType;
+  onChange: (next: ContentPackageItemType) => void;
+}) {
+  return (
+    <div className="rounded-lg border bg-muted/40 p-3 space-y-2">
+      <Label>بخش مقصد</Label>
+      <Select value={value} onValueChange={(next) => onChange(next as ContentPackageItemType)}>
+        <SelectTrigger>
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {CONTENT_PACKAGE_TYPE_OPTIONS.map((option) => (
+            <SelectItem key={option.value} value={option.value}>
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <p className="text-xs text-muted-foreground">
+        اگر نوع از Excel اشتباه تشخیص داده شده، اینجا عوض کنید تا مودال همان بخش باز شود.
+      </p>
+    </div>
+  );
 }
 
 export function BulkContentImport({ users }: BulkContentImportProps) {
@@ -32,6 +66,7 @@ export function BulkContentImport({ users }: BulkContentImportProps) {
   const zipRef = useRef<HTMLInputElement>(null);
   const closingByFinishRef = useRef(false);
   const advancingRef = useRef(false);
+  const switchingTypeRef = useRef(false);
 
   const [ownerUserId, setOwnerUserId] = useState("");
   const [parsing, setParsing] = useState(false);
@@ -135,9 +170,34 @@ export function BulkContentImport({ users }: BulkContentImportProps) {
     finishIfDone(nextSaved, skippedCount, index + 1);
   };
 
+  const handleContentTypeChange = (nextType: ContentPackageItemType) => {
+    if (!current || current.contentType === nextType) return;
+    switchingTypeRef.current = true;
+    setDrafts((prev) =>
+      prev.map((item, itemIndex) => {
+        if (itemIndex !== index) return item;
+        return {
+          ...item,
+          contentType: nextType,
+          platform:
+            nextType === "social"
+              ? item.platform ?? detectSocialPlatformFromText(item.location)
+              : null,
+        };
+      })
+    );
+    // Ignore Dialog unmount close events from the previous section modal.
+    window.setTimeout(() => {
+      switchingTypeRef.current = false;
+    }, 0);
+  };
+
   const handleDialogOpenChange = (open: boolean) => {
     if (open) {
       setReviewOpen(true);
+      return;
+    }
+    if (switchingTypeRef.current) {
       return;
     }
     if (closingByFinishRef.current || advancingRef.current) {
@@ -152,6 +212,9 @@ export function BulkContentImport({ users }: BulkContentImportProps) {
   if (!currentCampaign) return null;
 
   const imageUrl = current ? stripFileAccessToken(current.imageUrl) : "";
+  const typeSwitcher = current ? (
+    <BulkContentTypeSwitcher value={current.contentType} onChange={handleContentTypeChange} />
+  ) : null;
 
   return (
     <>
@@ -167,7 +230,7 @@ export function BulkContentImport({ users }: BulkContentImportProps) {
             یک ZIP شامل <span className="font-medium">فهرست.xlsx</span> و پوشه{" "}
             <span className="font-medium">images</span> آپلود کنید. برای هر ردیف، مودال همان بخش
             (تبلیغات محیطی / شبکه اجتماعی / اقدام) باز می‌شود؛ فیلدهای Excel از قبل پر هستند و بقیه را
-            تکمیل می‌کنید.
+            تکمیل می‌کنید. اگر نوع اشتباه بود، داخل مودال بخش مقصد را عوض کنید.
           </p>
 
           <div className="space-y-2">
@@ -247,6 +310,7 @@ export function BulkContentImport({ users }: BulkContentImportProps) {
           onCreated={handleSaved}
           onSkip={handleSkip}
           skipLabel="رد کردن این مورد"
+          bulkTypeSwitcher={typeSwitcher}
         />
       ) : null}
 
@@ -270,6 +334,7 @@ export function BulkContentImport({ users }: BulkContentImportProps) {
           }}
           onSaved={handleSaved}
           onSkip={handleSkip}
+          bulkTypeSwitcher={typeSwitcher}
         />
       ) : null}
 
@@ -293,6 +358,7 @@ export function BulkContentImport({ users }: BulkContentImportProps) {
           }}
           onSaved={handleSaved}
           onSkip={handleSkip}
+          bulkTypeSwitcher={typeSwitcher}
         />
       ) : null}
     </>

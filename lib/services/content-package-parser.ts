@@ -52,11 +52,34 @@ function pickColumn(header: string[], aliases: string[]): number {
   return -1;
 }
 
+export const CONTENT_PACKAGE_TYPE_OPTIONS: {
+  value: ContentPackageItemType;
+  label: string;
+}[] = [
+  { value: "billboard", label: "تبلیغات محیطی" },
+  { value: "social", label: "شبکه اجتماعی" },
+  { value: "activity", label: "اقدام" },
+];
+
 export function mapContentPackageType(raw: string): ContentPackageItemType | null {
   const value = raw.trim();
   if (!value) return null;
-  if (value.includes("بیلبورد") || /billboard/i.test(value)) return "billboard";
-  if (value.includes("شبکه") || /social/i.test(value)) return "social";
+  if (
+    value.includes("بیلبورد") ||
+    value.includes("محیطی") ||
+    /billboard/i.test(value)
+  ) {
+    return "billboard";
+  }
+  if (
+    value.includes("شبکه") ||
+    value.includes("پوستر") ||
+    value.includes("ویدیو") ||
+    value.includes("ویدئو") ||
+    /social|poster|video/i.test(value)
+  ) {
+    return "social";
+  }
   if (value.includes("اقدام") || /activity/i.test(value)) return "activity";
   return null;
 }
