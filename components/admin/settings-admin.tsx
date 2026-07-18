@@ -64,11 +64,13 @@ const channelSchema = z.object({
 const schema = z.object({
   title: z.string().min(1).max(CONTENT_TITLE_MAX_LENGTH, CONTENT_TITLE_MAX_LENGTH_MESSAGE),
   slug: z.string().min(1),
+  tagline: z.string().optional(),
   description: z.string().min(1),
   status: z.enum(["live", "completed", "draft"]),
   startDate: z.string(),
   endDate: z.string(),
   coverImageUrl: z.string().optional(),
+  faviconUrl: z.string().optional(),
   published: z.boolean(),
   features: featuresSchema,
   adminOwnerLabel: z.string().optional(),
@@ -240,11 +242,13 @@ export function SettingsAdmin({
     defaultValues: {
       title: initialSettings.title,
       slug: initialSettings.slug,
+      tagline: initialSettings.tagline ?? "",
       description: initialSettings.description,
       status: initialSettings.status,
       startDate: initialSettings.startDate,
       endDate: initialSettings.endDate,
       coverImageUrl: initialSettings.coverImageUrl ?? "",
+      faviconUrl: initialSettings.faviconUrl ?? "",
       published: initialSettings.published,
       features: {
         ...initialSettings.features,
@@ -283,11 +287,13 @@ export function SettingsAdmin({
         id: initialSettings.id,
         title: data.title,
         slug: data.slug,
+        tagline: data.tagline?.trim() || null,
         description: data.description,
         status: data.status,
         startDate: data.startDate,
         endDate: data.endDate,
         coverImageUrl: data.coverImageUrl,
+        faviconUrl: data.faviconUrl?.trim() || null,
         published: data.published,
         features: data.features,
         analyticsConfig: buildAnalyticsConfig(data, initialSettings.analyticsConfig),
@@ -383,11 +389,30 @@ export function SettingsAdmin({
         <CardContent>
           <form onSubmit={onSubmit} className="space-y-4">
             <div>
-              <Label>عنوان</Label>
+              <Label>عنوان سایت / کمپین</Label>
               <Input {...form.register("title")} maxLength={CONTENT_TITLE_MAX_LENGTH} />
+              <p className="mt-1 text-xs text-muted-foreground">
+                در تب مرورگر، عنوان صفحه و پیش‌نمایش اشتراک لینک استفاده می‌شود.
+              </p>
             </div>
             <div><Label>اسلاگ (URL)</Label><Input {...form.register("slug")} dir="ltr" /></div>
-            <div><Label>توضیحات</Label><Textarea {...form.register("description")} rows={4} /></div>
+            <div>
+              <Label>تگ‌لاین</Label>
+              <Input
+                {...form.register("tagline")}
+                placeholder="مثلاً گزارش زنده پیشرفت کمپین تبلیغاتی"
+              />
+              <p className="mt-1 text-xs text-muted-foreground">
+                متن کوتاه زیر عنوان؛ برای توضیح اشتراک در تلگرام، واتساپ و شبکه‌های اجتماعی اولویت دارد.
+              </p>
+            </div>
+            <div>
+              <Label>توضیحات</Label>
+              <Textarea {...form.register("description")} rows={4} />
+              <p className="mt-1 text-xs text-muted-foreground">
+                متن صفحه عمومی؛ اگر تگ‌لاین خالی باشد برای اشتراک هم استفاده می‌شود.
+              </p>
+            </div>
             <div>
               <Label>برچسب محتوای مدیریت</Label>
               <Input {...form.register("adminOwnerLabel")} placeholder={DEFAULT_ADMIN_OWNER_LABEL} />
@@ -519,7 +544,27 @@ export function SettingsAdmin({
               <PersianDateField control={form.control} name="startDate" label="تاریخ شروع (شمسی)" />
               <PersianDateField control={form.control} name="endDate" label="تاریخ پایان (شمسی)" />
             </div>
-            <MediaUpload label="تصویر کاور" value={form.watch("coverImageUrl") ?? ""} onChange={(url) => form.setValue("coverImageUrl", url)} />
+            <div className="space-y-2">
+              <MediaUpload
+                label="تصویر کاور / اشتراک"
+                value={form.watch("coverImageUrl") ?? ""}
+                onChange={(url) => form.setValue("coverImageUrl", url)}
+              />
+              <p className="text-xs text-muted-foreground">
+                تصویر پیش‌نمایش هنگام اشتراک لینک کمپین در تلگرام، واتساپ و شبکه‌های اجتماعی.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <MediaUpload
+                label="فاویکون"
+                value={form.watch("faviconUrl") ?? ""}
+                onChange={(url) => form.setValue("faviconUrl", url)}
+                accept="image/png,image/webp,image/x-icon,image/svg+xml,.ico"
+              />
+              <p className="text-xs text-muted-foreground">
+                آیکون تب مرورگر. اگر خالی باشد از لوگوی پیش‌فرض سایت استفاده می‌شود.
+              </p>
+            </div>
             <div className="flex items-center gap-2">
               <Switch checked={form.watch("published")} onCheckedChange={(v) => form.setValue("published", v)} />
               <Label>منتشر در صفحه عمومی</Label>

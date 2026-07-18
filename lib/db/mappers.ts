@@ -82,11 +82,13 @@ export function mapSettingsFromDb(row: any): CampaignSettings {
     id: row.id,
     slug: row.slug,
     title: row.title,
+    tagline: row.tagline ?? null,
     description: row.description,
     status: row.status,
     startDate: toDateString(row.start_date),
     endDate: toDateString(row.end_date),
     coverImageUrl: row.cover_image_url,
+    faviconUrl: row.favicon_url ?? null,
     published: row.published ?? false,
     features:
       typeof row.features === "string"

@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { Vazirmatn } from "next/font/google";
 import { ThemedToaster } from "@/components/themed-toaster";
+import { buildCampaignMetadata } from "@/lib/campaign-metadata";
+import { pgGetAllCampaigns } from "@/lib/db/repository";
+import { isPostgresConfigured } from "@/lib/utils";
 import "./globals.css";
 
 const vazirmatn = Vazirmatn({
@@ -8,15 +11,23 @@ const vazirmatn = Vazirmatn({
   variable: "--font-sans",
 });
 
-export const metadata: Metadata = {
-  title: "گزارش زنده کمپین",
-  description: "گزارش زنده پیشرفت کمپین تبلیغاتی",
-  icons: {
-    icon: [{ url: "/images/dolat.webp", type: "image/webp" }],
-    apple: [{ url: "/images/dolat.webp", type: "image/webp" }],
-    shortcut: ["/images/dolat.webp"],
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  if (!isPostgresConfigured()) {
+    return buildCampaignMetadata(null, { path: "/" });
+  }
+
+  try {
+    const campaigns = await pgGetAllCampaigns();
+    const primary =
+      campaigns.find((campaign) => campaign.published && campaign.status === "live") ??
+      campaigns.find((campaign) => campaign.published) ??
+      campaigns[0] ??
+      null;
+    return buildCampaignMetadata(primary, { path: "/" });
+  } catch {
+    return buildCampaignMetadata(null, { path: "/" });
+  }
+}
 
 const themeInitScript = `
 (function () {
@@ -51,4 +62,3 @@ export default function RootLayout({
     </html>
   );
 }
-

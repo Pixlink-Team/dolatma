@@ -95,6 +95,9 @@ function CampaignDashboardBody({
               همه کمپین‌ها
             </Link>
             <h1 className="text-lg font-bold">{settings.title}</h1>
+            {settings.tagline?.trim() ? (
+              <p className="text-xs text-muted-foreground mt-0.5">{settings.tagline}</p>
+            ) : null}
           </div>
           <div className="flex items-center gap-3">
             <p className="text-xs text-muted-foreground hidden sm:block">

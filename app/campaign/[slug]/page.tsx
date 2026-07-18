@@ -1,10 +1,12 @@
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 import { getPublicCampaignData } from "@/lib/data-access/campaign";
 import { CampaignDashboard } from "@/components/public/campaign-dashboard";
 import { CampaignPageUnlock } from "@/components/public/campaign-page-unlock";
 import { canScoreContent } from "@/lib/auth/access";
 import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
 import { isCampaignPageUnlocked } from "@/lib/campaign-page-unlock";
+import { buildCampaignMetadata } from "@/lib/campaign-metadata";
 import { pgGetPublishedCampaignBySlug } from "@/lib/db/repository";
 import { isPostgresConfigured } from "@/lib/utils";
 
@@ -13,6 +15,30 @@ export const dynamic = "force-dynamic";
 interface CampaignPageProps {
   params: Promise<{ slug: string }>;
   searchParams: Promise<{ export?: string }>;
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+
+  if (isPostgresConfigured()) {
+    const settings = await pgGetPublishedCampaignBySlug(slug);
+    if (settings) {
+      return buildCampaignMetadata(settings);
+    }
+  }
+
+  return buildCampaignMetadata({
+    title: slug,
+    tagline: null,
+    description: "",
+    coverImageUrl: null,
+    faviconUrl: null,
+    slug,
+  });
 }
 
 export default async function CampaignPage({ params, searchParams }: CampaignPageProps) {

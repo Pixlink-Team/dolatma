@@ -167,6 +167,12 @@ ALTER TABLE campaign_settings
 ALTER TABLE campaign_settings
   ADD COLUMN IF NOT EXISTS admin_owner_label TEXT NOT NULL DEFAULT 'مدیریت';
 
+ALTER TABLE campaign_settings
+  ADD COLUMN IF NOT EXISTS tagline TEXT;
+
+ALTER TABLE campaign_settings
+  ADD COLUMN IF NOT EXISTS favicon_url TEXT;
+
 ALTER TABLE billboards
   ADD COLUMN IF NOT EXISTS image_url TEXT,
   ADD COLUMN IF NOT EXISTS latitude DOUBLE PRECISION,

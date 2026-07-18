@@ -384,42 +384,62 @@ export async function pgSaveCampaign(data: Partial<CampaignSettings> & { id?: st
   const sql = getSql();
   const now = new Date().toISOString();
   const id = data.id ?? generateId();
-  const features = data.features ?? defaultFeatures;
+  const existing = data.id ? await pgGetCampaignById(data.id) : null;
+  const features = data.features ?? existing?.features ?? defaultFeatures;
 
   const contentPlansPayload =
     data.contentTopics && data.contentTopics.length > 0
       ? normalizeContentTopics(data.contentTopics)
-      : (data.contentPlans ?? []).map((name) => ({ name, subtopics: [] as string[] }));
+      : data.contentPlans
+        ? data.contentPlans.map((name) => ({ name, subtopics: [] as string[] }))
+        : existing?.contentTopics && existing.contentTopics.length > 0
+          ? normalizeContentTopics(existing.contentTopics)
+          : (existing?.contentPlans ?? []).map((name) => ({ name, subtopics: [] as string[] }));
+
+  const tagline =
+    data.tagline !== undefined ? data.tagline?.trim() || null : existing?.tagline ?? null;
+  const faviconUrl =
+    data.faviconUrl !== undefined
+      ? data.faviconUrl?.trim() || null
+      : existing?.faviconUrl ?? null;
+  const coverImageUrl =
+    data.coverImageUrl !== undefined
+      ? data.coverImageUrl?.trim() || null
+      : existing?.coverImageUrl ?? null;
 
   await sql`
     INSERT INTO campaign_settings (
-      id, slug, title, description, status, start_date, end_date,
-      cover_image_url, published, features, analytics_config, billboard_config, admin_owner_label, content_plans, updated_at
+      id, slug, title, tagline, description, status, start_date, end_date,
+      cover_image_url, favicon_url, published, features, analytics_config, billboard_config, admin_owner_label, content_plans, updated_at
     ) VALUES (
       ${id},
-      ${data.slug ?? slugify(data.title ?? id)},
-      ${data.title ?? ""},
-      ${data.description ?? ""},
-      ${data.status ?? "draft"},
-      ${data.startDate ?? now.split("T")[0]},
-      ${data.endDate ?? now.split("T")[0]},
-      ${data.coverImageUrl ?? null},
-      ${data.published ?? false},
+      ${data.slug ?? existing?.slug ?? slugify(data.title ?? id)},
+      ${data.title ?? existing?.title ?? ""},
+      ${tagline},
+      ${data.description ?? existing?.description ?? ""},
+      ${data.status ?? existing?.status ?? "draft"},
+      ${data.startDate ?? existing?.startDate ?? now.split("T")[0]},
+      ${data.endDate ?? existing?.endDate ?? now.split("T")[0]},
+      ${coverImageUrl},
+      ${faviconUrl},
+      ${data.published ?? existing?.published ?? false},
       ${sql.json({ ...features })},
-      ${sql.json(JSON.parse(JSON.stringify(serializeAnalyticsConfig(data.analyticsConfig ?? { site: { source: "manual" }, social: { source: "manual" } }))))},
-      ${sql.json(JSON.parse(JSON.stringify(data.billboardConfig ?? {})))},
-      ${data.adminOwnerLabel?.trim() || "توانیر"},
+      ${sql.json(JSON.parse(JSON.stringify(serializeAnalyticsConfig(data.analyticsConfig ?? existing?.analyticsConfig ?? { site: { source: "manual" }, social: { source: "manual" } }))))},
+      ${sql.json(JSON.parse(JSON.stringify(data.billboardConfig ?? existing?.billboardConfig ?? {})))},
+      ${data.adminOwnerLabel?.trim() || existing?.adminOwnerLabel || "توانیر"},
       ${sql.json(JSON.parse(JSON.stringify(contentPlansPayload)))},
       ${now}
     )
     ON CONFLICT (id) DO UPDATE SET
       slug = EXCLUDED.slug,
       title = EXCLUDED.title,
+      tagline = EXCLUDED.tagline,
       description = EXCLUDED.description,
       status = EXCLUDED.status,
       start_date = EXCLUDED.start_date,
       end_date = EXCLUDED.end_date,
       cover_image_url = EXCLUDED.cover_image_url,
+      favicon_url = EXCLUDED.favicon_url,
       published = EXCLUDED.published,
       features = EXCLUDED.features,
       analytics_config = EXCLUDED.analytics_config,

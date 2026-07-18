@@ -101,11 +101,15 @@ export interface CampaignSettings {
   id: string;
   slug: string;
   title: string;
+  /** Short line used under the title and for link previews when sharing. */
+  tagline?: string | null;
   description: string;
   status: CampaignStatus;
   startDate: string;
   endDate: string;
   coverImageUrl?: string | null;
+  /** Browser tab / bookmark icon; falls back to default site favicon when empty. */
+  faviconUrl?: string | null;
   published: boolean;
   features: CampaignFeatures;
   analyticsConfig: AnalyticsConfig;
