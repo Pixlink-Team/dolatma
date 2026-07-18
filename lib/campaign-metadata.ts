@@ -5,8 +5,10 @@ import { withFileAccessToken } from "@/lib/uploads";
 
 export const DEFAULT_SITE_TITLE = "گزارش زنده اقدام";
 export const DEFAULT_SITE_DESCRIPTION = "گزارش زنده پیشرفت اقدام تبلیغاتی";
-/** PNG favicon — WebP is not reliably supported as a browser tab icon. */
-export const DEFAULT_FAVICON_URL = "/images/dolat-icon.png";
+/** Site branding favicon (WebP source of truth). */
+export const DEFAULT_FAVICON_URL = "/images/dolat.webp";
+/** PNG twin for browsers that do not support WebP tab icons (e.g. Safari). */
+export const DEFAULT_FAVICON_PNG_URL = "/images/dolat-icon.png";
 
 export async function resolveSiteBaseUrl(): Promise<string> {
   const configured = process.env.NEXT_PUBLIC_APP_URL?.trim();
@@ -91,21 +93,31 @@ export async function buildCampaignMetadata(
     settings?.tagline?.trim() ||
     settings?.description?.trim() ||
     DEFAULT_SITE_DESCRIPTION;
-  const faviconUrl =
-    publicIconUrl(settings?.faviconUrl) || publicIconUrl(DEFAULT_FAVICON_URL)!;
+  const customFavicon = publicIconUrl(settings?.faviconUrl);
+  const faviconUrl = customFavicon || publicIconUrl(DEFAULT_FAVICON_URL)!;
+  const faviconType = iconMimeType(faviconUrl);
+  const usesDefaultWebp = !customFavicon;
+  // Prefer PNG first when using the default WebP brand mark — Safari/etc. ignore WebP favicons.
+  const iconEntries = [
+    ...(usesDefaultWebp
+      ? [{ url: DEFAULT_FAVICON_PNG_URL, type: "image/png" as const }]
+      : []),
+    { url: faviconUrl, ...(faviconType ? { type: faviconType } : {}) },
+  ];
   const ogImage = publicMediaUrl(settings?.coverImageUrl, baseUrl);
   const pagePath = options?.path ?? (settings?.slug ? `/campaign/${settings.slug}` : "/");
   const pageUrl = `${baseUrl}${pagePath.startsWith("/") ? pagePath : `/${pagePath}`}`;
-  const faviconType = iconMimeType(faviconUrl);
 
   return {
     metadataBase: new URL(baseUrl),
     title,
     description,
     icons: {
-      icon: [{ url: faviconUrl, ...(faviconType ? { type: faviconType } : {}) }],
-      apple: [{ url: faviconUrl, ...(faviconType ? { type: faviconType } : {}) }],
-      shortcut: [faviconUrl],
+      icon: iconEntries,
+      apple: usesDefaultWebp
+        ? [{ url: DEFAULT_FAVICON_PNG_URL, type: "image/png" }]
+        : [{ url: faviconUrl, ...(faviconType ? { type: faviconType } : {}) }],
+      shortcut: [usesDefaultWebp ? DEFAULT_FAVICON_PNG_URL : faviconUrl],
     },
     openGraph: {
       type: "website",

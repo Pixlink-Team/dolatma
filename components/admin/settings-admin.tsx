@@ -563,6 +563,7 @@ export function SettingsAdmin({
               />
               <p className="text-xs text-muted-foreground">
                 آیکون تب مرورگر. اگر خالی باشد از لوگوی پیش‌فرض سایت استفاده می‌شود.
+                برای نمایش مطمئن‌تر در همه مرورگرها ترجیحاً PNG یا ICO آپلود کنید (WebP در بعضی مرورگرها فاویکون نمی‌شود).
               </p>
             </div>
             <div className="flex items-center gap-2">

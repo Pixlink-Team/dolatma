@@ -48,7 +48,7 @@ export const mockCampaigns: CampaignSettings[] = [
     startDate: "2025-03-21",
     endDate: "2025-06-21",
     coverImageUrl: "https://images.unsplash.com/photo-1557804506-669a67965ba0?w=1200&h=400&fit=crop",
-    faviconUrl: "/images/dolat-icon.png",
+    faviconUrl: "/images/dolat.webp",
     published: true,
     features: fullFeatures,
     analyticsConfig: defaultAnalyticsConfig,
