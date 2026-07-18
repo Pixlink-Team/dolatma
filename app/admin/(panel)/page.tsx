@@ -12,9 +12,11 @@ import { resolveAdminCampaignId } from "@/lib/admin-campaign";
 import { DASHBOARD_STAT_DEFINITIONS } from "@/lib/admin-dashboard-stats";
 import { resolveAdminBillboards } from "@/lib/billboards";
 import type { Billboard, CampaignSettings } from "@/lib/types";
+import { BulkContentImport } from "@/components/admin/bulk-content-import";
 import { CampaignTools } from "@/components/admin/campaign-tools";
 import { canManageDirectives } from "@/lib/auth/access";
 import { getAuthSession, getOwnerFilter, isFullAdmin } from "@/lib/auth/get-session";
+import { getAllUsers } from "@/lib/data-access/admin";
 import {
   defaultContributorPermissions,
   hasContributorPermission,
@@ -161,6 +163,7 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
           await pgListDirectivesForUserInbox(campaignId, session.userId)
         )
       : [];
+  const bulkImportUsers = canManageAll ? await getAllUsers() : [];
 
   return (
     <div className="space-y-8">
@@ -190,6 +193,8 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
       </div>
 
       <CampaignTools isFullAdmin={canManageAll} />
+
+      {canManageAll ? <BulkContentImport users={bulkImportUsers} /> : null}
 
       <DashboardDirectivesPanel
         campaignId={campaignId}

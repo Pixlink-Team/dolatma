@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "79c6c87c232e1757181cdd8691ca0bb8decc4804",
+      "committedAt": "2026-07-18T12:24:32+03:30",
+      "title": "اولویت رتبه‌بندی وزارتخانه‌ها و زیرمجموعه‌ها نسبت به استان",
+      "subject": "Prioritize ministry ranking over province leaderboard"
+    },
+    {
       "hash": "ea140c23009abb899b341c879db2fff96740b25b",
       "committedAt": "2026-07-18T12:20:29+03:30",
       "title": "حفظ فاویکون WebP پیش‌فرض با پشتیبانی بهتر مرورگرها",

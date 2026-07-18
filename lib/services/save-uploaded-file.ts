@@ -27,6 +27,31 @@ function extensionForMime(mime: string): string {
   }
 }
 
+export async function saveUploadedImageBuffer(
+  buffer: Buffer,
+  options?: { mimeType?: string; fileNameHint?: string }
+): Promise<string> {
+  if (buffer.byteLength > MAX_IMAGE_BYTES) {
+    throw new Error("حجم تصویر بیش از حد مجاز است");
+  }
+
+  const magic = assertMagicMatchesKind(buffer, "image");
+  if (!magic.ok) {
+    throw new Error(magic.error);
+  }
+
+  const hintExt = options?.fileNameHint?.match(/(\.[a-z0-9]+)$/i)?.[1]?.toLowerCase();
+  const mimeExt = options?.mimeType ? extensionForMime(options.mimeType) : "";
+  const extension = mimeExt || hintExt || ".jpg";
+  const filename = `${randomUUID()}${extension}`;
+  const uploadsDir = getUploadsDir();
+
+  await mkdir(uploadsDir, { recursive: true });
+  await writeFile(`${uploadsDir}/${filename}`, buffer);
+
+  return getUploadPublicUrl(filename);
+}
+
 export async function saveUploadedImageFile(file: File): Promise<string> {
   if (file.type === "image/svg+xml") {
     throw new Error("آپلود فایل SVG مجاز نیست");
@@ -41,17 +66,8 @@ export async function saveUploadedImageFile(file: File): Promise<string> {
   }
 
   const buffer = Buffer.from(await file.arrayBuffer());
-  const magic = assertMagicMatchesKind(buffer, "image");
-  if (!magic.ok) {
-    throw new Error(magic.error);
-  }
-
-  const extension = extensionForMime(file.type);
-  const filename = `${randomUUID()}${extension}`;
-  const uploadsDir = getUploadsDir();
-
-  await mkdir(uploadsDir, { recursive: true });
-  await writeFile(`${uploadsDir}/${filename}`, buffer);
-
-  return getUploadPublicUrl(filename);
+  return saveUploadedImageBuffer(buffer, {
+    mimeType: file.type,
+    fileNameHint: file.name,
+  });
 }
