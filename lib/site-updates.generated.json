@@ -1,6 +1,18 @@
 {
   "entries": [
     {
+      "hash": "0f1bff60b981651dc98eaaaa6c0b4b07dae0a3bc",
+      "committedAt": "2026-07-19T09:16:30+03:30",
+      "title": "به‌روزرسانی دسته‌بندی تبلیغات محیطی و نگاشت داده‌های قبلی",
+      "subject": "Update outdoor ad categories and remap legacy values"
+    },
+    {
+      "hash": "2afd8167ebea626e2a7862007f1bfb555356c83a",
+      "committedAt": "2026-07-19T09:16:28+03:30",
+      "title": "آرشیو دستورکارها به‌جای حذف و تب جدید/دیده‌شده در داشبورد",
+      "subject": "Archive directives instead of deleting them"
+    },
+    {
       "hash": "4207a1dd66a67de0a9c18514d54d939c60cde3ff",
       "committedAt": "2026-07-19T09:15:33+03:30",
       "title": "آمار تیکت‌ها و جداسازی هشدار رفتار مشکوک در رصد کاربران",
