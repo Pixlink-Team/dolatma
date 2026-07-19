@@ -468,6 +468,8 @@ export interface CampaignDirective {
   audienceProvinces?: string[];
   published: boolean;
   publishedAt?: string | null;
+  /** Soft-archive timestamp; null means active. */
+  archivedAt?: string | null;
   sortOrder: number;
   attachments: DirectiveAttachment[];
   /** Present for managers; optional summary counts. */

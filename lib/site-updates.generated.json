@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "4207a1dd66a67de0a9c18514d54d939c60cde3ff",
+      "committedAt": "2026-07-19T09:15:33+03:30",
+      "title": "آمار تیکت‌ها و جداسازی هشدار رفتار مشکوک در رصد کاربران",
+      "subject": "Improve problem reports stats and content-focused stuck signals"
+    },
+    {
       "hash": "4bd3c203464b6d5175f46e7b587f4a63c224598a",
       "committedAt": "2026-07-18T19:02:25+03:30",
       "title": "امکان ساخت و دانلود پشتیبان ZIP ذخیره‌شده روی سایت به‌صورت روزانه و دستی",

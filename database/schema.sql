@@ -768,8 +768,13 @@ UPDATE campaign_directives
 SET end_date = due_date
 WHERE end_date IS NULL AND due_date IS NOT NULL;
 
+ALTER TABLE campaign_directives ADD COLUMN IF NOT EXISTS archived_at TIMESTAMPTZ;
+
 CREATE INDEX IF NOT EXISTS idx_campaign_directives_campaign
   ON campaign_directives(campaign_id, published, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_campaign_directives_archive
+  ON campaign_directives(campaign_id, archived_at, created_at DESC);
 
 CREATE TABLE IF NOT EXISTS directive_attachments (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

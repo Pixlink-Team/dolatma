@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { confirmDirectiveSeenAction } from "@/lib/actions/directive-actions";
 import type { CampaignDirective } from "@/lib/types";
 import { adminHref, cn, formatPersianDate, formatPersianDateTime, formatPersianNumber } from "@/lib/utils";
@@ -18,6 +19,8 @@ interface DashboardDirectivesPanelProps {
   canManage: boolean;
   inboxDirectives: CampaignDirective[];
 }
+
+type InboxTab = "new" | "seen";
 
 const PREVIEW_LIMIT = 5;
 
@@ -68,12 +71,22 @@ function DirectiveDateRange({ item }: { item: CampaignDirective }) {
   );
 }
 
+function sortPreview(rows: CampaignDirective[]): CampaignDirective[] {
+  return [...rows].sort((a, b) => {
+    const aUrgent = a.priority === "urgent" ? 0 : 1;
+    const bUrgent = b.priority === "urgent" ? 0 : 1;
+    if (aUrgent !== bUrgent) return aUrgent - bUrgent;
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  });
+}
+
 export function DashboardDirectivesPanel({
   campaignId,
   canManage,
   inboxDirectives: initialInbox,
 }: DashboardDirectivesPanelProps) {
   const [inboxRows, setInboxRows] = useState(initialInbox);
+  const [inboxTab, setInboxTab] = useState<InboxTab>("new");
   const [detailItem, setDetailItem] = useState<CampaignDirective | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -81,19 +94,20 @@ export function DashboardDirectivesPanel({
     () => inboxRows.filter((row) => !row.confirmed).length,
     [inboxRows]
   );
+  const seenCount = useMemo(
+    () => inboxRows.filter((row) => row.confirmed).length,
+    [inboxRows]
+  );
 
-  const previewRows = useMemo(() => {
-    const sorted = [...inboxRows].sort((a, b) => {
-      const aUnread = a.confirmed ? 1 : 0;
-      const bUnread = b.confirmed ? 1 : 0;
-      if (aUnread !== bUnread) return aUnread - bUnread;
-      const aUrgent = a.priority === "urgent" ? 0 : 1;
-      const bUrgent = b.priority === "urgent" ? 0 : 1;
-      if (aUrgent !== bUrgent) return aUrgent - bUrgent;
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-    });
-    return sorted.slice(0, PREVIEW_LIMIT);
-  }, [inboxRows]);
+  const tabRows = useMemo(() => {
+    const filtered =
+      inboxTab === "new"
+        ? inboxRows.filter((row) => !row.confirmed)
+        : inboxRows.filter((row) => row.confirmed);
+    return sortPreview(filtered);
+  }, [inboxRows, inboxTab]);
+
+  const previewRows = useMemo(() => tabRows.slice(0, PREVIEW_LIMIT), [tabRows]);
 
   const confirmSeen = (item: CampaignDirective) => {
     startTransition(async () => {
@@ -153,9 +167,25 @@ export function DashboardDirectivesPanel({
           </Link>
         </CardHeader>
         <CardContent className="space-y-3">
+          <Tabs
+            value={inboxTab}
+            onValueChange={(value) => setInboxTab(value as InboxTab)}
+          >
+            <TabsList>
+              <TabsTrigger value="new">
+                جدید ({formatPersianNumber(unreadCount)})
+              </TabsTrigger>
+              <TabsTrigger value="seen">
+                دیده‌شده ({formatPersianNumber(seenCount)})
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+
           {previewRows.length === 0 ? (
             <div className="rounded-xl border border-dashed px-4 py-8 text-center text-sm text-muted-foreground">
-              دستورکاری برای نمایش نیست
+              {inboxTab === "new"
+                ? "دستورکار جدیدی نیست"
+                : "هنوز دستورکار دیده‌شده‌ای ندارید"}
             </div>
           ) : (
             previewRows.map((item) => (
@@ -205,10 +235,10 @@ export function DashboardDirectivesPanel({
             ))
           )}
 
-          {inboxRows.length > PREVIEW_LIMIT && (
+          {tabRows.length > PREVIEW_LIMIT && (
             <p className="text-center text-xs text-muted-foreground">
               و{" "}
-              {formatPersianNumber(inboxRows.length - PREVIEW_LIMIT)} مورد دیگر در صفحه
+              {formatPersianNumber(tabRows.length - PREVIEW_LIMIT)} مورد دیگر در صفحه
               دستورکارها
             </p>
           )}

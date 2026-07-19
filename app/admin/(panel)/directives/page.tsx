@@ -5,6 +5,7 @@ import { canManageDirectives, canViewDirectives } from "@/lib/auth/access";
 import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
 import { pgGetUserPermissionsForCampaign } from "@/lib/db/repository-extended";
 import {
+  pgListArchivedDirectivesForCampaign,
   pgListCampaignUsersForDirectives,
   pgListDirectivesForCampaign,
   pgListDirectivesForUserInbox,
@@ -39,6 +40,7 @@ export default async function DirectivesPage({ searchParams }: PageProps) {
         campaignId={campaignId}
         canManage={canManage}
         initialDirectives={[]}
+        archivedDirectives={[]}
         inboxDirectives={[]}
         campaignUsers={[]}
         ministries={[]}
@@ -46,14 +48,16 @@ export default async function DirectivesPage({ searchParams }: PageProps) {
     );
   }
 
-  const [manageDirectives, inboxDirectives, campaignUsers, ministries] = await Promise.all([
-    canManage ? pgListDirectivesForCampaign(campaignId) : Promise.resolve([]),
-    session.userId
-      ? pgListDirectivesForUserInbox(campaignId, session.userId)
-      : Promise.resolve([]),
-    canManage ? pgListCampaignUsersForDirectives(campaignId) : Promise.resolve([]),
-    canManage ? pgListMinistries({ includeOrganizations: true }) : Promise.resolve([]),
-  ]);
+  const [manageDirectives, archivedDirectives, inboxDirectives, campaignUsers, ministries] =
+    await Promise.all([
+      canManage ? pgListDirectivesForCampaign(campaignId) : Promise.resolve([]),
+      canManage ? pgListArchivedDirectivesForCampaign(campaignId) : Promise.resolve([]),
+      session.userId
+        ? pgListDirectivesForUserInbox(campaignId, session.userId)
+        : Promise.resolve([]),
+      canManage ? pgListCampaignUsersForDirectives(campaignId) : Promise.resolve([]),
+      canManage ? pgListMinistries({ includeOrganizations: true }) : Promise.resolve([]),
+    ]);
 
   const initialDirectives = canManage ? manageDirectives : inboxDirectives;
 
@@ -62,6 +66,7 @@ export default async function DirectivesPage({ searchParams }: PageProps) {
       campaignId={campaignId}
       canManage={canManage}
       initialDirectives={withFileAccessTokensDeep(initialDirectives)}
+      archivedDirectives={withFileAccessTokensDeep(archivedDirectives)}
       inboxDirectives={withFileAccessTokensDeep(inboxDirectives)}
       campaignUsers={campaignUsers}
       ministries={ministries}

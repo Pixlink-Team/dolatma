@@ -202,6 +202,16 @@ export async function saveDirectiveAction(input: {
     return { success: false as const, error: "Database required" };
   }
 
+  if (input.id) {
+    const existing = await pgDirectives.pgGetDirectiveById(input.id);
+    if (!existing) {
+      return { success: false as const, error: "دستورکار یافت نشد" };
+    }
+    if (existing.archivedAt) {
+      return { success: false as const, error: "دستورکار آرشیو شده قابل ویرایش نیست" };
+    }
+  }
+
   if (input.audienceType === "region" && !input.audienceRegion) {
     return { success: false as const, error: "منطقه مخاطب را انتخاب کنید" };
   }
@@ -339,7 +349,7 @@ async function dispatchDirectiveSms(
   }
 }
 
-export async function deleteDirectiveAction(id: string, campaignId: string) {
+export async function archiveDirectiveAction(id: string, campaignId: string) {
   const access = await assertDirectivesAccess(campaignId);
   if (access.error || !access.session) {
     return { success: false as const, error: access.error ?? "Unauthorized" };
@@ -351,7 +361,11 @@ export async function deleteDirectiveAction(id: string, campaignId: string) {
     return { success: false as const, error: "Database required" };
   }
 
-  await pgDirectives.pgDeleteDirective(id);
+  const ok = await pgDirectives.pgArchiveDirective(id);
+  if (!ok) {
+    return { success: false as const, error: "دستورکار یافت نشد" };
+  }
+
   revalidateDirectives(campaignId);
   return { success: true as const };
 }

@@ -145,6 +145,7 @@ function mapDirectiveRow(
     audienceProvinces: mapAudienceProvinces(row.audience_cities),
     published: Boolean(row.published),
     publishedAt: toIsoString(row.published_at),
+    archivedAt: toIsoString(row.archived_at),
     sortOrder: Number(row.sort_order ?? 0),
     attachments,
     seenCount: row.seen_count != null ? Number(row.seen_count) : undefined,
@@ -300,7 +301,46 @@ export async function pgListDirectivesForCampaign(
       WHERE r.directive_id = d.id
     ) stats ON true
     WHERE d.campaign_id = ${campaignId}
+      AND d.archived_at IS NULL
     ORDER BY d.created_at DESC
+  `;
+
+  const ids = rows.map((row) => String(row.id));
+  const attachmentsMap = await loadAttachmentsForDirectives(ids);
+
+  return rows.map((row) =>
+    mapDirectiveRow(row as Record<string, unknown>, attachmentsMap.get(String(row.id)) ?? [])
+  );
+}
+
+export async function pgListArchivedDirectivesForCampaign(
+  campaignId: string
+): Promise<CampaignDirective[]> {
+  const sql = getSql();
+  const rows = await sql`
+    SELECT
+      d.*,
+      creator.name AS created_by_name,
+      ministry.name AS audience_ministry_name,
+      org.name AS audience_organization_name,
+      COALESCE(stats.recipient_count, 0)::int AS recipient_count,
+      COALESCE(stats.seen_count, 0)::int AS seen_count,
+      COALESCE(stats.unseen_count, 0)::int AS unseen_count
+    FROM campaign_directives d
+    LEFT JOIN users creator ON creator.id = d.created_by_user_id
+    LEFT JOIN ministries ministry ON ministry.id = d.audience_ministry_id
+    LEFT JOIN ministry_organizations org ON org.id = d.audience_organization_id
+    LEFT JOIN LATERAL (
+      SELECT
+        COUNT(*)::int AS recipient_count,
+        COUNT(*) FILTER (WHERE confirmed = true)::int AS seen_count,
+        COUNT(*) FILTER (WHERE confirmed = false)::int AS unseen_count
+      FROM directive_recipients r
+      WHERE r.directive_id = d.id
+    ) stats ON true
+    WHERE d.campaign_id = ${campaignId}
+      AND d.archived_at IS NOT NULL
+    ORDER BY d.archived_at DESC, d.created_at DESC
   `;
 
   const ids = rows.map((row) => String(row.id));
@@ -331,6 +371,7 @@ export async function pgListDirectivesForUserInbox(
     LEFT JOIN ministry_organizations org ON org.id = d.audience_organization_id
     WHERE d.campaign_id = ${campaignId}
       AND d.published = true
+      AND d.archived_at IS NULL
     ORDER BY d.created_at DESC
   `;
 
@@ -628,9 +669,17 @@ export async function pgSaveDirective(input: SaveDirectiveInput): Promise<{ id: 
   return { id };
 }
 
-export async function pgDeleteDirective(id: string): Promise<void> {
+export async function pgArchiveDirective(id: string): Promise<boolean> {
   const sql = getSql();
-  await sql`DELETE FROM campaign_directives WHERE id = ${id}`;
+  const now = new Date().toISOString();
+  const rows = await sql`
+    UPDATE campaign_directives
+    SET archived_at = COALESCE(archived_at, ${now}),
+        updated_at = ${now}
+    WHERE id = ${id}
+    RETURNING id
+  `;
+  return rows.length > 0;
 }
 
 export async function pgConfirmDirectiveSeen(
