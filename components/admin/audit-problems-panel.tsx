@@ -1,7 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { AlertTriangle, CheckCircle2, Loader2, TriangleAlert } from "lucide-react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Clock3,
+  Loader2,
+  MessageSquareReply,
+  Ticket,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,13 +25,16 @@ import { updateProblemReportStatusAction, replyToProblemReportAction } from "@/l
 import {
   PROBLEM_REPORT_CATEGORY_LABELS,
   PROBLEM_REPORT_STATUS_LABELS,
-  STUCK_SIGNAL_KIND_LABELS,
   type ProblemReport,
+  type ProblemReportStats,
   type ProblemReportStatus,
-  type StuckBehaviorSignal,
 } from "@/lib/audit/problem-types";
 import { getAuditRoleLabel } from "@/lib/audit/labels";
-import { formatPersianDateTime, formatPersianNumber } from "@/lib/utils";
+import {
+  formatPersianDateTime,
+  formatPersianMinutesDuration,
+  formatPersianNumber,
+} from "@/lib/utils";
 
 const STATUS_BADGE: Record<
   ProblemReportStatus,
@@ -36,35 +46,48 @@ const STATUS_BADGE: Record<
   dismissed: "outline",
 };
 
-const SEVERITY_BADGE: Record<
-  StuckBehaviorSignal["severity"],
-  "destructive" | "warning" | "outline"
-> = {
-  high: "destructive",
-  medium: "warning",
-  low: "outline",
-};
-
-const SEVERITY_LABEL: Record<StuckBehaviorSignal["severity"], string> = {
-  high: "بالا",
-  medium: "متوسط",
-  low: "کم",
-};
+type StatusFilter = ProblemReportStatus | "open" | "answered" | "all";
 
 function resolveName(name?: string | null, email?: string | null) {
   return name?.trim() || email?.trim() || "ناشناس";
 }
 
+function StatChip({
+  label,
+  value,
+  icon: Icon,
+  hint,
+}: {
+  label: string;
+  value: string;
+  icon: typeof Ticket;
+  hint?: string;
+}) {
+  return (
+    <Card>
+      <CardContent className="p-4 flex items-start gap-3">
+        <div className="rounded-md bg-muted p-2 shrink-0">
+          <Icon className="h-4 w-4 text-muted-foreground" />
+        </div>
+        <div className="min-w-0 space-y-0.5">
+          <p className="text-xs text-muted-foreground">{label}</p>
+          <p className="text-lg font-semibold tabular-nums">{value}</p>
+          {hint && <p className="text-[11px] text-muted-foreground">{hint}</p>}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export function AuditProblemsPanel({
   reports,
-  signals,
+  stats,
 }: {
   reports: ProblemReport[];
-  signals: StuckBehaviorSignal[];
+  stats: ProblemReportStats;
 }) {
-  const [statusFilter, setStatusFilter] = useState<ProblemReportStatus | "open" | "all">(
-    "open"
-  );
+  // Default: show everything so answered tickets stay visible alongside open ones.
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [busyId, setBusyId] = useState<string | null>(null);
 
@@ -72,6 +95,9 @@ export function AuditProblemsPanel({
     if (statusFilter === "all") return reports;
     if (statusFilter === "open") {
       return reports.filter((r) => r.status === "pending" || r.status === "in_progress");
+    }
+    if (statusFilter === "answered") {
+      return reports.filter((r) => Boolean(r.adminNote?.trim()));
     }
     return reports.filter((r) => r.status === statusFilter);
   }, [reports, statusFilter]);
@@ -121,90 +147,58 @@ export function AuditProblemsPanel({
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base flex items-center gap-2">
-            <TriangleAlert className="h-4 w-4 text-amber-500" />
-            هشدار رفتار مشکوک / گیر کرده
-            <Badge variant="warning">{formatPersianNumber(signals.length)}</Badge>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <p className="text-sm text-muted-foreground">
-            سیستم از روی کلیک‌های تکراری، رفت‌وآمد زیاد در یک صفحه و ورودهای ناموفق،
-            کاربرانی را که احتمالاً مشکل دارند تشخیص می‌دهد.
-          </p>
-          {signals.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-4 text-center">
-              فعلاً هشدار رفتاری ثبت نشده است.
-            </p>
-          ) : (
-            <div className="space-y-3">
-              {signals.map((signal) => (
-                <div key={signal.id} className="rounded-lg border p-3 space-y-2">
-                  <div className="flex flex-wrap items-center gap-2 justify-between">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Badge variant={SEVERITY_BADGE[signal.severity]}>
-                        شدت {SEVERITY_LABEL[signal.severity]}
-                      </Badge>
-                      <Badge variant="outline">{STUCK_SIGNAL_KIND_LABELS[signal.kind]}</Badge>
-                      <span className="font-medium">
-                        {resolveName(signal.actorName, signal.actorEmail)}
-                      </span>
-                      {signal.actorRole && (
-                        <Badge variant="outline">{getAuditRoleLabel(signal.actorRole)}</Badge>
-                      )}
-                    </div>
-                    <span className="text-xs text-muted-foreground">
-                      {formatPersianNumber(signal.count)} بار ·{" "}
-                      {formatPersianDateTime(signal.lastSeenAt)}
-                    </span>
-                  </div>
-                  <p className="text-sm font-medium">{signal.title}</p>
-                  <p className="text-sm text-muted-foreground">{signal.detail}</p>
-                  {(signal.path || signal.label) && (
-                    <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-                      {signal.label && <span>کنترل: {signal.label}</span>}
-                      {signal.path && (
-                        <span dir="ltr" className="font-mono">
-                          {signal.path}
-                        </span>
-                      )}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <StatChip
+          label="کل تیکت‌ها"
+          value={formatPersianNumber(stats.total)}
+          icon={Ticket}
+        />
+        <StatChip
+          label="باز"
+          value={formatPersianNumber(stats.open)}
+          icon={AlertTriangle}
+          hint={`${formatPersianNumber(stats.pending)} در انتظار · ${formatPersianNumber(stats.inProgress)} در حال بررسی`}
+        />
+        <StatChip
+          label="پاسخ‌داده‌شده"
+          value={formatPersianNumber(stats.answered)}
+          icon={MessageSquareReply}
+          hint={`${formatPersianNumber(stats.resolved)} حل‌شده · ${formatPersianNumber(stats.dismissed)} بسته‌شده`}
+        />
+        <StatChip
+          label="میانگین پاسخ"
+          value={formatPersianMinutesDuration(stats.avgReplyMinutes)}
+          icon={Clock3}
+          hint="از ثبت تیکت تا اولین پاسخ ادمین"
+        />
+      </div>
 
       <Card>
         <CardHeader className="pb-2 space-y-3">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <CardTitle className="text-base flex items-center gap-2">
               <AlertTriangle className="h-4 w-4 text-amber-500" />
-              گزارش‌های مشکل کاربران
+              مشکلات ثبت‌شده
               <Badge variant="warning">
-                {formatPersianNumber(
-                  reports.filter((r) => r.status === "pending" || r.status === "in_progress")
-                    .length
-                )}{" "}
-                باز
+                {formatPersianNumber(stats.open)} باز
               </Badge>
+              {stats.answered > 0 && (
+                <Badge variant="outline">
+                  {formatPersianNumber(stats.answered)} پاسخ‌داده‌شده
+                </Badge>
+              )}
             </CardTitle>
             <Select
               value={statusFilter}
-              onValueChange={(value) =>
-                setStatusFilter(value as ProblemReportStatus | "open" | "all")
-              }
+              onValueChange={(value) => setStatusFilter(value as StatusFilter)}
             >
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-[200px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="open">بازها</SelectItem>
                 <SelectItem value="all">همه</SelectItem>
+                <SelectItem value="open">بازها</SelectItem>
+                <SelectItem value="answered">پاسخ‌داده‌شده‌ها</SelectItem>
                 <SelectItem value="pending">در انتظار</SelectItem>
                 <SelectItem value="in_progress">در حال بررسی</SelectItem>
                 <SelectItem value="resolved">حل شده</SelectItem>
@@ -230,6 +224,9 @@ export function AuditProblemsPanel({
                       <Badge variant="outline">
                         {PROBLEM_REPORT_CATEGORY_LABELS[report.category]}
                       </Badge>
+                      {report.adminNote?.trim() && (
+                        <Badge variant="success">پاسخ ادمین دارد</Badge>
+                      )}
                     </div>
                     <h3 className="font-semibold text-base">{report.title}</h3>
                     <p className="text-sm text-muted-foreground">
@@ -239,6 +236,12 @@ export function AuditProblemsPanel({
                         : ""}
                       {" · "}
                       {formatPersianDateTime(report.createdAt)}
+                      {report.repliedAt && (
+                        <>
+                          {" · پاسخ: "}
+                          {formatPersianDateTime(report.repliedAt)}
+                        </>
+                      )}
                     </p>
                   </div>
                 </div>

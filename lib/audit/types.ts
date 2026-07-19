@@ -151,6 +151,8 @@ export interface AuditDashboardData {
   contentByUser: UserContentContribution[];
   logins: AuditEvent[];
   problemReports: import("./problem-types").ProblemReport[];
+  problemStats: import("./problem-types").ProblemReportStats;
   stuckSignals: import("./problem-types").StuckBehaviorSignal[];
+  recentUserErrors: import("./problem-types").RecentUserError[];
 }
 

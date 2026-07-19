@@ -2,8 +2,13 @@
 
 import { useEffect, useRef } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
+import { toast } from "sonner";
 
 const MAX_LABEL_LENGTH = 120;
+
+/** Content mutation actions: save, add, edit, close, register, delete, upload, etc. */
+const CONTENT_ACTION_PATTERN =
+  /ذخیره|افزودن|ویرایش|بستن|ثبت|حذف|آپلود|ساخت|ایجاد|به‌?روزرسانی|بروزرسانی|انتشار|تأیید|تایید|کپی|جدید|ارسال|save|add|edit|delete|upload|create|update|submit|close/i;
 
 function sendTrack(body: Record<string, unknown>) {
   try {
@@ -26,9 +31,15 @@ function sendTrack(body: Record<string, unknown>) {
   }
 }
 
+function currentPath(): string {
+  if (typeof window === "undefined") return "";
+  return window.location.pathname + window.location.search;
+}
+
 function resolveClickTarget(target: EventTarget | null): {
   label: string;
   role: string;
+  contentAction: boolean;
 } | null {
   if (!(target instanceof Element)) return null;
 
@@ -56,12 +67,27 @@ function resolveClickTarget(target: EventTarget | null): {
       ? "link"
       : interactive.getAttribute("role") || interactive.tagName.toLowerCase();
 
-  return { label: label.slice(0, MAX_LABEL_LENGTH), role };
+  const sliced = label.slice(0, MAX_LABEL_LENGTH);
+  return {
+    label: sliced,
+    role,
+    contentAction: CONTENT_ACTION_PATTERN.test(sliced),
+  };
+}
+
+function extractToastMessage(message: unknown): string {
+  if (typeof message === "string") return message.trim();
+  if (typeof message === "number" || typeof message === "boolean") return String(message);
+  if (message && typeof message === "object" && "message" in message) {
+    const nested = (message as { message?: unknown }).message;
+    if (typeof nested === "string") return nested.trim();
+  }
+  return "خطای ناشناخته";
 }
 
 /**
  * Client-side audit tracker for the admin panel.
- * Records page views on navigation and clicks on interactive elements.
+ * Records page views, clicks (flagging content actions), and UI errors from toast.error.
  */
 export function AuditTracker() {
   const pathname = usePathname();
@@ -91,21 +117,48 @@ export function AuditTracker() {
 
       sendTrack({
         action: "ui.click",
-        path: window.location.pathname + window.location.search,
+        path: currentPath(),
         label: resolved.label,
-        metadata: { role: resolved.role },
+        metadata: {
+          role: resolved.role,
+          contentAction: resolved.contentAction,
+        },
       });
     };
 
     document.addEventListener("click", handleClick, { capture: true });
-    return () => document.removeEventListener("click", handleClick, { capture: true } as EventListenerOptions);
+    return () =>
+      document.removeEventListener("click", handleClick, {
+        capture: true,
+      } as EventListenerOptions);
+  }, []);
+
+  useEffect(() => {
+    const originalError = toast.error.bind(toast);
+
+    toast.error = ((message: unknown, data?: unknown) => {
+      const text = extractToastMessage(message).slice(0, MAX_LABEL_LENGTH);
+      if (text) {
+        sendTrack({
+          action: "ui.error",
+          path: currentPath(),
+          label: text,
+          metadata: { source: "toast.error" },
+        });
+      }
+      return originalError(message as never, data as never);
+    }) as typeof toast.error;
+
+    return () => {
+      toast.error = originalError as typeof toast.error;
+    };
   }, []);
 
   useEffect(() => {
     const sendHeartbeat = () => {
       sendTrack({
         action: "presence.heartbeat",
-        path: window.location.pathname + window.location.search,
+        path: currentPath(),
         label: "آنلاین",
       });
     };

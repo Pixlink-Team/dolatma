@@ -81,6 +81,26 @@ export function formatDuration(seconds: number): string {
   return `${formatPersianNumber(mins)}:${secsStr}`;
 }
 
+/** Human-readable Persian duration from total minutes (ticket reply SLA, etc.). */
+export function formatPersianMinutesDuration(minutes: number | null | undefined): string {
+  if (minutes == null || !Number.isFinite(minutes) || minutes < 0) return "—";
+  const total = Math.round(minutes);
+  if (total < 1) return "کمتر از ۱ دقیقه";
+  if (total < 60) return `${formatPersianNumber(total)} دقیقه`;
+  const hours = Math.floor(total / 60);
+  const mins = total % 60;
+  if (hours < 48) {
+    return mins > 0
+      ? `${formatPersianNumber(hours)} ساعت و ${formatPersianNumber(mins)} دقیقه`
+      : `${formatPersianNumber(hours)} ساعت`;
+  }
+  const days = Math.floor(hours / 24);
+  const remHours = hours % 24;
+  return remHours > 0
+    ? `${formatPersianNumber(days)} روز و ${formatPersianNumber(remHours)} ساعت`
+    : `${formatPersianNumber(days)} روز`;
+}
+
 export function generateId(): string {
   return crypto.randomUUID();
 }

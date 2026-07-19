@@ -654,12 +654,23 @@ CREATE TABLE IF NOT EXISTS user_problem_reports (
   status TEXT NOT NULL DEFAULT 'pending'
     CHECK (status IN ('pending', 'in_progress', 'resolved', 'dismissed')),
   admin_note TEXT,
+  replied_at TIMESTAMPTZ,
   resolved_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
   resolved_at TIMESTAMPTZ,
   metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Existing deployments: add reply timestamp when missing
+ALTER TABLE user_problem_reports ADD COLUMN IF NOT EXISTS replied_at TIMESTAMPTZ;
+
+-- Backfill first-reply time for already-answered tickets
+UPDATE user_problem_reports
+SET replied_at = COALESCE(replied_at, updated_at, created_at)
+WHERE admin_note IS NOT NULL
+  AND btrim(admin_note) <> ''
+  AND replied_at IS NULL;
 
 CREATE INDEX IF NOT EXISTS idx_user_problem_reports_status
   ON user_problem_reports(status, created_at DESC);
@@ -669,6 +680,10 @@ CREATE INDEX IF NOT EXISTS idx_user_problem_reports_reporter
 
 CREATE INDEX IF NOT EXISTS idx_user_problem_reports_created
   ON user_problem_reports(created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_user_problem_reports_replied
+  ON user_problem_reports(replied_at DESC)
+  WHERE replied_at IS NOT NULL;
 
 -- ─── Database privilege + RLS hardening ───
 -- ENABLE RLS (without FORCE) so the table-owning app role keeps normal access.

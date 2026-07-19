@@ -31,6 +31,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { AuditProblemsPanel } from "@/components/admin/audit-problems-panel";
+import { AuditStuckBehaviorPanel } from "@/components/admin/audit-stuck-behavior-panel";
 import { useChartTheme } from "@/lib/hooks/use-chart-theme";
 import {
   formatPersianDateShort,
@@ -557,7 +558,7 @@ export function AuditAdmin({ data, databaseReady }: AuditAdminProps) {
           label="هشدار رفتار"
           value={summary.stuckSignals}
           icon={TriangleAlert}
-          hint="احتمال گیر کردن کاربر"
+          hint="ذخیره تکراری یا خطای کاربر"
         />
         <StatCard label="ورود امروز" value={summary.loginsToday} icon={LogIn} />
         <StatCard label="تغییرات محتوا امروز" value={summary.contentChangesToday} icon={FileStack} />
@@ -758,9 +759,17 @@ export function AuditAdmin({ data, databaseReady }: AuditAdminProps) {
           <TabsTrigger value="overview">نمای کلی</TabsTrigger>
           <TabsTrigger value="problems">
             مشکلات
-            {(summary.openProblemReports > 0 || summary.stuckSignals > 0) && (
+            {summary.openProblemReports > 0 && (
               <Badge variant="warning" className="mr-1.5">
-                {formatPersianNumber(summary.openProblemReports + summary.stuckSignals)}
+                {formatPersianNumber(summary.openProblemReports)}
+              </Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="stuck">
+            رفتار مشکوک
+            {summary.stuckSignals > 0 && (
+              <Badge variant="destructive" className="mr-1.5">
+                {formatPersianNumber(summary.stuckSignals)}
               </Badge>
             )}
           </TabsTrigger>
@@ -773,7 +782,25 @@ export function AuditAdmin({ data, databaseReady }: AuditAdminProps) {
         <TabsContent value="problems">
           <AuditProblemsPanel
             reports={data.problemReports ?? []}
+            stats={
+              data.problemStats ?? {
+                total: data.problemReports?.length ?? 0,
+                open: summary.openProblemReports,
+                pending: 0,
+                inProgress: 0,
+                answered: 0,
+                resolved: 0,
+                dismissed: 0,
+                avgReplyMinutes: null,
+              }
+            }
+          />
+        </TabsContent>
+
+        <TabsContent value="stuck">
+          <AuditStuckBehaviorPanel
             signals={data.stuckSignals ?? []}
+            recentErrors={data.recentUserErrors ?? []}
           />
         </TabsContent>
 

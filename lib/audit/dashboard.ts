@@ -13,11 +13,31 @@ import {
 } from "@/lib/db/audit-repository";
 import {
   pgCountOpenProblemReports,
+  pgGetProblemReportStats,
   pgListProblemReports,
 } from "@/lib/db/problem-reports-repository";
-import { pgGetStuckBehaviorSignals } from "@/lib/db/stuck-signals-repository";
+import {
+  pgGetStuckBehaviorSignals,
+  pgListRecentUserErrors,
+} from "@/lib/db/stuck-signals-repository";
 import type { AuditDashboardData } from "@/lib/audit/types";
-import type { ProblemReport, StuckBehaviorSignal } from "@/lib/audit/problem-types";
+import type {
+  ProblemReport,
+  ProblemReportStats,
+  RecentUserError,
+  StuckBehaviorSignal,
+} from "@/lib/audit/problem-types";
+
+const EMPTY_PROBLEM_STATS: ProblemReportStats = {
+  total: 0,
+  open: 0,
+  pending: 0,
+  inProgress: 0,
+  answered: 0,
+  resolved: 0,
+  dismissed: 0,
+  avgReplyMinutes: null,
+};
 
 async function safe<T>(fn: () => Promise<T>, fallback: T): Promise<T> {
   try {
@@ -44,7 +64,9 @@ export async function getAuditDashboardData(): Promise<AuditDashboardData> {
     logins,
     problemReports,
     openProblemReports,
+    problemStats,
     stuckSignals,
+    recentUserErrors,
   ] = await Promise.all([
     pgGetAuditSummaryCounts(),
     pgGetAuditDailySeries(14),
@@ -60,7 +82,9 @@ export async function getAuditDashboardData(): Promise<AuditDashboardData> {
     pgListAuditEvents({ action: "auth.login", limit: 50 }),
     safe<ProblemReport[]>(() => pgListProblemReports({ limit: 100 }), []),
     safe(() => pgCountOpenProblemReports(), 0),
+    safe(() => pgGetProblemReportStats(), EMPTY_PROBLEM_STATS),
     safe<StuckBehaviorSignal[]>(() => pgGetStuckBehaviorSignals(), []),
+    safe<RecentUserError[]>(() => pgListRecentUserErrors(40), []),
   ]);
 
   return {
@@ -83,6 +107,8 @@ export async function getAuditDashboardData(): Promise<AuditDashboardData> {
     contentByUser,
     logins,
     problemReports,
+    problemStats,
     stuckSignals,
+    recentUserErrors,
   };
 }

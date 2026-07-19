@@ -9,7 +9,11 @@ export type ProblemReportCategory =
 
 export type ProblemReportStatus = "pending" | "in_progress" | "resolved" | "dismissed";
 
-export type StuckSignalKind = "repeated_click" | "page_thrash" | "failed_login_burst";
+export type StuckSignalKind =
+  | "repeated_content_action"
+  | "repeated_error"
+  | "content_action_with_errors"
+  | "failed_login_burst";
 
 export interface ProblemReport {
   id: string;
@@ -25,11 +29,36 @@ export interface ProblemReport {
   campaignId: string | null;
   status: ProblemReportStatus;
   adminNote: string | null;
+  repliedAt: string | null;
   resolvedByUserId: string | null;
   resolvedAt: string | null;
   metadata: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface ProblemReportStats {
+  total: number;
+  open: number;
+  pending: number;
+  inProgress: number;
+  answered: number;
+  resolved: number;
+  dismissed: number;
+  /** Average minutes from ticket creation to first admin reply; null when none replied. */
+  avgReplyMinutes: number | null;
+}
+
+export interface RecentUserError {
+  id: string;
+  actorKey: string;
+  actorUserId: string | null;
+  actorName: string;
+  actorEmail: string | null;
+  actorRole: string | null;
+  message: string;
+  path: string | null;
+  createdAt: string;
 }
 
 export interface CreateProblemReportInput {
@@ -77,7 +106,8 @@ export const PROBLEM_REPORT_STATUS_LABELS: Record<ProblemReportStatus, string> =
 };
 
 export const STUCK_SIGNAL_KIND_LABELS: Record<StuckSignalKind, string> = {
-  repeated_click: "کلیک تکراری",
-  page_thrash: "رفت‌وآمد زیاد در صفحه",
+  repeated_content_action: "تکرار ذخیره / ثبت محتوا",
+  repeated_error: "خطای تکراری",
+  content_action_with_errors: "ذخیره ناموفق + خطا",
   failed_login_burst: "ورود ناموفق پیاپی",
 };

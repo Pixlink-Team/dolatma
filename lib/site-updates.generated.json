@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "4bd3c203464b6d5175f46e7b587f4a63c224598a",
+      "committedAt": "2026-07-18T19:02:25+03:30",
+      "title": "امکان ساخت و دانلود پشتیبان ZIP ذخیره‌شده روی سایت به‌صورت روزانه و دستی",
+      "subject": "Store campaign backups on server with daily noon cron"
+    },
+    {
       "hash": "e2ea3dcddf3ded3b2e91bc6ab948c50a7d4986a2",
       "committedAt": "2026-07-18T17:15:05+03:30",
       "title": "نمایش نام خیابان‌ها روی نقشه تبلیغات محیطی با زوم نزدیک‌تر",
