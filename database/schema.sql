@@ -894,3 +894,15 @@ CREATE POLICY ministry_organizations_app_access ON ministry_organizations
 -- Seed data for ministries and organizations is applied at runtime via
 -- pgEnsureDefaultMinistries() from lib/ministry-seed.ts (idempotent by name).
 
+-- Remap legacy billboard category keys to the current taxonomy (idempotent).
+UPDATE billboards SET category = 'fence_wall_banner', updated_at = now()
+WHERE category IN ('banner', 'narde', 'sakhteman');
+UPDATE billboards SET category = 'other', updated_at = now()
+WHERE category = 'lightbox';
+UPDATE billboards SET category = 'urban_tv', updated_at = now()
+WHERE category = 'monitor';
+UPDATE billboards SET category = 'bus_metro', updated_at = now()
+WHERE category = 'bus_shelter';
+UPDATE billboards SET category = 'scaffolding', updated_at = now()
+WHERE category = 'darbast';
+
