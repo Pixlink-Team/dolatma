@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
 import { hasContributorPermission, type ContributorPermissionKey } from "@/lib/contributor-permissions";
+import { matchBillboardCategoryKey } from "@/lib/billboard-categories";
 import { normalizePlanLabels } from "@/lib/content-topics";
 import { getSql } from "@/lib/db/client";
 import { pgGetUserById, pgGetUserPermissionsForCampaign } from "@/lib/db/repository-extended";
@@ -269,9 +270,11 @@ async function bulkUpdatePostgres(
       `;
     }
     if (patch.category !== undefined) {
+      const normalizedCategory =
+        patch.category === null ? null : matchBillboardCategoryKey(patch.category) ?? patch.category;
       await sql`
         UPDATE billboards
-        SET category = ${patch.category}, updated_at = ${now}
+        SET category = ${normalizedCategory}, updated_at = ${now}
         WHERE campaign_id = ${campaignId} AND id IN ${sql(ids)}
           AND (${ownerFilter}::text IS NULL OR owner_user_id = ${ownerFilter})
       `;
@@ -498,9 +501,13 @@ function bulkUpdateMock(
       });
 
     if (contentType === "billboard") {
+      const normalizedCategory =
+        patch.category === undefined || patch.category === null
+          ? patch.category
+          : matchBillboardCategoryKey(patch.category) ?? patch.category;
       next.billboards = patchList(store.billboards, (item) => ({
         ...item,
-        ...(patch.category !== undefined ? { category: patch.category } : {}),
+        ...(patch.category !== undefined ? { category: normalizedCategory } : {}),
         ...(patch.status !== undefined ? { status: patch.status } : {}),
       }));
     } else if (contentType === "poster") {

@@ -2,7 +2,10 @@ import { saveBillboard } from "@/lib/data-access/admin";
 import { pgReplaceBillboardPeriods } from "@/lib/db/repository";
 import { saveUploadedImageFile } from "@/lib/services/save-uploaded-file";
 import { generateId, formatPersianDateShort } from "@/lib/utils";
-import type { BillboardCategory } from "@/lib/billboard-categories";
+import {
+  matchBillboardCategoryKey,
+  type BillboardCategory,
+} from "@/lib/billboard-categories";
 
 export interface BillboardDisplayPeriodInput {
   id?: string;
@@ -156,7 +159,7 @@ export async function saveLocalBillboard(params: CreateLocalBillboardInput): Pro
     externalUrl: buildMapsUrl(params.latitude, params.longitude),
     latitude: params.latitude,
     longitude: params.longitude,
-    category: params.category ?? null,
+    category: matchBillboardCategoryKey(params.category) ?? params.category ?? null,
     areaSqm: params.areaSqm ?? null,
     source: "manual",
     status: (params.status as "draft" | "published" | "completed") ?? "draft",

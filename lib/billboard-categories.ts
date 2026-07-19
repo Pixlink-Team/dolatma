@@ -1,36 +1,47 @@
 export const BILLBOARD_CATEGORIES = [
-  "straboard",
-  "banner",
   "billboard",
-  "lightbox",
-  "monitor",
+  "straboard",
   "bridge",
-  "bus_shelter",
-  "darbast",
-  "narde",
-  "sakhteman",
+  "urban_tv",
+  "bus_metro",
+  "wrap",
+  "scaffolding",
+  "fence_wall_banner",
+  "stand",
   "other",
 ] as const;
 
 export type BillboardCategory = (typeof BILLBOARD_CATEGORIES)[number];
 
 export const billboardCategoryLabels: Record<BillboardCategory, string> = {
-  straboard: "استرابورد",
-  banner: "بنر",
   billboard: "بیلبورد",
-  lightbox: "لایت‌باکس",
-  monitor: "مانیتور",
-  bridge: "پل عابرپیاده",
-  bus_shelter: "ایستگاه اتوبوس",
-  darbast: "داربست",
-  narde: "نرده",
-  sakhteman: "ساختمان",
+  straboard: "استرابورد",
+  bridge: "عرشه پل",
+  urban_tv: "تلویزیون شهری",
+  bus_metro: "ایستگاه اتوبوس و مترو",
+  wrap: "لم پوست",
+  scaffolding: "داربست و اسپیس",
+  fence_wall_banner: "بنر روی نرده و دیوار",
+  stand: "استند",
   other: "سایر",
+};
+
+/** Remap legacy stored keys to the current taxonomy. */
+export const LEGACY_BILLBOARD_CATEGORY_MAP: Record<string, BillboardCategory> = {
+  banner: "fence_wall_banner",
+  narde: "fence_wall_banner",
+  sakhteman: "fence_wall_banner",
+  lightbox: "other",
+  monitor: "urban_tv",
+  bus_shelter: "bus_metro",
+  darbast: "scaffolding",
 };
 
 export function getBillboardCategoryLabel(value: string | null | undefined): string {
   if (!value) return "نامشخص";
-  return billboardCategoryLabels[value as BillboardCategory] ?? value;
+  const matched = matchBillboardCategoryKey(value);
+  if (matched) return billboardCategoryLabels[matched];
+  return value;
 }
 
 const billboardCategoryLookup = new Map<string, BillboardCategory>(
@@ -49,8 +60,41 @@ const billboardCategoryAliases: Record<string, BillboardCategory> = {
   استرابرد: "straboard",
   "bill board": "billboard",
   "بیلبورد شهری": "billboard",
-  "light box": "lightbox",
-  "لایت باکس": "lightbox",
+  "light box": "other",
+  lightbox: "other",
+  "لایت باکس": "other",
+  "لایت‌باکس": "other",
+  لایتباکس: "other",
+  banner: "fence_wall_banner",
+  بنر: "fence_wall_banner",
+  narde: "fence_wall_banner",
+  نرده: "fence_wall_banner",
+  sakhteman: "fence_wall_banner",
+  ساختمان: "fence_wall_banner",
+  "بنر روی نرده": "fence_wall_banner",
+  "بنر روی دیوار": "fence_wall_banner",
+  monitor: "urban_tv",
+  مانیتور: "urban_tv",
+  "تلویزیون شهری": "urban_tv",
+  "urban tv": "urban_tv",
+  bus_shelter: "bus_metro",
+  "ایستگاه اتوبوس": "bus_metro",
+  "ایستگاه مترو": "bus_metro",
+  "ایستگاه اتوبوس و مترو": "bus_metro",
+  darbast: "scaffolding",
+  داربست: "scaffolding",
+  اسپیس: "scaffolding",
+  "داربست و اسپیس": "scaffolding",
+  "پل عابرپیاده": "bridge",
+  "پل عابر پیاده": "bridge",
+  "عرشه پل": "bridge",
+  bridge_deck: "bridge",
+  لمپوست: "wrap",
+  "لم پوست": "wrap",
+  "لم‌پوست": "wrap",
+  wrap: "wrap",
+  استند: "stand",
+  stand: "stand",
 };
 
 export function matchBillboardCategoryKey(
@@ -64,9 +108,16 @@ export function matchBillboardCategoryKey(
     return slug as BillboardCategory;
   }
 
+  if (LEGACY_BILLBOARD_CATEGORY_MAP[slug]) {
+    return LEGACY_BILLBOARD_CATEGORY_MAP[slug];
+  }
+
   const aliasKey = normalized.toLowerCase().replace(/_/g, " ").replace(/\s+/g, " ").trim();
   if (billboardCategoryAliases[aliasKey]) {
     return billboardCategoryAliases[aliasKey];
+  }
+  if (billboardCategoryAliases[normalized]) {
+    return billboardCategoryAliases[normalized];
   }
 
   return (

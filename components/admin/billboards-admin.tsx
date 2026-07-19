@@ -149,7 +149,7 @@ export function BillboardsAdmin({
         <div>
           <h1 className="text-2xl font-bold">تبلیغات محیطی</h1>
           <p className="text-sm text-muted-foreground">
-            استرابورد، بنر، بیلبورد، لایت‌باکس، مانیتور و سایر رسانه‌های محیطی
+            بیلبورد، استرابورد، عرشه پل، تلویزیون شهری و سایر رسانه‌های محیطی
           </p>
         </div>
         <div className="flex items-center gap-2">
