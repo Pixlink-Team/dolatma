@@ -30,7 +30,16 @@ export {
   verifyAdminSessionToken,
 } from "@/lib/auth/session";
 
-export function getAdminSessionCookieOptions(maxAge = 60 * 60 * 24) {
+/** Default session lifetime when "remember me" is off. */
+export const ADMIN_SESSION_MAX_AGE_SECONDS = 60 * 60 * 24; // 1 day
+/** Extended lifetime when "remember me" is checked. */
+export const ADMIN_SESSION_REMEMBER_MAX_AGE_SECONDS = 60 * 60 * 24 * 30; // 30 days
+
+export function getAdminSessionMaxAge(rememberMe = false) {
+  return rememberMe ? ADMIN_SESSION_REMEMBER_MAX_AGE_SECONDS : ADMIN_SESSION_MAX_AGE_SECONDS;
+}
+
+export function getAdminSessionCookieOptions(maxAge = ADMIN_SESSION_MAX_AGE_SECONDS) {
   return {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",

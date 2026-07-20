@@ -45,6 +45,13 @@ export function getTimeOfDayConfig(date: Date = new Date()): TimeOfDayConfig {
   return { period, ...PERIOD_CONFIG[period] };
 }
 
+/** Personalize time-of-day greeting with a remembered login name. */
+export function formatPersonalizedGreeting(baseGreeting: string, rememberedUser?: string | null): string {
+  const name = rememberedUser?.trim();
+  if (!name) return baseGreeting;
+  return `${baseGreeting}، ${name}`;
+}
+
 export function formatPersianClock(date: Date): string {
   return new Intl.DateTimeFormat("fa-IR", {
     hour: "2-digit",

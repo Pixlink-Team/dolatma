@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "db54558af14dc0f29f47dc1ce9cccf23da94c208",
+      "committedAt": "2026-07-19T09:17:32+03:30",
+      "title": "به‌روزرسانی دسته‌های قدیمی تبلیغات محیطی در پایگاه داده",
+      "subject": "Add idempotent SQL remap for legacy billboard categories"
+    },
+    {
       "hash": "0f1bff60b981651dc98eaaaa6c0b4b07dae0a3bc",
       "committedAt": "2026-07-19T09:16:30+03:30",
       "title": "به‌روزرسانی دسته‌بندی تبلیغات محیطی و نگاشت داده‌های قبلی",

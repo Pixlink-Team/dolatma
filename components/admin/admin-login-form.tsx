@@ -12,10 +12,13 @@ import { getSafeRedirectPath } from "@/lib/auth/safe-redirect";
 import {
   formatPersianClock,
   formatPersianLoginDate,
+  formatPersonalizedGreeting,
   getTimeOfDayConfig,
   type TimeOfDayConfig,
 } from "@/lib/login-time-of-day";
+import { DEFAULT_LOGIN_PAGE_SETTINGS } from "@/lib/login-page-defaults";
 import { isSupabaseConfigured } from "@/lib/utils";
+import type { LoginPageSettings } from "@/lib/types";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 
 type CardTiltState = {
@@ -37,6 +40,9 @@ const ALL_PERIOD_BACKGROUNDS = [
   "/images/login/night.webp",
 ] as const;
 
+const LAST_LOGIN_USER_KEY = "dolatma:last-login-user";
+const REMEMBER_ME_KEY = "dolatma:remember-me";
+
 function getBoundedMotion(value: number, max: number) {
   return Math.max(-max, Math.min(max, value));
 }
@@ -51,11 +57,45 @@ function isNextRedirectError(error: unknown): boolean {
   );
 }
 
-export function AdminLoginForm() {
+function readStoredLoginUser(): string {
+  try {
+    return window.localStorage.getItem(LAST_LOGIN_USER_KEY)?.trim() ?? "";
+  } catch {
+    return "";
+  }
+}
+
+function readStoredRememberMe(): boolean {
+  try {
+    return window.localStorage.getItem(REMEMBER_ME_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function persistLoginPreferences(username: string, rememberMe: boolean) {
+  try {
+    const trimmed = username.trim();
+    if (trimmed) {
+      window.localStorage.setItem(LAST_LOGIN_USER_KEY, trimmed);
+    }
+    window.localStorage.setItem(REMEMBER_ME_KEY, rememberMe ? "1" : "0");
+  } catch {
+    // Ignore storage failures (private mode, quota, etc.).
+  }
+}
+
+type AdminLoginFormProps = {
+  settings?: LoginPageSettings;
+};
+
+export function AdminLoginForm({ settings = DEFAULT_LOGIN_PAGE_SETTINGS }: AdminLoginFormProps) {
   const searchParams = useSearchParams();
   const redirectTo = getSafeRedirectPath(searchParams.get("next"));
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
+  const [rememberedUser, setRememberedUser] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -76,6 +116,16 @@ export function AdminLoginForm() {
     syncMotionPreference();
     mediaQuery.addEventListener("change", syncMotionPreference);
     return () => mediaQuery.removeEventListener("change", syncMotionPreference);
+  }, []);
+
+  useEffect(() => {
+    const storedUser = readStoredLoginUser();
+    const storedRememberMe = readStoredRememberMe();
+    if (storedUser) {
+      setEmail(storedUser);
+      setRememberedUser(storedUser);
+    }
+    setRememberMe(storedRememberMe);
   }, []);
 
   useEffect(() => {
@@ -115,11 +165,13 @@ export function AdminLoginForm() {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
 
+        persistLoginPreferences(email, rememberMe);
         window.location.assign(redirectTo);
         return;
       }
 
-      await loginAdminAction(email, password, redirectTo);
+      persistLoginPreferences(email, rememberMe);
+      await loginAdminAction(email, password, redirectTo, rememberMe);
     } catch (err) {
       if (isNextRedirectError(err)) return;
       const nextErrorMessage = err instanceof Error ? err.message : "خطا در ورود";
@@ -129,6 +181,10 @@ export function AdminLoginForm() {
       setLoading(false);
     }
   };
+
+  const greetingText = timeOfDay
+    ? formatPersonalizedGreeting(timeOfDay.greeting, rememberedUser)
+    : null;
 
   return (
     <main
@@ -148,13 +204,18 @@ export function AdminLoginForm() {
         />
       ))}
 
-      {now && timeOfDay ? (
+      {now && timeOfDay && greetingText ? (
         <div
           className="pointer-events-none absolute bottom-4 right-4 z-10 max-w-[14rem] text-right sm:bottom-6 sm:right-6 sm:max-w-none"
           aria-live="polite"
         >
-          <p className="text-[11px] font-medium text-white/65 [text-shadow:0_1px_10px_rgba(0,0,0,0.7)]">
-            {timeOfDay.greeting}
+          <p
+            className={[
+              "text-[11px] font-medium text-white/65 [text-shadow:0_1px_10px_rgba(0,0,0,0.7)]",
+              rememberedUser ? "animate-in fade-in slide-in-from-bottom-1 duration-700" : "",
+            ].join(" ")}
+          >
+            {greetingText}
           </p>
           <p
             className="mt-0.5 font-sans text-[1.65rem] font-semibold leading-none text-white tabular-nums sm:text-[1.85rem]"
@@ -194,11 +255,17 @@ export function AdminLoginForm() {
                 />
               </div>
               <div className="min-w-0">
-                <p className="text-sm font-medium text-white/80">ورود به سامانه</p>
-                <h1 className="mt-1 text-2xl font-bold tracking-tight text-white">25 درجه قرار همدلی</h1>
-                <p className="mt-1 text-sm text-white/78">مدیریت گزارش‌ها و محتوای اقدام</p>
+                <p className="text-sm font-medium text-white/80">{settings.eyebrow}</p>
+                <h1 className="mt-1 text-2xl font-bold tracking-tight text-white">{settings.title}</h1>
+                <p className="mt-1 text-sm text-white/78">{settings.subtitle}</p>
               </div>
             </header>
+
+            {rememberedUser ? (
+              <p className="mb-5 animate-in fade-in slide-in-from-top-1 duration-500 rounded-2xl border border-white/20 bg-white/10 px-4 py-3 text-sm text-white/90 [text-shadow:0_2px_12px_rgba(0,0,0,0.55)]">
+                خوش آمدید دوباره، <span className="font-semibold text-white">{rememberedUser}</span>
+              </p>
+            ) : null}
 
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="space-y-2">
@@ -251,6 +318,23 @@ export function AdminLoginForm() {
                 </div>
               </div>
 
+              <label className="flex cursor-pointer items-center gap-3 select-none">
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="h-4 w-4 accent-[#0A84FF]"
+                />
+                <span className="text-sm text-white/85 [text-shadow:0_2px_10px_rgba(0,0,0,0.65)]">
+                  مرا به خاطر بسپار
+                  <span className="mt-0.5 block text-[11px] text-white/55">
+                    {rememberMe
+                      ? "نشست تا ۳۰ روز فعال می‌ماند"
+                      : "بدون تیک، نشست پس از ۱ روز منقضی می‌شود"}
+                  </span>
+                </span>
+              </label>
+
               {errorMessage ? (
                 <p className="rounded-2xl border border-red-300/25 bg-red-500/18 px-4 py-3 text-sm text-red-50 shadow-[0_10px_30px_rgba(127,29,29,0.18)] backdrop-blur-sm [text-shadow:0_2px_10px_rgba(0,0,0,0.62)]">
                   {errorMessage}
@@ -274,7 +358,7 @@ export function AdminLoginForm() {
             </form>
 
             <p className="mt-6 text-center text-xs text-white/70 [text-shadow:0_2px_14px_rgba(0,0,0,0.82)]">
-              سامانه مدیریت گزارش زنده اقدام
+              {settings.footer}
             </p>
           </div>
         </section>

@@ -18,6 +18,7 @@ import { PersianDateField } from "@/components/ui/persian-date-input";
 import { updateSettingsAction } from "@/lib/actions/admin-actions";
 import { saveCampaignPagePasswordAction } from "@/lib/actions/extended-actions";
 import { SmsSettingsCard } from "@/components/admin/sms-settings-card";
+import { LoginPageSettingsCard } from "@/components/admin/login-page-settings-card";
 import {
   contentPlansFromTopics,
   normalizeContentTopics,
@@ -380,6 +381,8 @@ export function SettingsAdmin({
           )}
         </CardContent>
       </Card>
+
+      {canEditFullSettings && <LoginPageSettingsCard />}
 
       {canEditFullSettings && <SmsSettingsCard />}
 

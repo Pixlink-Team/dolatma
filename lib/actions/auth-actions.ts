@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import {
   getAdminSessionCookieName,
   getAdminSessionCookieOptions,
+  getAdminSessionMaxAge,
   getLegacyMockCookieName,
   verifyEffectiveAdminCredentials,
 } from "@/lib/auth/admin-session";
@@ -97,11 +98,13 @@ async function registerFailedLogin(rateKey: string, loginEmail: string, ip: stri
 export async function loginAdminAction(
   email: string,
   password: string,
-  redirectTo?: string | null
+  redirectTo?: string | null,
+  rememberMe = false
 ) {
   const loginEmail = email.trim();
   const { rateKey, ip } = await resolveLoginClient(loginEmail);
   const nextPath = getSafeRedirectPath(redirectTo);
+  const cookieOptions = getAdminSessionCookieOptions(getAdminSessionMaxAge(rememberMe));
 
   try {
     const blocked = getRateLimitBlock(rateKey);
@@ -123,7 +126,6 @@ export async function loginAdminAction(
     // session (which then bounces protected admin sections back to /admin).
     if (await verifyEffectiveAdminCredentials(email, password)) {
       const cookieStore = await cookies();
-      const cookieOptions = getAdminSessionCookieOptions();
 
       // Prefer a linked DB profile only when that profile is also admin.
       if (isPostgresConfigured()) {
@@ -145,7 +147,7 @@ export async function loginAdminAction(
             category: "auth",
             action: "auth.login",
             label: "ورود مدیر سیستم (پروفایل کاربری)",
-            metadata: { method: "env_admin_linked_db_user" },
+            metadata: { method: "env_admin_linked_db_user", rememberMe },
           });
 
           redirect(nextPath);
@@ -167,7 +169,7 @@ export async function loginAdminAction(
         category: "auth",
         action: "auth.login",
         label: "ورود مدیر سیستم",
-        metadata: { method: "env_admin" },
+        metadata: { method: "env_admin", rememberMe },
       });
 
       redirect(nextPath);
@@ -180,7 +182,6 @@ export async function loginAdminAction(
         const cookieStore = await cookies();
         const sessionVersion = await getSessionVersion(user.id);
         const token = createUserSessionTokenSync(user.id, user.role, sessionVersion);
-        const cookieOptions = getAdminSessionCookieOptions();
 
         cookieStore.set(getAdminSessionCookieName(), token, cookieOptions);
         cookieStore.set(getLegacyMockCookieName(), "", { ...cookieOptions, maxAge: 0 });
@@ -196,7 +197,7 @@ export async function loginAdminAction(
           category: "auth",
           action: "auth.login",
           label: "ورود کاربر",
-          metadata: { method: "db_user" },
+          metadata: { method: "db_user", rememberMe },
         });
 
         redirect(nextPath);

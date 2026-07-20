@@ -110,6 +110,14 @@ export interface SmsProviderSettingsPublic {
   configured: boolean;
 }
 
+/** Configurable copy shown on the admin login screen. */
+export interface LoginPageSettings {
+  eyebrow: string;
+  title: string;
+  subtitle: string;
+  footer: string;
+}
+
 export interface CampaignSettings {
   id: string;
   slug: string;
