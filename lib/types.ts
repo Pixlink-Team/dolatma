@@ -161,6 +161,8 @@ export interface DeviceDirectiveStats {
   seen: number;
   unseen: number;
   confirmed: number;
+  /** Submitted commitment / action plans for received directives. */
+  actionPlans: number;
 }
 
 export interface DeviceContentStats {
@@ -181,6 +183,7 @@ export interface DeviceCampaignHistoryItem {
   directivesReceived: number;
   directivesSeen: number;
   directivesConfirmed: number;
+  actionPlans: number;
   contentUploads: number;
 }
 
@@ -195,6 +198,7 @@ export interface DeviceReadiness {
     profileComplete: boolean;
     hasCapacity: boolean;
     directiveResponseOk: boolean;
+    actionPlanOk: boolean;
   };
 }
 
@@ -647,6 +651,56 @@ export interface DirectiveRecipient {
   smsSentAt?: string | null;
   seenAt?: string | null;
   confirmed: boolean;
+  hasActionPlan?: boolean;
+  actionPlanId?: string | null;
+}
+
+/** Device commitment after acknowledging a directive (تعهد و برنامه اقدام). */
+export interface DirectiveActionPlan {
+  id: string;
+  directiveId: string;
+  userId: string;
+  userName?: string | null;
+  deviceId?: string | null;
+  deviceName?: string | null;
+  studiedAcknowledged: boolean;
+  isExecutable: boolean;
+  notExecutableReason: string;
+  plannedActions: string;
+  capacityIds: string[];
+  capacityTitles: string[];
+  capacityNotes: string;
+  volumeDescription: string;
+  scheduleStart?: string | null;
+  scheduleEnd?: string | null;
+  scheduleNotes: string;
+  executorName: string;
+  executorRole: string;
+  executorPhone: string;
+  obstacles: string;
+  supportNeeded: string;
+  status: "submitted";
+  submittedAt: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DirectiveActionPlanInput {
+  studiedAcknowledged: boolean;
+  isExecutable: boolean;
+  notExecutableReason?: string;
+  plannedActions?: string;
+  capacityIds?: string[];
+  capacityNotes?: string;
+  volumeDescription?: string;
+  scheduleStart?: string | null;
+  scheduleEnd?: string | null;
+  scheduleNotes?: string;
+  executorName?: string;
+  executorRole?: string;
+  executorPhone?: string;
+  obstacles?: string;
+  supportNeeded?: string;
 }
 
 export interface CampaignDirective {
@@ -700,6 +754,10 @@ export interface CampaignDirective {
   /** Present when loading the current user's inbox row. */
   confirmed?: boolean;
   seenAt?: string | null;
+  /** Whether the current user submitted a commitment / action plan. */
+  hasActionPlan?: boolean;
+  /** Managers: count of submitted action plans for this directive. */
+  actionPlanCount?: number;
   createdAt: string;
   updatedAt: string;
 }

@@ -1233,3 +1233,45 @@ CREATE INDEX IF NOT EXISTS idx_campaign_form_responses_campaign
 CREATE INDEX IF NOT EXISTS idx_campaign_form_responses_owner
   ON campaign_form_responses(owner_user_id, created_at DESC);
 
+-- Commitment / action plan after directive acknowledgment (per recipient)
+CREATE TABLE IF NOT EXISTS directive_action_plans (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  directive_id UUID NOT NULL REFERENCES campaign_directives(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  device_id UUID REFERENCES devices(id) ON DELETE SET NULL,
+  studied_acknowledged BOOLEAN NOT NULL DEFAULT true,
+  is_executable BOOLEAN NOT NULL,
+  not_executable_reason TEXT NOT NULL DEFAULT '',
+  planned_actions TEXT NOT NULL DEFAULT '',
+  capacity_ids UUID[] NOT NULL DEFAULT '{}',
+  capacity_notes TEXT NOT NULL DEFAULT '',
+  volume_description TEXT NOT NULL DEFAULT '',
+  schedule_start DATE,
+  schedule_end DATE,
+  schedule_notes TEXT NOT NULL DEFAULT '',
+  executor_name TEXT NOT NULL DEFAULT '',
+  executor_role TEXT NOT NULL DEFAULT '',
+  executor_phone TEXT NOT NULL DEFAULT '',
+  obstacles TEXT NOT NULL DEFAULT '',
+  support_needed TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'submitted'
+    CHECK (status IN ('submitted')),
+  submitted_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (directive_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_directive_action_plans_directive
+  ON directive_action_plans(directive_id, submitted_at DESC);
+CREATE INDEX IF NOT EXISTS idx_directive_action_plans_user
+  ON directive_action_plans(user_id, submitted_at DESC);
+CREATE INDEX IF NOT EXISTS idx_directive_action_plans_device
+  ON directive_action_plans(device_id, submitted_at DESC);
+
+ALTER TABLE directive_action_plans ENABLE ROW LEVEL SECURITY;
+ALTER TABLE directive_action_plans NO FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS directive_action_plans_app_access ON directive_action_plans;
+CREATE POLICY directive_action_plans_app_access ON directive_action_plans
+  FOR ALL USING (true) WITH CHECK (true);
+

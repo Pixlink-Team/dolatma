@@ -1,6 +1,18 @@
 {
   "entries": [
     {
+      "hash": "ece884a1a002d0fd17f78e3141a9201082dc0c21",
+      "committedAt": "2026-07-21T16:08:01+03:30",
+      "title": "تأکید روی انتشار خودکار تغییرات بعد از هر کار",
+      "subject": "Clarify always build-commit-push without asking"
+    },
+    {
+      "hash": "d60bc3780c6ae0bb8fb270a077c0649a635bc4a8",
+      "committedAt": "2026-07-21T16:01:39+03:30",
+      "title": "افزودن بخش فرم‌ساز برای ساخت و پر کردن فرم‌های سفارشی",
+      "subject": "Add admin form builder for contributor data collection"
+    },
+    {
       "hash": "5a7ac2e37c769f2ba20965a686083f3c1f80c579",
       "committedAt": "2026-07-21T15:58:59+03:30",
       "title": "امکان صدور دستورکار توسط یوزر مادر فقط برای زیرمجموعه‌های خودش",

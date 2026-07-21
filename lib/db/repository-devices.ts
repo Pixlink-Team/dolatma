@@ -859,6 +859,7 @@ function computeReadiness(input: {
         profileComplete: false,
         hasCapacity: false,
         directiveResponseOk: false,
+        actionPlanOk: false,
       },
     };
   }
@@ -879,14 +880,20 @@ function computeReadiness(input: {
       ? directiveStats.seen / directiveStats.received
       : 1;
   const directiveResponseOk = seenRate >= 0.5;
+  const actionPlanRate =
+    directiveStats.confirmed > 0
+      ? directiveStats.actionPlans / directiveStats.confirmed
+      : 1;
+  const actionPlanOk = actionPlanRate >= 0.5;
 
   let score = 0;
-  if (hasPrimaryOfficial) score += 25;
-  if (hasDeputyOfficial) score += 15;
+  if (hasPrimaryOfficial) score += 20;
+  if (hasDeputyOfficial) score += 10;
   if (hasActiveUsers) score += 20;
   if (profileComplete) score += 15;
   if (hasCapacity) score += 15;
   if (directiveResponseOk) score += 10;
+  if (actionPlanOk) score += 10;
 
   const gaps: string[] = [];
   if (!hasPrimaryOfficial) gaps.push("مسئول اصلی فعال ندارد");
@@ -895,6 +902,7 @@ function computeReadiness(input: {
   if (!profileComplete) gaps.push("اطلاعات پروفایل ناقص است");
   if (!hasCapacity) gaps.push("ظرفیتی ثبت نشده");
   if (!directiveResponseOk) gaps.push("نرخ مشاهده دستورها پایین است");
+  if (!actionPlanOk) gaps.push("نرخ ثبت برنامه اقدام پایین است");
 
   let status: DeviceReadiness["status"] = "ready";
   if (score < 40 || !hasPrimaryOfficial) status = "high_risk";
@@ -916,6 +924,7 @@ function computeReadiness(input: {
       profileComplete,
       hasCapacity,
       directiveResponseOk,
+      actionPlanOk,
     },
   };
 }
@@ -936,7 +945,12 @@ async function loadDirectiveStats(deviceId: string): Promise<DeviceDirectiveStat
         COUNT(*)::int AS received,
         COUNT(*) FILTER (WHERE seen_at IS NOT NULL)::int AS seen,
         COUNT(*) FILTER (WHERE seen_at IS NULL)::int AS unseen,
-        COUNT(*) FILTER (WHERE confirmed IS TRUE)::int AS confirmed
+        COUNT(*) FILTER (WHERE confirmed IS TRUE)::int AS confirmed,
+        (
+          SELECT COUNT(*)::int
+          FROM directive_action_plans ap
+          JOIN device_users du2 ON du2.id = ap.user_id
+        ) AS action_plans
       FROM directive_recipients dr
       JOIN device_users du ON du.id = dr.user_id
     `;
@@ -946,10 +960,11 @@ async function loadDirectiveStats(deviceId: string): Promise<DeviceDirectiveStat
       seen: Number(row?.seen ?? 0),
       unseen: Number(row?.unseen ?? 0),
       confirmed: Number(row?.confirmed ?? 0),
+      actionPlans: Number(row?.action_plans ?? 0),
     };
   } catch (error) {
     console.error("[device-passport] loadDirectiveStats failed", error);
-    return { received: 0, seen: 0, unseen: 0, confirmed: 0 };
+    return { received: 0, seen: 0, unseen: 0, confirmed: 0, actionPlans: 0 };
   }
 }
 
@@ -1028,7 +1043,14 @@ async function loadCampaignHistory(deviceId: string): Promise<DeviceCampaignHist
           d.campaign_id,
           COUNT(DISTINCT dr.directive_id)::int AS directives_received,
           COUNT(DISTINCT CASE WHEN dr.seen_at IS NOT NULL THEN dr.directive_id END)::int AS directives_seen,
-          COUNT(DISTINCT CASE WHEN dr.confirmed IS TRUE THEN dr.directive_id END)::int AS directives_confirmed
+          COUNT(DISTINCT CASE WHEN dr.confirmed IS TRUE THEN dr.directive_id END)::int AS directives_confirmed,
+          (
+            SELECT COUNT(DISTINCT ap.directive_id)::int
+            FROM directive_action_plans ap
+            JOIN device_users du2 ON du2.id = ap.user_id
+            JOIN campaign_directives d2 ON d2.id = ap.directive_id
+            WHERE d2.campaign_id = d.campaign_id
+          ) AS action_plans
         FROM campaign_directives d
         JOIN directive_recipients dr ON dr.directive_id = d.id
         JOIN device_users du ON du.id = dr.user_id
@@ -1060,6 +1082,7 @@ async function loadCampaignHistory(deviceId: string): Promise<DeviceCampaignHist
         COALESCE(ds.directives_received, 0) AS directives_received,
         COALESCE(ds.directives_seen, 0) AS directives_seen,
         COALESCE(ds.directives_confirmed, 0) AS directives_confirmed,
+        COALESCE(ds.action_plans, 0) AS action_plans,
         COALESCE(ct.content_uploads, 0) AS content_uploads
       FROM campaign_settings cs
       LEFT JOIN directive_stats ds ON ds.campaign_id = cs.id
@@ -1086,6 +1109,7 @@ async function loadCampaignHistory(deviceId: string): Promise<DeviceCampaignHist
         directivesReceived: Number(r.directives_received ?? 0),
         directivesSeen: Number(r.directives_seen ?? 0),
         directivesConfirmed: Number(r.directives_confirmed ?? 0),
+        actionPlans: Number(r.action_plans ?? 0),
         contentUploads: Number(r.content_uploads ?? 0),
       };
     });
@@ -1135,6 +1159,7 @@ async function loadCampaignHistory(deviceId: string): Promise<DeviceCampaignHist
           directivesReceived: Number(r.directives_received ?? 0),
           directivesSeen: Number(r.directives_seen ?? 0),
           directivesConfirmed: Number(r.directives_confirmed ?? 0),
+          actionPlans: 0,
           contentUploads: Number(r.content_uploads ?? 0),
         };
       });

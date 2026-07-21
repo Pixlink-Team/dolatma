@@ -153,6 +153,9 @@ function mapDirectiveRow(
     recipientCount: row.recipient_count != null ? Number(row.recipient_count) : undefined,
     confirmed: row.confirmed != null ? Boolean(row.confirmed) : undefined,
     seenAt: toIsoString(row.seen_at),
+    hasActionPlan: row.has_action_plan != null ? Boolean(row.has_action_plan) : undefined,
+    actionPlanCount:
+      row.action_plan_count != null ? Number(row.action_plan_count) : undefined,
     createdAt: toIsoString(row.created_at) ?? new Date().toISOString(),
     updatedAt: toIsoString(row.updated_at) ?? new Date().toISOString(),
   };
@@ -326,7 +329,8 @@ export async function pgListDirectivesForCampaign(
           org.name AS audience_organization_name,
           COALESCE(stats.recipient_count, 0)::int AS recipient_count,
           COALESCE(stats.seen_count, 0)::int AS seen_count,
-          COALESCE(stats.unseen_count, 0)::int AS unseen_count
+          COALESCE(stats.unseen_count, 0)::int AS unseen_count,
+          COALESCE(stats.action_plan_count, 0)::int AS action_plan_count
         FROM campaign_directives d
         LEFT JOIN users creator ON creator.id = d.created_by_user_id
         LEFT JOIN ministries ministry ON ministry.id = d.audience_ministry_id
@@ -335,7 +339,12 @@ export async function pgListDirectivesForCampaign(
           SELECT
             COUNT(*)::int AS recipient_count,
             COUNT(*) FILTER (WHERE confirmed = true)::int AS seen_count,
-            COUNT(*) FILTER (WHERE confirmed = false)::int AS unseen_count
+            COUNT(*) FILTER (WHERE confirmed = false)::int AS unseen_count,
+            (
+              SELECT COUNT(*)::int
+              FROM directive_action_plans ap
+              WHERE ap.directive_id = d.id
+            ) AS action_plan_count
           FROM directive_recipients r
           WHERE r.directive_id = d.id
         ) stats ON true
@@ -352,7 +361,8 @@ export async function pgListDirectivesForCampaign(
           org.name AS audience_organization_name,
           COALESCE(stats.recipient_count, 0)::int AS recipient_count,
           COALESCE(stats.seen_count, 0)::int AS seen_count,
-          COALESCE(stats.unseen_count, 0)::int AS unseen_count
+          COALESCE(stats.unseen_count, 0)::int AS unseen_count,
+          COALESCE(stats.action_plan_count, 0)::int AS action_plan_count
         FROM campaign_directives d
         LEFT JOIN users creator ON creator.id = d.created_by_user_id
         LEFT JOIN ministries ministry ON ministry.id = d.audience_ministry_id
@@ -361,7 +371,12 @@ export async function pgListDirectivesForCampaign(
           SELECT
             COUNT(*)::int AS recipient_count,
             COUNT(*) FILTER (WHERE confirmed = true)::int AS seen_count,
-            COUNT(*) FILTER (WHERE confirmed = false)::int AS unseen_count
+            COUNT(*) FILTER (WHERE confirmed = false)::int AS unseen_count,
+            (
+              SELECT COUNT(*)::int
+              FROM directive_action_plans ap
+              WHERE ap.directive_id = d.id
+            ) AS action_plan_count
           FROM directive_recipients r
           WHERE r.directive_id = d.id
         ) stats ON true
@@ -393,7 +408,8 @@ export async function pgListArchivedDirectivesForCampaign(
           org.name AS audience_organization_name,
           COALESCE(stats.recipient_count, 0)::int AS recipient_count,
           COALESCE(stats.seen_count, 0)::int AS seen_count,
-          COALESCE(stats.unseen_count, 0)::int AS unseen_count
+          COALESCE(stats.unseen_count, 0)::int AS unseen_count,
+          COALESCE(stats.action_plan_count, 0)::int AS action_plan_count
         FROM campaign_directives d
         LEFT JOIN users creator ON creator.id = d.created_by_user_id
         LEFT JOIN ministries ministry ON ministry.id = d.audience_ministry_id
@@ -402,7 +418,12 @@ export async function pgListArchivedDirectivesForCampaign(
           SELECT
             COUNT(*)::int AS recipient_count,
             COUNT(*) FILTER (WHERE confirmed = true)::int AS seen_count,
-            COUNT(*) FILTER (WHERE confirmed = false)::int AS unseen_count
+            COUNT(*) FILTER (WHERE confirmed = false)::int AS unseen_count,
+            (
+              SELECT COUNT(*)::int
+              FROM directive_action_plans ap
+              WHERE ap.directive_id = d.id
+            ) AS action_plan_count
           FROM directive_recipients r
           WHERE r.directive_id = d.id
         ) stats ON true
@@ -419,7 +440,8 @@ export async function pgListArchivedDirectivesForCampaign(
           org.name AS audience_organization_name,
           COALESCE(stats.recipient_count, 0)::int AS recipient_count,
           COALESCE(stats.seen_count, 0)::int AS seen_count,
-          COALESCE(stats.unseen_count, 0)::int AS unseen_count
+          COALESCE(stats.unseen_count, 0)::int AS unseen_count,
+          COALESCE(stats.action_plan_count, 0)::int AS action_plan_count
         FROM campaign_directives d
         LEFT JOIN users creator ON creator.id = d.created_by_user_id
         LEFT JOIN ministries ministry ON ministry.id = d.audience_ministry_id
@@ -428,7 +450,12 @@ export async function pgListArchivedDirectivesForCampaign(
           SELECT
             COUNT(*)::int AS recipient_count,
             COUNT(*) FILTER (WHERE confirmed = true)::int AS seen_count,
-            COUNT(*) FILTER (WHERE confirmed = false)::int AS unseen_count
+            COUNT(*) FILTER (WHERE confirmed = false)::int AS unseen_count,
+            (
+              SELECT COUNT(*)::int
+              FROM directive_action_plans ap
+              WHERE ap.directive_id = d.id
+            ) AS action_plan_count
           FROM directive_recipients r
           WHERE r.directive_id = d.id
         ) stats ON true
@@ -457,12 +484,15 @@ export async function pgListDirectivesForUserInbox(
       ministry.name AS audience_ministry_name,
       org.name AS audience_organization_name,
       r.confirmed,
-      r.seen_at
+      r.seen_at,
+      (ap.id IS NOT NULL) AS has_action_plan
     FROM campaign_directives d
     INNER JOIN directive_recipients r ON r.directive_id = d.id AND r.user_id = ${userId}
     LEFT JOIN users creator ON creator.id = d.created_by_user_id
     LEFT JOIN ministries ministry ON ministry.id = d.audience_ministry_id
     LEFT JOIN ministry_organizations org ON org.id = d.audience_organization_id
+    LEFT JOIN directive_action_plans ap
+      ON ap.directive_id = d.id AND ap.user_id = ${userId}
     WHERE d.campaign_id = ${campaignId}
       AND d.published = true
       AND d.archived_at IS NULL
@@ -487,7 +517,8 @@ export async function pgGetDirectiveById(id: string): Promise<CampaignDirective 
       org.name AS audience_organization_name,
       COALESCE(stats.recipient_count, 0)::int AS recipient_count,
       COALESCE(stats.seen_count, 0)::int AS seen_count,
-      COALESCE(stats.unseen_count, 0)::int AS unseen_count
+      COALESCE(stats.unseen_count, 0)::int AS unseen_count,
+      COALESCE(stats.action_plan_count, 0)::int AS action_plan_count
     FROM campaign_directives d
     LEFT JOIN users creator ON creator.id = d.created_by_user_id
     LEFT JOIN ministries ministry ON ministry.id = d.audience_ministry_id
@@ -496,7 +527,12 @@ export async function pgGetDirectiveById(id: string): Promise<CampaignDirective 
       SELECT
         COUNT(*)::int AS recipient_count,
         COUNT(*) FILTER (WHERE confirmed = true)::int AS seen_count,
-        COUNT(*) FILTER (WHERE confirmed = false)::int AS unseen_count
+        COUNT(*) FILTER (WHERE confirmed = false)::int AS unseen_count,
+        (
+          SELECT COUNT(*)::int
+          FROM directive_action_plans ap
+          WHERE ap.directive_id = d.id
+        ) AS action_plan_count
       FROM directive_recipients r
       WHERE r.directive_id = d.id
     ) stats ON true
@@ -522,9 +558,12 @@ export async function pgListDirectiveRecipients(
       u.name AS user_name,
       u.email AS user_email,
       u.role AS user_role,
-      u.phone AS user_phone
+      u.phone AS user_phone,
+      ap.id AS action_plan_id
     FROM directive_recipients r
     INNER JOIN users u ON u.id = r.user_id
+    LEFT JOIN directive_action_plans ap
+      ON ap.directive_id = r.directive_id AND ap.user_id = r.user_id
     WHERE r.directive_id = ${directiveId}
     ORDER BY u.name ASC
   `;
@@ -546,6 +585,8 @@ export async function pgListDirectiveRecipients(
     smsSentAt: toIsoString(row.sms_sent_at),
     seenAt: toIsoString(row.seen_at),
     confirmed: Boolean(row.confirmed),
+    hasActionPlan: Boolean(row.action_plan_id),
+    actionPlanId: row.action_plan_id ? String(row.action_plan_id) : null,
   }));
 }
 

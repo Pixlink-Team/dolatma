@@ -7,6 +7,7 @@ import { z } from "zod";
 import {
   Archive,
   Check,
+  ClipboardCheck,
   ClipboardList,
   Download,
   Eye,
@@ -17,6 +18,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
+import { DirectiveActionPlanDialog } from "@/components/admin/directive-action-plan-dialog";
 import { DirectiveCtaButton } from "@/components/admin/directive-cta-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -301,7 +303,14 @@ export function DirectivesAdmin({
   const [detailItem, setDetailItem] = useState<CampaignDirective | null>(null);
   const [trackingItem, setTrackingItem] = useState<CampaignDirective | null>(null);
   const [recipients, setRecipients] = useState<DirectiveRecipient[]>([]);
-  const [recipientFilter, setRecipientFilter] = useState<"all" | "unseen" | "sms_error">("all");
+  const [recipientFilter, setRecipientFilter] = useState<"all" | "unseen" | "sms_error" | "no_plan">(
+    "all"
+  );
+  const [actionPlanTarget, setActionPlanTarget] = useState<{
+    directive: CampaignDirective;
+    mode: "edit" | "view";
+    planId?: string | null;
+  } | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const form = useForm<FormValues>({
@@ -519,6 +528,9 @@ export function DirectivesAdmin({
 
   const filteredRecipients = useMemo(() => {
     if (recipientFilter === "unseen") return recipients.filter((row) => !row.confirmed);
+    if (recipientFilter === "no_plan") {
+      return recipients.filter((row) => row.confirmed && !row.hasActionPlan);
+    }
     if (recipientFilter === "sms_error") {
       return recipients.filter(
         (row) => row.smsStatus === "failed" || row.smsStatus === "no_phone"
@@ -534,15 +546,37 @@ export function DirectivesAdmin({
         toast.error(result.error ?? "تأیید ثبت نشد");
         return;
       }
-      const next = { ...item, confirmed: true, seenAt: new Date().toISOString() };
+      const next = {
+        ...item,
+        confirmed: true,
+        seenAt: new Date().toISOString(),
+        hasActionPlan: item.hasActionPlan ?? false,
+      };
       setInboxRowsState((prev) =>
         prev.map((row) => (row.id === item.id ? next : row))
       );
       if (detailItem?.id === item.id) {
         setDetailItem(next);
       }
-      toast.success("تأیید مشاهده ثبت شد");
+      toast.success("تأیید مشاهده ثبت شد — اکنون برنامه اقدام را ثبت کنید");
+      setActionPlanTarget({ directive: next, mode: "edit" });
     });
+  };
+
+  const markActionPlanSaved = (directiveId: string) => {
+    setInboxRowsState((prev) =>
+      prev.map((row) =>
+        row.id === directiveId ? { ...row, hasActionPlan: true } : row
+      )
+    );
+    if (detailItem?.id === directiveId) {
+      setDetailItem({ ...detailItem, hasActionPlan: true });
+    }
+    setRecipients((prev) =>
+      prev.map((row) =>
+        row.directiveId === directiveId ? { ...row, hasActionPlan: true } : row
+      )
+    );
   };
 
   return (
@@ -555,7 +589,7 @@ export function DirectivesAdmin({
               ? audienceScope === "subordinates"
                 ? "صدور دستورکار برای زیرمجموعه‌های خودتان و پیگیری مشاهده"
                 : "انتشار دستورکار برای کاربران و پیگیری مشاهده و پیامک"
-              : "دستورکارهای جدید را ببینید، نامه رسمی را مشاهده کنید و تأیید مشاهده بزنید"}
+              : "دستورکارهای جدید را ببینید، تأیید مشاهده بزنید و برنامه اقدام ثبت کنید"}
           </p>
         </div>
         {canManage && managerView === "manage" && manageListTab === "active" && (
@@ -645,8 +679,11 @@ export function DirectivesAdmin({
                     )}
                     {showingArchive && <Badge variant="secondary">آرشیو</Badge>}
                     {showingInbox && !item.confirmed && <Badge>جدید</Badge>}
-                    {showingInbox && item.confirmed && (
-                      <Badge variant="secondary">دیده‌شده</Badge>
+                    {showingInbox && item.confirmed && !item.hasActionPlan && (
+                      <Badge variant="destructive">نیاز به برنامه اقدام</Badge>
+                    )}
+                    {showingInbox && item.confirmed && item.hasActionPlan && (
+                      <Badge variant="secondary">تعهد ثبت‌شده</Badge>
                     )}
                   </div>
                   <p className="text-sm text-muted-foreground line-clamp-2 whitespace-pre-wrap">
@@ -661,7 +698,8 @@ export function DirectivesAdmin({
                     {!showingInbox && (
                       <span>
                         {formatPersianNumber(item.seenCount ?? 0)} دیده‌اند ·{" "}
-                        {formatPersianNumber(item.unseenCount ?? 0)} ندیده‌اند
+                        {formatPersianNumber(item.unseenCount ?? 0)} ندیده‌اند ·{" "}
+                        {formatPersianNumber(item.actionPlanCount ?? 0)} تعهد
                       </span>
                     )}
                   </div>
@@ -682,6 +720,18 @@ export function DirectivesAdmin({
                     <Button size="sm" disabled={isPending} onClick={() => confirmSeen(item)}>
                       <Check className="h-4 w-4" />
                       تأیید مشاهده
+                    </Button>
+                  )}
+                  {showingInbox && item.confirmed && (
+                    <Button
+                      size="sm"
+                      variant={item.hasActionPlan ? "outline" : "default"}
+                      onClick={() =>
+                        setActionPlanTarget({ directive: item, mode: "edit" })
+                      }
+                    >
+                      <ClipboardCheck className="h-4 w-4" />
+                      {item.hasActionPlan ? "ویرایش برنامه اقدام" : "ثبت برنامه اقدام"}
                     </Button>
                   )}
                   {!showingInbox && canManage && (
@@ -1246,6 +1296,19 @@ export function DirectivesAdmin({
                     تأیید مشاهده
                   </Button>
                 )}
+                {showingInbox && detailItem.confirmed && (
+                  <Button
+                    variant={detailItem.hasActionPlan ? "outline" : "default"}
+                    onClick={() =>
+                      setActionPlanTarget({ directive: detailItem, mode: "edit" })
+                    }
+                  >
+                    <ClipboardCheck className="h-4 w-4" />
+                    {detailItem.hasActionPlan
+                      ? "ویرایش برنامه اقدام"
+                      : "ثبت برنامه اقدام"}
+                  </Button>
+                )}
               </div>
             </>
           )}
@@ -1272,18 +1335,22 @@ export function DirectivesAdmin({
                 <p className="text-sm text-muted-foreground">
                   {formatPersianNumber(trackingItem.seenCount ?? 0)} دیده‌اند ·{" "}
                   {formatPersianNumber(trackingItem.unseenCount ?? 0)} ندیده‌اند ·{" "}
+                  {formatPersianNumber(trackingItem.actionPlanCount ?? 0)} تعهد ·{" "}
                   {formatPersianNumber(trackingItem.recipientCount ?? recipients.length)} مخاطب
                 </p>
 
                 <Tabs
                   value={recipientFilter}
                   onValueChange={(value) =>
-                    setRecipientFilter(value as "all" | "unseen" | "sms_error")
+                    setRecipientFilter(
+                      value as "all" | "unseen" | "sms_error" | "no_plan"
+                    )
                   }
                 >
                   <TabsList>
                     <TabsTrigger value="all">همه</TabsTrigger>
                     <TabsTrigger value="unseen">فقط ندیده‌ها</TabsTrigger>
+                    <TabsTrigger value="no_plan">بدون برنامه اقدام</TabsTrigger>
                     <TabsTrigger value="sms_error">خطای پیامک / بدون شماره</TabsTrigger>
                   </TabsList>
                 </Tabs>
@@ -1295,6 +1362,7 @@ export function DirectivesAdmin({
                         <th className="px-3 py-2 font-medium">نام</th>
                         <th className="px-3 py-2 font-medium">نقش</th>
                         <th className="px-3 py-2 font-medium">مشاهده</th>
+                        <th className="px-3 py-2 font-medium">تعهد</th>
                         <th className="px-3 py-2 font-medium">زمان تأیید</th>
                         <th className="px-3 py-2 font-medium">پیامک</th>
                       </tr>
@@ -1302,7 +1370,7 @@ export function DirectivesAdmin({
                     <tbody>
                       {filteredRecipients.length === 0 ? (
                         <tr>
-                          <td colSpan={5} className="px-3 py-6 text-center text-muted-foreground">
+                          <td colSpan={6} className="px-3 py-6 text-center text-muted-foreground">
                             موردی نیست
                           </td>
                         </tr>
@@ -1328,6 +1396,28 @@ export function DirectivesAdmin({
                               )}
                             </td>
                             <td className="px-3 py-2">
+                              {row.hasActionPlan && row.actionPlanId ? (
+                                <Button
+                                  variant="link"
+                                  size="sm"
+                                  className="h-auto p-0"
+                                  onClick={() =>
+                                    setActionPlanTarget({
+                                      directive: trackingItem,
+                                      mode: "view",
+                                      planId: row.actionPlanId,
+                                    })
+                                  }
+                                >
+                                  مشاهده تعهد
+                                </Button>
+                              ) : row.confirmed ? (
+                                <Badge variant="destructive">ثبت نشده</Badge>
+                              ) : (
+                                "—"
+                              )}
+                            </td>
+                            <td className="px-3 py-2">
                               {row.seenAt ? formatPersianDateTime(row.seenAt) : "—"}
                             </td>
                             <td className="px-3 py-2">
@@ -1347,6 +1437,29 @@ export function DirectivesAdmin({
           )}
         </DialogContent>
       </Dialog>
+
+      <DirectiveActionPlanDialog
+        open={Boolean(actionPlanTarget)}
+        onOpenChange={(next) => {
+          if (!next) setActionPlanTarget(null);
+        }}
+        directiveId={actionPlanTarget?.directive.id ?? ""}
+        campaignId={campaignId}
+        directiveTitle={actionPlanTarget?.directive.title ?? ""}
+        mode={actionPlanTarget?.mode ?? "edit"}
+        planId={actionPlanTarget?.planId}
+        onSaved={() => {
+          if (!actionPlanTarget) return;
+          const alreadyHad = Boolean(actionPlanTarget.directive.hasActionPlan);
+          markActionPlanSaved(actionPlanTarget.directive.id);
+          if (trackingItem?.id === actionPlanTarget.directive.id && !alreadyHad) {
+            setTrackingItem({
+              ...trackingItem,
+              actionPlanCount: (trackingItem.actionPlanCount ?? 0) + 1,
+            });
+          }
+        }}
+      />
     </div>
   );
 }

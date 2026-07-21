@@ -152,9 +152,9 @@ export function DashboardDirectivesPanel({
             </CardTitle>
             <p className="text-sm text-muted-foreground">
               {unreadCount > 0
-                ? "دستورکارهای جدید را ببینید و تأیید مشاهده بزنید"
+                ? "دستورکارهای جدید را ببینید، تأیید مشاهده و برنامه اقدام ثبت کنید"
                 : inboxRows.length > 0
-                  ? "همه دستورکارهای شما دیده‌شده‌اند"
+                  ? "همه دستورکارهای شما دیده‌شده‌اند — برنامه اقدام را تکمیل کنید"
                   : canManage
                     ? "هنوز دستورکاری برای شما نیست — از صفحه دستورکارها می‌توانید ایجاد کنید"
                     : "هنوز دستورکاری برای شما ارسال نشده است"}
@@ -204,8 +204,10 @@ export function DashboardDirectivesPanel({
                       {item.priority === "urgent" && <Badge variant="destructive">فوری</Badge>}
                       {!item.confirmed ? (
                         <Badge>جدید</Badge>
+                      ) : !item.hasActionPlan ? (
+                        <Badge variant="destructive">نیاز به برنامه اقدام</Badge>
                       ) : (
-                        <Badge variant="secondary">دیده‌شده</Badge>
+                        <Badge variant="secondary">تعهد ثبت‌شده</Badge>
                       )}
                     </div>
                     <p className="line-clamp-2 whitespace-pre-wrap text-sm text-muted-foreground">
@@ -223,10 +225,14 @@ export function DashboardDirectivesPanel({
                       <Eye className="h-4 w-4" />
                       جزئیات
                     </Button>
-                    {!item.confirmed && (
+                    {!item.confirmed ? (
                       <Button size="sm" disabled={isPending} onClick={() => confirmSeen(item)}>
                         <Check className="h-4 w-4" />
                         تأیید مشاهده
+                      </Button>
+                    ) : (
+                      <Button size="sm" variant="outline" asChild>
+                        <Link href={directivesHref}>برنامه اقدام</Link>
                       </Button>
                     )}
                   </div>

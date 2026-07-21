@@ -323,11 +323,12 @@ export function DevicePassportView({ initialPassport }: DevicePassportViewProps)
         </div>
       </section>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
         {[
           { label: "دستورهای دریافتی", value: passport.directiveStats.received },
           { label: "دیده‌شده", value: passport.directiveStats.seen },
           { label: "تأییدشده", value: passport.directiveStats.confirmed },
+          { label: "برنامه اقدام", value: passport.directiveStats.actionPlans },
           { label: "آپلود محتوا", value: passport.contentStats.totalUploads },
         ].map((item) => (
           <div key={item.label} className="rounded-lg border bg-card p-4">
@@ -625,6 +626,7 @@ export function DevicePassportView({ initialPassport }: DevicePassportViewProps)
                   <th className="p-2 text-right font-medium">دستور</th>
                   <th className="p-2 text-right font-medium">دیده‌شده</th>
                   <th className="p-2 text-right font-medium">تأیید</th>
+                  <th className="p-2 text-right font-medium">تعهد</th>
                   <th className="p-2 text-right font-medium">محتوا</th>
                 </tr>
               </thead>
@@ -643,6 +645,7 @@ export function DevicePassportView({ initialPassport }: DevicePassportViewProps)
                     <td className="p-2">{item.directivesReceived}</td>
                     <td className="p-2">{item.directivesSeen}</td>
                     <td className="p-2">{item.directivesConfirmed}</td>
+                    <td className="p-2">{item.actionPlans}</td>
                     <td className="p-2">{item.contentUploads}</td>
                   </tr>
                 ))}
