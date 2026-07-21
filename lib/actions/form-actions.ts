@@ -21,6 +21,7 @@ import {
   pgListFormResponses,
   pgSaveCampaignForm,
   pgSubmitFormResponse,
+  pgUpdateFormResponse,
 } from "@/lib/db/repository-forms";
 import { pgGetUserPermissionsForCampaign } from "@/lib/db/repository-extended";
 import type {
@@ -202,6 +203,48 @@ export async function submitFormResponseAction(input: {
     formId: form.id,
     campaignId: form.campaignId,
     ownerUserId: access.session.userId ?? null,
+    answers: validated.answers,
+  });
+
+  if (!result.success) return result;
+
+  await revalidateForms();
+  return { success: true as const, response: result.response };
+}
+
+export async function updateFormResponseAction(input: {
+  responseId: string;
+  campaignId: string;
+  answers: Record<string, unknown>;
+}) {
+  const access = await assertCanAccessForms(input.campaignId);
+  if (access.error || !access.session) return access.error ?? UNAUTHORIZED;
+
+  const dbError = requirePostgres();
+  if (dbError) return dbError;
+
+  const existing = await pgGetFormResponse(input.responseId);
+  if (!existing || existing.campaignId !== input.campaignId) {
+    return { success: false as const, error: "پاسخ یافت نشد" };
+  }
+
+  const canManage = canManageForms(access.session);
+  if (!canManage && existing.ownerUserId !== access.session.userId) {
+    return UNAUTHORIZED;
+  }
+
+  const form = await pgGetCampaignForm(existing.formId);
+  if (!form || form.campaignId !== input.campaignId) {
+    return { success: false as const, error: "فرم یافت نشد" };
+  }
+
+  const validated = validateFormAnswers(form.fields, input.answers ?? {});
+  if (!validated.ok) {
+    return { success: false as const, error: validated.error };
+  }
+
+  const result = await pgUpdateFormResponse({
+    responseId: existing.id,
     answers: validated.answers,
   });
 

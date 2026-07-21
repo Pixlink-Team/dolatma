@@ -326,6 +326,35 @@ export async function pgSubmitFormResponse(data: {
   };
 }
 
+export async function pgUpdateFormResponse(data: {
+  responseId: string;
+  answers: Record<string, unknown>;
+}): Promise<
+  { success: true; response: CampaignFormResponse } | { success: false; error: string }
+> {
+  const sql = getSql();
+  const now = new Date().toISOString();
+  const answersJson = JSON.parse(JSON.stringify(data.answers));
+
+  const rows = await sql`
+    UPDATE campaign_form_responses
+    SET
+      answers = ${sql.json(answersJson)},
+      updated_at = ${now}
+    WHERE id = ${data.responseId}
+    RETURNING *
+  `;
+
+  if (!rows[0]) {
+    return { success: false, error: "پاسخ یافت نشد" };
+  }
+
+  return {
+    success: true,
+    response: mapResponseFromDb(rows[0] as Record<string, unknown>),
+  };
+}
+
 export async function pgDeleteFormResponse(
   responseId: string
 ): Promise<{ success: true } | { success: false; error: string }> {

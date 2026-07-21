@@ -17,14 +17,19 @@ import {
 } from "@/components/ui/select";
 import { DocumentUpload } from "@/components/ui/document-upload";
 import { PersianDateInput } from "@/components/ui/persian-date-input";
-import { submitFormResponseAction } from "@/lib/actions/form-actions";
-import type { CampaignForm, FormField } from "@/lib/types";
+import {
+  submitFormResponseAction,
+  updateFormResponseAction,
+} from "@/lib/actions/form-actions";
+import type { CampaignForm, CampaignFormResponse, FormField } from "@/lib/types";
 
 interface FormFillDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   campaignId: string;
   form: CampaignForm | null;
+  /** When set, dialog edits an existing response instead of creating a new one. */
+  editingResponse?: CampaignFormResponse | null;
   onSubmitted: () => void;
 }
 
@@ -36,20 +41,40 @@ function emptyAnswers(fields: FormField[]): Record<string, unknown> {
   return answers;
 }
 
+function answersFromResponse(
+  fields: FormField[],
+  existing: Record<string, unknown> | undefined
+): Record<string, unknown> {
+  const answers = emptyAnswers(fields);
+  if (!existing) return answers;
+  for (const field of fields) {
+    if (Object.prototype.hasOwnProperty.call(existing, field.id)) {
+      answers[field.id] = existing[field.id];
+    }
+  }
+  return answers;
+}
+
 export function FormFillDialog({
   open,
   onOpenChange,
   campaignId,
   form,
+  editingResponse = null,
   onSubmitted,
 }: FormFillDialogProps) {
   const [answers, setAnswers] = useState<Record<string, unknown>>({});
   const [isPending, startTransition] = useTransition();
+  const isEditing = Boolean(editingResponse);
 
   useEffect(() => {
     if (!open || !form) return;
-    setAnswers(emptyAnswers(form.fields));
-  }, [open, form]);
+    setAnswers(
+      isEditing
+        ? answersFromResponse(form.fields, editingResponse?.answers)
+        : emptyAnswers(form.fields)
+    );
+  }, [open, form, isEditing, editingResponse]);
 
   const setAnswer = (fieldId: string, value: unknown) => {
     setAnswers((prev) => ({ ...prev, [fieldId]: value }));
@@ -58,16 +83,26 @@ export function FormFillDialog({
   const handleSubmit = () => {
     if (!form) return;
     startTransition(async () => {
-      const result = await submitFormResponseAction({
-        formId: form.id,
-        campaignId,
-        answers,
-      });
+      const result =
+        isEditing && editingResponse
+          ? await updateFormResponseAction({
+              responseId: editingResponse.id,
+              campaignId,
+              answers,
+            })
+          : await submitFormResponseAction({
+              formId: form.id,
+              campaignId,
+              answers,
+            });
+
       if (!result.success) {
-        toast.error(result.error ?? "ثبت پاسخ ناموفق بود");
+        toast.error(
+          result.error ?? (isEditing ? "ویرایش پاسخ ناموفق بود" : "ثبت پاسخ ناموفق بود")
+        );
         return;
       }
-      toast.success("پاسخ با موفقیت ثبت شد");
+      toast.success(isEditing ? "پاسخ با موفقیت ویرایش شد" : "پاسخ با موفقیت ثبت شد");
       onOpenChange(false);
       onSubmitted();
     });
@@ -77,7 +112,11 @@ export function FormFillDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{form?.title ?? "پر کردن فرم"}</DialogTitle>
+          <DialogTitle>
+            {isEditing
+              ? `ویرایش پاسخ — ${form?.title ?? "فرم"}`
+              : (form?.title ?? "پر کردن فرم")}
+          </DialogTitle>
         </DialogHeader>
 
         {form?.description ? (
@@ -171,7 +210,13 @@ export function FormFillDialog({
               انصراف
             </Button>
             <Button type="button" onClick={handleSubmit} disabled={isPending || !form}>
-              {isPending ? "در حال ارسال..." : "ارسال پاسخ"}
+              {isPending
+                ? isEditing
+                  ? "در حال ذخیره..."
+                  : "در حال ارسال..."
+                : isEditing
+                  ? "ذخیره تغییرات"
+                  : "ارسال پاسخ"}
             </Button>
           </div>
         </div>

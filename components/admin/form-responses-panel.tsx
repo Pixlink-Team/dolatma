@@ -1,7 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
-import { Trash2 } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { deleteFormResponseAction } from "@/lib/actions/form-actions";
@@ -14,6 +14,7 @@ interface FormResponsesPanelProps {
   responses: CampaignFormResponse[];
   canManage: boolean;
   onChanged: () => void;
+  onEdit: (response: CampaignFormResponse) => void;
 }
 
 function formatAnswerValue(field: FormField | undefined, value: unknown): string {
@@ -31,6 +32,7 @@ export function FormResponsesPanel({
   responses,
   canManage,
   onChanged,
+  onEdit,
 }: FormResponsesPanelProps) {
   const [isPending, startTransition] = useTransition();
 
@@ -76,7 +78,19 @@ export function FormResponsesPanel({
 
       <div className="space-y-3">
         {responses.map((response) => (
-          <div key={response.id} className="rounded-xl border p-4 space-y-3">
+          <div
+            key={response.id}
+            className="rounded-xl border p-4 space-y-3 cursor-pointer transition-colors hover:bg-muted/20"
+            onClick={() => onEdit(response)}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onEdit(response);
+              }
+            }}
+          >
             <div className="flex items-start justify-between gap-3">
               <div className="space-y-1">
                 <p className="text-sm font-medium">
@@ -86,15 +100,27 @@ export function FormResponsesPanel({
                   {new Date(response.createdAt).toLocaleString("fa-IR")}
                 </p>
               </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                disabled={isPending}
-                onClick={() => handleDelete(response.id)}
-              >
-                <Trash2 className="h-4 w-4 text-destructive" />
-              </Button>
+              <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  title="ویرایش پاسخ"
+                  onClick={() => onEdit(response)}
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  disabled={isPending}
+                  title="حذف پاسخ"
+                  onClick={() => handleDelete(response.id)}
+                >
+                  <Trash2 className="h-4 w-4 text-destructive" />
+                </Button>
+              </div>
             </div>
 
             <div className="grid gap-2 sm:grid-cols-2">
@@ -111,6 +137,7 @@ export function FormResponsesPanel({
                         target="_blank"
                         rel="noreferrer"
                         className="text-sm text-primary underline break-all"
+                        onClick={(e) => e.stopPropagation()}
                       >
                         مشاهده فایل
                       </a>

@@ -31,6 +31,9 @@ export function FormsAdmin({ campaignId, canManage }: FormsAdminProps) {
   const [editingForm, setEditingForm] = useState<CampaignForm | null>(null);
   const [fillOpen, setFillOpen] = useState(false);
   const [fillForm, setFillForm] = useState<CampaignForm | null>(null);
+  const [editingResponse, setEditingResponse] = useState<CampaignFormResponse | null>(
+    null
+  );
   const [isPending, startTransition] = useTransition();
 
   const selectedForm = forms.find((form) => form.id === selectedFormId) ?? null;
@@ -91,7 +94,19 @@ export function FormsAdmin({ campaignId, canManage }: FormsAdminProps) {
   };
 
   const openFill = (form: CampaignForm) => {
+    setEditingResponse(null);
     setFillForm(form);
+    setFillOpen(true);
+  };
+
+  const openEditResponse = (response: CampaignFormResponse) => {
+    const form = forms.find((item) => item.id === response.formId) ?? selectedForm;
+    if (!form) {
+      toast.error("فرم مربوط به این پاسخ یافت نشد");
+      return;
+    }
+    setFillForm(form);
+    setEditingResponse(response);
     setFillOpen(true);
   };
 
@@ -118,8 +133,8 @@ export function FormsAdmin({ campaignId, canManage }: FormsAdminProps) {
           </div>
           <p className="text-sm text-muted-foreground">
             {canManage
-              ? "فرم بسازید، فیلدها را ویرایش کنید و پاسخ‌های مشارکت‌کنندگان را ببینید"
-              : "فرم‌های منتشرشده را پر کنید و پاسخ‌های خود را ببینید"}
+              ? "فرم بسازید، فیلدها را ویرایش کنید و پاسخ‌های کاربران را ببینید و ویرایش کنید"
+              : "فرم‌های منتشرشده را پر کنید و پاسخ‌های خود را ببینید و ویرایش کنید"}
           </p>
         </div>
         {canManage ? (
@@ -232,6 +247,7 @@ export function FormsAdmin({ campaignId, canManage }: FormsAdminProps) {
             responses={responses}
             canManage={canManage}
             onChanged={() => void loadResponses(selectedFormId)}
+            onEdit={openEditResponse}
           />
         </div>
       )}
@@ -248,9 +264,13 @@ export function FormsAdmin({ campaignId, canManage }: FormsAdminProps) {
 
       <FormFillDialog
         open={fillOpen}
-        onOpenChange={setFillOpen}
+        onOpenChange={(open) => {
+          setFillOpen(open);
+          if (!open) setEditingResponse(null);
+        }}
         campaignId={campaignId}
         form={fillForm}
+        editingResponse={editingResponse}
         onSubmitted={() => void refreshAll()}
       />
     </div>
