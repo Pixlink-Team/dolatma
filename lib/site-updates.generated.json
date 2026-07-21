@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "2daa9691ff4eb3db1156106859945d248ee9088a",
+      "committedAt": "2026-07-21T15:40:34+03:30",
+      "title": "افزودن شناسنامه ۳۶۰ درجه برای هر دستگاه و زیرمجموعه",
+      "subject": "Add device 360 passport page and admin list links"
+    },
+    {
       "hash": "95a3ab09c62837f833484e0302b1e26529f42dff",
       "committedAt": "2026-07-21T15:36:58+03:30",
       "title": "افزودن اتاق عملیات دستورکار با نسخه‌بندی فایل و هشدار جایگزینی",

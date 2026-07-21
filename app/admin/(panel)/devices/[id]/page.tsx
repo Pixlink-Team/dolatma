@@ -16,7 +16,13 @@ export default async function DevicePassportPage({ params }: PageProps) {
   const { id } = await params;
   if (!isPostgresConfigured()) notFound();
 
-  const passport = await pgGetDevicePassport(id);
+  let passport: Awaited<ReturnType<typeof pgGetDevicePassport>> = null;
+  try {
+    passport = await pgGetDevicePassport(id);
+  } catch (error) {
+    console.error("[device-passport] page load failed", id, error);
+    throw error;
+  }
   if (!passport) notFound();
 
   return <DevicePassportView initialPassport={passport} />;

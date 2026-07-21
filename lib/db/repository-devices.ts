@@ -268,57 +268,76 @@ export async function ensureDeviceSchema(): Promise<void> {
   `;
 
   // Migrate legacy ministries/orgs into devices (idempotent by id).
-  await sql`
-    INSERT INTO devices (
-      id, name, short_name, type, parent_id, mission, activity_scope,
-      status, is_active, created_at, updated_at
-    )
-    SELECT
-      m.id,
-      COALESCE(NULLIF(TRIM(m.full_name), ''), m.name),
-      m.name,
-      'ministry',
-      NULL,
-      m.description,
-      'national',
-      CASE WHEN m.is_active IS FALSE THEN 'inactive' ELSE 'active' END,
-      COALESCE(m.is_active, true),
-      m.created_at,
-      now()
-    FROM ministries m
-    ON CONFLICT (id) DO NOTHING
-  `;
-  await sql`
-    INSERT INTO devices (
-      id, name, short_name, type, parent_id, activity_scope,
-      status, is_active, created_at, updated_at
-    )
-    SELECT
-      o.id,
-      COALESCE(NULLIF(TRIM(o.full_name), ''), o.name),
-      o.name,
-      'organization',
-      o.ministry_id,
-      'national',
-      CASE WHEN o.is_active IS FALSE THEN 'inactive' ELSE 'active' END,
-      COALESCE(o.is_active, true),
-      o.created_at,
-      now()
-    FROM ministry_organizations o
-    ON CONFLICT (id) DO NOTHING
-  `;
-  await sql`
-    UPDATE users
-    SET device_id = COALESCE(organization_id, ministry_id)
-    WHERE device_id IS NULL
-      AND COALESCE(organization_id, ministry_id) IS NOT NULL
-  `;
-  await sql`
-    UPDATE campaign_directives
-    SET audience_device_id = COALESCE(audience_organization_id, audience_ministry_id)
-    WHERE audience_device_id IS NULL
-      AND COALESCE(audience_organization_id, audience_ministry_id) IS NOT NULL
-  `;
+  // Ignore unique-name conflicts from partial prior seeds.
+  try {
+    await sql`
+      INSERT INTO devices (
+        id, name, short_name, type, parent_id, mission, activity_scope,
+        status, is_active, created_at, updated_at
+      )
+      SELECT
+        m.id,
+        COALESCE(NULLIF(TRIM(m.full_name), ''), m.name),
+        m.name,
+        'ministry',
+        NULL,
+        m.description,
+        'national',
+        CASE WHEN m.is_active IS FALSE THEN 'inactive' ELSE 'active' END,
+        COALESCE(m.is_active, true),
+        m.created_at,
+        now()
+      FROM ministries m
+      WHERE NOT EXISTS (SELECT 1 FROM devices d WHERE d.id = m.id)
+      ON CONFLICT (id) DO NOTHING
+    `;
+    await sql`
+      INSERT INTO devices (
+        id, name, short_name, type, parent_id, activity_scope,
+        status, is_active, created_at, updated_at
+      )
+      SELECT
+        o.id,
+        COALESCE(NULLIF(TRIM(o.full_name), ''), o.name),
+        o.name,
+        'organization',
+        o.ministry_id,
+        'national',
+        CASE WHEN o.is_active IS FALSE THEN 'inactive' ELSE 'active' END,
+        COALESCE(o.is_active, true),
+        o.created_at,
+        now()
+      FROM ministry_organizations o
+      WHERE NOT EXISTS (SELECT 1 FROM devices d WHERE d.id = o.id)
+        AND EXISTS (SELECT 1 FROM devices d WHERE d.id = o.ministry_id)
+      ON CONFLICT (id) DO NOTHING
+    `;
+    await sql`
+      UPDATE users
+      SET device_id = COALESCE(organization_id, ministry_id)
+      WHERE device_id IS NULL
+        AND COALESCE(organization_id, ministry_id) IS NOT NULL
+        AND EXISTS (
+          SELECT 1 FROM devices d
+          WHERE d.id = COALESCE(users.organization_id, users.ministry_id)
+        )
+    `;
+    await sql`
+      UPDATE campaign_directives
+      SET audience_device_id = COALESCE(audience_organization_id, audience_ministry_id)
+      WHERE audience_device_id IS NULL
+        AND COALESCE(audience_organization_id, audience_ministry_id) IS NOT NULL
+        AND EXISTS (
+          SELECT 1 FROM devices d
+          WHERE d.id = COALESCE(
+            campaign_directives.audience_organization_id,
+            campaign_directives.audience_ministry_id
+          )
+        )
+    `;
+  } catch (error) {
+    console.error("[devices] legacy migration skipped", error);
+  }
 }
 
 async function syncLegacyFromDevice(device: {
@@ -764,37 +783,59 @@ export async function pgDeleteDeviceCapacity(
 
 async function listDeviceUsers(deviceId: string): Promise<AdminUser[]> {
   const sql = getSql();
-  const rows = await sql`
-    SELECT
-      u.*,
-      m.name AS ministry_name,
-      o.name AS organization_name,
-      d.name AS device_name,
-      p.name AS parent_user_name
-    FROM users u
-    LEFT JOIN ministries m ON m.id = u.ministry_id
-    LEFT JOIN ministry_organizations o ON o.id = u.organization_id
-    LEFT JOIN devices d ON d.id = COALESCE(u.device_id, u.organization_id, u.ministry_id)
-    LEFT JOIN users p ON p.id = u.parent_user_id
-    WHERE u.device_id = ${deviceId}
-       OR u.organization_id = ${deviceId}
-       OR (u.ministry_id = ${deviceId} AND u.organization_id IS NULL)
-       OR u.device_id IN (SELECT id FROM devices WHERE parent_id = ${deviceId})
-       OR u.organization_id IN (SELECT id FROM devices WHERE parent_id = ${deviceId})
-    ORDER BY u.created_at DESC
-  `;
-  return rows.map((row) => {
-    const user = mapUserFromDb(row as Record<string, unknown>);
-    const record = row as Record<string, unknown>;
-    return {
-      ...user,
-      deviceId: record.device_id
-        ? String(record.device_id)
-        : user.organizationId ?? user.ministryId ?? null,
-      deviceName:
-        typeof record.device_name === "string" ? record.device_name : null,
-    };
-  });
+  try {
+    const rows = await sql`
+      SELECT
+        u.*,
+        m.name AS ministry_name,
+        o.name AS organization_name,
+        d.name AS device_name,
+        p.name AS parent_user_name
+      FROM users u
+      LEFT JOIN ministries m ON m.id = u.ministry_id
+      LEFT JOIN ministry_organizations o ON o.id = u.organization_id
+      LEFT JOIN devices d ON d.id = COALESCE(u.device_id, u.organization_id, u.ministry_id)
+      LEFT JOIN users p ON p.id = u.parent_user_id
+      WHERE u.device_id = ${deviceId}
+         OR u.organization_id = ${deviceId}
+         OR (u.ministry_id = ${deviceId} AND u.organization_id IS NULL)
+         OR u.device_id IN (SELECT id FROM devices WHERE parent_id = ${deviceId})
+         OR u.organization_id IN (SELECT id FROM devices WHERE parent_id = ${deviceId})
+      ORDER BY u.created_at DESC
+    `;
+    return rows.map((row) => {
+      const user = mapUserFromDb(row as Record<string, unknown>);
+      const record = row as Record<string, unknown>;
+      return {
+        ...user,
+        deviceId: record.device_id
+          ? String(record.device_id)
+          : user.organizationId ?? user.ministryId ?? null,
+        deviceName:
+          typeof record.device_name === "string" ? record.device_name : null,
+      };
+    });
+  } catch (error) {
+    console.error("[device-passport] listDeviceUsers primary failed", error);
+    const rows = await sql`
+      SELECT
+        u.*,
+        m.name AS ministry_name,
+        o.name AS organization_name,
+        p.name AS parent_user_name
+      FROM users u
+      LEFT JOIN ministries m ON m.id = u.ministry_id
+      LEFT JOIN ministry_organizations o ON o.id = u.organization_id
+      LEFT JOIN users p ON p.id = u.parent_user_id
+      WHERE u.organization_id = ${deviceId}
+         OR (u.ministry_id = ${deviceId} AND u.organization_id IS NULL)
+         OR u.organization_id IN (
+           SELECT id FROM ministry_organizations WHERE ministry_id = ${deviceId}
+         )
+      ORDER BY u.created_at DESC
+    `;
+    return rows.map((row) => mapUserFromDb(row as Record<string, unknown>));
+  }
 }
 
 function computeReadiness(input: {
@@ -881,172 +922,227 @@ function computeReadiness(input: {
 
 async function loadDirectiveStats(deviceId: string): Promise<DeviceDirectiveStats> {
   const sql = getSql();
-  const rows = await sql`
-    WITH device_users AS (
+  try {
+    const rows = await sql`
+      WITH device_users AS (
+        SELECT id FROM users
+        WHERE device_id = ${deviceId}
+           OR organization_id = ${deviceId}
+           OR (ministry_id = ${deviceId} AND organization_id IS NULL)
+           OR device_id IN (SELECT id FROM devices WHERE parent_id = ${deviceId})
+           OR organization_id IN (SELECT id FROM devices WHERE parent_id = ${deviceId})
+      )
+      SELECT
+        COUNT(*)::int AS received,
+        COUNT(*) FILTER (WHERE seen_at IS NOT NULL)::int AS seen,
+        COUNT(*) FILTER (WHERE seen_at IS NULL)::int AS unseen,
+        COUNT(*) FILTER (WHERE confirmed IS TRUE)::int AS confirmed
+      FROM directive_recipients dr
+      JOIN device_users du ON du.id = dr.user_id
+    `;
+    const row = rows[0] as Record<string, unknown> | undefined;
+    return {
+      received: Number(row?.received ?? 0),
+      seen: Number(row?.seen ?? 0),
+      unseen: Number(row?.unseen ?? 0),
+      confirmed: Number(row?.confirmed ?? 0),
+    };
+  } catch (error) {
+    console.error("[device-passport] loadDirectiveStats failed", error);
+    return { received: 0, seen: 0, unseen: 0, confirmed: 0 };
+  }
+}
+
+async function loadContentStats(deviceId: string): Promise<DeviceContentStats> {
+  const empty: DeviceContentStats = {
+    billboards: 0,
+    posters: 0,
+    videos: 0,
+    socialPosts: 0,
+    activities: 0,
+    files: 0,
+    totalUploads: 0,
+    score: 0,
+  };
+  const sql = getSql();
+  try {
+    const userRows = await sql`
       SELECT id FROM users
       WHERE device_id = ${deviceId}
          OR organization_id = ${deviceId}
          OR (ministry_id = ${deviceId} AND organization_id IS NULL)
          OR device_id IN (SELECT id FROM devices WHERE parent_id = ${deviceId})
          OR organization_id IN (SELECT id FROM devices WHERE parent_id = ${deviceId})
-    ),
-    scoped AS (
-      SELECT DISTINCT ON (dr.directive_id, dr.user_id)
-        dr.directive_id,
-        dr.user_id,
-        dr.seen_at,
-        dr.confirmed
-      FROM directive_recipients dr
-      JOIN device_users du ON du.id = dr.user_id
-      ORDER BY dr.directive_id, dr.user_id, dr.seen_at DESC NULLS LAST
-    )
-    SELECT
-      COUNT(*)::int AS received,
-      COUNT(*) FILTER (WHERE seen_at IS NOT NULL)::int AS seen,
-      COUNT(*) FILTER (WHERE seen_at IS NULL)::int AS unseen,
-      COUNT(*) FILTER (WHERE confirmed IS TRUE)::int AS confirmed
-    FROM scoped
-  `;
-  const row = rows[0] as Record<string, unknown> | undefined;
-  return {
-    received: Number(row?.received ?? 0),
-    seen: Number(row?.seen ?? 0),
-    unseen: Number(row?.unseen ?? 0),
-    confirmed: Number(row?.confirmed ?? 0),
-  };
-}
+    `;
+    const userIds = userRows.map((row) => String(row.id));
+    if (userIds.length === 0) return empty;
 
-async function loadContentStats(deviceId: string): Promise<DeviceContentStats> {
-  const sql = getSql();
-  const userRows = await sql`
-    SELECT id FROM users
-    WHERE device_id = ${deviceId}
-       OR organization_id = ${deviceId}
-       OR (ministry_id = ${deviceId} AND organization_id IS NULL)
-       OR device_id IN (SELECT id FROM devices WHERE parent_id = ${deviceId})
-       OR organization_id IN (SELECT id FROM devices WHERE parent_id = ${deviceId})
-  `;
-  const userIds = userRows.map((row) => String(row.id));
-  if (userIds.length === 0) {
+    const [billboards, posters, videos, socialPosts, activities, files] = await Promise.all([
+      sql`SELECT COUNT(*)::int AS c FROM billboards WHERE owner_user_id IN ${sql(userIds)}`,
+      sql`SELECT COUNT(*)::int AS c FROM posters WHERE owner_user_id IN ${sql(userIds)}`,
+      sql`SELECT COUNT(*)::int AS c FROM videos WHERE owner_user_id IN ${sql(userIds)}`,
+      sql`SELECT COUNT(*)::int AS c FROM social_media_posts WHERE owner_user_id IN ${sql(userIds)}`,
+      sql`SELECT COUNT(*)::int AS c FROM campaign_activities WHERE owner_user_id IN ${sql(userIds)}`,
+      sql`SELECT COUNT(*)::int AS c FROM campaign_files WHERE owner_user_id IN ${sql(userIds)}`,
+    ]);
+
+    const b = Number(billboards[0]?.c ?? 0);
+    const p = Number(posters[0]?.c ?? 0);
+    const v = Number(videos[0]?.c ?? 0);
+    const s = Number(socialPosts[0]?.c ?? 0);
+    const a = Number(activities[0]?.c ?? 0);
+    const f = Number(files[0]?.c ?? 0);
+    const totalUploads = b + p + v + s + a + f;
+    const score = b * 5 + p * 3 + v * 4 + s * 2 + a * 3 + f * 1;
+
     return {
-      billboards: 0,
-      posters: 0,
-      videos: 0,
-      socialPosts: 0,
-      activities: 0,
-      files: 0,
-      totalUploads: 0,
-      score: 0,
+      billboards: b,
+      posters: p,
+      videos: v,
+      socialPosts: s,
+      activities: a,
+      files: f,
+      totalUploads,
+      score,
     };
+  } catch (error) {
+    console.error("[device-passport] loadContentStats failed", error);
+    return empty;
   }
-
-  const [billboards, posters, videos, socialPosts, activities, files] = await Promise.all([
-    sql`SELECT COUNT(*)::int AS c FROM billboards WHERE owner_user_id IN ${sql(userIds)}`,
-    sql`SELECT COUNT(*)::int AS c FROM posters WHERE owner_user_id IN ${sql(userIds)}`,
-    sql`SELECT COUNT(*)::int AS c FROM videos WHERE owner_user_id IN ${sql(userIds)}`,
-    sql`SELECT COUNT(*)::int AS c FROM social_media_posts WHERE owner_user_id IN ${sql(userIds)}`,
-    sql`SELECT COUNT(*)::int AS c FROM campaign_activities WHERE owner_user_id IN ${sql(userIds)}`,
-    sql`SELECT COUNT(*)::int AS c FROM campaign_files WHERE owner_user_id IN ${sql(userIds)}`,
-  ]);
-
-  const b = Number(billboards[0]?.c ?? 0);
-  const p = Number(posters[0]?.c ?? 0);
-  const v = Number(videos[0]?.c ?? 0);
-  const s = Number(socialPosts[0]?.c ?? 0);
-  const a = Number(activities[0]?.c ?? 0);
-  const f = Number(files[0]?.c ?? 0);
-  const totalUploads = b + p + v + s + a + f;
-  const score = b * 5 + p * 3 + v * 4 + s * 2 + a * 3 + f * 1;
-
-  return {
-    billboards: b,
-    posters: p,
-    videos: v,
-    socialPosts: s,
-    activities: a,
-    files: f,
-    totalUploads,
-    score,
-  };
 }
 
 async function loadCampaignHistory(deviceId: string): Promise<DeviceCampaignHistoryItem[]> {
   const sql = getSql();
-  const rows = await sql`
-    WITH device_users AS (
-      SELECT id FROM users
-      WHERE device_id = ${deviceId}
-         OR organization_id = ${deviceId}
-         OR (ministry_id = ${deviceId} AND organization_id IS NULL)
-         OR device_id IN (SELECT id FROM devices WHERE parent_id = ${deviceId})
-         OR organization_id IN (SELECT id FROM devices WHERE parent_id = ${deviceId})
-    ),
-    directive_stats AS (
+  try {
+    const rows = await sql`
+      WITH device_users AS (
+        SELECT id FROM users
+        WHERE device_id = ${deviceId}
+           OR organization_id = ${deviceId}
+           OR (ministry_id = ${deviceId} AND organization_id IS NULL)
+           OR device_id IN (SELECT id FROM devices WHERE parent_id = ${deviceId})
+           OR organization_id IN (SELECT id FROM devices WHERE parent_id = ${deviceId})
+      ),
+      directive_stats AS (
+        SELECT
+          d.campaign_id,
+          COUNT(DISTINCT dr.directive_id)::int AS directives_received,
+          COUNT(DISTINCT CASE WHEN dr.seen_at IS NOT NULL THEN dr.directive_id END)::int AS directives_seen,
+          COUNT(DISTINCT CASE WHEN dr.confirmed IS TRUE THEN dr.directive_id END)::int AS directives_confirmed
+        FROM campaign_directives d
+        JOIN directive_recipients dr ON dr.directive_id = d.id
+        JOIN device_users du ON du.id = dr.user_id
+        GROUP BY d.campaign_id
+      ),
+      content_stats AS (
+        SELECT campaign_id, SUM(cnt)::int AS content_uploads FROM (
+          SELECT campaign_id, COUNT(*)::int AS cnt FROM billboards
+            WHERE owner_user_id IN (SELECT id FROM device_users) GROUP BY campaign_id
+          UNION ALL
+          SELECT campaign_id, COUNT(*)::int AS cnt FROM posters
+            WHERE owner_user_id IN (SELECT id FROM device_users) GROUP BY campaign_id
+          UNION ALL
+          SELECT campaign_id, COUNT(*)::int AS cnt FROM videos
+            WHERE owner_user_id IN (SELECT id FROM device_users) GROUP BY campaign_id
+          UNION ALL
+          SELECT campaign_id, COUNT(*)::int AS cnt FROM social_media_posts
+            WHERE owner_user_id IN (SELECT id FROM device_users) GROUP BY campaign_id
+          UNION ALL
+          SELECT campaign_id, COUNT(*)::int AS cnt FROM campaign_activities
+            WHERE owner_user_id IN (SELECT id FROM device_users) GROUP BY campaign_id
+        ) t
+        GROUP BY campaign_id
+      )
       SELECT
-        d.campaign_id,
-        COUNT(DISTINCT dr.directive_id)::int AS directives_received,
-        COUNT(DISTINCT dr.directive_id) FILTER (WHERE dr.seen_at IS NOT NULL)::int AS directives_seen,
-        COUNT(DISTINCT dr.directive_id) FILTER (WHERE dr.confirmed IS TRUE)::int AS directives_confirmed
-      FROM campaign_directives d
-      JOIN directive_recipients dr ON dr.directive_id = d.id
-      JOIN device_users du ON du.id = dr.user_id
-      GROUP BY d.campaign_id
-    ),
-    content_stats AS (
-      SELECT campaign_id, SUM(cnt)::int AS content_uploads FROM (
-        SELECT campaign_id, COUNT(*)::int AS cnt FROM billboards
-          WHERE owner_user_id IN (SELECT id FROM device_users) GROUP BY campaign_id
-        UNION ALL
-        SELECT campaign_id, COUNT(*)::int AS cnt FROM posters
-          WHERE owner_user_id IN (SELECT id FROM device_users) GROUP BY campaign_id
-        UNION ALL
-        SELECT campaign_id, COUNT(*)::int AS cnt FROM videos
-          WHERE owner_user_id IN (SELECT id FROM device_users) GROUP BY campaign_id
-        UNION ALL
-        SELECT campaign_id, COUNT(*)::int AS cnt FROM social_media_posts
-          WHERE owner_user_id IN (SELECT id FROM device_users) GROUP BY campaign_id
-        UNION ALL
-        SELECT campaign_id, COUNT(*)::int AS cnt FROM campaign_activities
-          WHERE owner_user_id IN (SELECT id FROM device_users) GROUP BY campaign_id
-      ) t
-      GROUP BY campaign_id
-    )
-    SELECT
-      cs.id AS campaign_id,
-      cs.title AS campaign_title,
-      cs.slug AS campaign_slug,
-      COALESCE(ds.directives_received, 0) AS directives_received,
-      COALESCE(ds.directives_seen, 0) AS directives_seen,
-      COALESCE(ds.directives_confirmed, 0) AS directives_confirmed,
-      COALESCE(ct.content_uploads, 0) AS content_uploads
-    FROM campaign_settings cs
-    LEFT JOIN directive_stats ds ON ds.campaign_id = cs.id
-    LEFT JOIN content_stats ct ON ct.campaign_id = cs.id
-    WHERE COALESCE(ds.directives_received, 0) > 0
-       OR COALESCE(ct.content_uploads, 0) > 0
-       OR cs.id IN (
-         SELECT campaign_id FROM campaign_directives
-         WHERE audience_device_id = ${deviceId}
-            OR audience_ministry_id = ${deviceId}
-            OR audience_organization_id = ${deviceId}
-            OR audience_device_id IN (SELECT id FROM devices WHERE parent_id = ${deviceId})
-       )
-    ORDER BY cs.created_at DESC NULLS LAST
-    LIMIT 50
-  `;
+        cs.id AS campaign_id,
+        cs.title AS campaign_title,
+        cs.slug AS campaign_slug,
+        COALESCE(ds.directives_received, 0) AS directives_received,
+        COALESCE(ds.directives_seen, 0) AS directives_seen,
+        COALESCE(ds.directives_confirmed, 0) AS directives_confirmed,
+        COALESCE(ct.content_uploads, 0) AS content_uploads
+      FROM campaign_settings cs
+      LEFT JOIN directive_stats ds ON ds.campaign_id = cs.id
+      LEFT JOIN content_stats ct ON ct.campaign_id = cs.id
+      WHERE COALESCE(ds.directives_received, 0) > 0
+         OR COALESCE(ct.content_uploads, 0) > 0
+         OR cs.id IN (
+           SELECT campaign_id FROM campaign_directives
+           WHERE audience_ministry_id = ${deviceId}
+              OR audience_organization_id = ${deviceId}
+              OR audience_device_id = ${deviceId}
+              OR audience_device_id IN (SELECT id FROM devices WHERE parent_id = ${deviceId})
+         )
+      ORDER BY cs.updated_at DESC NULLS LAST
+      LIMIT 50
+    `;
 
-  return rows.map((row) => {
-    const r = row as Record<string, unknown>;
-    return {
-      campaignId: String(r.campaign_id),
-      campaignTitle: String(r.campaign_title ?? ""),
-      campaignSlug: String(r.campaign_slug ?? ""),
-      directivesReceived: Number(r.directives_received ?? 0),
-      directivesSeen: Number(r.directives_seen ?? 0),
-      directivesConfirmed: Number(r.directives_confirmed ?? 0),
-      contentUploads: Number(r.content_uploads ?? 0),
-    };
-  });
+    return rows.map((row) => {
+      const r = row as Record<string, unknown>;
+      return {
+        campaignId: String(r.campaign_id),
+        campaignTitle: String(r.campaign_title ?? ""),
+        campaignSlug: String(r.campaign_slug ?? ""),
+        directivesReceived: Number(r.directives_received ?? 0),
+        directivesSeen: Number(r.directives_seen ?? 0),
+        directivesConfirmed: Number(r.directives_confirmed ?? 0),
+        contentUploads: Number(r.content_uploads ?? 0),
+      };
+    });
+  } catch (error) {
+    console.error("[device-passport] loadCampaignHistory failed", error);
+    // Fallback without audience_device_id (older DBs before migrate).
+    try {
+      const rows = await sql`
+        WITH device_users AS (
+          SELECT id FROM users
+          WHERE organization_id = ${deviceId}
+             OR (ministry_id = ${deviceId} AND organization_id IS NULL)
+             OR organization_id IN (
+               SELECT id FROM ministry_organizations WHERE ministry_id = ${deviceId}
+             )
+        ),
+        directive_stats AS (
+          SELECT
+            d.campaign_id,
+            COUNT(DISTINCT dr.directive_id)::int AS directives_received,
+            COUNT(DISTINCT CASE WHEN dr.seen_at IS NOT NULL THEN dr.directive_id END)::int AS directives_seen,
+            COUNT(DISTINCT CASE WHEN dr.confirmed IS TRUE THEN dr.directive_id END)::int AS directives_confirmed
+          FROM campaign_directives d
+          JOIN directive_recipients dr ON dr.directive_id = d.id
+          JOIN device_users du ON du.id = dr.user_id
+          GROUP BY d.campaign_id
+        )
+        SELECT
+          cs.id AS campaign_id,
+          cs.title AS campaign_title,
+          cs.slug AS campaign_slug,
+          COALESCE(ds.directives_received, 0) AS directives_received,
+          COALESCE(ds.directives_seen, 0) AS directives_seen,
+          COALESCE(ds.directives_confirmed, 0) AS directives_confirmed,
+          0 AS content_uploads
+        FROM campaign_settings cs
+        INNER JOIN directive_stats ds ON ds.campaign_id = cs.id
+        ORDER BY cs.updated_at DESC NULLS LAST
+        LIMIT 50
+      `;
+      return rows.map((row) => {
+        const r = row as Record<string, unknown>;
+        return {
+          campaignId: String(r.campaign_id),
+          campaignTitle: String(r.campaign_title ?? ""),
+          campaignSlug: String(r.campaign_slug ?? ""),
+          directivesReceived: Number(r.directives_received ?? 0),
+          directivesSeen: Number(r.directives_seen ?? 0),
+          directivesConfirmed: Number(r.directives_confirmed ?? 0),
+          contentUploads: Number(r.content_uploads ?? 0),
+        };
+      });
+    } catch (fallbackError) {
+      console.error("[device-passport] loadCampaignHistory fallback failed", fallbackError);
+      return [];
+    }
+  }
 }
 
 export async function pgGetDevicePassport(deviceId: string): Promise<DevicePassport | null> {
@@ -1057,10 +1153,22 @@ export async function pgGetDevicePassport(deviceId: string): Promise<DevicePassp
   const [parent, children, officials, capacities, users, directiveStats, contentStats, campaignHistory] =
     await Promise.all([
       device.parentId ? pgGetDeviceById(device.parentId) : Promise.resolve(null),
-      pgListDevices({ parentId: deviceId }),
-      pgListDeviceOfficials(deviceId, { includeInactive: true }),
-      pgListDeviceCapacities(deviceId),
-      listDeviceUsers(deviceId),
+      pgListDevices({ parentId: deviceId }).catch((error) => {
+        console.error("[device-passport] children failed", error);
+        return [] as Device[];
+      }),
+      pgListDeviceOfficials(deviceId, { includeInactive: true }).catch((error) => {
+        console.error("[device-passport] officials failed", error);
+        return [] as DeviceOfficial[];
+      }),
+      pgListDeviceCapacities(deviceId).catch((error) => {
+        console.error("[device-passport] capacities failed", error);
+        return [] as DeviceCapacity[];
+      }),
+      listDeviceUsers(deviceId).catch((error) => {
+        console.error("[device-passport] users failed", error);
+        return [] as AdminUser[];
+      }),
       loadDirectiveStats(deviceId),
       loadContentStats(deviceId),
       loadCampaignHistory(deviceId),
