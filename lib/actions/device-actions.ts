@@ -138,6 +138,10 @@ export async function saveDeviceCapacityAction(data: {
   isActive?: boolean;
   ownerName?: string | null;
   coverageScope?: string | null;
+  province?: string | null;
+  city?: string | null;
+  address?: string | null;
+  details?: Record<string, unknown> | null;
 }) {
   const session = await getAuthSession();
   if (!session || !isFullAdmin(session)) {

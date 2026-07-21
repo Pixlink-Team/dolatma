@@ -143,6 +143,9 @@ export interface DeviceOfficial {
   createdAt: string;
 }
 
+/** Type-specific structured fields for capacity reporting (JSONB). */
+export type CapacityDetailsPayload = Record<string, unknown>;
+
 export interface DeviceCapacity {
   id: string;
   deviceId: string;
@@ -152,6 +155,12 @@ export interface DeviceCapacity {
   isActive: boolean;
   ownerName?: string | null;
   coverageScope?: string | null;
+  /** Asset location (may differ from device HQ). */
+  province?: string | null;
+  city?: string | null;
+  address?: string | null;
+  /** Structured metrics keyed by capacityType. */
+  details?: CapacityDetailsPayload;
   lastUpdatedAt: string;
   createdAt: string;
 }
@@ -650,6 +659,10 @@ export interface UserCapacity {
   isActive: boolean;
   ownerName?: string | null;
   coverageScope?: string | null;
+  province?: string | null;
+  city?: string | null;
+  address?: string | null;
+  details?: CapacityDetailsPayload;
   lastUpdatedAt: string;
   createdAt: string;
 }
@@ -710,6 +723,11 @@ export interface CapacityMapItem {
   coverageScope?: string | null;
   province?: string | null;
   city?: string | null;
+  address?: string | null;
+  details?: CapacityDetailsPayload;
+  /** Resolved location for map filters (asset first, else owner). */
+  mapProvince?: string | null;
+  mapCity?: string | null;
   deviceId?: string | null;
   deviceName?: string | null;
   userId?: string | null;

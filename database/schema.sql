@@ -975,6 +975,10 @@ CREATE TABLE IF NOT EXISTS device_capacities (
   is_active BOOLEAN NOT NULL DEFAULT true,
   owner_name TEXT,
   coverage_scope TEXT,
+  province TEXT,
+  city TEXT,
+  address TEXT,
+  details JSONB NOT NULL DEFAULT '{}'::jsonb,
   last_updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -989,6 +993,15 @@ ALTER TABLE device_capacities ADD CONSTRAINT device_capacities_type_check
 
 CREATE INDEX IF NOT EXISTS idx_device_capacities_device
   ON device_capacities(device_id, is_active);
+
+ALTER TABLE device_capacities ADD COLUMN IF NOT EXISTS province TEXT;
+ALTER TABLE device_capacities ADD COLUMN IF NOT EXISTS city TEXT;
+ALTER TABLE device_capacities ADD COLUMN IF NOT EXISTS address TEXT;
+ALTER TABLE device_capacities
+  ADD COLUMN IF NOT EXISTS details JSONB NOT NULL DEFAULT '{}'::jsonb;
+
+CREATE INDEX IF NOT EXISTS idx_device_capacities_location
+  ON device_capacities(province, city);
 
 -- Migrate ministries → devices (preserve UUID)
 INSERT INTO devices (
@@ -1293,6 +1306,10 @@ CREATE TABLE IF NOT EXISTS user_capacities (
   is_active BOOLEAN NOT NULL DEFAULT true,
   owner_name TEXT,
   coverage_scope TEXT,
+  province TEXT,
+  city TEXT,
+  address TEXT,
+  details JSONB NOT NULL DEFAULT '{}'::jsonb,
   last_updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -1307,6 +1324,15 @@ ALTER TABLE user_capacities ADD CONSTRAINT user_capacities_type_check
 
 CREATE INDEX IF NOT EXISTS idx_user_capacities_user
   ON user_capacities(user_id, is_active);
+
+ALTER TABLE user_capacities ADD COLUMN IF NOT EXISTS province TEXT;
+ALTER TABLE user_capacities ADD COLUMN IF NOT EXISTS city TEXT;
+ALTER TABLE user_capacities ADD COLUMN IF NOT EXISTS address TEXT;
+ALTER TABLE user_capacities
+  ADD COLUMN IF NOT EXISTS details JSONB NOT NULL DEFAULT '{}'::jsonb;
+
+CREATE INDEX IF NOT EXISTS idx_user_capacities_location
+  ON user_capacities(province, city);
 
 ALTER TABLE directive_recipients
   ADD COLUMN IF NOT EXISTS executed_at TIMESTAMPTZ;

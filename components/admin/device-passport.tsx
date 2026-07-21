@@ -38,6 +38,14 @@ import {
   saveDeviceOfficialAction,
 } from "@/lib/actions/device-actions";
 import {
+  CapacityDetailsFields,
+  resetDetailsForType,
+} from "@/components/admin/capacity-details-fields";
+import {
+  formatCapacityDetailsSummary,
+  normalizeCapacityDetails,
+} from "@/lib/capacity-details";
+import {
   DEVICE_CAPACITY_TYPE_LABELS,
   DEVICE_OFFICIAL_ROLE_LABELS,
   DEVICE_READINESS_LABELS,
@@ -108,6 +116,10 @@ const capacitySchema = z.object({
   description: z.string().optional(),
   ownerName: z.string().optional(),
   coverageScope: z.string().optional(),
+  province: z.string().optional(),
+  city: z.string().optional(),
+  address: z.string().optional(),
+  details: z.record(z.string(), z.unknown()).optional(),
   isActive: z.boolean(),
 });
 
@@ -177,9 +189,19 @@ export function DevicePassportView({ initialPassport }: DevicePassportViewProps)
       description: "",
       ownerName: "",
       coverageScope: "",
+      province: "",
+      city: "",
+      address: "",
+      details: resetDetailsForType("other") as Record<string, unknown>,
       isActive: true,
     },
   });
+
+  const watchedCapacityType = capacityForm.watch("capacityType");
+  const watchedCapacityDetails = capacityForm.watch("details");
+  const watchedCapacityProvince = capacityForm.watch("province");
+  const watchedCapacityCity = capacityForm.watch("city");
+  const watchedCapacityAddress = capacityForm.watch("address");
 
   const activeOfficials = useMemo(
     () => passport.officials.filter((item) => item.isActive),
@@ -246,6 +268,10 @@ export function DevicePassportView({ initialPassport }: DevicePassportViewProps)
 
   const onSaveCapacity = capacityForm.handleSubmit((data) => {
     startTransition(async () => {
+      const details = normalizeCapacityDetails(
+        data.capacityType as DeviceCapacityType,
+        data.details ?? {}
+      );
       const result = await saveDeviceCapacityAction({
         id: editingCapacityId ?? undefined,
         deviceId: device.id,
@@ -254,6 +280,10 @@ export function DevicePassportView({ initialPassport }: DevicePassportViewProps)
         description: data.description || null,
         ownerName: data.ownerName || null,
         coverageScope: data.coverageScope || null,
+        province: data.province || null,
+        city: data.city || null,
+        address: data.address || null,
+        details: details as Record<string, unknown>,
         isActive: data.isActive,
       });
       if (!result.success) {
@@ -531,6 +561,10 @@ export function DevicePassportView({ initialPassport }: DevicePassportViewProps)
                 description: "",
                 ownerName: "",
                 coverageScope: "",
+                province: "",
+                city: "",
+                address: "",
+                details: resetDetailsForType("other") as Record<string, unknown>,
                 isActive: true,
               });
               setCapacityOpen(true);
@@ -544,7 +578,17 @@ export function DevicePassportView({ initialPassport }: DevicePassportViewProps)
           <p className="text-sm text-muted-foreground">ظرفیتی ثبت نشده است.</p>
         ) : (
           <div className="space-y-2">
-            {passport.capacities.map((item) => (
+            {passport.capacities.map((item) => {
+              const summary = formatCapacityDetailsSummary(
+                item.capacityType,
+                normalizeCapacityDetails(item.capacityType, item.details),
+                {
+                  province: item.province,
+                  city: item.city,
+                  address: item.address,
+                }
+              );
+              return (
               <div
                 key={item.id}
                 className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3"
@@ -558,6 +602,9 @@ export function DevicePassportView({ initialPassport }: DevicePassportViewProps)
                     {" · "}
                     {item.isActive ? "فعال" : "غیرفعال"}
                   </p>
+                  {summary ? (
+                    <p className="mt-1 text-xs text-foreground/80">{summary}</p>
+                  ) : null}
                 </div>
                 <div className="flex gap-1">
                   <Button
@@ -571,6 +618,13 @@ export function DevicePassportView({ initialPassport }: DevicePassportViewProps)
                         description: item.description ?? "",
                         ownerName: item.ownerName ?? "",
                         coverageScope: item.coverageScope ?? "",
+                        province: item.province ?? "",
+                        city: item.city ?? "",
+                        address: item.address ?? "",
+                        details: normalizeCapacityDetails(
+                          item.capacityType,
+                          item.details
+                        ) as Record<string, unknown>,
                         isActive: item.isActive,
                       });
                       setCapacityOpen(true);
@@ -598,7 +652,8 @@ export function DevicePassportView({ initialPassport }: DevicePassportViewProps)
                   </Button>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </section>
@@ -771,17 +826,22 @@ export function DevicePassportView({ initialPassport }: DevicePassportViewProps)
       </Dialog>
 
       <Dialog open={capacityOpen} onOpenChange={setCapacityOpen}>
-        <DialogContent dir="rtl">
+        <DialogContent dir="rtl" className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>{editingCapacityId ? "ویرایش ظرفیت" : "ثبت ظرفیت"}</DialogTitle>
           </DialogHeader>
           <form className="space-y-3" onSubmit={onSaveCapacity}>
             <Field label="نوع">
               <Select
-                value={capacityForm.watch("capacityType")}
-                onValueChange={(value) =>
-                  capacityForm.setValue("capacityType", value as DeviceCapacityType)
-                }
+                value={watchedCapacityType}
+                onValueChange={(value) => {
+                  const nextType = value as DeviceCapacityType;
+                  capacityForm.setValue("capacityType", nextType);
+                  capacityForm.setValue(
+                    "details",
+                    resetDetailsForType(nextType) as Record<string, unknown>
+                  );
+                }}
               >
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -794,7 +854,32 @@ export function DevicePassportView({ initialPassport }: DevicePassportViewProps)
               </Select>
             </Field>
             <Field label="عنوان"><Input {...capacityForm.register("title")} /></Field>
-            <Field label="توضیح"><Textarea rows={2} {...capacityForm.register("description")} /></Field>
+            <CapacityDetailsFields
+              capacityType={watchedCapacityType as DeviceCapacityType}
+              details={normalizeCapacityDetails(
+                watchedCapacityType as DeviceCapacityType,
+                watchedCapacityDetails ?? {}
+              )}
+              province={watchedCapacityProvince ?? ""}
+              city={watchedCapacityCity ?? ""}
+              address={watchedCapacityAddress ?? ""}
+              onDetailsChange={(details) =>
+                capacityForm.setValue(
+                  "details",
+                  details as Record<string, unknown>
+                )
+              }
+              onProvinceChange={(province) =>
+                capacityForm.setValue("province", province)
+              }
+              onCityChange={(city) => capacityForm.setValue("city", city)}
+              onAddressChange={(address) =>
+                capacityForm.setValue("address", address)
+              }
+            />
+            <Field label="توضیح تکمیلی">
+              <Textarea rows={2} {...capacityForm.register("description")} />
+            </Field>
             <Field label="مسئول"><Input {...capacityForm.register("ownerName")} /></Field>
             <Field label="محدوده پوشش"><Input {...capacityForm.register("coverageScope")} /></Field>
             <div className="flex items-center justify-between gap-2">

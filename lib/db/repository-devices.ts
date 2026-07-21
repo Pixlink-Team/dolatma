@@ -1,9 +1,14 @@
 import { getSql } from "@/lib/db/client";
 import { mapUserFromDb } from "@/lib/db/mappers";
+import {
+  normalizeCapacityDetails,
+  type CapacityDetails,
+} from "@/lib/capacity-details";
 import { DEFAULT_MINISTRIES } from "@/lib/ministry-seed";
 import { generateId } from "@/lib/utils";
 import type {
   AdminUser,
+  CapacityDetailsPayload,
   Device,
   DeviceActivityScope,
   DeviceCampaignHistoryItem,
@@ -173,11 +178,18 @@ function mapOfficial(row: Record<string, unknown>): DeviceOfficial {
   };
 }
 
+function asOptionalText(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed || null;
+}
+
 function mapCapacity(row: Record<string, unknown>): DeviceCapacity {
+  const capacityType = asCapacityType(row.capacity_type);
   return {
     id: String(row.id),
     deviceId: String(row.device_id),
-    capacityType: asCapacityType(row.capacity_type),
+    capacityType,
     title: String(row.title ?? ""),
     description:
       typeof row.description === "string" && row.description.trim()
@@ -192,6 +204,13 @@ function mapCapacity(row: Record<string, unknown>): DeviceCapacity {
       typeof row.coverage_scope === "string" && row.coverage_scope.trim()
         ? row.coverage_scope.trim()
         : null,
+    province: asOptionalText(row.province),
+    city: asOptionalText(row.city),
+    address: asOptionalText(row.address),
+    details: normalizeCapacityDetails(
+      capacityType,
+      row.details
+    ) as CapacityDetailsPayload,
     lastUpdatedAt: toIso(row.last_updated_at),
     createdAt: toIso(row.created_at),
   };
@@ -248,9 +267,24 @@ export async function ensureDeviceSchema(): Promise<void> {
       is_active BOOLEAN NOT NULL DEFAULT true,
       owner_name TEXT,
       coverage_scope TEXT,
+      province TEXT,
+      city TEXT,
+      address TEXT,
+      details JSONB NOT NULL DEFAULT '{}'::jsonb,
       last_updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     )
+  `;
+  await sql`ALTER TABLE device_capacities ADD COLUMN IF NOT EXISTS province TEXT`;
+  await sql`ALTER TABLE device_capacities ADD COLUMN IF NOT EXISTS city TEXT`;
+  await sql`ALTER TABLE device_capacities ADD COLUMN IF NOT EXISTS address TEXT`;
+  await sql`
+    ALTER TABLE device_capacities
+      ADD COLUMN IF NOT EXISTS details JSONB NOT NULL DEFAULT '{}'::jsonb
+  `;
+  await sql`
+    CREATE INDEX IF NOT EXISTS idx_device_capacities_location
+      ON device_capacities(province, city)
   `;
   await sql`
     ALTER TABLE users
@@ -727,6 +761,10 @@ export async function pgSaveDeviceCapacity(data: {
   isActive?: boolean;
   ownerName?: string | null;
   coverageScope?: string | null;
+  province?: string | null;
+  city?: string | null;
+  address?: string | null;
+  details?: CapacityDetails | CapacityDetailsPayload | null;
 }): Promise<{ success: true; id: string } | { success: false; error: string }> {
   const sql = getSql();
   await ensureDeviceSchema();
@@ -739,6 +777,11 @@ export async function pgSaveDeviceCapacity(data: {
   const isActive = data.isActive !== false;
   const ownerName = data.ownerName?.trim() || null;
   const coverageScope = data.coverageScope?.trim() || null;
+  const province = data.province?.trim() || null;
+  const city = data.city?.trim() || null;
+  const address = data.address?.trim() || null;
+  const details = normalizeCapacityDetails(data.capacityType, data.details ?? {});
+  const detailsJson = JSON.parse(JSON.stringify(details));
   const now = new Date().toISOString();
 
   try {
@@ -751,6 +794,10 @@ export async function pgSaveDeviceCapacity(data: {
           is_active = ${isActive},
           owner_name = ${ownerName},
           coverage_scope = ${coverageScope},
+          province = ${province},
+          city = ${city},
+          address = ${address},
+          details = ${sql.json(detailsJson)},
           last_updated_at = ${now}
         WHERE id = ${id}
       `;
@@ -758,11 +805,13 @@ export async function pgSaveDeviceCapacity(data: {
       await sql`
         INSERT INTO device_capacities (
           id, device_id, capacity_type, title, description, is_active,
-          owner_name, coverage_scope, last_updated_at, created_at
+          owner_name, coverage_scope, province, city, address, details,
+          last_updated_at, created_at
         )
         VALUES (
           ${id}, ${data.deviceId}, ${data.capacityType}, ${title}, ${description},
-          ${isActive}, ${ownerName}, ${coverageScope}, ${now}, ${now}
+          ${isActive}, ${ownerName}, ${coverageScope}, ${province}, ${city},
+          ${address}, ${sql.json(detailsJson)}, ${now}, ${now}
         )
       `;
     }

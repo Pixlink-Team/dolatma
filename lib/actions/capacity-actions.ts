@@ -31,6 +31,10 @@ export async function saveMyCapacityAction(data: {
   isActive?: boolean;
   ownerName?: string | null;
   coverageScope?: string | null;
+  province?: string | null;
+  city?: string | null;
+  address?: string | null;
+  details?: Record<string, unknown> | null;
 }) {
   const session = await getAuthSession();
   if (!session?.userId) return { success: false as const, error: "Unauthorized" };

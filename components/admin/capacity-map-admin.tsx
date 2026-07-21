@@ -13,6 +13,11 @@ import {
 } from "@/components/ui/select";
 import { ProvinceCityFields } from "@/components/admin/province-city-fields";
 import { getNationalCapacityMapAction } from "@/lib/actions/capacity-actions";
+import {
+  formatCapacityDetailsSummary,
+  getCapacityPrimaryMetric,
+  normalizeCapacityDetails,
+} from "@/lib/capacity-details";
 import { DEVICE_CAPACITY_TYPE_LABELS } from "@/lib/device-labels";
 import { getLocationCenter, MAP_DEFAULT_CENTER } from "@/lib/iran-location-center";
 import type { CapacityMapItem, DeviceCapacityType } from "@/lib/types";
@@ -48,16 +53,40 @@ export function CapacityMapAdmin({ initialItems, devices }: CapacityMapAdminProp
     const byProvince = new Map<string, number>();
     let deviceCount = 0;
     let userCount = 0;
+    let metricSum = 0;
+    let metricCount = 0;
+    let metricUnit = "";
     for (const item of items) {
       if (!item.isActive) continue;
       byType.set(item.capacityType, (byType.get(item.capacityType) ?? 0) + 1);
-      if (item.province) {
-        byProvince.set(item.province, (byProvince.get(item.province) ?? 0) + 1);
+      const mapProvince = item.mapProvince ?? item.province;
+      if (mapProvince) {
+        byProvince.set(mapProvince, (byProvince.get(mapProvince) ?? 0) + 1);
       }
       if (item.source === "device") deviceCount += 1;
       else userCount += 1;
+
+      const metric = getCapacityPrimaryMetric(
+        item.capacityType,
+        normalizeCapacityDetails(item.capacityType, item.details)
+      );
+      if (metric) {
+        metricSum += metric.value;
+        metricCount += 1;
+        if (!metricUnit) metricUnit = metric.unitLabel;
+        else if (metricUnit !== metric.unitLabel) metricUnit = "واحد ترکیبی";
+      }
     }
-    return { byType, byProvince, deviceCount, userCount, total: deviceCount + userCount };
+    return {
+      byType,
+      byProvince,
+      deviceCount,
+      userCount,
+      total: deviceCount + userCount,
+      metricSum,
+      metricCount,
+      metricUnit,
+    };
   }, [items]);
 
   const mapPoints = useMemo(() => {
@@ -91,6 +120,56 @@ export function CapacityMapAdmin({ initialItems, devices }: CapacityMapAdminProp
       }
       setItems(result.items);
     });
+  };
+
+  const exportCsv = () => {
+    const header = [
+      "source",
+      "title",
+      "capacityType",
+      "device",
+      "user",
+      "province",
+      "city",
+      "address",
+      "summary",
+      "metricValue",
+      "metricUnit",
+      "isActive",
+    ];
+    const rows = items.map((item) => {
+      const details = normalizeCapacityDetails(item.capacityType, item.details);
+      const summaryText = formatCapacityDetailsSummary(item.capacityType, details, {
+        province: item.mapProvince ?? item.province,
+        city: item.mapCity ?? item.city,
+        address: item.address,
+      });
+      const metric = getCapacityPrimaryMetric(item.capacityType, details);
+      return [
+        item.source,
+        item.title,
+        DEVICE_CAPACITY_TYPE_LABELS[item.capacityType],
+        item.deviceName ?? "",
+        item.userName ?? "",
+        item.mapProvince ?? item.province ?? "",
+        item.mapCity ?? item.city ?? "",
+        item.address ?? "",
+        summaryText,
+        metric?.value ?? "",
+        metric?.unitLabel ?? "",
+        item.isActive ? "active" : "inactive",
+      ]
+        .map((cell) => `"${String(cell).replace(/"/g, '""')}"`)
+        .join(",");
+    });
+    const csv = "\uFEFF" + [header.join(","), ...rows].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `capacity-report-${new Date().toISOString().slice(0, 10)}.csv`;
+    anchor.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -134,17 +213,33 @@ export function CapacityMapAdmin({ initialItems, devices }: CapacityMapAdminProp
             </SelectContent>
           </Select>
         </div>
-        <div className="flex items-end">
-          <Button onClick={applyFilters} disabled={isPending} className="w-full">
+        <div className="flex items-end gap-2">
+          <Button onClick={applyFilters} disabled={isPending} className="flex-1">
             {isPending ? "در حال فیلتر..." : "اعمال فیلتر"}
+          </Button>
+          <Button type="button" variant="outline" onClick={exportCsv}>
+            خروجی CSV
           </Button>
         </div>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="کل ظرفیت فعال" value={summary.total} />
         <StatCard label="ظرفیت دستگاه‌ها" value={summary.deviceCount} />
         <StatCard label="ظرفیت کاربران" value={summary.userCount} />
+        <StatCard
+          label={
+            summary.metricCount > 0
+              ? `جمع شاخص (${summary.metricUnit})`
+              : "جمع شاخص عددی"
+          }
+          value={summary.metricSum}
+          hint={
+            summary.metricCount > 0
+              ? `${formatPersianNumber(summary.metricCount)} مورد دارای عدد`
+              : "برای جمع دقیق، یک نوع ظرفیت فیلتر کنید"
+          }
+        />
       </div>
 
       <div className="overflow-hidden rounded-xl border">
@@ -152,43 +247,61 @@ export function CapacityMapAdmin({ initialItems, devices }: CapacityMapAdminProp
       </div>
 
       <div className="overflow-x-auto rounded-xl border">
-        <table className="w-full min-w-[720px] text-sm">
+        <table className="w-full min-w-[960px] text-sm">
           <thead className="bg-muted/40 text-right">
             <tr>
               <th className="p-3 font-medium">عنوان</th>
               <th className="p-3 font-medium">نوع</th>
+              <th className="p-3 font-medium">جزئیات</th>
               <th className="p-3 font-medium">منبع</th>
               <th className="p-3 font-medium">دستگاه / کاربر</th>
-              <th className="p-3 font-medium">استان</th>
+              <th className="p-3 font-medium">استان / شهر</th>
               <th className="p-3 font-medium">وضعیت</th>
             </tr>
           </thead>
           <tbody>
             {items.length === 0 ? (
               <tr>
-                <td colSpan={6} className="p-6 text-center text-muted-foreground">
+                <td colSpan={7} className="p-6 text-center text-muted-foreground">
                   ظرفیتی با این فیلتر یافت نشد.
                 </td>
               </tr>
             ) : (
-              items.map((item) => (
-                <tr key={`${item.source}-${item.id}`} className="border-t">
-                  <td className="p-3">{item.title}</td>
-                  <td className="p-3">
-                    {DEVICE_CAPACITY_TYPE_LABELS[item.capacityType]}
-                  </td>
-                  <td className="p-3">
-                    {item.source === "device" ? "دستگاه" : "کاربر"}
-                  </td>
-                  <td className="p-3">
-                    {item.source === "device"
-                      ? item.deviceName ?? "—"
-                      : item.userName ?? "—"}
-                  </td>
-                  <td className="p-3">{item.province ?? "—"}</td>
-                  <td className="p-3">{item.isActive ? "فعال" : "غیرفعال"}</td>
-                </tr>
-              ))
+              items.map((item) => {
+                const details = normalizeCapacityDetails(
+                  item.capacityType,
+                  item.details
+                );
+                const detailSummary = formatCapacityDetailsSummary(
+                  item.capacityType,
+                  details,
+                  null
+                );
+                const location = [item.mapProvince ?? item.province, item.mapCity ?? item.city]
+                  .filter(Boolean)
+                  .join(" / ");
+                return (
+                  <tr key={`${item.source}-${item.id}`} className="border-t align-top">
+                    <td className="p-3">{item.title}</td>
+                    <td className="p-3">
+                      {DEVICE_CAPACITY_TYPE_LABELS[item.capacityType]}
+                    </td>
+                    <td className="max-w-[280px] p-3 text-xs text-muted-foreground">
+                      {detailSummary || "—"}
+                    </td>
+                    <td className="p-3">
+                      {item.source === "device" ? "دستگاه" : "کاربر"}
+                    </td>
+                    <td className="p-3">
+                      {item.source === "device"
+                        ? item.deviceName ?? "—"
+                        : item.userName ?? "—"}
+                    </td>
+                    <td className="p-3">{location || "—"}</td>
+                    <td className="p-3">{item.isActive ? "فعال" : "غیرفعال"}</td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
@@ -197,11 +310,20 @@ export function CapacityMapAdmin({ initialItems, devices }: CapacityMapAdminProp
   );
 }
 
-function StatCard({ label, value }: { label: string; value: number }) {
+function StatCard({
+  label,
+  value,
+  hint,
+}: {
+  label: string;
+  value: number;
+  hint?: string;
+}) {
   return (
     <div className="rounded-xl border bg-card p-4">
       <p className="text-xs text-muted-foreground">{label}</p>
       <p className="mt-1 text-2xl font-bold">{formatPersianNumber(value)}</p>
+      {hint ? <p className="mt-1 text-[11px] text-muted-foreground">{hint}</p> : null}
     </div>
   );
 }

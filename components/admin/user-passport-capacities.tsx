@@ -23,9 +23,18 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  CapacityDetailsFields,
+  resetDetailsForType,
+} from "@/components/admin/capacity-details-fields";
+import {
   deleteMyCapacityAction,
   saveMyCapacityAction,
 } from "@/lib/actions/capacity-actions";
+import {
+  formatCapacityDetailsSummary,
+  normalizeCapacityDetails,
+  type CapacityDetails,
+} from "@/lib/capacity-details";
 import { DEVICE_CAPACITY_TYPE_LABELS } from "@/lib/device-labels";
 import type { DeviceCapacityType, UserCapacity } from "@/lib/types";
 
@@ -39,8 +48,29 @@ type CapacityForm = {
   description: string;
   ownerName: string;
   coverageScope: string;
+  province: string;
+  city: string;
+  address: string;
+  details: CapacityDetails;
   isActive: boolean;
 };
+
+function defaultFormValues(
+  capacityType: DeviceCapacityType = "other"
+): CapacityForm {
+  return {
+    capacityType,
+    title: "",
+    description: "",
+    ownerName: "",
+    coverageScope: "",
+    province: "",
+    city: "",
+    address: "",
+    details: resetDetailsForType(capacityType),
+    isActive: true,
+  };
+}
 
 export function UserPassportCapacities({ initialCapacities }: UserPassportCapacitiesProps) {
   const [capacities, setCapacities] = useState(initialCapacities);
@@ -49,14 +79,7 @@ export function UserPassportCapacities({ initialCapacities }: UserPassportCapaci
   const [isPending, startTransition] = useTransition();
 
   const form = useForm<CapacityForm>({
-    defaultValues: {
-      capacityType: "other",
-      title: "",
-      description: "",
-      ownerName: "",
-      coverageScope: "",
-      isActive: true,
-    },
+    defaultValues: defaultFormValues(),
   });
 
   const typeOptions = useMemo(
@@ -64,21 +87,21 @@ export function UserPassportCapacities({ initialCapacities }: UserPassportCapaci
     []
   );
 
+  const watchedType = form.watch("capacityType");
+  const watchedDetails = form.watch("details");
+  const watchedProvince = form.watch("province");
+  const watchedCity = form.watch("city");
+  const watchedAddress = form.watch("address");
+
   const openCreate = () => {
     setEditingId(null);
-    form.reset({
-      capacityType: "other",
-      title: "",
-      description: "",
-      ownerName: "",
-      coverageScope: "",
-      isActive: true,
-    });
+    form.reset(defaultFormValues());
     setOpen(true);
   };
 
   const onSave = form.handleSubmit((data) => {
     startTransition(async () => {
+      const details = normalizeCapacityDetails(data.capacityType, data.details);
       const result = await saveMyCapacityAction({
         id: editingId ?? undefined,
         capacityType: data.capacityType,
@@ -86,6 +109,10 @@ export function UserPassportCapacities({ initialCapacities }: UserPassportCapaci
         description: data.description,
         ownerName: data.ownerName,
         coverageScope: data.coverageScope,
+        province: data.province,
+        city: data.city,
+        address: data.address,
+        details: details as Record<string, unknown>,
         isActive: data.isActive,
       });
       if (!result.success) {
@@ -94,19 +121,25 @@ export function UserPassportCapacities({ initialCapacities }: UserPassportCapaci
       }
       toast.success(editingId ? "ظرفیت به‌روز شد" : "ظرفیت ثبت شد");
       setOpen(false);
-      // Soft refresh list from optimistic merge
+      const nextFields = {
+        capacityType: data.capacityType,
+        title: data.title.trim(),
+        description: data.description.trim() || null,
+        ownerName: data.ownerName.trim() || null,
+        coverageScope: data.coverageScope.trim() || null,
+        province: data.province.trim() || null,
+        city: data.city.trim() || null,
+        address: data.address.trim() || null,
+        details: details as UserCapacity["details"],
+        isActive: data.isActive,
+      };
       if (editingId) {
         setCapacities((prev) =>
           prev.map((item) =>
             item.id === editingId
               ? {
                   ...item,
-                  capacityType: data.capacityType,
-                  title: data.title.trim(),
-                  description: data.description.trim() || null,
-                  ownerName: data.ownerName.trim() || null,
-                  coverageScope: data.coverageScope.trim() || null,
-                  isActive: data.isActive,
+                  ...nextFields,
                   lastUpdatedAt: new Date().toISOString(),
                 }
               : item
@@ -117,12 +150,7 @@ export function UserPassportCapacities({ initialCapacities }: UserPassportCapaci
           {
             id: result.id,
             userId: "",
-            capacityType: data.capacityType,
-            title: data.title.trim(),
-            description: data.description.trim() || null,
-            isActive: data.isActive,
-            ownerName: data.ownerName.trim() || null,
-            coverageScope: data.coverageScope.trim() || null,
+            ...nextFields,
             lastUpdatedAt: new Date().toISOString(),
             createdAt: new Date().toISOString(),
           },
@@ -138,7 +166,7 @@ export function UserPassportCapacities({ initialCapacities }: UserPassportCapaci
         <div>
           <h2 className="text-base font-semibold">شناسنامه ظرفیت من</h2>
           <p className="text-xs text-muted-foreground">
-            ظرفیت‌های رسانه‌ای و میدانی خود را ثبت کنید تا در نقشه ملی تجمیع شود.
+            ظرفیت‌ها را با فیلدهای دقیق ثبت کنید تا در نقشه ملی و گزارش‌ها قابل تجمیع باشند.
           </p>
         </div>
         <Button size="sm" onClick={openCreate}>
@@ -151,65 +179,86 @@ export function UserPassportCapacities({ initialCapacities }: UserPassportCapaci
         <p className="text-sm text-muted-foreground">هنوز ظرفیتی ثبت نکرده‌اید.</p>
       ) : (
         <div className="space-y-2">
-          {capacities.map((item) => (
-            <div
-              key={item.id}
-              className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3"
-            >
-              <div>
-                <p className="font-medium">{item.title}</p>
-                <p className="text-xs text-muted-foreground">
-                  {DEVICE_CAPACITY_TYPE_LABELS[item.capacityType]}
-                  {item.coverageScope ? ` · پوشش: ${item.coverageScope}` : ""}
-                  {" · "}
-                  {item.isActive ? "فعال" : "غیرفعال"}
-                </p>
+          {capacities.map((item) => {
+            const summary = formatCapacityDetailsSummary(
+              item.capacityType,
+              normalizeCapacityDetails(item.capacityType, item.details),
+              {
+                province: item.province,
+                city: item.city,
+                address: item.address,
+              }
+            );
+            return (
+              <div
+                key={item.id}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3"
+              >
+                <div>
+                  <p className="font-medium">{item.title}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {DEVICE_CAPACITY_TYPE_LABELS[item.capacityType]}
+                    {item.coverageScope ? ` · پوشش: ${item.coverageScope}` : ""}
+                    {" · "}
+                    {item.isActive ? "فعال" : "غیرفعال"}
+                  </p>
+                  {summary ? (
+                    <p className="mt-1 text-xs text-foreground/80">{summary}</p>
+                  ) : null}
+                </div>
+                <div className="flex gap-1">
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => {
+                      setEditingId(item.id);
+                      form.reset({
+                        capacityType: item.capacityType,
+                        title: item.title,
+                        description: item.description ?? "",
+                        ownerName: item.ownerName ?? "",
+                        coverageScope: item.coverageScope ?? "",
+                        province: item.province ?? "",
+                        city: item.city ?? "",
+                        address: item.address ?? "",
+                        details: normalizeCapacityDetails(
+                          item.capacityType,
+                          item.details
+                        ),
+                        isActive: item.isActive,
+                      });
+                      setOpen(true);
+                    }}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    disabled={isPending}
+                    onClick={() => {
+                      startTransition(async () => {
+                        const result = await deleteMyCapacityAction(item.id);
+                        if (!result.success) {
+                          toast.error(result.error);
+                          return;
+                        }
+                        toast.success("ظرفیت حذف شد");
+                        setCapacities((prev) => prev.filter((c) => c.id !== item.id));
+                      });
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                </div>
               </div>
-              <div className="flex gap-1">
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  onClick={() => {
-                    setEditingId(item.id);
-                    form.reset({
-                      capacityType: item.capacityType,
-                      title: item.title,
-                      description: item.description ?? "",
-                      ownerName: item.ownerName ?? "",
-                      coverageScope: item.coverageScope ?? "",
-                      isActive: item.isActive,
-                    });
-                    setOpen(true);
-                  }}
-                >
-                  <Pencil className="h-4 w-4" />
-                </Button>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  disabled={isPending}
-                  onClick={() => {
-                    startTransition(async () => {
-                      const result = await deleteMyCapacityAction(item.id);
-                      if (!result.success) {
-                        toast.error(result.error);
-                        return;
-                      }
-                      toast.success("ظرفیت حذف شد");
-                      setCapacities((prev) => prev.filter((c) => c.id !== item.id));
-                    });
-                  }}
-                >
-                  <Trash2 className="h-4 w-4 text-destructive" />
-                </Button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent dir="rtl">
+        <DialogContent dir="rtl" className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>{editingId ? "ویرایش ظرفیت" : "ثبت ظرفیت"}</DialogTitle>
           </DialogHeader>
@@ -217,10 +266,12 @@ export function UserPassportCapacities({ initialCapacities }: UserPassportCapaci
             <div className="space-y-1.5">
               <Label>نوع</Label>
               <Select
-                value={form.watch("capacityType")}
-                onValueChange={(value) =>
-                  form.setValue("capacityType", value as DeviceCapacityType)
-                }
+                value={watchedType}
+                onValueChange={(value) => {
+                  const nextType = value as DeviceCapacityType;
+                  form.setValue("capacityType", nextType);
+                  form.setValue("details", resetDetailsForType(nextType));
+                }}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -238,8 +289,19 @@ export function UserPassportCapacities({ initialCapacities }: UserPassportCapaci
               <Label>عنوان</Label>
               <Input {...form.register("title", { required: true })} />
             </div>
+            <CapacityDetailsFields
+              capacityType={watchedType}
+              details={watchedDetails}
+              province={watchedProvince}
+              city={watchedCity}
+              address={watchedAddress}
+              onDetailsChange={(details) => form.setValue("details", details)}
+              onProvinceChange={(province) => form.setValue("province", province)}
+              onCityChange={(city) => form.setValue("city", city)}
+              onAddressChange={(address) => form.setValue("address", address)}
+            />
             <div className="space-y-1.5">
-              <Label>توضیح</Label>
+              <Label>توضیح تکمیلی</Label>
               <Textarea rows={2} {...form.register("description")} />
             </div>
             <div className="space-y-1.5">
