@@ -162,7 +162,12 @@ export function AdminSidebar() {
     <>
       <div className="p-4 border-b space-y-3">
         <Link href="/admin" className="font-bold text-lg block">پنل مدیریت</Link>
-        {campaigns.length > 0 && (
+        {campaigns.length === 1 && (
+          <p className="text-sm font-medium truncate" title={campaigns[0].title}>
+            {campaigns[0].title}
+          </p>
+        )}
+        {campaigns.length > 1 && (
           <div className="space-y-1.5">
             <p className="text-xs text-muted-foreground">اقدام فعال</p>
             <Select value={campaignId} onValueChange={setCampaignId}>

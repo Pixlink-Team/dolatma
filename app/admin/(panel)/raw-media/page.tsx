@@ -15,7 +15,7 @@ export default async function RawMediaPage({ searchParams }: RawMediaPageProps) 
   const params = await searchParams;
   const { campaignId } = await resolveAdminCampaignId(params.campaign);
 
-  if (!campaignId) redirect("/admin/campaigns");
+  if (!campaignId) redirect("/admin");
 
   const session = await getAuthSession();
   const canScore = Boolean(session && canScoreContent(session));
@@ -23,7 +23,7 @@ export default async function RawMediaPage({ searchParams }: RawMediaPageProps) 
     getAdminData(campaignId, ["rawMedia"]),
     getAdminBulkEditProps(),
   ]);
-  if (!data.settings) redirect("/admin/campaigns");
+  if (!data.settings) redirect("/admin");
 
   return (
     <RawMediaAdmin

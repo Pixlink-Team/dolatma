@@ -1,7 +1,5 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { FolderKanban, Settings } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Settings } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { DashboardCompletenessCards } from "@/components/admin/dashboard-completeness-cards";
@@ -59,7 +57,6 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
   const { campaignId } = await resolveAdminCampaignId(params.campaign);
 
   if (!campaignId) {
-    if (canManageAll) redirect("/admin/campaigns");
     return (
       <div className="space-y-4">
         <h1 className="text-2xl font-bold">داشبورد</h1>
@@ -74,7 +71,6 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
 
   const data = await getAdminData(campaignId);
   if (!data.settings) {
-    if (canManageAll) redirect("/admin/campaigns");
     return (
       <div className="space-y-4">
         <h1 className="text-2xl font-bold">داشبورد</h1>
@@ -174,20 +170,12 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
           </p>
         </div>
         {canManageAll && (
-          <div className="flex items-center gap-2 flex-wrap">
-            <Link href="/admin/campaigns">
-              <Button variant="outline" size="sm" className="gap-1.5">
-                <FolderKanban className="h-3.5 w-3.5" />
-                مدیریت اقدامات
-              </Button>
-            </Link>
-            <Link href={adminHref("/admin/settings", campaignId)}>
-              <Badge variant="outline" className="gap-1 cursor-pointer">
-                <Settings className="h-3 w-3" />
-                تنظیمات
-              </Badge>
-            </Link>
-          </div>
+          <Link href={adminHref("/admin/settings", campaignId)}>
+            <Badge variant="outline" className="gap-1 cursor-pointer">
+              <Settings className="h-3 w-3" />
+              تنظیمات
+            </Badge>
+          </Link>
         )}
       </div>
 

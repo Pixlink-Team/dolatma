@@ -10,6 +10,6 @@ interface PageProps {
 export default async function GroupEditPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const { campaignId } = await resolveAdminCampaignId(params.campaign);
-  if (!campaignId) redirect("/admin/campaigns");
+  if (!campaignId) redirect("/admin");
   redirect(adminHref("/admin", campaignId));
 }

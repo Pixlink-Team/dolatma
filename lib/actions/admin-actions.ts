@@ -7,7 +7,6 @@ import { assertTutorialForPossibleCreate } from "@/lib/auth/require-tutorial-com
 import {
   deleteAnalyticsMetric,
   deleteBillboard,
-  deleteCampaign,
   deleteCampaignFile,
   deleteMediaCategory,
   deletePoster,
@@ -79,7 +78,7 @@ function isAuthError(
 async function revalidateAll(slug?: string) {
   revalidatePath("/");
   revalidatePath("/admin");
-  revalidatePath("/admin/campaigns");
+  revalidatePath("/admin/settings");
   revalidatePath("/admin/billboards");
   revalidatePath("/admin/posters");
   revalidatePath("/admin/videos");
@@ -131,12 +130,16 @@ async function assertContributorOwnsBillboard(
 export async function saveCampaignAction(data: Partial<CampaignSettings> & { id?: string }) {
   const auth = await requireFullAdmin();
   if (isAuthError(auth)) return auth;
+  // Single fixed campaign only — creating additional campaigns is disabled.
+  if (!data.id) {
+    return { success: false as const, error: "ساخت اقدام جدید غیرفعال است" };
+  }
   const cleaned = stripFileAccessTokensDeep(data);
   const validationError = validateTitlePayload(cleaned);
   if (validationError) return validationError;
   const result = await saveCampaign(cleaned);
   await auditContentChange({
-    isUpdate: Boolean(cleaned.id),
+    isUpdate: true,
     entityType: "campaign",
     entityId: cleaned.id,
     label: cleaned.title,
@@ -148,15 +151,8 @@ export async function saveCampaignAction(data: Partial<CampaignSettings> & { id?
 export async function deleteCampaignAction(id: string) {
   const auth = await requireFullAdmin();
   if (isAuthError(auth)) return auth;
-  try {
-    const result = await deleteCampaign(id);
-    await auditContentDelete({ entityType: "campaign", entityId: id });
-    await revalidateAll();
-    return result;
-  } catch (error) {
-    console.error("deleteCampaignAction failed:", error);
-    return { success: false, error: "حذف اقدام با خطا مواجه شد" };
-  }
+  void id;
+  return { success: false as const, error: "حذف اقدام غیرفعال است" };
 }
 
 export async function updateSettingsAction(data: Partial<CampaignSettings>) {

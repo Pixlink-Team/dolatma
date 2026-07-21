@@ -12,7 +12,7 @@ interface PageProps {
 export default async function PressPublicationsPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const { campaignId } = await resolveAdminCampaignId(params.campaign);
-  if (!campaignId) redirect("/admin/campaigns");
+  if (!campaignId) redirect("/admin");
   await requireContributorAccess(campaignId, "activities");
   const [data, bulkProps] = await Promise.all([
     getAdminData(campaignId, ["activities"]),

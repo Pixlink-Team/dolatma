@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "7ccd99dd9a17f4565ce5085a7e3ce9910af7425f",
+      "committedAt": "2026-07-21T16:36:04+03:30",
+      "title": "راست‌چین کردن فرم دستورکار و فیلدهای دیالوگ",
+      "subject": "Force RTL on directive form and shared dialog inputs"
+    },
+    {
       "hash": "b071fb09ce645c6f9d409901a98a9781a0c4a31b",
       "committedAt": "2026-07-21T16:31:25+03:30",
       "title": "افزودن اتاق عملیات به فرم ثبت و ویرایش دستورکار",

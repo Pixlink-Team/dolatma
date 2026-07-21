@@ -12,7 +12,7 @@ interface PageProps {
 export default async function FormsPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const { campaignId } = await resolveAdminCampaignId(params.campaign);
-  if (!campaignId) redirect("/admin/campaigns");
+  if (!campaignId) redirect("/admin");
 
   await requireContributorAccess(campaignId, "forms");
 

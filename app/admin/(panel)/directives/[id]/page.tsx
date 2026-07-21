@@ -32,7 +32,7 @@ export default async function DirectiveWorkspacePage({ params, searchParams }: P
   const { id } = await params;
   const query = await searchParams;
   const { campaignId } = await resolveAdminCampaignId(query.campaign);
-  if (!campaignId) redirect("/admin/campaigns");
+  if (!campaignId) redirect("/admin");
 
   const session = await getAuthSession();
   if (!session || !canViewDirectives(session)) redirect("/admin/login");

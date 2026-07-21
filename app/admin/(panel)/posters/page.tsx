@@ -13,7 +13,7 @@ interface PageProps {
 export default async function PostersPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const { campaignId } = await resolveAdminCampaignId(params.campaign);
-  if (!campaignId) redirect("/admin/campaigns");
+  if (!campaignId) redirect("/admin");
   const session = await getAuthSession();
   const canScore = Boolean(session && canScoreContent(session));
   const [data, bulkProps] = await Promise.all([

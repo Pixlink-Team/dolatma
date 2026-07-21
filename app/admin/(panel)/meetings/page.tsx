@@ -11,7 +11,7 @@ interface PageProps {
 export default async function MeetingsPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const { campaignId } = await resolveAdminCampaignId(params.campaign);
-  if (!campaignId) redirect("/admin/campaigns");
+  if (!campaignId) redirect("/admin");
   await requireContributorAccess(campaignId, "meetings");
   const data = await getAdminData(campaignId, ["meetings"]);
   return <MeetingsAdmin

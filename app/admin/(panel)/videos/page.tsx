@@ -14,7 +14,7 @@ interface PageProps {
 export default async function VideosPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const { campaignId } = await resolveAdminCampaignId(params.campaign);
-  if (!campaignId) redirect("/admin/campaigns");
+  if (!campaignId) redirect("/admin");
   const session = await getAuthSession();
   const canScore = Boolean(session && canScoreContent(session));
   const videoSections = ["videos", "videoCategories", "videoVersions"] as const;

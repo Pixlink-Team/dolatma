@@ -26,7 +26,7 @@ interface PageProps {
 export default async function DirectivesPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const { campaignId } = await resolveAdminCampaignId(params.campaign);
-  if (!campaignId) redirect("/admin/campaigns");
+  if (!campaignId) redirect("/admin");
 
   const session = await getAuthSession();
   if (!session || !canViewDirectives(session)) redirect("/admin/login");

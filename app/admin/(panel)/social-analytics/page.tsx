@@ -12,7 +12,7 @@ interface PageProps {
 export default async function SocialAnalyticsPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const { campaignId } = await resolveAdminCampaignId(params.campaign);
-  if (!campaignId) redirect("/admin/campaigns");
+  if (!campaignId) redirect("/admin");
   await requireContributorAccess(campaignId, "socialPosts");
   const [data, bulkProps] = await Promise.all([
     getAdminData(campaignId, ["socialPlatformStats"]),

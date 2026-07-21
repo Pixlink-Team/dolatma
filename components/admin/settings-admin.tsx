@@ -5,7 +5,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -336,11 +335,6 @@ export function SettingsAdmin({
             ? "اطلاعات، پیامک، آمار سایت و شبکه‌های اجتماعی"
             : "رمز دسترسی به صفحه نمایش اقدام"}
         </p>
-        {canEditFullSettings && (
-          <Link href="/admin/campaigns" className="text-sm text-primary hover:underline inline-block mt-1">
-            ساخت یا حذف اقدام ← مدیریت اقدامات
-          </Link>
-        )}
       </div>
 
       <CampaignTools isFullAdmin={canEditFullSettings} />
