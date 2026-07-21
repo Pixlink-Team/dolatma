@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "6ae723dfecb38213ae3b40141f0d2aa9051ebc7a",
+      "committedAt": "2026-07-21T15:53:07+03:30",
+      "title": "رفع خطای باز شدن شناسنامه ۳۶۰ درجه دستگاه",
+      "subject": "Fix device passport crash on missing campaign created_at"
+    },
+    {
       "hash": "2daa9691ff4eb3db1156106859945d248ee9088a",
       "committedAt": "2026-07-21T15:40:34+03:30",
       "title": "افزودن شناسنامه ۳۶۰ درجه برای هر دستگاه و زیرمجموعه",

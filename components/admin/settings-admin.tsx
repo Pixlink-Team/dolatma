@@ -17,6 +17,7 @@ import { MediaUpload } from "@/components/ui/media-upload";
 import { PersianDateField } from "@/components/ui/persian-date-input";
 import { updateSettingsAction } from "@/lib/actions/admin-actions";
 import { saveCampaignPagePasswordAction } from "@/lib/actions/extended-actions";
+import { CampaignTools } from "@/components/admin/campaign-tools";
 import { SmsSettingsCard } from "@/components/admin/sms-settings-card";
 import { LoginPageSettingsCard } from "@/components/admin/login-page-settings-card";
 import {
@@ -338,6 +339,8 @@ export function SettingsAdmin({
           </Link>
         )}
       </div>
+
+      <CampaignTools isFullAdmin={canEditFullSettings} />
 
       <Card>
         <CardHeader>
