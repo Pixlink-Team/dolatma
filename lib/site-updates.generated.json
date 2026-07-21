@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "9052dc9a423012fc5038c4a1a9c87483a3bd337c",
+      "committedAt": "2026-07-21T17:13:58+03:30",
+      "title": "رفع باز نشدن تقویم ملی و نقشه ظرفیت",
+      "subject": "Fix national calendar open on missing schema columns"
+    },
+    {
       "hash": "aec93006ae35d9ea4df0df6188446fe3b6f4a400",
       "committedAt": "2026-07-21T17:06:56+03:30",
       "title": "حذف بخش قدیمی آمار سایت از صفحه عمومی",

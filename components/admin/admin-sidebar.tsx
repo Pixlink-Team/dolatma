@@ -70,7 +70,6 @@ const allNavItems: {
   { href: "/admin/profile", label: "پروفایل من", icon: UserCircle },
   { href: "/admin/capacity-map", label: "نقشه ملی ظرفیت", icon: Map, adminOrClientOnly: true },
   { href: "/admin/calendar", label: "تقویم ملی", icon: CalendarDays, alwaysVisible: true },
-  { href: "/admin/best-practices", label: "بهترین اقدامات", icon: Award, alwaysVisible: true },
   { href: "/admin/settings", label: "تنظیمات اقدام", icon: Settings, adminOrClientOnly: true },
   { href: "/admin/tutorials", label: "آموزش بخش‌ها", icon: GraduationCap, adminOnly: true },
   { href: "/admin/ministries", label: "دستگاه‌ها", icon: Building2, adminOnly: true },
@@ -92,6 +91,7 @@ const allNavItems: {
   { href: "/admin/submissions", label: "مشارکت‌ها", icon: FileText, permissionKey: "submissions" },
   { href: "/admin/forms", label: "فرم‌ها", icon: FormInput, permissionKey: "forms" },
   { href: "/admin/users", label: "کاربران", icon: Users, usersNav: true },
+  { href: "/admin/best-practices", label: "بهترین اقدامات", icon: Award, alwaysVisible: true },
   { href: "/admin/updates", label: "آپدیت‌های سایت", icon: Rocket, adminOrClientOnly: true },
   { href: "/admin/audit", label: "رصد کاربران", icon: ScrollText, adminOnly: true },
 ];
@@ -105,6 +105,7 @@ const managementNavHrefs = new Set([
   "/admin/elanha",
   "/admin/updates",
   "/admin/forms",
+  "/admin/best-practices",
 ]);
 
 const DIRECTIVES_HREF = "/admin/directives";
