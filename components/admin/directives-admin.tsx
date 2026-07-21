@@ -880,8 +880,8 @@ export function DirectivesAdmin({
 
       {/* Create / Edit — basics + operations workspace together */}
       <Dialog open={open} onOpenChange={(next) => (next ? setOpen(true) : closeDialog())}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto" dir="rtl">
+          <DialogHeader className="text-right">
             <DialogTitle>
               {editingId ? "ویرایش دستورکار و اتاق عملیات" : "ثبت دستورکار و اتاق عملیات"}
             </DialogTitle>
@@ -891,10 +891,11 @@ export function DirectivesAdmin({
             </p>
           </DialogHeader>
 
-          <form onSubmit={onSubmit} className="space-y-4">
+          <form onSubmit={onSubmit} className="space-y-4 text-right" dir="rtl">
             <Tabs
               value={formTab}
               onValueChange={(value) => setFormTab(value as "basics" | "workspace")}
+              dir="rtl"
             >
               <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1">
                 <TabsTrigger value="basics">۱. مشخصات دستورکار</TabsTrigger>

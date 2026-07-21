@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "b071fb09ce645c6f9d409901a98a9781a0c4a31b",
+      "committedAt": "2026-07-21T16:31:25+03:30",
+      "title": "افزودن اتاق عملیات به فرم ثبت و ویرایش دستورکار",
+      "subject": "Embed operations workspace in directive create/edit form"
+    },
+    {
       "hash": "4ffd5ade7ed252bccfe9d8d804511ec436e3e4da",
       "committedAt": "2026-07-21T16:24:41+03:30",
       "title": "افزودن مرحله تعهد و برنامه اقدام پس از دریافت دستورکار",

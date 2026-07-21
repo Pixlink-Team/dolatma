@@ -348,7 +348,7 @@ export function DirectiveWorkspaceAdmin({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 text-right" dir="rtl">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-2">
           <Link
