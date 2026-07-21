@@ -156,3 +156,25 @@ export interface AuditDashboardData {
   recentUserErrors: import("./problem-types").RecentUserError[];
 }
 
+/** Per-day summary counts for the audit calendar. */
+export interface AuditDaySummary {
+  date: string;
+  totalEvents: number;
+  logins: number;
+  failedLogins: number;
+  contentChanges: number;
+  pageViews: number;
+  clicks: number;
+  uniqueUsers: number;
+}
+
+/** Full detail for a selected calendar day. */
+export interface AuditDayDetail {
+  date: string;
+  summary: AuditDaySummary;
+  actors: AuditActorSummary[];
+  logins: AuditEvent[];
+  failedLogins: AuditEvent[];
+  events: AuditEvent[];
+}
+

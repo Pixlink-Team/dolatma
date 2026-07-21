@@ -5,12 +5,16 @@ import type {
   AuditActorSummary,
   AuditClickSummary,
   AuditDailyPoint,
+  AuditDayDetail,
+  AuditDaySummary,
   AuditEvent,
   AuditEventFilters,
   AuditEventInput,
   AuditPathSummary,
   UserContentContribution,
 } from "@/lib/audit/types";
+
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 /** Midnight today in Asia/Tehran, as a UTC Date (Iran has no DST). */
 function getTehranTodayStart(): Date {
@@ -21,6 +25,15 @@ function getTehranTodayStart(): Date {
     day: "2-digit",
   }).format(new Date());
   return new Date(`${tehranDate}T00:00:00+03:30`);
+}
+
+/** Inclusive Tehran calendar day range for a YYYY-MM-DD date. */
+function getTehranDayRange(dateIso: string): { start: Date; end: Date } | null {
+  if (!ISO_DATE_RE.test(dateIso)) return null;
+  const start = new Date(`${dateIso}T00:00:00+03:30`);
+  const end = new Date(`${dateIso}T23:59:59.999+03:30`);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return null;
+  return { start, end };
 }
 
 function mapAuditRow(row: Record<string, unknown>): AuditEvent {
@@ -594,4 +607,158 @@ export async function pgGetUserContentContributions(): Promise<UserContentContri
     submissions: Number(row.submissions ?? 0),
     total: Number(row.total ?? 0),
   }));
+}
+
+/** Daily activity counts for a Gregorian inclusive date range (YYYY-MM-DD). */
+export async function pgGetAuditDailySeriesInRange(
+  fromDateIso: string,
+  toDateIso: string
+): Promise<AuditDailyPoint[]> {
+  if (!isPostgresConfigured()) return [];
+  if (!ISO_DATE_RE.test(fromDateIso) || !ISO_DATE_RE.test(toDateIso)) return [];
+
+  const sql = getSql();
+  const rows = await sql`
+    WITH days AS (
+      SELECT generate_series(
+        ${fromDateIso}::date,
+        ${toDateIso}::date,
+        interval '1 day'
+      )::date AS day
+    )
+    SELECT
+      days.day::text AS date,
+      COALESCE(COUNT(e.id) FILTER (WHERE e.action <> 'presence.heartbeat'), 0)::int AS total,
+      COALESCE(COUNT(e.id) FILTER (WHERE e.action = 'auth.login'), 0)::int AS logins,
+      COALESCE(COUNT(e.id) FILTER (WHERE e.category = 'content'), 0)::int AS content,
+      COALESCE(COUNT(e.id) FILTER (WHERE e.action = 'navigation.page_view'), 0)::int AS navigation,
+      COALESCE(COUNT(e.id) FILTER (WHERE e.action = 'ui.click'), 0)::int AS clicks
+    FROM days
+    LEFT JOIN user_audit_events e
+      ON e.created_at >= (days.day::timestamp AT TIME ZONE 'Asia/Tehran')
+      AND e.created_at < ((days.day + 1)::timestamp AT TIME ZONE 'Asia/Tehran')
+    GROUP BY days.day
+    ORDER BY days.day ASC
+  `;
+
+  return rows.map((row) => ({
+    date: String(row.date).slice(0, 10),
+    total: Number(row.total ?? 0),
+    logins: Number(row.logins ?? 0),
+    content: Number(row.content ?? 0),
+    navigation: Number(row.navigation ?? 0),
+    clicks: Number(row.clicks ?? 0),
+  }));
+}
+
+async function pgGetAuditActorsForRange(
+  start: Date,
+  end: Date,
+  limit = 50
+): Promise<AuditActorSummary[]> {
+  if (!isPostgresConfigured()) return [];
+
+  const sql = getSql();
+  const safeLimit = Math.min(Math.max(limit, 1), 100);
+  const rows = await sql`
+    WITH ranked AS (
+      SELECT
+        COALESCE(e.actor_user_id::text, NULLIF(e.actor_email, ''), NULLIF(e.actor_name, ''), 'unknown') AS actor_key,
+        e.actor_user_id,
+        NULLIF(MAX(e.actor_name), '') AS event_name,
+        NULLIF(MAX(e.actor_email), '') AS event_email,
+        NULLIF(MAX(e.actor_role), '') AS event_role,
+        MAX(u.name) AS user_name,
+        MAX(u.email) AS user_email,
+        MAX(u.role) AS user_role,
+        COUNT(*)::int AS event_count,
+        COUNT(*) FILTER (WHERE e.action = 'auth.login')::int AS login_count,
+        COUNT(*) FILTER (WHERE e.action = 'content.create')::int AS content_create_count,
+        COUNT(*) FILTER (WHERE e.action = 'content.update')::int AS content_update_count,
+        COUNT(*) FILTER (WHERE e.action = 'content.delete')::int AS content_delete_count,
+        COUNT(*) FILTER (WHERE e.action = 'navigation.page_view')::int AS page_view_count,
+        COUNT(*) FILTER (WHERE e.action = 'ui.click')::int AS click_count,
+        MAX(e.created_at) AS last_seen_at
+      FROM user_audit_events e
+      LEFT JOIN users u ON u.id = e.actor_user_id
+      WHERE e.created_at >= ${start}
+        AND e.created_at <= ${end}
+        AND e.action NOT IN ('auth.login_failed', 'presence.heartbeat')
+      GROUP BY
+        COALESCE(e.actor_user_id::text, NULLIF(e.actor_email, ''), NULLIF(e.actor_name, ''), 'unknown'),
+        e.actor_user_id
+    )
+    SELECT *
+    FROM ranked
+    ORDER BY event_count DESC, last_seen_at DESC
+    LIMIT ${safeLimit}
+  `;
+
+  return rows.map((row) => mapAuditActorRow(row as Record<string, unknown>));
+}
+
+export async function pgGetAuditDayDetail(dateIso: string): Promise<AuditDayDetail | null> {
+  if (!isPostgresConfigured()) return null;
+
+  const range = getTehranDayRange(dateIso);
+  if (!range) return null;
+
+  const { start, end } = range;
+  const sql = getSql();
+
+  const [summaryRows, actors, logins, failedLogins, events] = await Promise.all([
+    sql`
+      SELECT
+        COUNT(*) FILTER (WHERE action <> 'presence.heartbeat')::int AS total_events,
+        COUNT(*) FILTER (WHERE action = 'auth.login')::int AS logins,
+        COUNT(*) FILTER (WHERE action = 'auth.login_failed')::int AS failed_logins,
+        COUNT(*) FILTER (WHERE category = 'content')::int AS content_changes,
+        COUNT(*) FILTER (WHERE action = 'navigation.page_view')::int AS page_views,
+        COUNT(*) FILTER (WHERE action = 'ui.click')::int AS clicks,
+        COUNT(DISTINCT COALESCE(actor_user_id::text, NULLIF(actor_email, ''), NULLIF(actor_name, '')))
+          FILTER (WHERE action NOT IN ('auth.login_failed', 'presence.heartbeat'))::int AS unique_users
+      FROM user_audit_events
+      WHERE created_at >= ${start}
+        AND created_at <= ${end}
+    `,
+    pgGetAuditActorsForRange(start, end, 50),
+    pgListAuditEvents({
+      action: "auth.login",
+      from: start.toISOString(),
+      to: end.toISOString(),
+      limit: 100,
+    }),
+    pgListAuditEvents({
+      action: "auth.login_failed",
+      from: start.toISOString(),
+      to: end.toISOString(),
+      limit: 100,
+    }),
+    pgListAuditEvents({
+      from: start.toISOString(),
+      to: end.toISOString(),
+      limit: 300,
+    }),
+  ]);
+
+  const row = summaryRows[0] ?? {};
+  const summary: AuditDaySummary = {
+    date: dateIso,
+    totalEvents: Number(row.total_events ?? 0),
+    logins: Number(row.logins ?? 0),
+    failedLogins: Number(row.failed_logins ?? 0),
+    contentChanges: Number(row.content_changes ?? 0),
+    pageViews: Number(row.page_views ?? 0),
+    clicks: Number(row.clicks ?? 0),
+    uniqueUsers: Number(row.unique_users ?? 0),
+  };
+
+  return {
+    date: dateIso,
+    summary,
+    actors,
+    logins,
+    failedLogins,
+    events: events.filter((event) => event.action !== "presence.heartbeat"),
+  };
 }

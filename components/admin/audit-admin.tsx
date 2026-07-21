@@ -30,6 +30,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
+import { AuditCalendarPanel } from "@/components/admin/audit-calendar-panel";
 import { AuditProblemsPanel } from "@/components/admin/audit-problems-panel";
 import { AuditStuckBehaviorPanel } from "@/components/admin/audit-stuck-behavior-panel";
 import { useChartTheme } from "@/lib/hooks/use-chart-theme";
@@ -757,6 +758,7 @@ export function AuditAdmin({ data, databaseReady }: AuditAdminProps) {
       <Tabs defaultValue="overview">
         <TabsList>
           <TabsTrigger value="overview">نمای کلی</TabsTrigger>
+          <TabsTrigger value="calendar">تقویم</TabsTrigger>
           <TabsTrigger value="problems">
             مشکلات
             {summary.openProblemReports > 0 && (
@@ -778,6 +780,10 @@ export function AuditAdmin({ data, databaseReady }: AuditAdminProps) {
           <TabsTrigger value="logins">ورودها</TabsTrigger>
           <TabsTrigger value="events">رویدادها</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="calendar">
+          <AuditCalendarPanel />
+        </TabsContent>
 
         <TabsContent value="problems">
           <AuditProblemsPanel
