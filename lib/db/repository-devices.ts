@@ -506,9 +506,9 @@ export async function pgSaveDevice(data: {
           activity_scope = ${activityScope},
           mission = ${mission},
           address = ${address},
-          phones = ${phones}::jsonb,
+          phones = ${sql.json(JSON.parse(phones))},
           website = ${website},
-          social_links = ${socialLinks}::jsonb,
+          social_links = ${sql.json(JSON.parse(socialLinks))},
           status = ${status},
           is_active = ${isActive},
           updated_at = ${now}
@@ -524,7 +524,7 @@ export async function pgSaveDevice(data: {
         VALUES (
           ${id}, ${name}, ${shortName}, ${logoUrl}, ${data.type}, ${parentId},
           ${province}, ${city}, ${activityScope}, ${mission}, ${address},
-          ${phones}::jsonb, ${website}, ${socialLinks}::jsonb,
+          ${sql.json(JSON.parse(phones))}, ${website}, ${sql.json(JSON.parse(socialLinks))},
           ${status}, ${isActive}, ${now}, ${now}
         )
       `;

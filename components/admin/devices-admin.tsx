@@ -38,6 +38,7 @@ import {
 } from "@/lib/device-labels";
 import type { Device, DeviceStatus, DeviceType } from "@/lib/types";
 import { adminHref } from "@/lib/utils";
+import { useAdminCampaign } from "@/components/admin/admin-campaign-provider";
 
 const deviceSchema = z.object({
   name: z.string().min(1, "نام دستگاه الزامی است"),
@@ -60,6 +61,7 @@ interface DevicesAdminProps {
 }
 
 export function DevicesAdmin({ initialDevices }: DevicesAdminProps) {
+  const { campaignId } = useAdminCampaign();
   const [open, setOpen] = useState(false);
   const [childOpen, setChildOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -280,7 +282,7 @@ export function DevicesAdmin({ initialDevices }: DevicesAdminProps) {
                     </p>
                   </div>
                   <Button variant="outline" size="sm" asChild>
-                    <Link href={adminHref(`/admin/devices/${root.id}`)}>
+                    <Link href={adminHref(`/admin/devices/${root.id}`, campaignId)}>
                       <IdCard className="ml-1 h-4 w-4" />
                       شناسنامه
                     </Link>
@@ -318,7 +320,7 @@ export function DevicesAdmin({ initialDevices }: DevicesAdminProps) {
                           </p>
                         </div>
                         <Button variant="outline" size="sm" asChild>
-                          <Link href={adminHref(`/admin/devices/${child.id}`)}>
+                          <Link href={adminHref(`/admin/devices/${child.id}`, campaignId)}>
                             <IdCard className="ml-1 h-4 w-4" />
                             شناسنامه
                           </Link>

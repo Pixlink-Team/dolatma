@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "95a3ab09c62837f833484e0302b1e26529f42dff",
+      "committedAt": "2026-07-21T15:36:58+03:30",
+      "title": "افزودن اتاق عملیات دستورکار با نسخه‌بندی فایل و هشدار جایگزینی",
+      "subject": "Add directive operations workspace with version alerts"
+    },
+    {
       "hash": "77d6cfeb1eedd0455a2567f29a344d12b9cf0b44",
       "committedAt": "2026-07-20T14:13:19+03:30",
       "title": "امکان ویرایش متن صفحه ورود و به‌خاطر سپردن کاربر",

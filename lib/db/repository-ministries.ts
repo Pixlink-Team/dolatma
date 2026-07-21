@@ -1,5 +1,4 @@
 import { getSql } from "@/lib/db/client";
-import { DEFAULT_MINISTRIES } from "@/lib/ministry-seed";
 import type { Ministry, MinistryOrganization } from "@/lib/types";
 import { generateId } from "@/lib/utils";
 
