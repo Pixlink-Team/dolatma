@@ -569,6 +569,14 @@ export function mapUserFromDb(
     ministryName: typeof row.ministry_name === "string" ? row.ministry_name : null,
     organizationId: row.organization_id ? String(row.organization_id) : null,
     organizationName: typeof row.organization_name === "string" ? row.organization_name : null,
+    deviceId: row.device_id
+      ? String(row.device_id)
+      : row.organization_id
+        ? String(row.organization_id)
+        : row.ministry_id
+          ? String(row.ministry_id)
+          : null,
+    deviceName: typeof row.device_name === "string" ? row.device_name : null,
     parentUserId: row.parent_user_id ? String(row.parent_user_id) : null,
     parentUserName: typeof row.parent_user_name === "string" ? row.parent_user_name : null,
     campaignIds: campaignAccess.map((access) => access.campaignId),

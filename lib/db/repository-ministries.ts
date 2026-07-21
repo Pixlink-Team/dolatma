@@ -157,52 +157,8 @@ export async function pgGetMinistryById(id: string): Promise<Ministry | null> {
 }
 
 export async function pgEnsureDefaultMinistries(): Promise<void> {
-  const sql = getSql();
-  await ensureMinistryOrgSchema();
-  const now = new Date().toISOString();
-
-  for (const item of DEFAULT_MINISTRIES) {
-    await sql`
-      INSERT INTO ministries (id, name, full_name, description, is_active, created_at)
-      VALUES (
-        ${generateId()},
-        ${item.name},
-        ${item.fullName},
-        ${item.description ?? null},
-        ${true},
-        ${now}
-      )
-      ON CONFLICT (name) DO UPDATE SET
-        full_name = EXCLUDED.full_name,
-        description = COALESCE(EXCLUDED.description, ministries.description),
-        is_active = EXCLUDED.is_active
-    `;
-
-    const ministryRows = await sql`
-      SELECT id FROM ministries WHERE name = ${item.name} LIMIT 1
-    `;
-    const ministryId = ministryRows[0] ? String(ministryRows[0].id) : null;
-    if (!ministryId) continue;
-
-    for (const org of item.organizations) {
-      await sql`
-        INSERT INTO ministry_organizations (
-          id, ministry_id, name, full_name, is_active, created_at
-        )
-        VALUES (
-          ${generateId()},
-          ${ministryId},
-          ${org.name},
-          ${org.fullName ?? null},
-          ${true},
-          ${now}
-        )
-        ON CONFLICT (ministry_id, name) DO UPDATE SET
-          full_name = COALESCE(EXCLUDED.full_name, ministry_organizations.full_name),
-          is_active = EXCLUDED.is_active
-      `;
-    }
-  }
+  const { pgEnsureDefaultDevices } = await import("@/lib/db/repository-devices");
+  await pgEnsureDefaultDevices();
 }
 
 export async function pgSaveMinistry(data: {
@@ -239,6 +195,25 @@ export async function pgSaveMinistry(data: {
         VALUES (${id}, ${name}, ${fullName}, ${description}, ${isActive}, ${now})
       `;
     }
+
+    // Dual-write into unified devices table (same UUID).
+    try {
+      const { ensureDeviceSchema, pgSaveDevice } = await import("@/lib/db/repository-devices");
+      await ensureDeviceSchema();
+      await pgSaveDevice({
+        id,
+        name: fullName || name,
+        shortName: name,
+        type: "ministry",
+        parentId: null,
+        mission: description,
+        status: isActive ? "active" : "inactive",
+        activityScope: "national",
+      });
+    } catch {
+      // Devices table may not exist yet on very old DBs; migrate handles it.
+    }
+
     return { success: true, id };
   } catch (error) {
     const message = error instanceof Error ? error.message : "ذخیره وزارتخانه ناموفق بود";
@@ -286,6 +261,23 @@ export async function pgSaveOrganization(data: {
         VALUES (${id}, ${ministryId}, ${name}, ${fullName}, ${isActive}, ${now})
       `;
     }
+
+    try {
+      const { ensureDeviceSchema, pgSaveDevice } = await import("@/lib/db/repository-devices");
+      await ensureDeviceSchema();
+      await pgSaveDevice({
+        id,
+        name: fullName || name,
+        shortName: name,
+        type: "organization",
+        parentId: ministryId,
+        status: isActive ? "active" : "inactive",
+        activityScope: "national",
+      });
+    } catch {
+      // Devices table may not exist yet on very old DBs.
+    }
+
     return { success: true, id };
   } catch (error) {
     const message = error instanceof Error ? error.message : "ذخیره زیرمجموعه ناموفق بود";
@@ -310,6 +302,11 @@ export async function pgDeleteMinistry(
     };
   }
   await sql`DELETE FROM ministries WHERE id = ${id}`;
+  try {
+    await sql`DELETE FROM devices WHERE id = ${id}`;
+  } catch {
+    // ignore if devices table missing
+  }
   return { success: true };
 }
 
@@ -327,6 +324,11 @@ export async function pgDeleteOrganization(
     };
   }
   await sql`DELETE FROM ministry_organizations WHERE id = ${id}`;
+  try {
+    await sql`DELETE FROM devices WHERE id = ${id}`;
+  } catch {
+    // ignore if devices table missing
+  }
   return { success: true };
 }
 

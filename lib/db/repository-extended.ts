@@ -252,12 +252,19 @@ export async function pgSaveUser(data: {
   let ministryId = data.ministryId?.trim() || null;
   let organizationId = data.organizationId?.trim() || null;
   const parentUserId = data.parentUserId?.trim() || null;
+  let deviceId: string | null = organizationId ?? ministryId ?? null;
 
   if (organizationId) {
     const orgRows = await sql`
       SELECT ministry_id FROM ministry_organizations WHERE id = ${organizationId} LIMIT 1
     `;
-    const orgMinistryId = orgRows[0]?.ministry_id ? String(orgRows[0].ministry_id) : null;
+    let orgMinistryId = orgRows[0]?.ministry_id ? String(orgRows[0].ministry_id) : null;
+    if (!orgMinistryId) {
+      const deviceRows = await sql`
+        SELECT parent_id FROM devices WHERE id = ${organizationId} LIMIT 1
+      `;
+      orgMinistryId = deviceRows[0]?.parent_id ? String(deviceRows[0].parent_id) : null;
+    }
     if (!orgMinistryId) {
       return { success: false as const, error: "زیرمجموعه انتخاب‌شده معتبر نیست" };
     }
@@ -268,8 +275,10 @@ export async function pgSaveUser(data: {
       };
     }
     ministryId = orgMinistryId;
+    deviceId = organizationId;
   } else {
     organizationId = null;
+    deviceId = ministryId;
   }
 
   try {
@@ -288,6 +297,7 @@ export async function pgSaveUser(data: {
           account_manager_name = ${accountManagerName},
           ministry_id = ${ministryId},
           organization_id = ${organizationId},
+          device_id = ${deviceId},
           parent_user_id = ${parentUserId},
           password_hash = ${passwordHash}
         WHERE id = ${id}
@@ -305,6 +315,7 @@ export async function pgSaveUser(data: {
           account_manager_name = ${accountManagerName},
           ministry_id = ${ministryId},
           organization_id = ${organizationId},
+          device_id = ${deviceId},
           parent_user_id = ${parentUserId}
         WHERE id = ${id}
       `;
@@ -317,12 +328,12 @@ export async function pgSaveUser(data: {
     await sql`
       INSERT INTO users (
         id, email, password_hash, name, role, province, city, region, phone,
-        account_manager_name, ministry_id, organization_id, parent_user_id, created_at
+        account_manager_name, ministry_id, organization_id, device_id, parent_user_id, created_at
       )
       VALUES (
         ${id}, ${email}, ${passwordHash}, ${data.name}, ${data.role}, ${province}, ${city},
         ${region}, ${phone}, ${accountManagerName}, ${ministryId}, ${organizationId},
-        ${parentUserId}, ${now}
+        ${deviceId}, ${parentUserId}, ${now}
       )
     `;
   }
@@ -396,7 +407,8 @@ export async function pgUpdateUserMinistry(
   await sql`
     UPDATE users SET
       ministry_id = ${normalizedMinistry},
-      organization_id = ${normalizedOrg}
+      organization_id = ${normalizedOrg},
+      device_id = ${normalizedOrg ?? normalizedMinistry}
     WHERE id = ${userId}
   `;
   return { success: true as const };

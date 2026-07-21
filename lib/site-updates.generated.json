@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "77d6cfeb1eedd0455a2567f29a344d12b9cf0b44",
+      "committedAt": "2026-07-20T14:13:19+03:30",
+      "title": "امکان ویرایش متن صفحه ورود و به‌خاطر سپردن کاربر",
+      "subject": "Add editable login copy, greeting, and remember-me"
+    },
+    {
       "hash": "db54558af14dc0f29f47dc1ce9cccf23da94c208",
       "committedAt": "2026-07-19T09:17:32+03:30",
       "title": "به‌روزرسانی دسته‌های قدیمی تبلیغات محیطی در پایگاه داده",

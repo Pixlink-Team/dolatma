@@ -1,7 +1,10 @@
 import { redirect } from "next/navigation";
-import { MinistriesAdmin } from "@/components/admin/ministries-admin";
+import { DevicesAdmin } from "@/components/admin/devices-admin";
 import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
-import { pgEnsureDefaultMinistries, pgListMinistries } from "@/lib/db/repository-ministries";
+import {
+  pgEnsureDefaultDevices,
+  pgListDevices,
+} from "@/lib/db/repository-devices";
 import { isPostgresConfigured } from "@/lib/utils";
 
 export default async function MinistriesPage() {
@@ -9,11 +12,11 @@ export default async function MinistriesPage() {
   if (!session) redirect("/admin/login");
   if (!isFullAdmin(session)) redirect("/admin");
 
-  let ministries: Awaited<ReturnType<typeof pgListMinistries>> = [];
+  let devices: Awaited<ReturnType<typeof pgListDevices>> = [];
   if (isPostgresConfigured()) {
-    await pgEnsureDefaultMinistries();
-    ministries = await pgListMinistries({ includeOrganizations: true });
+    await pgEnsureDefaultDevices();
+    devices = await pgListDevices();
   }
 
-  return <MinistriesAdmin initialMinistries={ministries} />;
+  return <DevicesAdmin initialDevices={devices} />;
 }

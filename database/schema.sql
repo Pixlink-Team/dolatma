@@ -894,6 +894,186 @@ CREATE POLICY ministry_organizations_app_access ON ministry_organizations
 -- Seed data for ministries and organizations is applied at runtime via
 -- pgEnsureDefaultMinistries() from lib/ministry-seed.ts (idempotent by name).
 
+-- =============================================================================
+-- Devices (unified org passport entity) — ministries + orgs migrate by same UUID
+-- =============================================================================
+
+CREATE TABLE IF NOT EXISTS devices (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  short_name TEXT,
+  logo_url TEXT,
+  type TEXT NOT NULL DEFAULT 'organization',
+  parent_id UUID REFERENCES devices(id) ON DELETE SET NULL,
+  province TEXT,
+  city TEXT,
+  activity_scope TEXT NOT NULL DEFAULT 'national',
+  mission TEXT,
+  address TEXT,
+  phones JSONB NOT NULL DEFAULT '[]'::jsonb,
+  website TEXT,
+  social_links JSONB NOT NULL DEFAULT '{}'::jsonb,
+  status TEXT NOT NULL DEFAULT 'active',
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+ALTER TABLE devices DROP CONSTRAINT IF EXISTS devices_type_check;
+ALTER TABLE devices ADD CONSTRAINT devices_type_check
+  CHECK (type IN (
+    'ministry', 'organization', 'directorate', 'company',
+    'governorate', 'municipality', 'other'
+  ));
+
+ALTER TABLE devices DROP CONSTRAINT IF EXISTS devices_activity_scope_check;
+ALTER TABLE devices ADD CONSTRAINT devices_activity_scope_check
+  CHECK (activity_scope IN ('national', 'provincial', 'city', 'regional'));
+
+ALTER TABLE devices DROP CONSTRAINT IF EXISTS devices_status_check;
+ALTER TABLE devices ADD CONSTRAINT devices_status_check
+  CHECK (status IN ('active', 'inactive', 'suspended'));
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_devices_root_name_unique
+  ON devices (name) WHERE parent_id IS NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_devices_parent_name_unique
+  ON devices (parent_id, name) WHERE parent_id IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_devices_parent ON devices(parent_id);
+CREATE INDEX IF NOT EXISTS idx_devices_type ON devices(type);
+CREATE INDEX IF NOT EXISTS idx_devices_status ON devices(status);
+
+CREATE TABLE IF NOT EXISTS device_officials (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  device_id UUID NOT NULL REFERENCES devices(id) ON DELETE CASCADE,
+  role_type TEXT NOT NULL,
+  full_name TEXT NOT NULL,
+  phone TEXT,
+  email TEXT,
+  contact_note TEXT,
+  started_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  ended_at TIMESTAMPTZ,
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+ALTER TABLE device_officials DROP CONSTRAINT IF EXISTS device_officials_role_type_check;
+ALTER TABLE device_officials ADD CONSTRAINT device_officials_role_type_check
+  CHECK (role_type IN ('primary', 'deputy', 'pr', 'campaign_exec', 'supervisor'));
+
+CREATE INDEX IF NOT EXISTS idx_device_officials_device
+  ON device_officials(device_id, is_active, role_type);
+
+CREATE TABLE IF NOT EXISTS device_capacities (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  device_id UUID NOT NULL REFERENCES devices(id) ON DELETE CASCADE,
+  capacity_type TEXT NOT NULL,
+  title TEXT NOT NULL,
+  description TEXT,
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  owner_name TEXT,
+  coverage_scope TEXT,
+  last_updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+ALTER TABLE device_capacities DROP CONSTRAINT IF EXISTS device_capacities_type_check;
+ALTER TABLE device_capacities ADD CONSTRAINT device_capacities_type_check
+  CHECK (capacity_type IN (
+    'branches', 'website_app', 'social', 'sms_panel', 'billboards',
+    'urban_tv', 'venues', 'pr_team', 'creative_team', 'field_staff',
+    'call_center', 'contractors', 'other'
+  ));
+
+CREATE INDEX IF NOT EXISTS idx_device_capacities_device
+  ON device_capacities(device_id, is_active);
+
+-- Migrate ministries → devices (preserve UUID)
+INSERT INTO devices (
+  id, name, short_name, type, parent_id, mission, activity_scope,
+  status, is_active, created_at, updated_at
+)
+SELECT
+  m.id,
+  COALESCE(NULLIF(TRIM(m.full_name), ''), m.name),
+  m.name,
+  'ministry',
+  NULL,
+  m.description,
+  'national',
+  CASE WHEN m.is_active IS FALSE THEN 'inactive' ELSE 'active' END,
+  COALESCE(m.is_active, true),
+  m.created_at,
+  now()
+FROM ministries m
+ON CONFLICT (id) DO NOTHING;
+
+-- Migrate organizations → devices (preserve UUID, parent = ministry)
+INSERT INTO devices (
+  id, name, short_name, type, parent_id, activity_scope,
+  status, is_active, created_at, updated_at
+)
+SELECT
+  o.id,
+  COALESCE(NULLIF(TRIM(o.full_name), ''), o.name),
+  o.name,
+  'organization',
+  o.ministry_id,
+  'national',
+  CASE WHEN o.is_active IS FALSE THEN 'inactive' ELSE 'active' END,
+  COALESCE(o.is_active, true),
+  o.created_at,
+  now()
+FROM ministry_organizations o
+ON CONFLICT (id) DO NOTHING;
+
+ALTER TABLE users
+  ADD COLUMN IF NOT EXISTS device_id UUID REFERENCES devices(id) ON DELETE SET NULL;
+
+CREATE INDEX IF NOT EXISTS idx_users_device ON users(device_id);
+
+UPDATE users
+SET device_id = COALESCE(organization_id, ministry_id)
+WHERE device_id IS NULL
+  AND COALESCE(organization_id, ministry_id) IS NOT NULL;
+
+ALTER TABLE campaign_directives
+  ADD COLUMN IF NOT EXISTS audience_device_id UUID REFERENCES devices(id) ON DELETE SET NULL;
+
+CREATE INDEX IF NOT EXISTS idx_campaign_directives_audience_device
+  ON campaign_directives(audience_device_id);
+
+UPDATE campaign_directives
+SET audience_device_id = COALESCE(audience_organization_id, audience_ministry_id)
+WHERE audience_device_id IS NULL
+  AND COALESCE(audience_organization_id, audience_ministry_id) IS NOT NULL;
+
+ALTER TABLE devices ENABLE ROW LEVEL SECURITY;
+ALTER TABLE devices NO FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS devices_app_access ON devices;
+CREATE POLICY devices_app_access ON devices
+  FOR ALL
+  USING (true)
+  WITH CHECK (true);
+
+ALTER TABLE device_officials ENABLE ROW LEVEL SECURITY;
+ALTER TABLE device_officials NO FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS device_officials_app_access ON device_officials;
+CREATE POLICY device_officials_app_access ON device_officials
+  FOR ALL
+  USING (true)
+  WITH CHECK (true);
+
+ALTER TABLE device_capacities ENABLE ROW LEVEL SECURITY;
+ALTER TABLE device_capacities NO FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS device_capacities_app_access ON device_capacities;
+CREATE POLICY device_capacities_app_access ON device_capacities
+  FOR ALL
+  USING (true)
+  WITH CHECK (true);
+
 -- Remap legacy billboard category keys to the current taxonomy (idempotent).
 UPDATE billboards SET category = 'fence_wall_banner', updated_at = now()
 WHERE category IN ('banner', 'narde', 'sakhteman');
@@ -905,4 +1085,114 @@ UPDATE billboards SET category = 'bus_metro', updated_at = now()
 WHERE category = 'bus_shelter';
 UPDATE billboards SET category = 'scaffolding', updated_at = now()
 WHERE category = 'darbast';
+
+-- ---------------------------------------------------------------------------
+-- Directive operations workspace (اتاق عملیات هر دستورکار)
+-- ---------------------------------------------------------------------------
+
+ALTER TABLE campaign_directives ADD COLUMN IF NOT EXISTS objective TEXT NOT NULL DEFAULT '';
+ALTER TABLE campaign_directives ADD COLUMN IF NOT EXISTS expected_results TEXT NOT NULL DEFAULT '';
+ALTER TABLE campaign_directives ADD COLUMN IF NOT EXISTS urgency TEXT NOT NULL DEFAULT 'normal';
+ALTER TABLE campaign_directives DROP CONSTRAINT IF EXISTS campaign_directives_urgency_check;
+ALTER TABLE campaign_directives
+  ADD CONSTRAINT campaign_directives_urgency_check
+  CHECK (urgency IN ('low', 'normal', 'high', 'critical'));
+ALTER TABLE campaign_directives ADD COLUMN IF NOT EXISTS mandatory_actions JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE campaign_directives ADD COLUMN IF NOT EXISTS suggested_actions JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE campaign_directives ADD COLUMN IF NOT EXISTS kpis JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE campaign_directives ADD COLUMN IF NOT EXISTS brand_guide TEXT NOT NULL DEFAULT '';
+ALTER TABLE campaign_directives ADD COLUMN IF NOT EXISTS execution_guide TEXT NOT NULL DEFAULT '';
+ALTER TABLE campaign_directives ADD COLUMN IF NOT EXISTS approval_requirements TEXT NOT NULL DEFAULT '';
+ALTER TABLE campaign_directives
+  ADD COLUMN IF NOT EXISTS central_owner_user_id UUID REFERENCES users(id) ON DELETE SET NULL;
+ALTER TABLE campaign_directives ADD COLUMN IF NOT EXISTS central_owner_label TEXT;
+ALTER TABLE campaign_directives ADD COLUMN IF NOT EXISTS faq JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE campaign_directives
+  ADD COLUMN IF NOT EXISTS target_ministry_ids UUID[] NOT NULL DEFAULT '{}';
+ALTER TABLE campaign_directives
+  ADD COLUMN IF NOT EXISTS target_organization_ids UUID[] NOT NULL DEFAULT '{}';
+ALTER TABLE campaign_directives
+  ADD COLUMN IF NOT EXISTS target_provinces TEXT[] NOT NULL DEFAULT '{}';
+ALTER TABLE campaign_directives
+  ADD COLUMN IF NOT EXISTS target_cities TEXT[] NOT NULL DEFAULT '{}';
+
+CREATE INDEX IF NOT EXISTS idx_campaign_directives_central_owner
+  ON campaign_directives(central_owner_user_id);
+
+CREATE TABLE IF NOT EXISTS directive_workspace_assets (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  directive_id UUID NOT NULL REFERENCES campaign_directives(id) ON DELETE CASCADE,
+  category TEXT NOT NULL CHECK (category IN (
+    'reference', 'ready_text', 'print', 'video', 'social',
+    'brand_guide', 'training', 'approval'
+  )),
+  title TEXT NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
+  print_size TEXT,
+  sort_order INT NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_directive_workspace_assets_directive
+  ON directive_workspace_assets(directive_id, category, sort_order);
+
+CREATE TABLE IF NOT EXISTS directive_workspace_asset_versions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  asset_id UUID NOT NULL REFERENCES directive_workspace_assets(id) ON DELETE CASCADE,
+  version_number INT NOT NULL,
+  content_text TEXT,
+  file_url TEXT,
+  file_name TEXT,
+  mime_type TEXT,
+  file_size INT NOT NULL DEFAULT 0,
+  change_note TEXT NOT NULL DEFAULT '',
+  created_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  is_current BOOLEAN NOT NULL DEFAULT false,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (asset_id, version_number)
+);
+
+CREATE INDEX IF NOT EXISTS idx_directive_workspace_asset_versions_asset
+  ON directive_workspace_asset_versions(asset_id, version_number DESC);
+CREATE INDEX IF NOT EXISTS idx_directive_workspace_asset_versions_current
+  ON directive_workspace_asset_versions(asset_id, is_current)
+  WHERE is_current = true;
+
+CREATE TABLE IF NOT EXISTS directive_workspace_asset_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  asset_id UUID NOT NULL REFERENCES directive_workspace_assets(id) ON DELETE CASCADE,
+  version_id UUID NOT NULL REFERENCES directive_workspace_asset_versions(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  ministry_id UUID REFERENCES ministries(id) ON DELETE SET NULL,
+  organization_id UUID REFERENCES ministry_organizations(id) ON DELETE SET NULL,
+  event_type TEXT NOT NULL CHECK (event_type IN ('downloaded', 'published')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_directive_workspace_asset_events_asset
+  ON directive_workspace_asset_events(asset_id, version_id, event_type);
+CREATE INDEX IF NOT EXISTS idx_directive_workspace_asset_events_user
+  ON directive_workspace_asset_events(user_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS directive_replacement_alerts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  directive_id UUID NOT NULL REFERENCES campaign_directives(id) ON DELETE CASCADE,
+  asset_id UUID NOT NULL REFERENCES directive_workspace_assets(id) ON DELETE CASCADE,
+  old_version_id UUID NOT NULL REFERENCES directive_workspace_asset_versions(id) ON DELETE CASCADE,
+  new_version_id UUID NOT NULL REFERENCES directive_workspace_asset_versions(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  ministry_id UUID REFERENCES ministries(id) ON DELETE SET NULL,
+  organization_id UUID REFERENCES ministry_organizations(id) ON DELETE SET NULL,
+  status TEXT NOT NULL DEFAULT 'pending'
+    CHECK (status IN ('pending', 'acked', 'replaced')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  acked_at TIMESTAMPTZ,
+  UNIQUE (asset_id, new_version_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_directive_replacement_alerts_user
+  ON directive_replacement_alerts(user_id, status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_directive_replacement_alerts_directive
+  ON directive_replacement_alerts(directive_id, status);
 

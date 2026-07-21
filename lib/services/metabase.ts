@@ -1,4 +1,4 @@
-import type { AnalyticsChannel, AnalyticsMetric, ChannelAnalyticsConfig, MetabaseConfig, TrafficSource, DeviceType } from "@/lib/types";
+import type { AnalyticsChannel, AnalyticsMetric, ChannelAnalyticsConfig, MetabaseConfig, TrafficSource, AnalyticsDeviceType } from "@/lib/types";
 import { createHmac } from "crypto";
 
 interface MetabaseRow {
@@ -31,12 +31,12 @@ function normalizeSource(value: string | null): TrafficSource | null {
     : "other";
 }
 
-function normalizeDevice(value: string | null): DeviceType | null {
+function normalizeDevice(value: string | null): AnalyticsDeviceType | null {
   if (!value) return null;
   const normalized = value.toLowerCase();
-  const allowed: DeviceType[] = ["mobile", "desktop", "tablet"];
-  return allowed.includes(normalized as DeviceType)
-    ? (normalized as DeviceType)
+  const allowed: AnalyticsDeviceType[] = ["mobile", "desktop", "tablet"];
+  return allowed.includes(normalized as AnalyticsDeviceType)
+    ? (normalized as AnalyticsDeviceType)
     : null;
 }
 

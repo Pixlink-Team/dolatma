@@ -10,11 +10,13 @@ import {
   ClipboardList,
   Download,
   Eye,
+  LayoutDashboard,
   Plus,
   Trash2,
   Users,
 } from "lucide-react";
 import { toast } from "sonner";
+import Link from "next/link";
 import { DirectiveCtaButton } from "@/components/admin/directive-cta-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -57,7 +59,7 @@ import type {
 } from "@/lib/types";
 import { IRAN_PROVINCES } from "@/lib/iran-locations";
 import { USER_REGIONS, getUserRegionLabel, type UserRegion } from "@/lib/user-regions";
-import { cn, formatPersianDate, formatPersianDateTime, formatPersianNumber } from "@/lib/utils";
+import { adminHref, cn, formatPersianDate, formatPersianDateTime, formatPersianNumber } from "@/lib/utils";
 
 const schema = z.object({
   title: z.string().min(1).max(CONTENT_TITLE_MAX_LENGTH, CONTENT_TITLE_MAX_LENGTH_MESSAGE),
@@ -658,6 +660,12 @@ export function DirectivesAdmin({
                 </div>
 
                 <div className="flex flex-wrap gap-2">
+                  <Button variant="outline" size="sm" asChild>
+                    <Link href={adminHref(`/admin/directives/${item.id}`, campaignId)}>
+                      <LayoutDashboard className="h-4 w-4" />
+                      اتاق عملیات
+                    </Link>
+                  </Button>
                   <Button variant="outline" size="sm" onClick={() => setDetailItem(item)}>
                     <Eye className="h-4 w-4" />
                     جزئیات

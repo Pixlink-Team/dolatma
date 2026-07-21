@@ -515,6 +515,10 @@ export async function pgSaveDirective(input: SaveDirectiveInput): Promise<{ id: 
     input.audienceType === "ministry_city"
       ? (input.audienceOrganizationId?.trim() || null)
       : null;
+  const audienceDeviceId =
+    input.audienceType === "ministry_city"
+      ? audienceOrganizationId ?? audienceMinistryId
+      : null;
   const audienceProvinces =
     input.audienceType === "ministry_city"
       ? (input.audienceProvinces ?? []).map((province) => province.trim()).filter(Boolean)
@@ -536,7 +540,7 @@ export async function pgSaveDirective(input: SaveDirectiveInput): Promise<{ id: 
       id, campaign_id, created_by_user_id, title, body, priority, due_date,
       start_date, end_date, letter_file_url, letter_file_name, letter_mime_type, letter_file_size,
       cta_kind, cta_label, cta_url, cta_target,
-      audience_type, audience_region, audience_ministry_id, audience_organization_id, audience_cities,
+      audience_type, audience_region, audience_ministry_id, audience_organization_id, audience_device_id, audience_cities,
       published, published_at, sort_order, created_at, updated_at
     ) VALUES (
       ${id},
@@ -560,6 +564,7 @@ export async function pgSaveDirective(input: SaveDirectiveInput): Promise<{ id: 
       ${audienceRegion},
       ${audienceMinistryId},
       ${audienceOrganizationId},
+      ${audienceDeviceId},
       ${audienceProvinces},
       ${published},
       ${publishedAt},
@@ -586,6 +591,7 @@ export async function pgSaveDirective(input: SaveDirectiveInput): Promise<{ id: 
       audience_region = EXCLUDED.audience_region,
       audience_ministry_id = EXCLUDED.audience_ministry_id,
       audience_organization_id = EXCLUDED.audience_organization_id,
+      audience_device_id = EXCLUDED.audience_device_id,
       audience_cities = EXCLUDED.audience_cities,
       published = EXCLUDED.published,
       published_at = COALESCE(campaign_directives.published_at, EXCLUDED.published_at),

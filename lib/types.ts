@@ -4,7 +4,10 @@ export type MediaCategoryType = "poster" | "video";
 export type VersionStatus = "draft" | "revised" | "final";
 export type SubmissionStatus = "pending" | "approved" | "rejected";
 export type TrafficSource = "instagram" | "telegram" | "direct" | "google" | "referral" | "other";
-export type DeviceType = "mobile" | "desktop" | "tablet";
+/** Browser/client device class used in analytics metrics. */
+export type AnalyticsDeviceType = "mobile" | "desktop" | "tablet";
+/** @deprecated Prefer AnalyticsDeviceType — kept for temporary compatibility. */
+export type ClientDeviceType = AnalyticsDeviceType;
 export type AdminRole =
   | "admin"
   | "contributor"
@@ -48,6 +51,164 @@ export interface MinistryOrganization {
   fullName?: string | null;
   isActive?: boolean;
   createdAt: string;
+}
+
+/** Unified organizational entity (ministry, org, municipality, …). */
+export type DeviceType =
+  | "ministry"
+  | "organization"
+  | "directorate"
+  | "company"
+  | "governorate"
+  | "municipality"
+  | "other";
+
+export type DeviceActivityScope = "national" | "provincial" | "city" | "regional";
+export type DeviceStatus = "active" | "inactive" | "suspended";
+
+export type DeviceOfficialRole =
+  | "primary"
+  | "deputy"
+  | "pr"
+  | "campaign_exec"
+  | "supervisor";
+
+export type DeviceCapacityType =
+  | "branches"
+  | "website_app"
+  | "social"
+  | "sms_panel"
+  | "billboards"
+  | "urban_tv"
+  | "venues"
+  | "pr_team"
+  | "creative_team"
+  | "field_staff"
+  | "call_center"
+  | "contractors"
+  | "other";
+
+export type DeviceReadinessStatus =
+  | "ready"
+  | "needs_completion"
+  | "high_risk"
+  | "inactive";
+
+export interface DeviceSocialLinks {
+  instagram?: string;
+  telegram?: string;
+  x?: string;
+  linkedin?: string;
+  youtube?: string;
+  aparat?: string;
+  [key: string]: string | undefined;
+}
+
+export interface Device {
+  id: string;
+  name: string;
+  shortName?: string | null;
+  logoUrl?: string | null;
+  type: DeviceType;
+  parentId?: string | null;
+  parentName?: string | null;
+  province?: string | null;
+  city?: string | null;
+  activityScope: DeviceActivityScope;
+  mission?: string | null;
+  address?: string | null;
+  phones: string[];
+  website?: string | null;
+  socialLinks: DeviceSocialLinks;
+  status: DeviceStatus;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  childrenCount?: number;
+  usersCount?: number;
+}
+
+export interface DeviceOfficial {
+  id: string;
+  deviceId: string;
+  roleType: DeviceOfficialRole;
+  fullName: string;
+  phone?: string | null;
+  email?: string | null;
+  contactNote?: string | null;
+  startedAt: string;
+  endedAt?: string | null;
+  isActive: boolean;
+  userId?: string | null;
+  createdAt: string;
+}
+
+export interface DeviceCapacity {
+  id: string;
+  deviceId: string;
+  capacityType: DeviceCapacityType;
+  title: string;
+  description?: string | null;
+  isActive: boolean;
+  ownerName?: string | null;
+  coverageScope?: string | null;
+  lastUpdatedAt: string;
+  createdAt: string;
+}
+
+export interface DeviceDirectiveStats {
+  received: number;
+  seen: number;
+  unseen: number;
+  confirmed: number;
+}
+
+export interface DeviceContentStats {
+  billboards: number;
+  posters: number;
+  videos: number;
+  socialPosts: number;
+  activities: number;
+  files: number;
+  totalUploads: number;
+  score: number;
+}
+
+export interface DeviceCampaignHistoryItem {
+  campaignId: string;
+  campaignTitle: string;
+  campaignSlug: string;
+  directivesReceived: number;
+  directivesSeen: number;
+  directivesConfirmed: number;
+  contentUploads: number;
+}
+
+export interface DeviceReadiness {
+  status: DeviceReadinessStatus;
+  score: number;
+  reason: string;
+  factors: {
+    hasPrimaryOfficial: boolean;
+    hasDeputyOfficial: boolean;
+    hasActiveUsers: boolean;
+    profileComplete: boolean;
+    hasCapacity: boolean;
+    directiveResponseOk: boolean;
+  };
+}
+
+export interface DevicePassport {
+  device: Device;
+  parent: Device | null;
+  children: Device[];
+  officials: DeviceOfficial[];
+  capacities: DeviceCapacity[];
+  users: AdminUser[];
+  directiveStats: DeviceDirectiveStats;
+  contentStats: DeviceContentStats;
+  campaignHistory: DeviceCampaignHistoryItem[];
+  readiness: DeviceReadiness;
 }
 
 export interface CampaignFeatures {
@@ -307,7 +468,7 @@ export interface AnalyticsMetric extends Ownable {
   pageViews: number;
   avgSessionDuration: number;
   source?: TrafficSource | null;
-  device?: DeviceType | null;
+  device?: AnalyticsDeviceType | null;
   page?: string | null;
   city?: string | null;
   createdAt: string;
@@ -397,6 +558,9 @@ export interface AdminUser {
    */
   organizationId?: string | null;
   organizationName?: string | null;
+  /** Unified device assignment (organization preferred over ministry). */
+  deviceId?: string | null;
+  deviceName?: string | null;
   /** Parent ministry user for sub_user rows. */
   parentUserId?: string | null;
   parentUserName?: string | null;
@@ -489,6 +653,117 @@ export interface CampaignDirective {
   seenAt?: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+/** Urgency level for directive operations workspace (separate from priority). */
+export type DirectiveUrgency = "low" | "normal" | "high" | "critical";
+
+export type DirectiveWorkspaceAssetCategory =
+  | "reference"
+  | "ready_text"
+  | "print"
+  | "video"
+  | "social"
+  | "brand_guide"
+  | "training"
+  | "approval";
+
+export type DirectiveAssetEventType = "downloaded" | "published";
+export type DirectiveReplacementAlertStatus = "pending" | "acked" | "replaced";
+
+export interface DirectiveWorkspaceKpi {
+  id: string;
+  title: string;
+  target: number;
+  unit: string;
+}
+
+export interface DirectiveWorkspaceFaqItem {
+  id: string;
+  question: string;
+  answer: string;
+}
+
+/** Operations-room metadata for a single directive (دستورکار). */
+export interface DirectiveWorkspaceMeta {
+  directiveId: string;
+  objective: string;
+  expectedResults: string;
+  urgency: DirectiveUrgency;
+  mandatoryActions: string[];
+  suggestedActions: string[];
+  kpis: DirectiveWorkspaceKpi[];
+  brandGuide: string;
+  executionGuide: string;
+  approvalRequirements: string;
+  centralOwnerUserId?: string | null;
+  centralOwnerLabel?: string | null;
+  centralOwnerName?: string | null;
+  faq: DirectiveWorkspaceFaqItem[];
+  targetMinistryIds: string[];
+  targetOrganizationIds: string[];
+  targetProvinces: string[];
+  targetCities: string[];
+}
+
+export interface DirectiveWorkspaceAssetVersion {
+  id: string;
+  assetId: string;
+  versionNumber: number;
+  contentText?: string | null;
+  fileUrl?: string | null;
+  fileName?: string | null;
+  mimeType?: string | null;
+  fileSize: number;
+  changeNote: string;
+  createdByUserId?: string | null;
+  createdByName?: string | null;
+  isCurrent: boolean;
+  createdAt: string;
+}
+
+export interface DirectiveWorkspaceAsset {
+  id: string;
+  directiveId: string;
+  category: DirectiveWorkspaceAssetCategory;
+  title: string;
+  description: string;
+  printSize?: string | null;
+  sortOrder: number;
+  currentVersion: DirectiveWorkspaceAssetVersion | null;
+  versions: DirectiveWorkspaceAssetVersion[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DirectiveReplacementAlert {
+  id: string;
+  directiveId: string;
+  directiveTitle: string;
+  campaignId: string;
+  assetId: string;
+  assetTitle: string;
+  assetCategory: DirectiveWorkspaceAssetCategory;
+  oldVersionId: string;
+  oldVersionNumber: number;
+  newVersionId: string;
+  newVersionNumber: number;
+  userId: string;
+  userName?: string | null;
+  ministryId?: string | null;
+  ministryName?: string | null;
+  organizationId?: string | null;
+  organizationName?: string | null;
+  status: DirectiveReplacementAlertStatus;
+  createdAt: string;
+  ackedAt?: string | null;
+}
+
+export interface DirectiveWorkspaceBundle {
+  directive: CampaignDirective;
+  meta: DirectiveWorkspaceMeta;
+  assets: DirectiveWorkspaceAsset[];
+  pendingAlertCount: number;
 }
 
 export interface AuthSession {
