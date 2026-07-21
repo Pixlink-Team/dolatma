@@ -80,6 +80,23 @@ export async function ensureDirectiveCommandSchema(): Promise<void> {
     ALTER TABLE campaign_directives
       ADD COLUMN IF NOT EXISTS topic TEXT NOT NULL DEFAULT ''
   `;
+  // Audience columns required by national calendar conflict detection.
+  await sql`
+    ALTER TABLE campaign_directives
+      ADD COLUMN IF NOT EXISTS audience_ministry_id UUID
+  `;
+  await sql`
+    ALTER TABLE campaign_directives
+      ADD COLUMN IF NOT EXISTS audience_organization_id UUID
+  `;
+  await sql`
+    ALTER TABLE campaign_directives
+      ADD COLUMN IF NOT EXISTS audience_device_id UUID
+  `;
+  await sql`
+    ALTER TABLE campaign_directives
+      ADD COLUMN IF NOT EXISTS audience_cities TEXT[] NOT NULL DEFAULT '{}'
+  `;
   await sql`
     ALTER TABLE directive_recipients
       ADD COLUMN IF NOT EXISTS executed_at TIMESTAMPTZ

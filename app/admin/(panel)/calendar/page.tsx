@@ -1,20 +1,12 @@
 import { redirect } from "next/navigation";
 import { NationalCalendarAdmin } from "@/components/admin/national-calendar-admin";
-import { resolveAdminCampaignId } from "@/lib/admin-campaign";
 import { getAuthSession } from "@/lib/auth/get-session";
 import { getNationalCalendarAction } from "@/lib/actions/calendar-actions";
 import { isPostgresConfigured } from "@/lib/utils";
 
-interface PageProps {
-  searchParams: Promise<{ campaign?: string }>;
-}
-
-export default async function NationalCalendarPage({ searchParams }: PageProps) {
+export default async function NationalCalendarPage() {
   const session = await getAuthSession();
   if (!session) redirect("/admin/login");
-
-  const query = await searchParams;
-  const { campaignId } = await resolveAdminCampaignId(query.campaign);
 
   if (!isPostgresConfigured()) {
     return (
@@ -24,7 +16,8 @@ export default async function NationalCalendarPage({ searchParams }: PageProps) 
     );
   }
 
-  const result = await getNationalCalendarAction(campaignId);
+  // National view: all campaigns + all directives (no campaign filter).
+  const result = await getNationalCalendarAction(null);
   if (!result.success) {
     return (
       <div className="rounded-xl border p-6 text-sm text-destructive">

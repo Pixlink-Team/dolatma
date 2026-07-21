@@ -53,7 +53,7 @@ export function NationalCalendarAdmin({
       title: item.title,
       startDate: item.startDate,
       endDate: item.endDate,
-      topic: item.topics[0] ?? "",
+      topic: item.topics.filter(Boolean).join("، ") || "",
     })),
     ...directives.map((item) => ({
       id: item.id,
