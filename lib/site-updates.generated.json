@@ -1,6 +1,18 @@
 {
   "entries": [
     {
+      "hash": "176cda8c0fe7096cde05a973ae2010cd7f96853f",
+      "committedAt": "2026-07-21T17:54:23+03:30",
+      "title": "افزودن تقویم روزانه به رصد کاربران برای دیدن فعالیت هر روز",
+      "subject": "Add calendar day view to user audit dashboard"
+    },
+    {
+      "hash": "e91e4753c695088340a2f2a385704ed945bb6a9f",
+      "committedAt": "2026-07-21T17:16:39+03:30",
+      "title": "انتقال بهترین اقدامات به پایین منو کنار تنظیمات",
+      "subject": "Move best practices nav under management"
+    },
+    {
       "hash": "9052dc9a423012fc5038c4a1a9c87483a3bd337c",
       "committedAt": "2026-07-21T17:13:58+03:30",
       "title": "رفع باز نشدن تقویم ملی و نقشه ظرفیت",
