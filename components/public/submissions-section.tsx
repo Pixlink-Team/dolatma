@@ -6,6 +6,7 @@ import { KPICard } from "@/components/public/kpi-card";
 import { CollapsibleSection } from "@/components/public/collapsible-section";
 import { OwnerGroupedSection } from "@/components/public/owner-grouped-section";
 import { ParticipationChart } from "@/components/charts/participation-chart";
+import { CARD_THUMB_WIDTH, toCardThumbnailUrl } from "@/lib/card-thumbnail-url";
 import { useFilteredOwnerGroups } from "@/lib/hooks/use-filtered-owner-groups";
 import { flattenOwnerGroupsInSortOrder, shouldRenderChronologically } from "@/lib/owner-groups";
 import { useOwnerLocationFilter } from "@/lib/context/owner-location-filter-context";
@@ -42,9 +43,10 @@ function SubmissionCards({ submissions }: { submissions: CampaignSubmission[] })
           media={
             sub.mediaUrl ? (
               <Image
-                src={sub.mediaUrl}
+                src={toCardThumbnailUrl(sub.mediaUrl, { width: CARD_THUMB_WIDTH })}
                 alt={sub.title}
                 fill
+                unoptimized
                 className="object-cover"
                 sizes="(max-width: 1024px) 50vw, 25vw"
               />

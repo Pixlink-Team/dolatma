@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { MediaPlaceholder } from "@/components/ui/media-placeholder";
 import { getBillboardDisplayImage, hasBillboardDisplayImage } from "@/lib/billboard-media";
+import { CARD_THUMB_WIDTH, toCardThumbnailUrl } from "@/lib/card-thumbnail-url";
 import type { Billboard } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -12,11 +13,13 @@ interface BillboardThumbnailProps {
   sizes: string;
   className?: string;
   imageClassName?: string;
+  thumbWidth?: number;
 }
 
 /**
  * Use a plain img for billboards: next/image optimization often fails for
  * signed /api/files URLs and for remote image hosts the server cannot reach.
+ * Local uploads are served as small WebP thumbs via ?w=&q=.
  */
 export function BillboardThumbnail({
   billboard,
@@ -24,9 +27,11 @@ export function BillboardThumbnail({
   sizes: _sizes,
   className,
   imageClassName,
+  thumbWidth = CARD_THUMB_WIDTH,
 }: BillboardThumbnailProps) {
   void _sizes;
   const [imageFailed, setImageFailed] = useState(false);
+  const [useFullSrc, setUseFullSrc] = useState(false);
   const hasImage = hasBillboardDisplayImage(billboard) && !imageFailed;
 
   if (!hasImage) {
@@ -38,15 +43,25 @@ export function BillboardThumbnail({
     );
   }
 
+  const fullSrc = getBillboardDisplayImage(billboard);
+  const thumbSrc = toCardThumbnailUrl(fullSrc, { width: thumbWidth });
+  const previewSrc = useFullSrc || thumbSrc === fullSrc ? fullSrc : thumbSrc;
+
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src={getBillboardDisplayImage(billboard)}
+      src={previewSrc}
       alt={alt}
       loading="lazy"
       decoding="async"
       className={cn("absolute inset-0 h-full w-full object-cover", imageClassName, className)}
-      onError={() => setImageFailed(true)}
+      onError={() => {
+        if (!useFullSrc && previewSrc !== fullSrc) {
+          setUseFullSrc(true);
+          return;
+        }
+        setImageFailed(true);
+      }}
     />
   );
 }

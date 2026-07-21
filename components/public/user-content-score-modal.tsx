@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { ImageZoom } from "@/components/ui/image-zoom";
+import { COMPACT_THUMB_WIDTH, toCardThumbnailUrl } from "@/lib/card-thumbnail-url";
 import type { UserContentScoreItem } from "@/lib/city-leaderboard";
 import { formatPersianNumber } from "@/lib/utils";
 
@@ -63,8 +64,12 @@ export function UserContentScoreModal({
                     {item.thumbnailUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
-                        src={item.thumbnailUrl}
+                        src={toCardThumbnailUrl(item.thumbnailUrl, {
+                          width: COMPACT_THUMB_WIDTH,
+                        })}
                         alt={item.title}
+                        loading="lazy"
+                        decoding="async"
                         className="h-14 w-14 shrink-0 rounded-md object-cover"
                       />
                     ) : (

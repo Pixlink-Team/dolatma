@@ -4,6 +4,7 @@ import { useCallback, useRef, useState } from "react";
 import { Minus, Plus, X, ZoomIn } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { CARD_THUMB_WIDTH, toCardThumbnailUrl } from "@/lib/card-thumbnail-url";
 import { cn } from "@/lib/utils";
 
 const DEFAULT_SIZES = "(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 280px";
@@ -19,6 +20,8 @@ interface ImageZoomProps {
   sizes?: string;
   /** Thumbnail quality (1–100). Lower = less bandwidth. */
   quality?: number;
+  /** Max pixel width for the card preview thumbnail. */
+  thumbWidth?: number;
   /** Called when the thumbnail image fails to load */
   onError?: () => void;
 }
@@ -30,15 +33,18 @@ export function ImageZoom({
   imgClassName,
   showHint = true,
   sizes: _sizes = DEFAULT_SIZES,
-  quality: _quality,
+  quality = 70,
+  thumbWidth = CARD_THUMB_WIDTH,
   onError,
 }: ImageZoomProps) {
   void _sizes;
-  void _quality;
   const [open, setOpen] = useState(false);
   const [scale, setScale] = useState(1);
   const [imageFailed, setImageFailed] = useState(false);
+  const [useFullSrc, setUseFullSrc] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const thumbSrc = toCardThumbnailUrl(src, { width: thumbWidth, quality });
+  const previewSrc = useFullSrc || thumbSrc === src ? src : thumbSrc;
 
   const resetZoom = useCallback(() => setScale(1), []);
 
@@ -48,6 +54,10 @@ export function ImageZoom({
   };
 
   const handleImageError = () => {
+    if (!useFullSrc && previewSrc !== src) {
+      setUseFullSrc(true);
+      return;
+    }
     setImageFailed(true);
     onError?.();
   };
@@ -71,7 +81,7 @@ export function ImageZoom({
         {/* Plain img avoids next/image optimizer failures for signed/local and remote hosts */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={src}
+          src={previewSrc}
           alt={alt}
           loading="lazy"
           decoding="async"
@@ -133,6 +143,7 @@ export function ImageZoom({
               setScale((s) => Math.min(4, Math.max(0.5, Number((s + delta).toFixed(2)))));
             }}
           >
+            {/* Full-resolution image only when the lightbox is open */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={src}

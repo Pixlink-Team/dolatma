@@ -28,6 +28,7 @@ import {
 } from "@/lib/public-media-section";
 import { VideoThumbnail } from "@/components/media/video-thumbnail";
 import { cn } from "@/lib/utils";
+import { CARD_THUMB_WIDTH, toCardThumbnailUrl } from "@/lib/card-thumbnail-url";
 import { downloadMedia, getFilenameFromUrl } from "@/lib/media-utils";
 
 type CreativePublicFilter = "all" | "creative";
@@ -89,9 +90,10 @@ function ActivityCard({
           />
         ) : activity.imageUrl ? (
           <Image
-            src={activity.imageUrl}
+            src={toCardThumbnailUrl(activity.imageUrl, { width: CARD_THUMB_WIDTH })}
             alt={activity.title}
             fill
+            unoptimized
             className="object-cover apple-media-zoom"
             sizes="(max-width: 1280px) 16vw, 200px"
           />

@@ -3,6 +3,11 @@ import path from "path";
 import { NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth/get-session";
 import { verifyFileAccessToken } from "@/lib/auth/file-access-token";
+import {
+  getOrCreateUploadThumbnail,
+  parseThumbnailQuality,
+  parseThumbnailWidth,
+} from "@/lib/services/resize-upload-image";
 import { resolveUploadFilePath } from "@/lib/uploads";
 
 const MIME_TYPES: Record<string, string> = {
@@ -61,6 +66,23 @@ export async function GET(
 
     if (!fileStat.isFile()) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+
+    const { searchParams } = new URL(request.url);
+    const thumbWidth = parseThumbnailWidth(searchParams.get("w"));
+    if (thumbWidth) {
+      const quality = parseThumbnailQuality(searchParams.get("q"));
+      const thumb = await getOrCreateUploadThumbnail(filePath, filename, thumbWidth, quality);
+      if (thumb) {
+        return new NextResponse(new Uint8Array(thumb.buffer), {
+          headers: {
+            "Content-Type": thumb.contentType,
+            "Content-Length": String(thumb.buffer.length),
+            "Cache-Control": "private, max-age=86400",
+            "X-Content-Type-Options": "nosniff",
+          },
+        });
+      }
     }
 
     const contentType = getContentType(filename);

@@ -14,6 +14,7 @@ import { BillboardThumbnail } from "@/components/public/billboard-thumbnail";
 import { resolveBillboardCategoryDisplay } from "@/lib/billboard-categories";
 import { formatBillboardCityLine } from "@/lib/billboard-location";
 import { getBillboardDisplayImage, hasBillboardDisplayImage } from "@/lib/billboards";
+import { COMPACT_THUMB_WIDTH, toCardThumbnailUrl } from "@/lib/card-thumbnail-url";
 import type { Billboard } from "@/lib/types";
 import { formatPersianNumber } from "@/lib/utils";
 
@@ -68,8 +69,12 @@ export function LeaderboardBillboardsModal({
                         {canShowImage ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
-                            src={getBillboardDisplayImage(billboard)}
+                            src={toCardThumbnailUrl(getBillboardDisplayImage(billboard), {
+                              width: COMPACT_THUMB_WIDTH,
+                            })}
                             alt={billboard.title}
+                            loading="lazy"
+                            decoding="async"
                             className="h-full w-full object-cover"
                           />
                         ) : (
@@ -77,6 +82,7 @@ export function LeaderboardBillboardsModal({
                             billboard={billboard}
                             alt={billboard.title}
                             sizes="56px"
+                            thumbWidth={COMPACT_THUMB_WIDTH}
                           />
                         )}
                       </div>

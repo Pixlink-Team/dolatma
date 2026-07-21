@@ -5,6 +5,7 @@ import {
   isLocalUploadedMediaUrl,
   OptimizedMediaImage,
 } from "@/components/ui/optimized-media-image";
+import { CARD_THUMB_WIDTH, toCardThumbnailUrl } from "@/lib/card-thumbnail-url";
 import { cn } from "@/lib/utils";
 
 interface MediaThumbnailProps {
@@ -15,6 +16,8 @@ interface MediaThumbnailProps {
   className?: string;
   sizes?: string;
   objectFit?: "cover" | "contain";
+  /** Max pixel width for local /api/files thumbnails. */
+  thumbWidth?: number;
 }
 
 function shouldUsePlainImg(url: string): boolean {
@@ -33,18 +36,20 @@ export function MediaThumbnail({
   className,
   sizes = "400px",
   objectFit = "cover",
+  thumbWidth = CARD_THUMB_WIDTH,
 }: MediaThumbnailProps) {
   if (!src) {
     return <MediaPlaceholder kind={kind} className={className} />;
   }
 
   const fitClass = objectFit === "contain" ? "object-contain" : "object-cover";
+  const displaySrc = toCardThumbnailUrl(src, { width: thumbWidth });
 
   if (shouldUsePlainImg(src) || kind === "billboard") {
     return (
       // eslint-disable-next-line @next/next/no-img-element
       <img
-        src={src}
+        src={displaySrc}
         alt={alt}
         loading="lazy"
         decoding="async"
@@ -59,7 +64,7 @@ export function MediaThumbnail({
 
   return (
     <OptimizedMediaImage
-      src={src}
+      src={displaySrc}
       alt={alt}
       fill={fill}
       loading="lazy"

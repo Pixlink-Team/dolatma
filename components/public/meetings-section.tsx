@@ -5,6 +5,7 @@ import Image from "next/image";
 import { Download, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { CARD_THUMB_WIDTH, toCardThumbnailUrl } from "@/lib/card-thumbnail-url";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PublicContentCard } from "@/components/public/public-content-card";
@@ -67,9 +68,10 @@ function MeetingPreviewCard({
       media={
         meeting.imageUrl ? (
           <Image
-            src={meeting.imageUrl}
+            src={toCardThumbnailUrl(meeting.imageUrl, { width: CARD_THUMB_WIDTH })}
             alt={meeting.title}
             fill
+            unoptimized
             className="object-cover"
             sizes="(max-width: 1024px) 50vw, 33vw"
           />
