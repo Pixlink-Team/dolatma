@@ -1,6 +1,24 @@
 {
   "entries": [
     {
+      "hash": "531236c86570d9d6d536ca13eba46cb7b30e1762",
+      "committedAt": "2026-07-21T17:57:46+03:30",
+      "title": "رفع تقویم ملی و انتقال نقشه ظرفیت به تنظیمات مدیریت",
+      "subject": "Fix national calendar schema and move capacity map to settings nav"
+    },
+    {
+      "hash": "ce9545e814821564987705e9415844612ebe195a",
+      "committedAt": "2026-07-21T17:57:00+03:30",
+      "title": "ثبت دقیق ظرفیت‌ها با فیلدهای قابل گزارش مثل ظرفیت سالن و موقعیت",
+      "subject": "Add structured fields for capacity registration reporting"
+    },
+    {
+      "hash": "fc7ac14a9bf01637930f0641046318ed5cdf1a75",
+      "committedAt": "2026-07-21T17:56:25+03:30",
+      "title": "نمایش تصاویر کارت‌ها با حجم کمتر برای بارگذاری سریع‌تر",
+      "subject": "Serve small WebP thumbnails for card images"
+    },
+    {
       "hash": "176cda8c0fe7096cde05a973ae2010cd7f96853f",
       "committedAt": "2026-07-21T17:54:23+03:30",
       "title": "افزودن تقویم روزانه به رصد کاربران برای دیدن فعالیت هر روز",
