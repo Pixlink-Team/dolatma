@@ -1,7 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { canManageDirectives, canViewDirectives } from "@/lib/auth/access";
+import {
+  canManageDirectiveRecord,
+  canViewDirectives,
+} from "@/lib/auth/access";
 import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
 import * as pgWorkspace from "@/lib/db/repository-directive-workspace";
 import * as pgDirectives from "@/lib/db/repository-directives";
@@ -11,6 +14,8 @@ import {
   isWorkspaceAssetCategory,
 } from "@/lib/directive-workspace";
 import type {
+  AuthSession,
+  CampaignDirective,
   DirectiveAssetEventType,
   DirectiveReplacementAlert,
   DirectiveUrgency,
@@ -43,6 +48,16 @@ async function assertWorkspaceAccess(campaignId: string) {
   }
 
   return { session, error: null };
+}
+
+function assertCanManageDirectiveWorkspace(
+  session: AuthSession,
+  directive: CampaignDirective
+): string | null {
+  if (!canManageDirectiveRecord(session, directive)) {
+    return "فقط اتاق عملیات دستورکارهای خودتان را می‌توانید ویرایش کنید";
+  }
+  return null;
 }
 
 function revalidateWorkspace(campaignId: string, directiveId: string) {
@@ -105,7 +120,7 @@ export async function getDirectiveWorkspaceAction(directiveId: string): Promise<
     };
   }
 
-  const canManage = canManageDirectives(access.session);
+  const canManage = canManageDirectiveRecord(access.session, directive);
   const bundle = await pgWorkspace.pgGetDirectiveWorkspaceBundle(directiveId, {
     pendingAlertsForUserId: canManage ? null : access.session.userId,
   });
@@ -163,8 +178,9 @@ export async function saveDirectiveWorkspaceMetaAction(input: {
   if (access.error || !access.session) {
     return { success: false as const, error: access.error ?? "Unauthorized" };
   }
-  if (!canManageDirectives(access.session)) {
-    return { success: false as const, error: "فقط مدیر و کارفرما می‌توانند اتاق عملیات را ویرایش کنند" };
+  const manageError = assertCanManageDirectiveWorkspace(access.session, directive);
+  if (manageError) {
+    return { success: false as const, error: manageError };
   }
 
   const payload: Omit<DirectiveWorkspaceMeta, "directiveId" | "centralOwnerName"> = {
@@ -232,8 +248,9 @@ export async function createDirectiveWorkspaceAssetAction(input: {
   if (access.error || !access.session) {
     return { success: false as const, error: access.error ?? "Unauthorized" };
   }
-  if (!canManageDirectives(access.session)) {
-    return { success: false as const, error: "دسترسی ندارید" };
+  const manageError = assertCanManageDirectiveWorkspace(access.session, directive);
+  if (manageError) {
+    return { success: false as const, error: manageError };
   }
 
   const result = await pgWorkspace.pgCreateDirectiveWorkspaceAsset({
@@ -286,8 +303,9 @@ export async function addDirectiveWorkspaceAssetVersionAction(input: {
   if (access.error || !access.session) {
     return { success: false as const, error: access.error ?? "Unauthorized" };
   }
-  if (!canManageDirectives(access.session)) {
-    return { success: false as const, error: "دسترسی ندارید" };
+  const manageError = assertCanManageDirectiveWorkspace(access.session, directive);
+  if (manageError) {
+    return { success: false as const, error: manageError };
   }
 
   try {
@@ -326,8 +344,9 @@ export async function deleteDirectiveWorkspaceAssetAction(input: {
   if (access.error || !access.session) {
     return { success: false as const, error: access.error ?? "Unauthorized" };
   }
-  if (!canManageDirectives(access.session)) {
-    return { success: false as const, error: "دسترسی ندارید" };
+  const manageError = assertCanManageDirectiveWorkspace(access.session, directive);
+  if (manageError) {
+    return { success: false as const, error: manageError };
   }
 
   await pgWorkspace.pgDeleteDirectiveWorkspaceAsset(input.assetId);

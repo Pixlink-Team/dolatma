@@ -1,7 +1,12 @@
 import { redirect } from "next/navigation";
 import { DirectiveWorkspaceAdmin } from "@/components/admin/directive-workspace-admin";
 import { resolveAdminCampaignId } from "@/lib/admin-campaign";
-import { canManageDirectives, canViewDirectives } from "@/lib/auth/access";
+import {
+  canManageDirectiveRecord,
+  canManageDirectivesGlobally,
+  canViewDirectives,
+  isScopedDirectiveIssuer,
+} from "@/lib/auth/access";
 import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
 import {
   pgGetDirectiveWorkspaceBundle,
@@ -47,14 +52,22 @@ export default async function DirectiveWorkspacePage({ params, searchParams }: P
     redirect(`/admin/directives?campaign=${campaignId}`);
   }
 
-  const canManage = canManageDirectives(session);
+  const canManage = canManageDirectiveRecord(session, directive);
 
   if (!canManage && session.userId) {
     const inbox = await pgListDirectivesForUserInbox(campaignId, session.userId);
     if (!inbox.some((item) => item.id === id)) {
       redirect(`/admin/directives?campaign=${campaignId}`);
     }
+  } else if (!canManage) {
+    redirect(`/admin/directives?campaign=${campaignId}`);
   }
+
+  const audienceScope = canManageDirectivesGlobally(session)
+    ? "global"
+    : isScopedDirectiveIssuer(session)
+      ? "subordinates"
+      : "global";
 
   const [bundle, alerts, campaignUsers, ministries] = await Promise.all([
     pgGetDirectiveWorkspaceBundle(id, {
@@ -65,7 +78,12 @@ export default async function DirectiveWorkspacePage({ params, searchParams }: P
       : session.userId
         ? pgListReplacementAlertsForUser(session.userId, { directiveId: id })
         : Promise.resolve([]),
-    canManage ? pgListCampaignUsersForDirectives(campaignId) : Promise.resolve([]),
+    canManage
+      ? pgListCampaignUsersForDirectives(campaignId, {
+          parentUserId:
+            audienceScope === "subordinates" ? session.userId ?? undefined : undefined,
+        })
+      : Promise.resolve([]),
     pgListMinistries({ includeOrganizations: true }),
   ]);
 

@@ -144,6 +144,8 @@ interface CampaignUserOption {
 interface DirectivesAdminProps {
   campaignId: string;
   canManage: boolean;
+  /** Global = full campaign; subordinates = only the issuer's sub-users. */
+  audienceScope?: "global" | "subordinates";
   /** Active (non-archived) campaign directives for managers. */
   initialDirectives: CampaignDirective[];
   /** Archived campaign directives for managers. */
@@ -154,7 +156,10 @@ interface DirectivesAdminProps {
   ministries?: Ministry[];
 }
 
-function formatAudienceLabel(item: CampaignDirective): string {
+function formatAudienceLabel(
+  item: CampaignDirective,
+  audienceScope: "global" | "subordinates"
+): string {
   if (item.audienceType === "region") {
     return item.audienceRegion ? `منطقه ${getUserRegionLabel(item.audienceRegion)}` : "منطقه";
   }
@@ -166,7 +171,7 @@ function formatAudienceLabel(item: CampaignDirective): string {
     const scope = org ? `${ministry} › ${org}` : ministry;
     return provinces ? `${scope} — ${provinces}` : scope;
   }
-  return "همه کاربران";
+  return audienceScope === "subordinates" ? "همه زیرمجموعه‌ها" : "همه کاربران";
 }
 
 const smsStatusLabels: Record<DirectiveRecipient["smsStatus"], string> = {
@@ -269,6 +274,7 @@ function DirectiveDateRange({ item }: { item: CampaignDirective }) {
 export function DirectivesAdmin({
   campaignId,
   canManage,
+  audienceScope = "global",
   initialDirectives,
   archivedDirectives: initialArchived = [],
   inboxDirectives: initialInbox,
@@ -546,7 +552,9 @@ export function DirectivesAdmin({
           <h1 className="text-2xl font-bold">دستورکارها</h1>
           <p className="text-sm text-muted-foreground">
             {canManage
-              ? "انتشار دستورکار برای کاربران و پیگیری مشاهده و پیامک"
+              ? audienceScope === "subordinates"
+                ? "صدور دستورکار برای زیرمجموعه‌های خودتان و پیگیری مشاهده"
+                : "انتشار دستورکار برای کاربران و پیگیری مشاهده و پیامک"
               : "دستورکارهای جدید را ببینید، نامه رسمی را مشاهده کنید و تأیید مشاهده بزنید"}
           </p>
         </div>
@@ -633,7 +641,7 @@ export function DirectivesAdmin({
                     <h2 className="text-lg font-semibold">{item.title}</h2>
                     {item.priority === "urgent" && <Badge variant="destructive">فوری</Badge>}
                     {!showingInbox && (
-                      <Badge variant="outline">{formatAudienceLabel(item)}</Badge>
+                      <Badge variant="outline">{formatAudienceLabel(item, audienceScope)}</Badge>
                     )}
                     {showingArchive && <Badge variant="secondary">آرشیو</Badge>}
                     {showingInbox && !item.confirmed && <Badge>جدید</Badge>}
@@ -1009,15 +1017,24 @@ export function DirectivesAdmin({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">همه کاربران این اقدام</SelectItem>
-                  <SelectItem value="ministry_city">وزارتخانه و استان</SelectItem>
-                  <SelectItem value="region">منطقه جغرافیایی</SelectItem>
-                  <SelectItem value="users">افراد انتخابی</SelectItem>
+                  {audienceScope === "subordinates" ? (
+                    <>
+                      <SelectItem value="all">همه زیرمجموعه‌های من</SelectItem>
+                      <SelectItem value="users">افراد انتخابی از زیرمجموعه</SelectItem>
+                    </>
+                  ) : (
+                    <>
+                      <SelectItem value="all">همه کاربران این اقدام</SelectItem>
+                      <SelectItem value="ministry_city">وزارتخانه و استان</SelectItem>
+                      <SelectItem value="region">منطقه جغرافیایی</SelectItem>
+                      <SelectItem value="users">افراد انتخابی</SelectItem>
+                    </>
+                  )}
                 </SelectContent>
               </Select>
             </div>
 
-            {audienceType === "region" && (
+            {audienceScope === "global" && audienceType === "region" && (
               <div className="space-y-2">
                 <Label>منطقه</Label>
                 <Select
@@ -1040,7 +1057,7 @@ export function DirectivesAdmin({
               </div>
             )}
 
-            {audienceType === "ministry_city" && (
+            {audienceScope === "global" && audienceType === "ministry_city" && (
               <div className="space-y-3 rounded-lg border p-3">
                 <div className="space-y-2">
                   <Label>وزارتخانه</Label>
@@ -1149,7 +1166,11 @@ export function DirectivesAdmin({
                 <Label>انتخاب کاربران</Label>
                 <div className="max-h-48 space-y-2 overflow-y-auto rounded-lg border p-3">
                   {campaignUsers.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">کاربری در این اقدام نیست</p>
+                    <p className="text-sm text-muted-foreground">
+                      {audienceScope === "subordinates"
+                        ? "هنوز کاربر زیرمجموعه‌ای ندارید"
+                        : "کاربری در این اقدام نیست"}
+                    </p>
                   ) : (
                     campaignUsers.map((user) => (
                       <label key={user.id} className="flex items-center gap-2 text-sm">

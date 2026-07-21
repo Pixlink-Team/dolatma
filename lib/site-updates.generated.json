@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "bfecaf0dbb89e1b1f1b4591f1b2fe11043586950",
+      "committedAt": "2026-07-21T15:56:30+03:30",
+      "title": "انتقال بخش خروجی و پشتیبان‌گیری به تنظیمات اقدام",
+      "subject": "Move campaign export and backup tools into settings"
+    },
+    {
       "hash": "6ae723dfecb38213ae3b40141f0d2aa9051ebc7a",
       "committedAt": "2026-07-21T15:53:07+03:30",
       "title": "رفع خطای باز شدن شناسنامه ۳۶۰ درجه دستگاه",

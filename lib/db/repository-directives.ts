@@ -180,7 +180,10 @@ async function loadAttachmentsForDirectives(
   return map;
 }
 
-export async function pgListCampaignUsersForDirectives(campaignId: string): Promise<
+export async function pgListCampaignUsersForDirectives(
+  campaignId: string,
+  options?: { parentUserId?: string }
+): Promise<
   Array<{
     id: string;
     name: string;
@@ -197,19 +200,36 @@ export async function pgListCampaignUsersForDirectives(campaignId: string): Prom
   }>
 > {
   const sql = getSql();
-  const rows = await sql`
-    SELECT
-      u.id, u.name, u.email, u.role, u.region, u.phone,
-      u.province, u.city, u.ministry_id, m.name AS ministry_name,
-      u.organization_id, o.name AS organization_name
-    FROM users u
-    INNER JOIN user_campaign_access uca ON uca.user_id = u.id
-    LEFT JOIN ministries m ON m.id = u.ministry_id
-    LEFT JOIN ministry_organizations o ON o.id = u.organization_id
-    WHERE uca.campaign_id = ${campaignId}
-      AND u.role IN ('contributor', 'client', 'ministry_parent', 'sub_user')
-    ORDER BY u.name ASC
-  `;
+  const parentUserId = options?.parentUserId?.trim() || null;
+
+  const rows = parentUserId
+    ? await sql`
+        SELECT
+          u.id, u.name, u.email, u.role, u.region, u.phone,
+          u.province, u.city, u.ministry_id, m.name AS ministry_name,
+          u.organization_id, o.name AS organization_name
+        FROM users u
+        INNER JOIN user_campaign_access uca ON uca.user_id = u.id
+        LEFT JOIN ministries m ON m.id = u.ministry_id
+        LEFT JOIN ministry_organizations o ON o.id = u.organization_id
+        WHERE uca.campaign_id = ${campaignId}
+          AND u.parent_user_id = ${parentUserId}
+          AND u.role = 'sub_user'
+        ORDER BY u.name ASC
+      `
+    : await sql`
+        SELECT
+          u.id, u.name, u.email, u.role, u.region, u.phone,
+          u.province, u.city, u.ministry_id, m.name AS ministry_name,
+          u.organization_id, o.name AS organization_name
+        FROM users u
+        INNER JOIN user_campaign_access uca ON uca.user_id = u.id
+        LEFT JOIN ministries m ON m.id = u.ministry_id
+        LEFT JOIN ministry_organizations o ON o.id = u.organization_id
+        WHERE uca.campaign_id = ${campaignId}
+          AND u.role IN ('contributor', 'client', 'ministry_parent', 'sub_user')
+        ORDER BY u.name ASC
+      `;
 
   return rows.map((row) => ({
     id: String(row.id),
@@ -236,18 +256,33 @@ export async function pgResolveDirectiveAudienceUserIds(input: {
   audienceOrganizationId?: string | null;
   audienceProvinces?: string[];
   selectedUserIds?: string[];
+  /** When set, only these users may be resolved (e.g. issuer's subordinates). */
+  allowedUserIds?: string[] | null;
+  /** Limit the candidate pool to subordinates of this parent. */
+  parentUserId?: string | null;
 }): Promise<string[]> {
-  const users = await pgListCampaignUsersForDirectives(input.campaignId);
+  const users = await pgListCampaignUsersForDirectives(input.campaignId, {
+    parentUserId: input.parentUserId ?? undefined,
+  });
+  const allowed =
+    input.allowedUserIds && input.allowedUserIds.length > 0
+      ? new Set(input.allowedUserIds)
+      : null;
+  const inScope = (userId: string) => (allowed ? allowed.has(userId) : true);
 
   if (input.audienceType === "users") {
     const selected = new Set(input.selectedUserIds ?? []);
-    return users.filter((user) => selected.has(user.id)).map((user) => user.id);
+    return users
+      .filter((user) => selected.has(user.id) && inScope(user.id))
+      .map((user) => user.id);
   }
 
   if (input.audienceType === "region") {
     const region = input.audienceRegion;
     if (!region) return [];
-    return users.filter((user) => user.region === region).map((user) => user.id);
+    return users
+      .filter((user) => user.region === region && inScope(user.id))
+      .map((user) => user.id);
   }
 
   if (input.audienceType === "ministry_city") {
@@ -261,6 +296,7 @@ export async function pgResolveDirectiveAudienceUserIds(input: {
     const provinceSet = new Set(provinces.map((province) => province.toLowerCase()));
     return users
       .filter((user) => {
+        if (!inScope(user.id)) return false;
         if (user.ministryId !== ministryId) return false;
         if (organizationId && user.organizationId !== organizationId) {
           // Parent of the ministry still receives ministry/org-scoped directives.
@@ -272,38 +308,67 @@ export async function pgResolveDirectiveAudienceUserIds(input: {
       .map((user) => user.id);
   }
 
-  return users.map((user) => user.id);
+  return users.filter((user) => inScope(user.id)).map((user) => user.id);
 }
 
 export async function pgListDirectivesForCampaign(
-  campaignId: string
+  campaignId: string,
+  options?: { createdByUserId?: string }
 ): Promise<CampaignDirective[]> {
   const sql = getSql();
-  const rows = await sql`
-    SELECT
-      d.*,
-      creator.name AS created_by_name,
-      ministry.name AS audience_ministry_name,
-      org.name AS audience_organization_name,
-      COALESCE(stats.recipient_count, 0)::int AS recipient_count,
-      COALESCE(stats.seen_count, 0)::int AS seen_count,
-      COALESCE(stats.unseen_count, 0)::int AS unseen_count
-    FROM campaign_directives d
-    LEFT JOIN users creator ON creator.id = d.created_by_user_id
-    LEFT JOIN ministries ministry ON ministry.id = d.audience_ministry_id
-    LEFT JOIN ministry_organizations org ON org.id = d.audience_organization_id
-    LEFT JOIN LATERAL (
-      SELECT
-        COUNT(*)::int AS recipient_count,
-        COUNT(*) FILTER (WHERE confirmed = true)::int AS seen_count,
-        COUNT(*) FILTER (WHERE confirmed = false)::int AS unseen_count
-      FROM directive_recipients r
-      WHERE r.directive_id = d.id
-    ) stats ON true
-    WHERE d.campaign_id = ${campaignId}
-      AND d.archived_at IS NULL
-    ORDER BY d.created_at DESC
-  `;
+  const createdByUserId = options?.createdByUserId?.trim() || null;
+  const rows = createdByUserId
+    ? await sql`
+        SELECT
+          d.*,
+          creator.name AS created_by_name,
+          ministry.name AS audience_ministry_name,
+          org.name AS audience_organization_name,
+          COALESCE(stats.recipient_count, 0)::int AS recipient_count,
+          COALESCE(stats.seen_count, 0)::int AS seen_count,
+          COALESCE(stats.unseen_count, 0)::int AS unseen_count
+        FROM campaign_directives d
+        LEFT JOIN users creator ON creator.id = d.created_by_user_id
+        LEFT JOIN ministries ministry ON ministry.id = d.audience_ministry_id
+        LEFT JOIN ministry_organizations org ON org.id = d.audience_organization_id
+        LEFT JOIN LATERAL (
+          SELECT
+            COUNT(*)::int AS recipient_count,
+            COUNT(*) FILTER (WHERE confirmed = true)::int AS seen_count,
+            COUNT(*) FILTER (WHERE confirmed = false)::int AS unseen_count
+          FROM directive_recipients r
+          WHERE r.directive_id = d.id
+        ) stats ON true
+        WHERE d.campaign_id = ${campaignId}
+          AND d.archived_at IS NULL
+          AND d.created_by_user_id = ${createdByUserId}
+        ORDER BY d.created_at DESC
+      `
+    : await sql`
+        SELECT
+          d.*,
+          creator.name AS created_by_name,
+          ministry.name AS audience_ministry_name,
+          org.name AS audience_organization_name,
+          COALESCE(stats.recipient_count, 0)::int AS recipient_count,
+          COALESCE(stats.seen_count, 0)::int AS seen_count,
+          COALESCE(stats.unseen_count, 0)::int AS unseen_count
+        FROM campaign_directives d
+        LEFT JOIN users creator ON creator.id = d.created_by_user_id
+        LEFT JOIN ministries ministry ON ministry.id = d.audience_ministry_id
+        LEFT JOIN ministry_organizations org ON org.id = d.audience_organization_id
+        LEFT JOIN LATERAL (
+          SELECT
+            COUNT(*)::int AS recipient_count,
+            COUNT(*) FILTER (WHERE confirmed = true)::int AS seen_count,
+            COUNT(*) FILTER (WHERE confirmed = false)::int AS unseen_count
+          FROM directive_recipients r
+          WHERE r.directive_id = d.id
+        ) stats ON true
+        WHERE d.campaign_id = ${campaignId}
+          AND d.archived_at IS NULL
+        ORDER BY d.created_at DESC
+      `;
 
   const ids = rows.map((row) => String(row.id));
   const attachmentsMap = await loadAttachmentsForDirectives(ids);
@@ -314,34 +379,63 @@ export async function pgListDirectivesForCampaign(
 }
 
 export async function pgListArchivedDirectivesForCampaign(
-  campaignId: string
+  campaignId: string,
+  options?: { createdByUserId?: string }
 ): Promise<CampaignDirective[]> {
   const sql = getSql();
-  const rows = await sql`
-    SELECT
-      d.*,
-      creator.name AS created_by_name,
-      ministry.name AS audience_ministry_name,
-      org.name AS audience_organization_name,
-      COALESCE(stats.recipient_count, 0)::int AS recipient_count,
-      COALESCE(stats.seen_count, 0)::int AS seen_count,
-      COALESCE(stats.unseen_count, 0)::int AS unseen_count
-    FROM campaign_directives d
-    LEFT JOIN users creator ON creator.id = d.created_by_user_id
-    LEFT JOIN ministries ministry ON ministry.id = d.audience_ministry_id
-    LEFT JOIN ministry_organizations org ON org.id = d.audience_organization_id
-    LEFT JOIN LATERAL (
-      SELECT
-        COUNT(*)::int AS recipient_count,
-        COUNT(*) FILTER (WHERE confirmed = true)::int AS seen_count,
-        COUNT(*) FILTER (WHERE confirmed = false)::int AS unseen_count
-      FROM directive_recipients r
-      WHERE r.directive_id = d.id
-    ) stats ON true
-    WHERE d.campaign_id = ${campaignId}
-      AND d.archived_at IS NOT NULL
-    ORDER BY d.archived_at DESC, d.created_at DESC
-  `;
+  const createdByUserId = options?.createdByUserId?.trim() || null;
+  const rows = createdByUserId
+    ? await sql`
+        SELECT
+          d.*,
+          creator.name AS created_by_name,
+          ministry.name AS audience_ministry_name,
+          org.name AS audience_organization_name,
+          COALESCE(stats.recipient_count, 0)::int AS recipient_count,
+          COALESCE(stats.seen_count, 0)::int AS seen_count,
+          COALESCE(stats.unseen_count, 0)::int AS unseen_count
+        FROM campaign_directives d
+        LEFT JOIN users creator ON creator.id = d.created_by_user_id
+        LEFT JOIN ministries ministry ON ministry.id = d.audience_ministry_id
+        LEFT JOIN ministry_organizations org ON org.id = d.audience_organization_id
+        LEFT JOIN LATERAL (
+          SELECT
+            COUNT(*)::int AS recipient_count,
+            COUNT(*) FILTER (WHERE confirmed = true)::int AS seen_count,
+            COUNT(*) FILTER (WHERE confirmed = false)::int AS unseen_count
+          FROM directive_recipients r
+          WHERE r.directive_id = d.id
+        ) stats ON true
+        WHERE d.campaign_id = ${campaignId}
+          AND d.archived_at IS NOT NULL
+          AND d.created_by_user_id = ${createdByUserId}
+        ORDER BY d.archived_at DESC, d.created_at DESC
+      `
+    : await sql`
+        SELECT
+          d.*,
+          creator.name AS created_by_name,
+          ministry.name AS audience_ministry_name,
+          org.name AS audience_organization_name,
+          COALESCE(stats.recipient_count, 0)::int AS recipient_count,
+          COALESCE(stats.seen_count, 0)::int AS seen_count,
+          COALESCE(stats.unseen_count, 0)::int AS unseen_count
+        FROM campaign_directives d
+        LEFT JOIN users creator ON creator.id = d.created_by_user_id
+        LEFT JOIN ministries ministry ON ministry.id = d.audience_ministry_id
+        LEFT JOIN ministry_organizations org ON org.id = d.audience_organization_id
+        LEFT JOIN LATERAL (
+          SELECT
+            COUNT(*)::int AS recipient_count,
+            COUNT(*) FILTER (WHERE confirmed = true)::int AS seen_count,
+            COUNT(*) FILTER (WHERE confirmed = false)::int AS unseen_count
+          FROM directive_recipients r
+          WHERE r.directive_id = d.id
+        ) stats ON true
+        WHERE d.campaign_id = ${campaignId}
+          AND d.archived_at IS NOT NULL
+        ORDER BY d.archived_at DESC, d.created_at DESC
+      `;
 
   const ids = rows.map((row) => String(row.id));
   const attachmentsMap = await loadAttachmentsForDirectives(ids);
@@ -487,6 +581,8 @@ export interface SaveDirectiveInput {
     fileSize: number;
   }>;
   selectedUserIds?: string[];
+  /** When set, audience resolution is limited to this parent's sub-users. */
+  parentUserId?: string | null;
 }
 
 export async function pgSaveDirective(input: SaveDirectiveInput): Promise<{ id: string }> {
@@ -639,6 +735,7 @@ export async function pgSaveDirective(input: SaveDirectiveInput): Promise<{ id: 
         audienceOrganizationId,
         audienceProvinces,
         selectedUserIds: input.selectedUserIds,
+        parentUserId: input.parentUserId,
       })
     : [];
 

@@ -2,7 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
-import { canManageDirectives } from "@/lib/auth/access";
+import {
+  canManageDirectiveRecord,
+  canManageDirectives,
+  canManageDirectivesGlobally,
+  isScopedDirectiveIssuer,
+} from "@/lib/auth/access";
 import * as pgExt from "@/lib/db/repository-extended";
 import * as pgDirectives from "@/lib/db/repository-directives";
 import { getContentTitleValidationError } from "@/lib/content-constraints";
@@ -16,6 +21,7 @@ import {
 } from "@/lib/sms/provider";
 import { pgGetSmsProviderSettings } from "@/lib/db/system-settings";
 import type {
+  AuthSession,
   CampaignDirective,
   DirectiveAudienceType,
   DirectivePriority,
@@ -55,6 +61,13 @@ function revalidateDirectives(campaignId?: string) {
   }
 }
 
+function creatorFilterForSession(session: AuthSession): { createdByUserId?: string } {
+  if (isScopedDirectiveIssuer(session) && session.userId) {
+    return { createdByUserId: session.userId };
+  }
+  return {};
+}
+
 export async function listDirectivesAction(campaignId: string): Promise<{
   success: boolean;
   canManage: boolean;
@@ -73,7 +86,10 @@ export async function listDirectivesAction(campaignId: string): Promise<{
   const canManage = canManageDirectives(access.session);
 
   if (canManage) {
-    const directives = await pgDirectives.pgListDirectivesForCampaign(campaignId);
+    const directives = await pgDirectives.pgListDirectivesForCampaign(
+      campaignId,
+      creatorFilterForSession(access.session)
+    );
     return { success: true, canManage: true, directives };
   }
 
@@ -100,7 +116,11 @@ export async function listCampaignDirectiveUsersAction(campaignId: string) {
     return { success: false as const, users: [], error: "Database required" };
   }
 
-  const users = await pgDirectives.pgListCampaignUsersForDirectives(campaignId);
+  const users = await pgDirectives.pgListCampaignUsersForDirectives(campaignId, {
+    parentUserId: isScopedDirectiveIssuer(access.session)
+      ? access.session.userId ?? undefined
+      : undefined,
+  });
   return { success: true as const, users };
 }
 
@@ -120,6 +140,9 @@ export async function getDirectiveRecipientsAction(directiveId: string): Promise
   const directive = await pgDirectives.pgGetDirectiveById(directiveId);
   if (!directive) {
     return { success: false, recipients: [], error: "یافت نشد" };
+  }
+  if (!canManageDirectiveRecord(session, directive)) {
+    return { success: false, recipients: [], error: "دسترسی ندارید" };
   }
 
   const access = await assertDirectivesAccess(directive.campaignId);
@@ -196,10 +219,15 @@ export async function saveDirectiveAction(input: {
     return { success: false as const, error: access.error ?? "Unauthorized" };
   }
   if (!canManageDirectives(access.session)) {
-    return { success: false as const, error: "فقط مدیر و کارفرما می‌توانند دستورکار ثبت کنند" };
+    return { success: false as const, error: "اجازه ثبت دستورکار ندارید" };
   }
   if (!isPostgresConfigured()) {
     return { success: false as const, error: "Database required" };
+  }
+
+  const scoped = isScopedDirectiveIssuer(access.session);
+  if (scoped && !access.session.userId) {
+    return { success: false as const, error: "برای ثبت دستورکار باید با حساب کاربری وارد شوید" };
   }
 
   if (input.id) {
@@ -210,15 +238,69 @@ export async function saveDirectiveAction(input: {
     if (existing.archivedAt) {
       return { success: false as const, error: "دستورکار آرشیو شده قابل ویرایش نیست" };
     }
+    if (!canManageDirectiveRecord(access.session, existing)) {
+      return { success: false as const, error: "فقط دستورکارهای خودتان را می‌توانید ویرایش کنید" };
+    }
   }
 
-  if (input.audienceType === "region" && !input.audienceRegion) {
+  let selectedUserIds = input.selectedUserIds;
+  let parentUserId: string | null = null;
+  const audienceType = input.audienceType;
+
+  if (scoped) {
+    parentUserId = access.session.userId!;
+    if (audienceType === "region" || audienceType === "ministry_city") {
+      return {
+        success: false as const,
+        error: "شما فقط می‌توانید برای زیرمجموعه‌های خودتان دستورکار صادر کنید",
+      };
+    }
+    if (audienceType !== "all" && audienceType !== "users") {
+      return {
+        success: false as const,
+        error: "نوع مخاطب برای زیرمجموعه نامعتبر است",
+      };
+    }
+
+    const subordinateUsers = await pgDirectives.pgListCampaignUsersForDirectives(
+      input.campaignId,
+      { parentUserId }
+    );
+    const allowedIds = new Set(subordinateUsers.map((user) => user.id));
+    if (allowedIds.size === 0) {
+      return {
+        success: false as const,
+        error: "هنوز کاربر زیرمجموعه‌ای برای صدور دستورکار ندارید",
+      };
+    }
+
+    if (audienceType === "users") {
+      const selected = (selectedUserIds ?? []).filter((id) => allowedIds.has(id));
+      if (selected.length === 0) {
+        return {
+          success: false as const,
+          error: "حداقل یک کاربر از زیرمجموعه‌های خودتان را انتخاب کنید",
+        };
+      }
+      if ((selectedUserIds ?? []).some((id) => !allowedIds.has(id))) {
+        return {
+          success: false as const,
+          error: "فقط زیرمجموعه‌های خودتان را می‌توانید مخاطب قرار دهید",
+        };
+      }
+      selectedUserIds = selected;
+    }
+  } else if (!canManageDirectivesGlobally(access.session)) {
+    return { success: false as const, error: "اجازه ثبت دستورکار ندارید" };
+  }
+
+  if (audienceType === "region" && !input.audienceRegion) {
     return { success: false as const, error: "منطقه مخاطب را انتخاب کنید" };
   }
-  if (input.audienceType === "users" && !(input.selectedUserIds?.length)) {
+  if (audienceType === "users" && !(selectedUserIds?.length)) {
     return { success: false as const, error: "حداقل یک کاربر را انتخاب کنید" };
   }
-  if (input.audienceType === "ministry_city") {
+  if (audienceType === "ministry_city") {
     if (!input.audienceMinistryId?.trim()) {
       return { success: false as const, error: "وزارتخانه مخاطب را انتخاب کنید" };
     }
@@ -286,13 +368,14 @@ export async function saveDirectiveAction(input: {
     ctaUrl: cta.ctaUrl,
     ctaTarget: cta.ctaTarget,
     attachments,
-    audienceType: cleaned.audienceType,
+    audienceType,
     audienceRegion: cleaned.audienceRegion,
     audienceMinistryId: cleaned.audienceMinistryId,
     audienceOrganizationId: cleaned.audienceOrganizationId,
     audienceProvinces: cleaned.audienceProvinces ?? cleaned.audienceCities,
     published: true,
-    selectedUserIds: cleaned.selectedUserIds,
+    selectedUserIds,
+    parentUserId,
   });
 
   const shouldSendSms =
@@ -359,6 +442,14 @@ export async function archiveDirectiveAction(id: string, campaignId: string) {
   }
   if (!isPostgresConfigured()) {
     return { success: false as const, error: "Database required" };
+  }
+
+  const existing = await pgDirectives.pgGetDirectiveById(id);
+  if (!existing || existing.campaignId !== campaignId) {
+    return { success: false as const, error: "دستورکار یافت نشد" };
+  }
+  if (!canManageDirectiveRecord(access.session, existing)) {
+    return { success: false as const, error: "فقط دستورکارهای خودتان را می‌توانید آرشیو کنید" };
   }
 
   const ok = await pgDirectives.pgArchiveDirective(id);
