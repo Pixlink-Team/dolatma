@@ -34,7 +34,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import {
   archiveDirectiveAction,
@@ -42,6 +42,10 @@ import {
   getDirectiveRecipientsAction,
   saveDirectiveAction,
 } from "@/lib/actions/directive-actions";
+import {
+  getDirectiveWorkspaceAction,
+  saveDirectiveWorkspaceMetaAction,
+} from "@/lib/actions/directive-workspace-actions";
 import {
   CONTENT_TITLE_MAX_LENGTH,
   CONTENT_TITLE_MAX_LENGTH_MESSAGE,
@@ -53,10 +57,12 @@ import {
   type DirectiveCtaKind,
   type DirectiveInternalTarget,
 } from "@/lib/directive-cta";
+import { DIRECTIVE_URGENCY_OPTIONS } from "@/lib/directive-workspace";
 import type {
   CampaignDirective,
   DirectiveAudienceType,
   DirectiveRecipient,
+  DirectiveUrgency,
   Ministry,
 } from "@/lib/types";
 import { IRAN_PROVINCES } from "@/lib/iran-locations";
@@ -67,6 +73,11 @@ const schema = z.object({
   title: z.string().min(1).max(CONTENT_TITLE_MAX_LENGTH, CONTENT_TITLE_MAX_LENGTH_MESSAGE),
   body: z.string().min(1, "متن دستورکار الزامی است"),
   priority: z.enum(["normal", "urgent"]),
+  urgency: z.enum(["low", "normal", "high", "critical"]),
+  objective: z.string().optional(),
+  expectedResults: z.string().optional(),
+  mandatoryActions: z.string().optional(),
+  suggestedActions: z.string().optional(),
   startDate: z.string().min(1, "تاریخ شروع الزامی است"),
   endDate: z.string().min(1, "تاریخ پایان الزامی است"),
   audienceType: z.enum(["all", "region", "users", "ministry_city"]),
@@ -78,6 +89,17 @@ const schema = z.object({
   ctaUrl: z.string().optional(),
   ctaTarget: z.string().nullable().optional(),
 });
+
+function linesToList(value: string | undefined): string[] {
+  return (value ?? "")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+}
+
+function listToLines(values: string[] | undefined): string {
+  return (values ?? []).join("\n");
+}
 
 type FormValues = z.infer<typeof schema>;
 
@@ -312,6 +334,7 @@ export function DirectivesAdmin({
     planId?: string | null;
   } | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [formTab, setFormTab] = useState<"basics" | "workspace">("basics");
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -319,6 +342,11 @@ export function DirectivesAdmin({
       title: "",
       body: "",
       priority: "normal",
+      urgency: "normal",
+      objective: "",
+      expectedResults: "",
+      mandatoryActions: "",
+      suggestedActions: "",
       startDate: "",
       endDate: "",
       audienceType: "all",
@@ -370,6 +398,7 @@ export function DirectivesAdmin({
 
   const openCreate = () => {
     setEditingId(null);
+    setFormTab("basics");
     setSelectedUserIds([]);
     setSelectedProvinces([]);
     setLetterUpload({ url: "", fileName: "", fileSize: 0, mimeType: "" });
@@ -378,6 +407,11 @@ export function DirectivesAdmin({
       title: "",
       body: "",
       priority: "normal",
+      urgency: "normal",
+      objective: "",
+      expectedResults: "",
+      mandatoryActions: "",
+      suggestedActions: "",
       startDate: "",
       endDate: "",
       audienceType: "all",
@@ -394,6 +428,7 @@ export function DirectivesAdmin({
 
   const openEdit = (item: CampaignDirective) => {
     setEditingId(item.id);
+    setFormTab("basics");
     setLetterUpload({
       url: item.letterFileUrl ?? "",
       fileName: item.letterFileName ?? "",
@@ -408,6 +443,11 @@ export function DirectivesAdmin({
       title: item.title,
       body: item.body,
       priority: item.priority,
+      urgency: "normal",
+      objective: "",
+      expectedResults: "",
+      mandatoryActions: "",
+      suggestedActions: "",
       startDate: item.startDate ?? "",
       endDate: item.endDate ?? item.dueDate ?? "",
       audienceType: item.audienceType,
@@ -420,14 +460,23 @@ export function DirectivesAdmin({
       ctaTarget: item.ctaTarget ?? null,
     });
 
-    if (item.audienceType === "users") {
-      startTransition(async () => {
+    startTransition(async () => {
+      const workspace = await getDirectiveWorkspaceAction(item.id);
+      if (workspace.success && workspace.bundle) {
+        const meta = workspace.bundle.meta;
+        form.setValue("urgency", meta.urgency);
+        form.setValue("objective", meta.objective);
+        form.setValue("expectedResults", meta.expectedResults);
+        form.setValue("mandatoryActions", listToLines(meta.mandatoryActions));
+        form.setValue("suggestedActions", listToLines(meta.suggestedActions));
+      }
+      if (item.audienceType === "users") {
         const result = await getDirectiveRecipientsAction(item.id);
         if (result.success) {
           setSelectedUserIds(result.recipients.map((row) => row.userId));
         }
-      });
-    }
+      }
+    });
 
     setOpen(true);
   };
@@ -435,6 +484,7 @@ export function DirectivesAdmin({
   const closeDialog = () => {
     setOpen(false);
     setEditingId(null);
+    setFormTab("basics");
   };
 
   const toggleUser = (userId: string) => {
@@ -507,9 +557,47 @@ export function DirectivesAdmin({
         return;
       }
 
-      toast.success(editingId ? "دستورکار به‌روز شد" : "دستورکار منتشر شد");
+      const directiveId = result.id;
+      const existingWorkspace = await getDirectiveWorkspaceAction(directiveId);
+      const existingMeta = existingWorkspace.bundle?.meta;
+      const workspaceResult = await saveDirectiveWorkspaceMetaAction({
+        directiveId,
+        objective: data.objective?.trim() ?? "",
+        expectedResults: data.expectedResults?.trim() ?? "",
+        urgency: data.urgency as DirectiveUrgency,
+        mandatoryActions: linesToList(data.mandatoryActions),
+        suggestedActions: linesToList(data.suggestedActions),
+        kpis: existingMeta?.kpis ?? [],
+        brandGuide: existingMeta?.brandGuide ?? "",
+        executionGuide: existingMeta?.executionGuide ?? "",
+        approvalRequirements: existingMeta?.approvalRequirements ?? "",
+        centralOwnerUserId: existingMeta?.centralOwnerUserId ?? null,
+        centralOwnerLabel: existingMeta?.centralOwnerLabel ?? null,
+        faq: existingMeta?.faq ?? [],
+        targetMinistryIds: existingMeta?.targetMinistryIds ?? [],
+        targetOrganizationIds: existingMeta?.targetOrganizationIds ?? [],
+        targetProvinces:
+          data.audienceType === "ministry_city"
+            ? selectedProvinces
+            : existingMeta?.targetProvinces ?? [],
+        targetCities: existingMeta?.targetCities ?? [],
+      });
+
+      if (!workspaceResult.success) {
+        toast.error(
+          workspaceResult.error ??
+            "دستورکار ذخیره شد ولی اتاق عملیات کامل نشد؛ از صفحه اتاق عملیات ادامه دهید"
+        );
+      } else {
+        toast.success(
+          editingId
+            ? "دستورکار به‌روز شد — در حال باز کردن اتاق عملیات"
+            : "دستورکار منتشر شد — در حال باز کردن اتاق عملیات"
+        );
+      }
+
       closeDialog();
-      window.location.reload();
+      window.location.href = adminHref(`/admin/directives/${directiveId}`, campaignId);
     });
   });
 
@@ -587,15 +675,15 @@ export function DirectivesAdmin({
           <p className="text-sm text-muted-foreground">
             {canManage
               ? audienceScope === "subordinates"
-                ? "صدور دستورکار برای زیرمجموعه‌های خودتان و پیگیری مشاهده"
-                : "انتشار دستورکار برای کاربران و پیگیری مشاهده و پیامک"
+                ? "صدور دستورکار و تکمیل اتاق عملیات برای زیرمجموعه‌ها"
+                : "ثبت دستورکار همراه اتاق عملیات، فایل‌ها، KPI و پیگیری"
               : "دستورکارهای جدید را ببینید، تأیید مشاهده بزنید و برنامه اقدام ثبت کنید"}
           </p>
         </div>
         {canManage && managerView === "manage" && manageListTab === "active" && (
           <Button onClick={openCreate}>
             <Plus className="h-4 w-4" />
-            دستورکار جدید
+            ثبت دستورکار و اتاق عملیات
           </Button>
         )}
       </div>
@@ -706,7 +794,7 @@ export function DirectivesAdmin({
                 </div>
 
                 <div className="flex flex-wrap gap-2">
-                  <Button variant="outline" size="sm" asChild>
+                  <Button size="sm" asChild>
                     <Link href={adminHref(`/admin/directives/${item.id}`, campaignId)}>
                       <LayoutDashboard className="h-4 w-4" />
                       اتاق عملیات
@@ -743,7 +831,7 @@ export function DirectivesAdmin({
                       {!showingArchive && (
                         <>
                           <Button variant="outline" size="sm" onClick={() => openEdit(item)}>
-                            ویرایش
+                            ویرایش مشخصات
                           </Button>
                           <Button
                             variant="outline"
@@ -790,14 +878,30 @@ export function DirectivesAdmin({
         )}
       </div>
 
-      {/* Create / Edit */}
+      {/* Create / Edit — basics + operations workspace together */}
       <Dialog open={open} onOpenChange={(next) => (next ? setOpen(true) : closeDialog())}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editingId ? "ویرایش دستورکار" : "دستورکار جدید"}</DialogTitle>
+            <DialogTitle>
+              {editingId ? "ویرایش دستورکار و اتاق عملیات" : "ثبت دستورکار و اتاق عملیات"}
+            </DialogTitle>
+            <p className="text-sm text-muted-foreground">
+              مشخصات دستورکار و هدف‌های اتاق عملیات را همین‌جا پر کنید؛ بعد از ذخیره صفحه کامل
+              فایل‌ها، KPI و نسخه‌ها باز می‌شود.
+            </p>
           </DialogHeader>
 
           <form onSubmit={onSubmit} className="space-y-4">
+            <Tabs
+              value={formTab}
+              onValueChange={(value) => setFormTab(value as "basics" | "workspace")}
+            >
+              <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1">
+                <TabsTrigger value="basics">۱. مشخصات دستورکار</TabsTrigger>
+                <TabsTrigger value="workspace">۲. اتاق عملیات</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="basics" className="mt-4 space-y-4">
             <div className="space-y-2">
               <Label>عنوان</Label>
               <Input {...form.register("title")} />
@@ -1240,16 +1344,97 @@ export function DirectivesAdmin({
               </div>
             )}
 
+              </TabsContent>
+
+              <TabsContent value="workspace" className="mt-4 space-y-4">
+                <div className="rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-sm">
+                  اینجا هدف، فوریت و اقدامات اتاق عملیات همین دستورکار را تعریف می‌کنید.
+                </div>
+
+                <div className="space-y-2">
+                  <Label>درجه فوریت</Label>
+                  <Select
+                    value={form.watch("urgency")}
+                    onValueChange={(value) =>
+                      form.setValue("urgency", value as DirectiveUrgency)
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {DIRECTIVE_URGENCY_OPTIONS.map((item) => (
+                        <SelectItem key={item.value} value={item.value}>
+                          {item.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>هدف اصلی</Label>
+                  <Textarea
+                    rows={3}
+                    placeholder="هدف اصلی این دستور / کمپین چیست؟"
+                    {...form.register("objective")}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>نتایج مورد انتظار</Label>
+                  <Textarea
+                    rows={3}
+                    placeholder="چه نتایجی باید حاصل شود؟"
+                    {...form.register("expectedResults")}
+                  />
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>اقدامات الزامی (هر خط یک مورد)</Label>
+                    <Textarea rows={5} {...form.register("mandatoryActions")} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>اقدامات پیشنهادی (هر خط یک مورد)</Label>
+                    <Textarea rows={5} {...form.register("suggestedActions")} />
+                  </div>
+                </div>
+
+                <p className="text-xs text-muted-foreground">
+                  بعد از ذخیره، برای فایل‌های مرجع، متن آماده انتشار، چاپی، ویدئو، هویت بصری،
+                  FAQ و تاریخچه نسخه‌ها وارد صفحه کامل اتاق عملیات می‌شوید.
+                </p>
+              </TabsContent>
+            </Tabs>
+
             <p className="text-xs text-muted-foreground">
               با انتشار، برای مخاطبان پیامک رزرو می‌شود (سرویس پیامک فعلاً جای خالی است و بعداً وصل می‌شود).
             </p>
 
-            <div className="flex justify-end gap-2">
+            <div className="flex flex-wrap justify-end gap-2">
               <Button type="button" variant="outline" onClick={closeDialog}>
                 انصراف
               </Button>
+              {formTab === "basics" ? (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setFormTab("workspace")}
+                >
+                  ادامه: اتاق عملیات
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setFormTab("basics")}
+                >
+                  بازگشت به مشخصات
+                </Button>
+              )}
               <Button type="submit" disabled={isPending}>
-                {editingId ? "ذخیره" : "انتشار"}
+                {editingId ? "ذخیره و باز کردن اتاق عملیات" : "انتشار و باز کردن اتاق عملیات"}
               </Button>
             </div>
           </form>

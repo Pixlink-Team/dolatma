@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "4ffd5ade7ed252bccfe9d8d804511ec436e3e4da",
+      "committedAt": "2026-07-21T16:24:41+03:30",
+      "title": "افزودن مرحله تعهد و برنامه اقدام پس از دریافت دستورکار",
+      "subject": "Add directive commitment and action plan stage"
+    },
+    {
       "hash": "ece884a1a002d0fd17f78e3141a9201082dc0c21",
       "committedAt": "2026-07-21T16:08:01+03:30",
       "title": "تأکید روی انتشار خودکار تغییرات بعد از هر کار",
