@@ -1,0 +1,268 @@
+"use client";
+
+import { useMemo, useState, useTransition } from "react";
+import { useForm } from "react-hook-form";
+import { Pencil, Plus, Trash2 } from "lucide-react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  deleteMyCapacityAction,
+  saveMyCapacityAction,
+} from "@/lib/actions/capacity-actions";
+import { DEVICE_CAPACITY_TYPE_LABELS } from "@/lib/device-labels";
+import type { DeviceCapacityType, UserCapacity } from "@/lib/types";
+
+interface UserPassportCapacitiesProps {
+  initialCapacities: UserCapacity[];
+}
+
+type CapacityForm = {
+  capacityType: DeviceCapacityType;
+  title: string;
+  description: string;
+  ownerName: string;
+  coverageScope: string;
+  isActive: boolean;
+};
+
+export function UserPassportCapacities({ initialCapacities }: UserPassportCapacitiesProps) {
+  const [capacities, setCapacities] = useState(initialCapacities);
+  const [open, setOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  const form = useForm<CapacityForm>({
+    defaultValues: {
+      capacityType: "other",
+      title: "",
+      description: "",
+      ownerName: "",
+      coverageScope: "",
+      isActive: true,
+    },
+  });
+
+  const typeOptions = useMemo(
+    () => Object.keys(DEVICE_CAPACITY_TYPE_LABELS) as DeviceCapacityType[],
+    []
+  );
+
+  const openCreate = () => {
+    setEditingId(null);
+    form.reset({
+      capacityType: "other",
+      title: "",
+      description: "",
+      ownerName: "",
+      coverageScope: "",
+      isActive: true,
+    });
+    setOpen(true);
+  };
+
+  const onSave = form.handleSubmit((data) => {
+    startTransition(async () => {
+      const result = await saveMyCapacityAction({
+        id: editingId ?? undefined,
+        capacityType: data.capacityType,
+        title: data.title,
+        description: data.description,
+        ownerName: data.ownerName,
+        coverageScope: data.coverageScope,
+        isActive: data.isActive,
+      });
+      if (!result.success) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success(editingId ? "ظرفیت به‌روز شد" : "ظرفیت ثبت شد");
+      setOpen(false);
+      // Soft refresh list from optimistic merge
+      if (editingId) {
+        setCapacities((prev) =>
+          prev.map((item) =>
+            item.id === editingId
+              ? {
+                  ...item,
+                  capacityType: data.capacityType,
+                  title: data.title.trim(),
+                  description: data.description.trim() || null,
+                  ownerName: data.ownerName.trim() || null,
+                  coverageScope: data.coverageScope.trim() || null,
+                  isActive: data.isActive,
+                  lastUpdatedAt: new Date().toISOString(),
+                }
+              : item
+          )
+        );
+      } else {
+        setCapacities((prev) => [
+          {
+            id: result.id,
+            userId: "",
+            capacityType: data.capacityType,
+            title: data.title.trim(),
+            description: data.description.trim() || null,
+            isActive: data.isActive,
+            ownerName: data.ownerName.trim() || null,
+            coverageScope: data.coverageScope.trim() || null,
+            lastUpdatedAt: new Date().toISOString(),
+            createdAt: new Date().toISOString(),
+          },
+          ...prev,
+        ]);
+      }
+    });
+  });
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-2">
+        <div>
+          <h2 className="text-base font-semibold">شناسنامه ظرفیت من</h2>
+          <p className="text-xs text-muted-foreground">
+            ظرفیت‌های رسانه‌ای و میدانی خود را ثبت کنید تا در نقشه ملی تجمیع شود.
+          </p>
+        </div>
+        <Button size="sm" onClick={openCreate}>
+          <Plus className="ml-1 h-4 w-4" />
+          ثبت ظرفیت
+        </Button>
+      </div>
+
+      {capacities.length === 0 ? (
+        <p className="text-sm text-muted-foreground">هنوز ظرفیتی ثبت نکرده‌اید.</p>
+      ) : (
+        <div className="space-y-2">
+          {capacities.map((item) => (
+            <div
+              key={item.id}
+              className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3"
+            >
+              <div>
+                <p className="font-medium">{item.title}</p>
+                <p className="text-xs text-muted-foreground">
+                  {DEVICE_CAPACITY_TYPE_LABELS[item.capacityType]}
+                  {item.coverageScope ? ` · پوشش: ${item.coverageScope}` : ""}
+                  {" · "}
+                  {item.isActive ? "فعال" : "غیرفعال"}
+                </p>
+              </div>
+              <div className="flex gap-1">
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  onClick={() => {
+                    setEditingId(item.id);
+                    form.reset({
+                      capacityType: item.capacityType,
+                      title: item.title,
+                      description: item.description ?? "",
+                      ownerName: item.ownerName ?? "",
+                      coverageScope: item.coverageScope ?? "",
+                      isActive: item.isActive,
+                    });
+                    setOpen(true);
+                  }}
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  disabled={isPending}
+                  onClick={() => {
+                    startTransition(async () => {
+                      const result = await deleteMyCapacityAction(item.id);
+                      if (!result.success) {
+                        toast.error(result.error);
+                        return;
+                      }
+                      toast.success("ظرفیت حذف شد");
+                      setCapacities((prev) => prev.filter((c) => c.id !== item.id));
+                    });
+                  }}
+                >
+                  <Trash2 className="h-4 w-4 text-destructive" />
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent dir="rtl">
+          <DialogHeader>
+            <DialogTitle>{editingId ? "ویرایش ظرفیت" : "ثبت ظرفیت"}</DialogTitle>
+          </DialogHeader>
+          <form className="space-y-3" onSubmit={onSave}>
+            <div className="space-y-1.5">
+              <Label>نوع</Label>
+              <Select
+                value={form.watch("capacityType")}
+                onValueChange={(value) =>
+                  form.setValue("capacityType", value as DeviceCapacityType)
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {typeOptions.map((key) => (
+                    <SelectItem key={key} value={key}>
+                      {DEVICE_CAPACITY_TYPE_LABELS[key]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>عنوان</Label>
+              <Input {...form.register("title", { required: true })} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>توضیح</Label>
+              <Textarea rows={2} {...form.register("description")} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>مسئول</Label>
+              <Input {...form.register("ownerName")} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>محدوده پوشش</Label>
+              <Input {...form.register("coverageScope")} />
+            </div>
+            <div className="flex items-center justify-between gap-2">
+              <Label>فعال</Label>
+              <Switch
+                checked={form.watch("isActive")}
+                onCheckedChange={(checked) => form.setValue("isActive", checked)}
+              />
+            </div>
+            <Button type="submit" disabled={isPending} className="w-full">
+              ذخیره
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

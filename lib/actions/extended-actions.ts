@@ -574,6 +574,8 @@ export async function saveProfileAction(data: {
   city?: string | null;
   accountManagerName?: string | null;
   phone?: string | null;
+  alternateContactName?: string | null;
+  alternateContactPhone?: string | null;
 }) {
   const session = await getAuthSession();
   if (!session?.userId) {
@@ -598,6 +600,8 @@ export async function saveProfileAction(data: {
     region: user.region,
     phone: data.phone?.trim() || null,
     accountManagerName: data.accountManagerName,
+    alternateContactName: data.alternateContactName,
+    alternateContactPhone: data.alternateContactPhone,
     campaignIds: user.campaignIds,
     campaignPermissions: user.campaignPermissions,
   });

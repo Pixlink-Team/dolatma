@@ -602,6 +602,10 @@ export interface AdminUser {
   phone?: string | null;
   /** Account manager name set by the user in their profile. */
   accountManagerName?: string | null;
+  /** Alternate crisis contact name (from user profile). */
+  alternateContactName?: string | null;
+  /** Alternate crisis contact phone (from user profile). */
+  alternateContactPhone?: string | null;
   /** Government ministry this user belongs to (parent + sub-users). */
   ministryId?: string | null;
   ministryName?: string | null;
@@ -620,6 +624,82 @@ export interface AdminUser {
   campaignIds: string[];
   campaignPermissions: Record<string, ContributorPermissions>;
   createdAt: string;
+}
+
+export interface UserCapacity {
+  id: string;
+  userId: string;
+  capacityType: DeviceCapacityType;
+  title: string;
+  description?: string | null;
+  isActive: boolean;
+  ownerName?: string | null;
+  coverageScope?: string | null;
+  lastUpdatedAt: string;
+  createdAt: string;
+}
+
+export type DirectiveBlockerCategory =
+  | "budget"
+  | "approval_delay"
+  | "missing_file"
+  | "missing_capacity"
+  | "technical"
+  | "other";
+
+export interface DirectiveBlocker {
+  id: string;
+  directiveId: string;
+  userId: string;
+  userName?: string | null;
+  category: DirectiveBlockerCategory;
+  note: string;
+  createdAt: string;
+}
+
+export type BestPracticeStatus = "pending" | "approved" | "rejected";
+
+export interface BestPractice {
+  id: string;
+  campaignId: string;
+  contentType: ScoreableContentType;
+  contentId: string;
+  title: string;
+  suggestedScore?: number | null;
+  status: BestPracticeStatus;
+  suggestedBy?: string | null;
+  suggestedByName?: string | null;
+  approvedBy?: string | null;
+  approvedByName?: string | null;
+  approvedAt?: string | null;
+  createdAt: string;
+}
+
+export type DirectiveFunnelStage =
+  | "sent"
+  | "delivered"
+  | "seen"
+  | "accepted"
+  | "planned"
+  | "executed"
+  | "verified";
+
+export interface CapacityMapItem {
+  source: "device" | "user";
+  id: string;
+  capacityType: DeviceCapacityType;
+  title: string;
+  description?: string | null;
+  isActive: boolean;
+  ownerName?: string | null;
+  coverageScope?: string | null;
+  province?: string | null;
+  city?: string | null;
+  deviceId?: string | null;
+  deviceName?: string | null;
+  userId?: string | null;
+  userName?: string | null;
+  lastUpdatedAt: string;
 }
 
 export type DirectivePriority = "normal" | "urgent";
@@ -646,6 +726,9 @@ export interface DirectiveRecipient {
   userEmail: string;
   userRole: AdminRole;
   userPhone?: string | null;
+  alternateContactName?: string | null;
+  alternateContactPhone?: string | null;
+  accountManagerName?: string | null;
   smsStatus: DirectiveSmsStatus;
   smsError?: string | null;
   smsSentAt?: string | null;
@@ -653,6 +736,9 @@ export interface DirectiveRecipient {
   confirmed: boolean;
   hasActionPlan?: boolean;
   actionPlanId?: string | null;
+  executedAt?: string | null;
+  executionVerifiedAt?: string | null;
+  executionVerifiedBy?: string | null;
 }
 
 /** Device commitment after acknowledging a directive (تعهد و برنامه اقدام). */
@@ -745,6 +831,14 @@ export interface CampaignDirective {
   publishedAt?: string | null;
   /** Soft-archive timestamp; null means active. */
   archivedAt?: string | null;
+  /** Crisis / urgent broadcast mode for this directive. */
+  crisisMode?: boolean;
+  /** Minutes before escalating unconfirmed crisis recipients. */
+  escalationAfterMinutes?: number;
+  /** When crisis escalation SMS was last sent (idempotent). */
+  escalatedAt?: string | null;
+  /** Topic label used for national calendar conflict detection. */
+  topic?: string;
   sortOrder: number;
   attachments: DirectiveAttachment[];
   /** Present for managers; optional summary counts. */
@@ -758,6 +852,10 @@ export interface CampaignDirective {
   hasActionPlan?: boolean;
   /** Managers: count of submitted action plans for this directive. */
   actionPlanCount?: number;
+  /** Current user's execution timestamp when loading inbox. */
+  executedAt?: string | null;
+  /** Current user's execution verification timestamp. */
+  executionVerifiedAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }

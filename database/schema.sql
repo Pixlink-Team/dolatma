@@ -1275,3 +1275,109 @@ DROP POLICY IF EXISTS directive_action_plans_app_access ON directive_action_plan
 CREATE POLICY directive_action_plans_app_access ON directive_action_plans
   FOR ALL USING (true) WITH CHECK (true);
 
+-- ---------------------------------------------------------------------------
+-- Command features: user capacities, funnel, crisis, blockers, best practices
+-- ---------------------------------------------------------------------------
+
+ALTER TABLE users
+  ADD COLUMN IF NOT EXISTS alternate_contact_name TEXT;
+ALTER TABLE users
+  ADD COLUMN IF NOT EXISTS alternate_contact_phone TEXT;
+
+CREATE TABLE IF NOT EXISTS user_capacities (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  capacity_type TEXT NOT NULL,
+  title TEXT NOT NULL,
+  description TEXT,
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  owner_name TEXT,
+  coverage_scope TEXT,
+  last_updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+ALTER TABLE user_capacities DROP CONSTRAINT IF EXISTS user_capacities_type_check;
+ALTER TABLE user_capacities ADD CONSTRAINT user_capacities_type_check
+  CHECK (capacity_type IN (
+    'branches', 'website_app', 'social', 'sms_panel', 'billboards',
+    'urban_tv', 'venues', 'pr_team', 'creative_team', 'field_staff',
+    'call_center', 'contractors', 'other'
+  ));
+
+CREATE INDEX IF NOT EXISTS idx_user_capacities_user
+  ON user_capacities(user_id, is_active);
+
+ALTER TABLE directive_recipients
+  ADD COLUMN IF NOT EXISTS executed_at TIMESTAMPTZ;
+ALTER TABLE directive_recipients
+  ADD COLUMN IF NOT EXISTS execution_verified_at TIMESTAMPTZ;
+ALTER TABLE directive_recipients
+  ADD COLUMN IF NOT EXISTS execution_verified_by UUID REFERENCES users(id) ON DELETE SET NULL;
+
+ALTER TABLE campaign_directives
+  ADD COLUMN IF NOT EXISTS crisis_mode BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE campaign_directives
+  ADD COLUMN IF NOT EXISTS escalation_after_minutes INT NOT NULL DEFAULT 30;
+ALTER TABLE campaign_directives
+  ADD COLUMN IF NOT EXISTS escalated_at TIMESTAMPTZ;
+ALTER TABLE campaign_directives
+  ADD COLUMN IF NOT EXISTS topic TEXT NOT NULL DEFAULT '';
+
+CREATE TABLE IF NOT EXISTS directive_blockers (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  directive_id UUID NOT NULL REFERENCES campaign_directives(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  category TEXT NOT NULL,
+  note TEXT NOT NULL DEFAULT '',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+ALTER TABLE directive_blockers DROP CONSTRAINT IF EXISTS directive_blockers_category_check;
+ALTER TABLE directive_blockers ADD CONSTRAINT directive_blockers_category_check
+  CHECK (category IN (
+    'budget', 'approval_delay', 'missing_file', 'missing_capacity', 'technical', 'other'
+  ));
+
+CREATE INDEX IF NOT EXISTS idx_directive_blockers_directive
+  ON directive_blockers(directive_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_directive_blockers_user
+  ON directive_blockers(user_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS best_practices (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  campaign_id UUID NOT NULL REFERENCES campaign_settings(id) ON DELETE CASCADE,
+  content_type TEXT NOT NULL,
+  content_id UUID NOT NULL,
+  title TEXT NOT NULL DEFAULT '',
+  suggested_score DOUBLE PRECISION,
+  status TEXT NOT NULL DEFAULT 'pending'
+    CHECK (status IN ('pending', 'approved', 'rejected')),
+  suggested_by UUID REFERENCES users(id) ON DELETE SET NULL,
+  approved_by UUID REFERENCES users(id) ON DELETE SET NULL,
+  approved_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (campaign_id, content_type, content_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_best_practices_campaign_status
+  ON best_practices(campaign_id, status, created_at DESC);
+
+ALTER TABLE user_capacities ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_capacities NO FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS user_capacities_app_access ON user_capacities;
+CREATE POLICY user_capacities_app_access ON user_capacities
+  FOR ALL USING (true) WITH CHECK (true);
+
+ALTER TABLE directive_blockers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE directive_blockers NO FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS directive_blockers_app_access ON directive_blockers;
+CREATE POLICY directive_blockers_app_access ON directive_blockers
+  FOR ALL USING (true) WITH CHECK (true);
+
+ALTER TABLE best_practices ENABLE ROW LEVEL SECURITY;
+ALTER TABLE best_practices NO FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS best_practices_app_access ON best_practices;
+CREATE POLICY best_practices_app_access ON best_practices
+  FOR ALL USING (true) WITH CHECK (true);
+

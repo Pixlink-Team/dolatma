@@ -228,6 +228,8 @@ export async function pgSaveUser(data: {
   region?: string | null;
   phone?: string | null;
   accountManagerName?: string | null;
+  alternateContactName?: string | null;
+  alternateContactPhone?: string | null;
   ministryId?: string | null;
   organizationId?: string | null;
   parentUserId?: string | null;
@@ -249,6 +251,14 @@ export async function pgSaveUser(data: {
       : null;
   const phone = data.phone?.trim() || null;
   const accountManagerName = data.accountManagerName?.trim() || null;
+  let alternateContactName =
+    data.alternateContactName !== undefined
+      ? data.alternateContactName?.trim() || null
+      : null;
+  let alternateContactPhone =
+    data.alternateContactPhone !== undefined
+      ? data.alternateContactPhone?.trim() || null
+      : null;
   let ministryId = data.ministryId?.trim() || null;
   let organizationId = data.organizationId?.trim() || null;
   const parentUserId = data.parentUserId?.trim() || null;
@@ -281,6 +291,26 @@ export async function pgSaveUser(data: {
     deviceId = ministryId;
   }
 
+  if (
+    data.id &&
+    (data.alternateContactName === undefined || data.alternateContactPhone === undefined)
+  ) {
+    const existingAlt = await sql`
+      SELECT alternate_contact_name, alternate_contact_phone
+      FROM users WHERE id = ${id} LIMIT 1
+    `;
+    if (data.alternateContactName === undefined) {
+      alternateContactName = existingAlt[0]?.alternate_contact_name
+        ? String(existingAlt[0].alternate_contact_name)
+        : null;
+    }
+    if (data.alternateContactPhone === undefined) {
+      alternateContactPhone = existingAlt[0]?.alternate_contact_phone
+        ? String(existingAlt[0].alternate_contact_phone)
+        : null;
+    }
+  }
+
   try {
   if (data.id) {
     if (data.password) {
@@ -295,6 +325,8 @@ export async function pgSaveUser(data: {
           region = ${region},
           phone = ${phone},
           account_manager_name = ${accountManagerName},
+          alternate_contact_name = ${alternateContactName},
+          alternate_contact_phone = ${alternateContactPhone},
           ministry_id = ${ministryId},
           organization_id = ${organizationId},
           device_id = ${deviceId},
@@ -313,6 +345,8 @@ export async function pgSaveUser(data: {
           region = ${region},
           phone = ${phone},
           account_manager_name = ${accountManagerName},
+          alternate_contact_name = ${alternateContactName},
+          alternate_contact_phone = ${alternateContactPhone},
           ministry_id = ${ministryId},
           organization_id = ${organizationId},
           device_id = ${deviceId},
@@ -328,11 +362,13 @@ export async function pgSaveUser(data: {
     await sql`
       INSERT INTO users (
         id, email, password_hash, name, role, province, city, region, phone,
-        account_manager_name, ministry_id, organization_id, device_id, parent_user_id, created_at
+        account_manager_name, alternate_contact_name, alternate_contact_phone,
+        ministry_id, organization_id, device_id, parent_user_id, created_at
       )
       VALUES (
         ${id}, ${email}, ${passwordHash}, ${data.name}, ${data.role}, ${province}, ${city},
-        ${region}, ${phone}, ${accountManagerName}, ${ministryId}, ${organizationId},
+        ${region}, ${phone}, ${accountManagerName}, ${alternateContactName}, ${alternateContactPhone},
+        ${ministryId}, ${organizationId},
         ${deviceId}, ${parentUserId}, ${now}
       )
     `;

@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { DirectiveOpsPanels } from "@/components/admin/directive-ops-panels";
 import { DirectiveWorkspaceAdmin } from "@/components/admin/directive-workspace-admin";
 import { resolveAdminCampaignId } from "@/lib/admin-campaign";
 import {
@@ -8,6 +9,7 @@ import {
   isScopedDirectiveIssuer,
 } from "@/lib/auth/access";
 import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
+import { pgListDirectiveBlockers } from "@/lib/db/repository-blockers";
 import {
   pgGetDirectiveWorkspaceBundle,
   pgListReplacementAlertsForDirective,
@@ -16,12 +18,14 @@ import {
 import {
   pgGetDirectiveById,
   pgListCampaignUsersForDirectives,
+  pgListDirectiveRecipients,
   pgListDirectivesForUserInbox,
 } from "@/lib/db/repository-directives";
 import { pgGetUserPermissionsForCampaign } from "@/lib/db/repository-extended";
 import { pgListMinistries } from "@/lib/db/repository-ministries";
 import { isPostgresConfigured } from "@/lib/utils";
 import { withFileAccessTokensDeep } from "@/lib/uploads";
+import { processCrisisEscalationAction } from "@/lib/actions/directive-actions";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -32,7 +36,7 @@ export default async function DirectiveWorkspacePage({ params, searchParams }: P
   const { id } = await params;
   const query = await searchParams;
   const { campaignId } = await resolveAdminCampaignId(query.campaign);
-  if (!campaignId) redirect("/admin");
+  if (!campaignId) redirect("/admin/campaigns");
 
   const session = await getAuthSession();
   if (!session || !canViewDirectives(session)) redirect("/admin/login");
@@ -69,7 +73,7 @@ export default async function DirectiveWorkspacePage({ params, searchParams }: P
       ? "subordinates"
       : "global";
 
-  const [bundle, alerts, campaignUsers, ministries] = await Promise.all([
+  const [bundle, alerts, campaignUsers, ministries, recipients, blockers] = await Promise.all([
     pgGetDirectiveWorkspaceBundle(id, {
       pendingAlertsForUserId: canManage ? null : session.userId,
     }),
@@ -85,20 +89,35 @@ export default async function DirectiveWorkspacePage({ params, searchParams }: P
         })
       : Promise.resolve([]),
     pgListMinistries({ includeOrganizations: true }),
+    pgListDirectiveRecipients(id),
+    pgListDirectiveBlockers(id),
   ]);
 
   if (!bundle) {
     redirect(`/admin/directives?campaign=${campaignId}`);
   }
 
+  if (directive.crisisMode && canManage) {
+    void processCrisisEscalationAction(id, campaignId);
+  }
+
   return (
-    <DirectiveWorkspaceAdmin
-      campaignId={campaignId}
-      canManage={canManage}
-      initialBundle={withFileAccessTokensDeep(bundle)}
-      initialAlerts={withFileAccessTokensDeep(alerts)}
-      campaignUsers={campaignUsers}
-      ministries={ministries}
-    />
+    <div className="space-y-6">
+      <DirectiveOpsPanels
+        directive={directive}
+        recipients={recipients}
+        blockers={blockers}
+        canManage={canManage}
+        currentUserId={session.userId}
+      />
+      <DirectiveWorkspaceAdmin
+        campaignId={campaignId}
+        canManage={canManage}
+        initialBundle={withFileAccessTokensDeep(bundle)}
+        initialAlerts={withFileAccessTokensDeep(alerts)}
+        campaignUsers={campaignUsers}
+        ministries={ministries}
+      />
+    </div>
   );
 }

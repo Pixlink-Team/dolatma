@@ -26,6 +26,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { DocumentUpload } from "@/components/ui/document-upload";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { PersianDateField } from "@/components/ui/persian-date-input";
 import {
   Select,
@@ -42,6 +43,7 @@ import {
   getDirectiveRecipientsAction,
   saveDirectiveAction,
 } from "@/lib/actions/directive-actions";
+import { checkDirectiveCalendarConflictAction } from "@/lib/actions/calendar-actions";
 import {
   getDirectiveWorkspaceAction,
   saveDirectiveWorkspaceMetaAction,
@@ -74,6 +76,9 @@ const schema = z.object({
   body: z.string().min(1, "متن دستورکار الزامی است"),
   priority: z.enum(["normal", "urgent"]),
   urgency: z.enum(["low", "normal", "high", "critical"]),
+  crisisMode: z.boolean().optional(),
+  escalationAfterMinutes: z.coerce.number().min(5).max(1440).optional(),
+  topic: z.string().optional(),
   objective: z.string().optional(),
   expectedResults: z.string().optional(),
   mandatoryActions: z.string().optional(),
@@ -343,6 +348,9 @@ export function DirectivesAdmin({
       body: "",
       priority: "normal",
       urgency: "normal",
+      crisisMode: false,
+      escalationAfterMinutes: 30,
+      topic: "",
       objective: "",
       expectedResults: "",
       mandatoryActions: "",
@@ -408,6 +416,9 @@ export function DirectivesAdmin({
       body: "",
       priority: "normal",
       urgency: "normal",
+      crisisMode: false,
+      escalationAfterMinutes: 30,
+      topic: "",
       objective: "",
       expectedResults: "",
       mandatoryActions: "",
@@ -444,6 +455,9 @@ export function DirectivesAdmin({
       body: item.body,
       priority: item.priority,
       urgency: "normal",
+      crisisMode: Boolean(item.crisisMode),
+      escalationAfterMinutes: item.escalationAfterMinutes ?? 30,
+      topic: item.topic ?? "",
       objective: "",
       expectedResults: "",
       mandatoryActions: "",
@@ -517,6 +531,24 @@ export function DirectivesAdmin({
     }
 
     startTransition(async () => {
+      const conflictCheck = await checkDirectiveCalendarConflictAction({
+        campaignId,
+        excludeId: editingId,
+        deviceId:
+          data.audienceType === "ministry_city"
+            ? data.audienceOrganizationId || data.audienceMinistryId || null
+            : null,
+        provinces: data.audienceType === "ministry_city" ? selectedProvinces : [],
+        topic: data.topic,
+        startDate: data.startDate,
+        endDate: data.endDate,
+      });
+      if (conflictCheck.success && conflictCheck.conflicts.length > 0) {
+        toast.warning(
+          `هشدار تداخل تقویم: با «${conflictCheck.conflicts.map((c) => c.title).join("، ")}» هم‌پوشانی دارد (ثبت ادامه می‌یابد).`
+        );
+      }
+
       const result = await saveDirectiveAction({
         id: editingId ?? undefined,
         campaignId,
@@ -550,6 +582,9 @@ export function DirectivesAdmin({
         ctaUrl: data.ctaUrl,
         ctaTarget: data.ctaTarget,
         sendSmsOnPublish: true,
+        crisisMode: Boolean(data.crisisMode) || data.urgency === "critical",
+        escalationAfterMinutes: data.escalationAfterMinutes ?? 30,
+        topic: data.topic?.trim() || "",
       });
 
       if (!result.success) {
@@ -937,7 +972,38 @@ export function DirectivesAdmin({
                   </SelectContent>
                 </Select>
               </div>
+              <div className="space-y-2">
+                <Label>موضوع (برای تقویم ملی)</Label>
+                <Input {...form.register("topic")} placeholder="مثلاً سلامت / آموزش" />
+              </div>
             </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3">
+              <div>
+                <Label>حالت بحران</Label>
+                <p className="text-xs text-muted-foreground">
+                  ابلاغ فوری، الزام تأیید دریافت و تصاعد به تماس جایگزین
+                </p>
+              </div>
+              <Switch
+                checked={Boolean(form.watch("crisisMode"))}
+                onCheckedChange={(checked) => {
+                  form.setValue("crisisMode", checked);
+                  if (checked) form.setValue("urgency", "critical");
+                }}
+              />
+            </div>
+            {form.watch("crisisMode") ? (
+              <div className="space-y-2">
+                <Label>مهلت تصاعد (دقیقه)</Label>
+                <Input
+                  type="number"
+                  min={5}
+                  max={1440}
+                  {...form.register("escalationAfterMinutes")}
+                />
+              </div>
+            ) : null}
 
             <div className="grid gap-4 sm:grid-cols-2">
               <PersianDateField

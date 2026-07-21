@@ -19,6 +19,8 @@ const schema = z.object({
   city: z.string().optional(),
   accountManagerName: z.string().optional(),
   phone: z.string().optional(),
+  alternateContactName: z.string().optional(),
+  alternateContactPhone: z.string().optional(),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -29,6 +31,8 @@ interface ProfileSettingsFormProps {
   initialCity?: string | null;
   initialAccountManagerName?: string | null;
   initialPhone?: string | null;
+  initialAlternateContactName?: string | null;
+  initialAlternateContactPhone?: string | null;
   initialRegion?: UserRegion | null;
   email: string;
 }
@@ -39,6 +43,8 @@ export function ProfileSettingsForm({
   initialCity,
   initialAccountManagerName,
   initialPhone,
+  initialAlternateContactName,
+  initialAlternateContactPhone,
   initialRegion,
   email,
 }: ProfileSettingsFormProps) {
@@ -52,6 +58,8 @@ export function ProfileSettingsForm({
       city: initialCity ?? "",
       accountManagerName: initialAccountManagerName ?? "",
       phone: initialPhone ?? "",
+      alternateContactName: initialAlternateContactName ?? "",
+      alternateContactPhone: initialAlternateContactPhone ?? "",
     },
   });
 
@@ -66,6 +74,8 @@ export function ProfileSettingsForm({
         city: data.city || null,
         accountManagerName: data.accountManagerName?.trim() || null,
         phone: data.phone?.trim() || null,
+        alternateContactName: data.alternateContactName?.trim() || null,
+        alternateContactPhone: data.alternateContactPhone?.trim() || null,
       });
       if (!result.success) {
         toast.error(result.error ?? "ذخیره پروفایل ناموفق بود");
@@ -114,6 +124,28 @@ export function ProfileSettingsForm({
           این فیلد را خودتان تنظیم می‌کنید و در لیست کاربران برای مدیر/کارفرما نمایش داده می‌شود.
         </p>
       </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-2">
+          <Label>نام تماس جایگزین (بحران)</Label>
+          <Input
+            {...form.register("alternateContactName")}
+            placeholder="نام فرد جایگزین"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>موبایل تماس جایگزین</Label>
+          <Input
+            {...form.register("alternateContactPhone")}
+            dir="ltr"
+            placeholder="0912xxxxxxx"
+            inputMode="tel"
+          />
+        </div>
+      </div>
+      <p className="text-xs text-muted-foreground -mt-2">
+        در حالت بحران، پیامک تصاعد به این شماره ارسال می‌شود.
+      </p>
 
       <ProvinceCityFields
         province={selectedProvince ?? ""}

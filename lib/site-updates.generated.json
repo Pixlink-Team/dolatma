@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "fa8554f5d58a197468fb30ef13a0923c54a4ea41",
+      "committedAt": "2026-07-21T16:43:40+03:30",
+      "title": "حذف امکان ساخت و مدیریت چند اقدام — فقط اقدامات دولت باقی ماند",
+      "subject": "Remove multi-campaign create/delete management"
+    },
+    {
       "hash": "7ccd99dd9a17f4565ce5085a7e3ce9910af7425f",
       "committedAt": "2026-07-21T16:36:04+03:30",
       "title": "راست‌چین کردن فرم دستورکار و فیلدهای دیالوگ",

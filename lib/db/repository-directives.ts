@@ -146,6 +146,11 @@ function mapDirectiveRow(
     published: Boolean(row.published),
     publishedAt: toIsoString(row.published_at),
     archivedAt: toIsoString(row.archived_at),
+    crisisMode: Boolean(row.crisis_mode),
+    escalationAfterMinutes:
+      row.escalation_after_minutes != null ? Number(row.escalation_after_minutes) : 30,
+    escalatedAt: toIsoString(row.escalated_at),
+    topic: row.topic != null ? String(row.topic) : "",
     sortOrder: Number(row.sort_order ?? 0),
     attachments,
     seenCount: row.seen_count != null ? Number(row.seen_count) : undefined,
@@ -156,6 +161,8 @@ function mapDirectiveRow(
     hasActionPlan: row.has_action_plan != null ? Boolean(row.has_action_plan) : undefined,
     actionPlanCount:
       row.action_plan_count != null ? Number(row.action_plan_count) : undefined,
+    executedAt: toIsoString(row.executed_at),
+    executionVerifiedAt: toIsoString(row.execution_verified_at),
     createdAt: toIsoString(row.created_at) ?? new Date().toISOString(),
     updatedAt: toIsoString(row.updated_at) ?? new Date().toISOString(),
   };
@@ -559,6 +566,12 @@ export async function pgListDirectiveRecipients(
       u.email AS user_email,
       u.role AS user_role,
       u.phone AS user_phone,
+      u.alternate_contact_name,
+      u.alternate_contact_phone,
+      u.account_manager_name,
+      r.executed_at,
+      r.execution_verified_at,
+      r.execution_verified_by,
       ap.id AS action_plan_id
     FROM directive_recipients r
     INNER JOIN users u ON u.id = r.user_id
@@ -580,6 +593,18 @@ export async function pgListDirectiveRecipients(
       typeof row.user_phone === "string" && row.user_phone.trim()
         ? String(row.user_phone).trim()
         : null,
+    alternateContactName:
+      typeof row.alternate_contact_name === "string" && row.alternate_contact_name.trim()
+        ? String(row.alternate_contact_name).trim()
+        : null,
+    alternateContactPhone:
+      typeof row.alternate_contact_phone === "string" && row.alternate_contact_phone.trim()
+        ? String(row.alternate_contact_phone).trim()
+        : null,
+    accountManagerName:
+      typeof row.account_manager_name === "string" && row.account_manager_name.trim()
+        ? String(row.account_manager_name).trim()
+        : null,
     smsStatus: mapSmsStatus(row.sms_status),
     smsError: row.sms_error ? String(row.sms_error) : null,
     smsSentAt: toIsoString(row.sms_sent_at),
@@ -587,6 +612,11 @@ export async function pgListDirectiveRecipients(
     confirmed: Boolean(row.confirmed),
     hasActionPlan: Boolean(row.action_plan_id),
     actionPlanId: row.action_plan_id ? String(row.action_plan_id) : null,
+    executedAt: toIsoString(row.executed_at),
+    executionVerifiedAt: toIsoString(row.execution_verified_at),
+    executionVerifiedBy: row.execution_verified_by
+      ? String(row.execution_verified_by)
+      : null,
   }));
 }
 
@@ -624,6 +654,9 @@ export interface SaveDirectiveInput {
   selectedUserIds?: string[];
   /** When set, audience resolution is limited to this parent's sub-users. */
   parentUserId?: string | null;
+  crisisMode?: boolean;
+  escalationAfterMinutes?: number;
+  topic?: string | null;
 }
 
 export async function pgSaveDirective(input: SaveDirectiveInput): Promise<{ id: string }> {
@@ -660,6 +693,13 @@ export async function pgSaveDirective(input: SaveDirectiveInput): Promise<{ id: 
     input.audienceType === "ministry_city"
       ? (input.audienceProvinces ?? []).map((province) => province.trim()).filter(Boolean)
       : [];
+  const crisisMode = Boolean(input.crisisMode);
+  const escalationAfterMinutes = Math.max(
+    5,
+    Math.min(24 * 60, Number(input.escalationAfterMinutes ?? 30) || 30)
+  );
+  const topic = input.topic?.trim() || "";
+  const urgency = crisisMode ? "critical" : undefined;
 
   const existing = input.id
     ? await sql`SELECT id, published_at FROM campaign_directives WHERE id = ${id} LIMIT 1`
@@ -678,7 +718,8 @@ export async function pgSaveDirective(input: SaveDirectiveInput): Promise<{ id: 
       start_date, end_date, letter_file_url, letter_file_name, letter_mime_type, letter_file_size,
       cta_kind, cta_label, cta_url, cta_target,
       audience_type, audience_region, audience_ministry_id, audience_organization_id, audience_device_id, audience_cities,
-      published, published_at, sort_order, created_at, updated_at
+      published, published_at, sort_order, created_at, updated_at,
+      crisis_mode, escalation_after_minutes, topic, urgency
     ) VALUES (
       ${id},
       ${input.campaignId},
@@ -707,7 +748,11 @@ export async function pgSaveDirective(input: SaveDirectiveInput): Promise<{ id: 
       ${publishedAt},
       0,
       ${now},
-      ${now}
+      ${now},
+      ${crisisMode},
+      ${escalationAfterMinutes},
+      ${topic},
+      ${urgency ?? "normal"}
     )
     ON CONFLICT (id) DO UPDATE SET
       title = EXCLUDED.title,
@@ -732,6 +777,13 @@ export async function pgSaveDirective(input: SaveDirectiveInput): Promise<{ id: 
       audience_cities = EXCLUDED.audience_cities,
       published = EXCLUDED.published,
       published_at = COALESCE(campaign_directives.published_at, EXCLUDED.published_at),
+      crisis_mode = EXCLUDED.crisis_mode,
+      escalation_after_minutes = EXCLUDED.escalation_after_minutes,
+      topic = EXCLUDED.topic,
+      urgency = CASE
+        WHEN EXCLUDED.crisis_mode THEN 'critical'
+        ELSE campaign_directives.urgency
+      END,
       updated_at = EXCLUDED.updated_at
   `;
 
@@ -841,6 +893,200 @@ export async function pgConfirmDirectiveSeen(
     RETURNING user_id
   `;
   return rows.length > 0;
+}
+
+export async function pgMarkDirectiveSeen(
+  directiveId: string,
+  userId: string
+): Promise<boolean> {
+  const sql = getSql();
+  const now = new Date().toISOString();
+  const rows = await sql`
+    UPDATE directive_recipients
+    SET seen_at = COALESCE(seen_at, ${now})
+    WHERE directive_id = ${directiveId}
+      AND user_id = ${userId}
+    RETURNING user_id
+  `;
+  return rows.length > 0;
+}
+
+export async function pgMarkDirectiveExecuted(
+  directiveId: string,
+  userId: string
+): Promise<boolean> {
+  const sql = getSql();
+  const now = new Date().toISOString();
+  const rows = await sql`
+    UPDATE directive_recipients
+    SET executed_at = COALESCE(executed_at, ${now}),
+        seen_at = COALESCE(seen_at, ${now}),
+        confirmed = true
+    WHERE directive_id = ${directiveId}
+      AND user_id = ${userId}
+    RETURNING user_id
+  `;
+  return rows.length > 0;
+}
+
+export async function pgVerifyDirectiveExecution(
+  directiveId: string,
+  userId: string,
+  verifiedBy: string
+): Promise<boolean> {
+  const sql = getSql();
+  const now = new Date().toISOString();
+  const rows = await sql`
+    UPDATE directive_recipients
+    SET execution_verified_at = COALESCE(execution_verified_at, ${now}),
+        execution_verified_by = COALESCE(execution_verified_by, ${verifiedBy}),
+        executed_at = COALESCE(executed_at, ${now})
+    WHERE directive_id = ${directiveId}
+      AND user_id = ${userId}
+    RETURNING user_id
+  `;
+  return rows.length > 0;
+}
+
+export async function pgMarkDirectiveEscalated(directiveId: string): Promise<boolean> {
+  const sql = getSql();
+  const now = new Date().toISOString();
+  const rows = await sql`
+    UPDATE campaign_directives
+    SET escalated_at = COALESCE(escalated_at, ${now}),
+        updated_at = ${now}
+    WHERE id = ${directiveId}
+      AND crisis_mode = true
+      AND escalated_at IS NULL
+    RETURNING id
+  `;
+  return rows.length > 0;
+}
+
+export async function pgListCrisisEscalationTargets(directiveId: string): Promise<
+  Array<{
+    userId: string;
+    userName: string;
+    phone: string | null;
+    alternateContactName: string | null;
+    alternateContactPhone: string | null;
+    accountManagerName: string | null;
+  }>
+> {
+  const sql = getSql();
+  const rows = await sql`
+    SELECT
+      u.id AS user_id,
+      u.name AS user_name,
+      u.phone,
+      u.alternate_contact_name,
+      u.alternate_contact_phone,
+      u.account_manager_name
+    FROM directive_recipients r
+    INNER JOIN users u ON u.id = r.user_id
+    INNER JOIN campaign_directives d ON d.id = r.directive_id
+    WHERE r.directive_id = ${directiveId}
+      AND d.crisis_mode = true
+      AND r.confirmed = false
+      AND d.published = true
+      AND d.escalated_at IS NULL
+      AND d.published_at IS NOT NULL
+      AND d.published_at <= (now() - make_interval(mins => GREATEST(COALESCE(d.escalation_after_minutes, 30), 5)))
+  `;
+  return rows.map((row) => ({
+    userId: String(row.user_id),
+    userName: String(row.user_name ?? ""),
+    phone:
+      typeof row.phone === "string" && row.phone.trim() ? String(row.phone).trim() : null,
+    alternateContactName:
+      typeof row.alternate_contact_name === "string" && row.alternate_contact_name.trim()
+        ? String(row.alternate_contact_name).trim()
+        : null,
+    alternateContactPhone:
+      typeof row.alternate_contact_phone === "string" && row.alternate_contact_phone.trim()
+        ? String(row.alternate_contact_phone).trim()
+        : null,
+    accountManagerName:
+      typeof row.account_manager_name === "string" && row.account_manager_name.trim()
+        ? String(row.account_manager_name).trim()
+        : null,
+  }));
+}
+
+export async function pgListCalendarDirectives(campaignId?: string | null) {
+  const sql = getSql();
+  const campaignFilter = campaignId?.trim() || null;
+  const rows = await sql`
+    SELECT
+      d.id,
+      d.campaign_id,
+      d.title,
+      d.start_date,
+      d.end_date,
+      d.topic,
+      d.audience_device_id,
+      d.audience_ministry_id,
+      d.audience_organization_id,
+      d.audience_cities,
+      d.crisis_mode,
+      d.published,
+      cs.title AS campaign_title
+    FROM campaign_directives d
+    INNER JOIN campaign_settings cs ON cs.id = d.campaign_id
+    WHERE d.archived_at IS NULL
+      AND (${campaignFilter}::uuid IS NULL OR d.campaign_id = ${campaignFilter})
+    ORDER BY COALESCE(d.start_date, d.end_date, d.created_at::date) ASC
+  `;
+  return rows.map((row) => ({
+    id: String(row.id),
+    campaignId: String(row.campaign_id),
+    campaignTitle: String(row.campaign_title ?? ""),
+    title: String(row.title ?? ""),
+    startDate: toDateString(row.start_date),
+    endDate: toDateString(row.end_date),
+    topic: String(row.topic ?? ""),
+    deviceId: row.audience_device_id
+      ? String(row.audience_device_id)
+      : row.audience_organization_id
+        ? String(row.audience_organization_id)
+        : row.audience_ministry_id
+          ? String(row.audience_ministry_id)
+          : null,
+    provinces: mapAudienceProvinces(row.audience_cities),
+    crisisMode: Boolean(row.crisis_mode),
+    published: Boolean(row.published),
+  }));
+}
+
+export async function pgListCalendarCampaigns() {
+  const sql = getSql();
+  const rows = await sql`
+    SELECT id, title, start_date, end_date, content_plans
+    FROM campaign_settings
+    ORDER BY COALESCE(start_date, end_date, created_at::date) ASC
+  `;
+  return rows.map((row) => {
+    const rawPlans = row.content_plans;
+    let plans: string[] = [];
+    if (Array.isArray(rawPlans)) {
+      plans = rawPlans
+        .map((p) => {
+          if (typeof p === "string") return p.trim();
+          if (p && typeof p === "object" && "name" in p) {
+            return String((p as { name?: string }).name ?? "").trim();
+          }
+          return "";
+        })
+        .filter(Boolean);
+    }
+    return {
+      id: String(row.id),
+      title: String(row.title ?? ""),
+      startDate: toDateString(row.start_date),
+      endDate: toDateString(row.end_date),
+      topics: plans,
+    };
+  });
 }
 
 export async function pgUpdateRecipientSmsStatus(input: {

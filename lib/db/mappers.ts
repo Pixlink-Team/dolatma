@@ -567,6 +567,14 @@ export function mapUserFromDb(
       : null,
     phone: typeof row.phone === "string" && row.phone.trim() ? row.phone.trim() : null,
     accountManagerName: row.account_manager_name ?? null,
+    alternateContactName:
+      typeof row.alternate_contact_name === "string" && row.alternate_contact_name.trim()
+        ? row.alternate_contact_name.trim()
+        : null,
+    alternateContactPhone:
+      typeof row.alternate_contact_phone === "string" && row.alternate_contact_phone.trim()
+        ? row.alternate_contact_phone.trim()
+        : null,
     ministryId: row.ministry_id ? String(row.ministry_id) : null,
     ministryName: typeof row.ministry_name === "string" ? row.ministry_name : null,
     organizationId: row.organization_id ? String(row.organization_id) : null,

@@ -3,9 +3,11 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
+  Award,
   BarChart3,
   Bell,
   Building2,
+  CalendarDays,
   ClipboardCheck,
   ClipboardList,
   FileStack,
@@ -19,6 +21,7 @@ import {
   LayoutDashboard,
   LayoutGrid,
   LogOut,
+  Map,
   Menu,
   Radio,
   Rocket,
@@ -66,6 +69,9 @@ const allNavItems: {
 }[] = [
   { href: "/admin", label: "داشبورد", icon: LayoutDashboard },
   { href: "/admin/profile", label: "پروفایل من", icon: UserCircle },
+  { href: "/admin/capacity-map", label: "نقشه ملی ظرفیت", icon: Map, adminOrClientOnly: true },
+  { href: "/admin/calendar", label: "تقویم ملی", icon: CalendarDays, alwaysVisible: true },
+  { href: "/admin/best-practices", label: "بهترین اقدامات", icon: Award, alwaysVisible: true },
   { href: "/admin/settings", label: "تنظیمات اقدام", icon: Settings, adminOrClientOnly: true },
   { href: "/admin/tutorials", label: "آموزش بخش‌ها", icon: GraduationCap, adminOnly: true },
   { href: "/admin/ministries", label: "دستگاه‌ها", icon: Building2, adminOnly: true },
