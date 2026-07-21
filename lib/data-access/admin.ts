@@ -214,6 +214,7 @@ export async function saveCampaign(data: Partial<CampaignSettings> & { id?: stri
           submissions: false,
           files: false,
           rawMedia: false,
+          forms: false,
         },
         analyticsConfig: data.analyticsConfig ?? {
           site: { source: "manual", metabase: null },

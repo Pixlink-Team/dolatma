@@ -1196,3 +1196,40 @@ CREATE INDEX IF NOT EXISTS idx_directive_replacement_alerts_user
 CREATE INDEX IF NOT EXISTS idx_directive_replacement_alerts_directive
   ON directive_replacement_alerts(directive_id, status);
 
+-- Dynamic campaign forms (admin-built; contributors fill in panel)
+CREATE TABLE IF NOT EXISTS campaign_forms (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  campaign_id UUID NOT NULL REFERENCES campaign_settings(id) ON DELETE CASCADE,
+  title TEXT NOT NULL DEFAULT '',
+  description TEXT NOT NULL DEFAULT '',
+  fields JSONB NOT NULL DEFAULT '[]'::jsonb,
+  status TEXT NOT NULL DEFAULT 'draft'
+    CHECK (status IN ('draft', 'published', 'archived')),
+  sort_order INT NOT NULL DEFAULT 0,
+  created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_campaign_forms_campaign
+  ON campaign_forms(campaign_id, status, sort_order);
+
+CREATE TABLE IF NOT EXISTS campaign_form_responses (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  form_id UUID NOT NULL REFERENCES campaign_forms(id) ON DELETE CASCADE,
+  campaign_id UUID NOT NULL REFERENCES campaign_settings(id) ON DELETE CASCADE,
+  owner_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  answers JSONB NOT NULL DEFAULT '{}'::jsonb,
+  status TEXT NOT NULL DEFAULT 'submitted'
+    CHECK (status IN ('submitted', 'reviewed')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_campaign_form_responses_form
+  ON campaign_form_responses(form_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_campaign_form_responses_campaign
+  ON campaign_form_responses(campaign_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_campaign_form_responses_owner
+  ON campaign_form_responses(owner_user_id, created_at DESC);
+

@@ -226,6 +226,55 @@ export interface CampaignFeatures {
   submissions: boolean;
   files: boolean;
   rawMedia: boolean;
+  forms: boolean;
+}
+
+export type FormFieldType =
+  | "text"
+  | "textarea"
+  | "number"
+  | "select"
+  | "checkbox"
+  | "date"
+  | "file";
+
+export interface FormField {
+  id: string;
+  type: FormFieldType;
+  label: string;
+  required: boolean;
+  placeholder?: string;
+  options?: string[];
+  accept?: string;
+}
+
+export type CampaignFormStatus = "draft" | "published" | "archived";
+
+export interface CampaignForm {
+  id: string;
+  campaignId: string;
+  title: string;
+  description: string;
+  fields: FormField[];
+  status: CampaignFormStatus;
+  sortOrder: number;
+  createdBy?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  responseCount?: number;
+}
+
+export type CampaignFormResponseStatus = "submitted" | "reviewed";
+
+export interface CampaignFormResponse extends Ownable {
+  id: string;
+  formId: string;
+  campaignId: string;
+  answers: Record<string, unknown>;
+  status: CampaignFormResponseStatus;
+  createdAt: string;
+  updatedAt: string;
+  formTitle?: string;
 }
 
 export type AnalyticsSource = "manual" | "metabase" | "hybrid";

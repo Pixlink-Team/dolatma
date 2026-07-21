@@ -75,6 +75,7 @@ const defaultFeatures = {
   submissions: true,
   files: true,
   rawMedia: true,
+  forms: true,
 };
 
 export async function pgGetAllCampaigns(): Promise<CampaignSettings[]> {

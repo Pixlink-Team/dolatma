@@ -43,6 +43,7 @@ const featuresSchema = z.object({
   submissions: z.boolean(),
   files: z.boolean(),
   rawMedia: z.boolean(),
+  forms: z.boolean(),
 });
 
 const schema = z.object({
@@ -77,6 +78,7 @@ const defaultFeatures: CampaignFeatures = {
   submissions: false,
   files: false,
   rawMedia: true,
+  forms: false,
 };
 
 interface CampaignsAdminProps {
@@ -174,6 +176,7 @@ export function CampaignsAdmin({ initialCampaigns }: CampaignsAdminProps) {
     { key: "submissions", label: "مشارکت کاربران" },
     { key: "files", label: "فایل‌های اقدام" },
     { key: "rawMedia", label: "راش تصویر" },
+    { key: "forms", label: "فرم‌ها" },
   ];
 
   return (

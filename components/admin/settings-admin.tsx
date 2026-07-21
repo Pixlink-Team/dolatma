@@ -47,6 +47,7 @@ const featuresSchema = z.object({
   submissions: z.boolean(),
   files: z.boolean(),
   rawMedia: z.boolean(),
+  forms: z.boolean(),
 });
 
 const metabaseSchema = z.object({
@@ -101,6 +102,7 @@ const featureLabels: { key: keyof CampaignFeatures; label: string }[] = [
   { key: "submissions", label: "مشارکت کاربران" },
   { key: "files", label: "فایل‌های اقدام" },
   { key: "rawMedia", label: "راش تصویر" },
+  { key: "forms", label: "فرم‌ها" },
 ];
 
 function buildChannelAnalyticsConfig(
@@ -255,6 +257,7 @@ export function SettingsAdmin({
       features: {
         ...initialSettings.features,
         rawMedia: initialSettings.features.rawMedia ?? true,
+        forms: initialSettings.features.forms ?? false,
       },
       adminOwnerLabel: initialSettings.adminOwnerLabel ?? DEFAULT_ADMIN_OWNER_LABEL,
       siteAnalytics: {

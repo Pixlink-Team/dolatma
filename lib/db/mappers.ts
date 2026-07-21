@@ -111,6 +111,7 @@ export function mapSettingsFromDb(row: any): CampaignSettings {
             submissions: true,
             files: true,
             rawMedia: true,
+            forms: true,
             ...JSON.parse(row.features),
           }
         : {
@@ -128,6 +129,7 @@ export function mapSettingsFromDb(row: any): CampaignSettings {
             submissions: true,
             files: true,
             rawMedia: true,
+            forms: true,
             ...(row.features ?? {}),
           },
     analyticsConfig: normalizeAnalyticsConfig(

@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "5a7ac2e37c769f2ba20965a686083f3c1f80c579",
+      "committedAt": "2026-07-21T15:58:59+03:30",
+      "title": "امکان صدور دستورکار توسط یوزر مادر فقط برای زیرمجموعه‌های خودش",
+      "subject": "Allow ministry parents to issue directives to their sub-users"
+    },
+    {
       "hash": "bfecaf0dbb89e1b1f1b4591f1b2fe11043586950",
       "committedAt": "2026-07-21T15:56:30+03:30",
       "title": "انتقال بخش خروجی و پشتیبان‌گیری به تنظیمات اقدام",
