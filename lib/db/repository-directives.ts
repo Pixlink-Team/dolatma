@@ -49,6 +49,51 @@ function mapPriority(value: unknown): DirectivePriority {
   return value === "urgent" ? "urgent" : "normal";
 }
 
+/** Ensure command-center columns exist on older databases without a full migrate. */
+export async function ensureDirectiveCommandSchema(): Promise<void> {
+  const sql = getSql();
+  await sql`
+    ALTER TABLE campaign_directives
+      ADD COLUMN IF NOT EXISTS start_date DATE
+  `;
+  await sql`
+    ALTER TABLE campaign_directives
+      ADD COLUMN IF NOT EXISTS end_date DATE
+  `;
+  await sql`
+    ALTER TABLE campaign_directives
+      ADD COLUMN IF NOT EXISTS urgency TEXT NOT NULL DEFAULT 'normal'
+  `;
+  await sql`
+    ALTER TABLE campaign_directives
+      ADD COLUMN IF NOT EXISTS crisis_mode BOOLEAN NOT NULL DEFAULT false
+  `;
+  await sql`
+    ALTER TABLE campaign_directives
+      ADD COLUMN IF NOT EXISTS escalation_after_minutes INT NOT NULL DEFAULT 30
+  `;
+  await sql`
+    ALTER TABLE campaign_directives
+      ADD COLUMN IF NOT EXISTS escalated_at TIMESTAMPTZ
+  `;
+  await sql`
+    ALTER TABLE campaign_directives
+      ADD COLUMN IF NOT EXISTS topic TEXT NOT NULL DEFAULT ''
+  `;
+  await sql`
+    ALTER TABLE directive_recipients
+      ADD COLUMN IF NOT EXISTS executed_at TIMESTAMPTZ
+  `;
+  await sql`
+    ALTER TABLE directive_recipients
+      ADD COLUMN IF NOT EXISTS execution_verified_at TIMESTAMPTZ
+  `;
+  await sql`
+    ALTER TABLE directive_recipients
+      ADD COLUMN IF NOT EXISTS execution_verified_by UUID REFERENCES users(id) ON DELETE SET NULL
+  `;
+}
+
 function mapAudienceType(value: unknown): DirectiveAudienceType {
   if (value === "region" || value === "users" || value === "ministry_city") return value;
   return "all";
@@ -661,6 +706,7 @@ export interface SaveDirectiveInput {
 
 export async function pgSaveDirective(input: SaveDirectiveInput): Promise<{ id: string }> {
   const sql = getSql();
+  await ensureDirectiveCommandSchema();
   const id = input.id ?? generateId();
   const now = new Date().toISOString();
   const published = input.published ?? true;
@@ -916,6 +962,7 @@ export async function pgMarkDirectiveExecuted(
   userId: string
 ): Promise<boolean> {
   const sql = getSql();
+  await ensureDirectiveCommandSchema();
   const now = new Date().toISOString();
   const rows = await sql`
     UPDATE directive_recipients
@@ -935,6 +982,7 @@ export async function pgVerifyDirectiveExecution(
   verifiedBy: string
 ): Promise<boolean> {
   const sql = getSql();
+  await ensureDirectiveCommandSchema();
   const now = new Date().toISOString();
   const rows = await sql`
     UPDATE directive_recipients
@@ -950,6 +998,7 @@ export async function pgVerifyDirectiveExecution(
 
 export async function pgMarkDirectiveEscalated(directiveId: string): Promise<boolean> {
   const sql = getSql();
+  await ensureDirectiveCommandSchema();
   const now = new Date().toISOString();
   const rows = await sql`
     UPDATE campaign_directives
@@ -974,6 +1023,7 @@ export async function pgListCrisisEscalationTargets(directiveId: string): Promis
   }>
 > {
   const sql = getSql();
+  await ensureDirectiveCommandSchema();
   const rows = await sql`
     SELECT
       u.id AS user_id,
@@ -1015,6 +1065,7 @@ export async function pgListCrisisEscalationTargets(directiveId: string): Promis
 
 export async function pgListCalendarDirectives(campaignId?: string | null) {
   const sql = getSql();
+  await ensureDirectiveCommandSchema();
   const campaignFilter = campaignId?.trim() || null;
   const rows = await sql`
     SELECT

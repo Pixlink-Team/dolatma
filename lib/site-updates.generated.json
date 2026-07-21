@@ -1,6 +1,18 @@
 {
   "entries": [
     {
+      "hash": "aec93006ae35d9ea4df0df6188446fe3b6f4a400",
+      "committedAt": "2026-07-21T17:06:56+03:30",
+      "title": "حذف بخش قدیمی آمار سایت از صفحه عمومی",
+      "subject": "Remove unused public analytics section"
+    },
+    {
+      "hash": "a0b2d03e042bbb947d726df6ac2bc1e82686b6d4",
+      "committedAt": "2026-07-21T17:06:50+03:30",
+      "title": "جایگزینی آمار سایت با بخش سایت‌های شرکت‌ها",
+      "subject": "Replace site analytics metrics with company websites"
+    },
+    {
       "hash": "0d8d059d3de67d2856dd0f49de020a59bc8aba3c",
       "committedAt": "2026-07-21T17:06:41+03:30",
       "title": "امکان ویرایش پاسخ‌های پرشده فرم‌ها مثل ویرایش تبلیغات محیطی",

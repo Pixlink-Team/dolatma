@@ -172,6 +172,8 @@ export async function pgListNationalCapacityMap(filters?: {
 > {
   const sql = getSql();
   await ensureUserCapacitySchema();
+  const { ensureDeviceSchema } = await import("@/lib/db/repository-devices");
+  await ensureDeviceSchema();
 
   const province = filters?.province?.trim() || null;
   const city = filters?.city?.trim() || null;

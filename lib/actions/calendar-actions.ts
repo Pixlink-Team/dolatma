@@ -36,54 +36,66 @@ export async function getNationalCalendarAction(campaignId?: string | null) {
     };
   }
 
-  const [campaigns, directives] = await Promise.all([
-    pgListCalendarCampaigns(),
-    pgListCalendarDirectives(campaignId),
-  ]);
+  try {
+    const [campaigns, directives] = await Promise.all([
+      pgListCalendarCampaigns(),
+      pgListCalendarDirectives(campaignId),
+    ]);
 
-  const conflicts: Array<{
-    aId: string;
-    aTitle: string;
-    aKind: "campaign" | "directive";
-    bId: string;
-    bTitle: string;
-    bKind: "campaign" | "directive";
-  }> = [];
+    const conflicts: Array<{
+      aId: string;
+      aTitle: string;
+      aKind: "campaign" | "directive";
+      bId: string;
+      bTitle: string;
+      bKind: "campaign" | "directive";
+    }> = [];
 
-  // Directive ↔ directive conflicts (same device + province + topic + dates)
-  for (let i = 0; i < directives.length; i++) {
-    for (let j = i + 1; j < directives.length; j++) {
-      const a = directives[i];
-      const b = directives[j];
-      if (
-        detectCalendarConflict({
-          deviceId: a.deviceId,
-          provinces: a.provinces,
-          topic: a.topic,
-          startDate: a.startDate,
-          endDate: a.endDate,
-          other: {
-            deviceId: b.deviceId,
-            provinces: b.provinces,
-            topic: b.topic,
-            startDate: b.startDate,
-            endDate: b.endDate,
-          },
-        })
-      ) {
-        conflicts.push({
-          aId: a.id,
-          aTitle: a.title,
-          aKind: "directive",
-          bId: b.id,
-          bTitle: b.title,
-          bKind: "directive",
-        });
+    // Directive ↔ directive conflicts (same device + province + topic + dates)
+    for (let i = 0; i < directives.length; i++) {
+      for (let j = i + 1; j < directives.length; j++) {
+        const a = directives[i];
+        const b = directives[j];
+        if (
+          detectCalendarConflict({
+            deviceId: a.deviceId,
+            provinces: a.provinces,
+            topic: a.topic,
+            startDate: a.startDate,
+            endDate: a.endDate,
+            other: {
+              deviceId: b.deviceId,
+              provinces: b.provinces,
+              topic: b.topic,
+              startDate: b.startDate,
+              endDate: b.endDate,
+            },
+          })
+        ) {
+          conflicts.push({
+            aId: a.id,
+            aTitle: a.title,
+            aKind: "directive",
+            bId: b.id,
+            bTitle: b.title,
+            bKind: "directive",
+          });
+        }
       }
     }
-  }
 
-  return { success: true as const, campaigns, directives, conflicts };
+    return { success: true as const, campaigns, directives, conflicts };
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "بارگذاری تقویم ناموفق بود";
+    return {
+      success: false as const,
+      error: message,
+      campaigns: [],
+      directives: [],
+      conflicts: [],
+    };
+  }
 }
 
 export async function checkDirectiveCalendarConflictAction(input: {
