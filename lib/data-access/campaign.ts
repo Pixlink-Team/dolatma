@@ -1,14 +1,11 @@
 import { getMockStore, getMockStoreForCampaign } from "@/lib/mock-data";
 import { resolvePublicBillboards } from "@/lib/billboards";
 import type {
-  AnalyticsChannel,
-  AnalyticsMetric,
   AnalyticsSummary,
   CampaignActivity,
   CampaignKPIs,
   CampaignListItem,
   CampaignSettings,
-  ChannelAnalyticsConfig,
   MeetingPublicPreview,
   MeetingWithTasks,
   PublicCampaignData,
@@ -29,11 +26,10 @@ import { sanitizePublicCampaignSettings } from "@/lib/campaign-page-unlock";
 import { withFileAccessTokensDeep } from "@/lib/uploads";
 import { isPostgresConfigured, isSupabaseConfigured } from "@/lib/utils";
 import * as pg from "@/lib/db/repository";
-import { fetchMetabaseMetrics, resolveChannelMetabaseEmbedUrl } from "@/lib/services/metabase";
 import {
-  mapAnalyticsFromDb,
   mapBillboardFromDb,
   mapCategoryFromDb,
+  mapCompanyWebsiteFromDb,
   mapPosterFromDb,
   mapPosterVersionFromDb,
   mapSettingsFromDb,
@@ -43,34 +39,6 @@ import {
 } from "@/lib/db/mappers";
 import type { RawMediaUpload } from "@/lib/types";
 import { createClient } from "@/lib/supabase/server";
-
-async function resolveChannelAnalyticsMetrics(
-  settings: CampaignSettings,
-  dbMetrics: AnalyticsMetric[],
-  channel: AnalyticsChannel,
-  channelConfig: ChannelAnalyticsConfig
-): Promise<AnalyticsMetric[]> {
-  const channelMetrics = dbMetrics.filter((metric) => (metric.channel ?? "site") === channel);
-  const metabase = channelConfig.metabase;
-  const useMetabase =
-    (channelConfig.source === "metabase" || channelConfig.source === "hybrid") &&
-    Boolean(metabase?.url && metabase?.questionId);
-
-  if (!useMetabase || !metabase) {
-    return channelMetrics;
-  }
-
-  try {
-    const liveMetrics = await fetchMetabaseMetrics(settings.id, metabase, channel);
-    if (channelConfig.source === "hybrid") {
-      return [...channelMetrics, ...liveMetrics];
-    }
-    return liveMetrics;
-  } catch (error) {
-    console.error(`Metabase analytics fetch failed (${channel}):`, error);
-    return channelMetrics;
-  }
-}
 
 function buildAnalyticsSummary(
   metrics: { visitors: number; uniqueVisitors: number; pageViews: number; avgSessionDuration: number; source?: string | null; device?: string | null; page?: string | null; city?: string | null; date: string }[]
@@ -135,18 +103,6 @@ function buildAnalyticsSummary(
       .map(([date, data]) => ({ date, ...data }))
       .sort((a, b) => a.date.localeCompare(b.date)),
     hasData: totalVisitors > 0,
-  };
-}
-
-function withMetabaseEmbed(
-  summary: AnalyticsSummary,
-  channelConfig: ChannelAnalyticsConfig
-): AnalyticsSummary {
-  const metabaseEmbedUrl = resolveChannelMetabaseEmbedUrl(channelConfig);
-  return {
-    ...summary,
-    metabaseEmbedUrl,
-    hasData: summary.hasData || Boolean(metabaseEmbedUrl),
   };
 }
 
@@ -221,7 +177,7 @@ function buildSectionVisibility(
     billboards: unknown[];
     posters: unknown[];
     videos: unknown[];
-    analytics: AnalyticsSummary;
+    companyWebsites: unknown[];
     socialAnalytics: SocialAnalyticsSummary;
     socialPosts: unknown[];
     sitePublications: unknown[];
@@ -238,9 +194,7 @@ function buildSectionVisibility(
     billboards: features.billboards && data.billboards.length > 0,
     posters: features.posters && data.posters.length > 0,
     videos: features.videos && data.videos.length > 0,
-    analytics:
-      features.analytics &&
-      (data.analytics.hasData || Boolean(data.analytics.metabaseEmbedUrl)),
+    analytics: features.analytics && data.companyWebsites.length > 0,
     socialAnalytics:
       features.socialAnalytics && data.socialAnalytics.hasData,
     socialPosts: (features.socialPosts ?? true) && data.socialPosts.length > 0,
@@ -280,7 +234,7 @@ function buildKPIs(
     billboards: unknown[];
     posters: unknown[];
     videos: unknown[];
-    analytics: AnalyticsSummary;
+    companyWebsites: unknown[];
     socialAnalytics: SocialAnalyticsSummary;
     socialPosts: unknown[];
     sitePublications: unknown[];
@@ -298,7 +252,7 @@ function buildKPIs(
     totalBillboards: visibility.billboards ? data.billboards.length : 0,
     totalPosters: visibility.posters ? data.posters.length : 0,
     totalVideos: visibility.videos ? data.videos.length : 0,
-    totalSiteVisitors: visibility.analytics ? data.analytics.uniqueVisitors : 0,
+    totalCompanyWebsites: visibility.analytics ? data.companyWebsites.length : 0,
     totalSocialFollowers: visibility.socialAnalytics ? data.socialAnalytics.totalFollowers : 0,
     totalSocialPosts: visibility.socialPosts ? data.socialPosts.length : 0,
     totalSocialPostViews: visibility.socialPosts
@@ -356,11 +310,9 @@ function assemblePublicData(
     }))
     .filter((v) => v.versions.length > 0);
 
-  const siteMetrics = store.analytics.filter((metric) => (metric.channel ?? "site") === "site");
-  const analytics = withMetabaseEmbed(
-    buildAnalyticsSummary(siteMetrics),
-    settings.analyticsConfig.site
-  );
+  const companyWebsites = (store.companyWebsites ?? [])
+    .filter((item) => item.published)
+    .sort((a, b) => a.sortOrder - b.sortOrder || b.createdAt.localeCompare(a.createdAt));
   const socialAnalytics = buildSocialAnalyticsSummary(store.socialPlatformStats ?? []);
   const submissions = store.submissions
     .filter((s) => s.published && s.status === "approved")
@@ -405,7 +357,7 @@ function assemblePublicData(
     billboards,
     posters,
     videos,
-    analytics,
+    companyWebsites,
     socialAnalytics,
     socialPosts,
     sitePublications,
@@ -422,7 +374,7 @@ function assemblePublicData(
     billboards,
     posters,
     videos,
-    analytics,
+    companyWebsites,
     socialAnalytics,
     socialPosts,
     sitePublications,
@@ -448,7 +400,8 @@ function assemblePublicData(
     videoCategories,
     videos,
     videoGroups: groupByOwner(videos, adminOwnerLabel),
-    analytics,
+    companyWebsites,
+    companyWebsiteGroups: groupByOwner(companyWebsites, adminOwnerLabel),
     socialAnalytics,
     socialPosts,
     socialPostGroups: groupByOwner(socialPosts, adminOwnerLabel),
@@ -560,12 +513,6 @@ export async function getPublicCampaignData(slug: string): Promise<PublicCampaig
       // Backfill: publish older contributor drafts that never reached the public page.
       await pg.pgPublishContributorUploads(settings.id);
       const campaignStore = await pg.pgGetPublicCampaignData(settings.id);
-      const siteMetrics = await resolveChannelAnalyticsMetrics(
-        settings,
-        campaignStore.analytics,
-        "site",
-        settings.analyticsConfig.site
-      );
       const billboards = await resolvePublicBillboards(
         settings,
         campaignStore.billboards
@@ -575,7 +522,6 @@ export async function getPublicCampaignData(slug: string): Promise<PublicCampaig
         {
           settings,
           ...campaignStore,
-          analytics: siteMetrics,
           socialPlatformStats: campaignStore.socialPlatformStats ?? [],
         } as CampaignPublicStore,
         billboards
@@ -613,7 +559,7 @@ export async function getPublicCampaignData(slug: string): Promise<PublicCampaig
       videoCategoriesRes,
       videosRes,
       videoVersionsRes,
-      analyticsRes,
+      companyWebsitesRes,
       submissionsRes,
     ] = await Promise.all([
       supabase.from("billboards").select("*").eq("campaign_id", campaignId).eq("published", true).order("sort_order"),
@@ -623,7 +569,7 @@ export async function getPublicCampaignData(slug: string): Promise<PublicCampaig
       supabase.from("media_categories").select("*").eq("campaign_id", campaignId).eq("type", "video").eq("published", true).order("sort_order"),
       supabase.from("videos").select("*").eq("campaign_id", campaignId).eq("published", true).order("sort_order"),
       supabase.from("video_versions").select("*").order("version_number"),
-      supabase.from("analytics_metrics").select("*").eq("campaign_id", campaignId).order("date"),
+      supabase.from("company_websites").select("*").eq("campaign_id", campaignId).eq("published", true).order("sort_order"),
       supabase.from("campaign_submissions").select("*").eq("campaign_id", campaignId).eq("published", true).eq("status", "approved"),
     ]);
 
@@ -644,7 +590,7 @@ export async function getPublicCampaignData(slug: string): Promise<PublicCampaig
       videoVersions: (videoVersionsRes.data ?? [])
         .filter((v) => videoIds.includes(v.video_id))
         .map(mapVideoVersionFromDb),
-      analytics: (analyticsRes.data ?? []).map(mapAnalyticsFromDb),
+      companyWebsites: (companyWebsitesRes.data ?? []).map(mapCompanyWebsiteFromDb),
       submissions: (submissionsRes.data ?? []).map(mapSubmissionFromDb),
       files: [],
       socialPosts: [],

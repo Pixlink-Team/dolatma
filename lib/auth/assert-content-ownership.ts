@@ -8,6 +8,7 @@ export type OwnedContentTable =
   | "posters"
   | "videos"
   | "analytics_metrics"
+  | "company_websites"
   | "campaign_submissions"
   | "campaign_files"
   | "raw_media_uploads"
@@ -22,6 +23,7 @@ const OWNED_TABLES = new Set<OwnedContentTable>([
   "posters",
   "videos",
   "analytics_metrics",
+  "company_websites",
   "campaign_submissions",
   "campaign_files",
   "raw_media_uploads",

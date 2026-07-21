@@ -1,6 +1,5 @@
 import type { LucideIcon } from "lucide-react";
 import {
-  BarChart3,
   ClipboardList,
   FileStack,
   FileText,
@@ -16,7 +15,6 @@ import {
 import type { ContributorPermissionKey } from "@/lib/contributor-permissions";
 import { splitSocialPosts } from "@/lib/social-posts";
 import type {
-  AnalyticsMetric,
   Billboard,
   BroadcastReport,
   CampaignActivity,
@@ -24,6 +22,7 @@ import type {
   CampaignFeatures,
   CampaignMeeting,
   CampaignSubmission,
+  CompanyWebsite,
   Poster,
   SocialMediaPost,
   SocialPlatformStat,
@@ -35,7 +34,7 @@ export interface AdminDashboardData {
   videos: CampaignVideo[];
   files?: CampaignFile[];
   submissions: CampaignSubmission[];
-  analytics: AnalyticsMetric[];
+  companyWebsites?: CompanyWebsite[];
   socialPosts?: SocialMediaPost[];
   socialPlatformStats?: SocialPlatformStat[];
   broadcastReports?: BroadcastReport[];
@@ -96,10 +95,10 @@ export const DASHBOARD_STAT_DEFINITIONS: DashboardStatDefinition[] = [
   {
     permissionKey: "analytics",
     featureKey: "analytics",
-    label: "آمار سایت",
+    label: "سایت‌های شرکت‌ها",
     href: "/admin/analytics",
-    icon: BarChart3,
-    getCount: (data) => data.analytics.length,
+    icon: Globe,
+    getCount: (data) => (data.companyWebsites ?? []).length,
   },
   {
     permissionKey: "sitePublications",

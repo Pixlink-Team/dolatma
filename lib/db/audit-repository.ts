@@ -532,7 +532,7 @@ export async function pgGetUserContentContributions(): Promise<UserContentContri
       UNION ALL
       SELECT owner_user_id, 'meetings', COUNT(*)::int FROM campaign_meetings WHERE owner_user_id IS NOT NULL GROUP BY owner_user_id
       UNION ALL
-      SELECT owner_user_id, 'analytics', COUNT(*)::int FROM analytics_metrics WHERE owner_user_id IS NOT NULL GROUP BY owner_user_id
+      SELECT owner_user_id, 'analytics', COUNT(*)::int FROM company_websites WHERE owner_user_id IS NOT NULL GROUP BY owner_user_id
       UNION ALL
       SELECT owner_user_id, 'submissions', COUNT(*)::int FROM campaign_submissions WHERE owner_user_id IS NOT NULL GROUP BY owner_user_id
     ),

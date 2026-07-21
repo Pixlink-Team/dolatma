@@ -23,7 +23,7 @@ export const tutorialSectionLabels: Record<TutorialSectionKey, string> = {
   videos: "ویدیوها",
   files: "فایل‌ها",
   rawMedia: "راش تصویر",
-  analytics: "آمار سایت",
+  analytics: "سایت‌های شرکت‌ها",
   socialAnalytics: "شبکه‌های اجتماعی",
   socialPosts: "پست‌های شبکه اجتماعی",
   sitePublications: "انتشار در سایت",

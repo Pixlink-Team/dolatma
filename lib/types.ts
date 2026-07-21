@@ -527,6 +527,21 @@ export interface AnalyticsMetric extends Ownable {
   createdAt: string;
 }
 
+/** Company website listing shown instead of site visitor analytics. */
+export interface CompanyWebsite extends Ownable {
+  id: string;
+  campaignId: string;
+  title: string;
+  url: string;
+  companyName?: string | null;
+  description?: string | null;
+  logoUrl?: string | null;
+  published: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface CampaignSubmission extends Ownable {
   id: string;
   campaignId: string;
@@ -1195,7 +1210,7 @@ export interface CampaignKPIs {
   totalBillboards: number;
   totalPosters: number;
   totalVideos: number;
-  totalSiteVisitors: number;
+  totalCompanyWebsites: number;
   totalSocialFollowers: number;
   totalSocialPosts: number;
   totalSocialPostViews: number;
@@ -1261,7 +1276,8 @@ export interface PublicCampaignData {
   videoCategories: MediaCategory[];
   videos: VideoWithVersions[];
   videoGroups: DataOwnerGroup<VideoWithVersions>[];
-  analytics: AnalyticsSummary;
+  companyWebsites: CompanyWebsite[];
+  companyWebsiteGroups: DataOwnerGroup<CompanyWebsite>[];
   socialAnalytics: SocialAnalyticsSummary;
   socialPosts: SocialMediaPost[];
   socialPostGroups: DataOwnerGroup<SocialMediaPost>[];

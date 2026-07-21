@@ -11,7 +11,7 @@ import type { CampaignAuthViewer } from "@/lib/auth/campaign-viewer";
 import { BillboardSection } from "@/components/public/billboard-section";
 import { PostersSection } from "@/components/public/posters-section";
 import { VideosSection } from "@/components/public/videos-section";
-import { AnalyticsSection } from "@/components/public/analytics-section";
+import { CompanyWebsitesSection } from "@/components/public/company-websites-section";
 import { SocialAnalyticsSection } from "@/components/public/social-analytics-section";
 import { SubmissionsSection } from "@/components/public/submissions-section";
 import { CampaignFilesSection } from "@/components/public/campaign-files-section";
@@ -129,10 +129,13 @@ function CampaignDashboardBody({
       <main className="container mx-auto max-w-[1280px] space-y-8 overflow-x-hidden px-4 py-8">
         <CampaignOverviewSection data={data} />
 
-        {sections.analytics && !contentFilterActive && (
-          <DeferredSection minHeight={320} forceRender={forceRender}>
-            <section data-export-section data-export-label="آمار سایت اقدام">
-              <AnalyticsSection analytics={data.analytics} />
+        {sections.analytics && (
+          <DeferredSection minHeight={240} forceRender={forceRender}>
+            <section data-export-section data-export-label="سایت‌های شرکت‌ها">
+              <CompanyWebsitesSection
+                websites={data.companyWebsites}
+                groups={data.companyWebsiteGroups}
+              />
             </section>
           </DeferredSection>
         )}

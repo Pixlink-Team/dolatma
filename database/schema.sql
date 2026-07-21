@@ -1381,3 +1381,28 @@ DROP POLICY IF EXISTS best_practices_app_access ON best_practices;
 CREATE POLICY best_practices_app_access ON best_practices
   FOR ALL USING (true) WITH CHECK (true);
 
+-- Company websites (replaces site visitor analytics in the public campaign)
+CREATE TABLE IF NOT EXISTS company_websites (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  campaign_id UUID NOT NULL REFERENCES campaign_settings(id) ON DELETE CASCADE,
+  owner_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  title TEXT NOT NULL,
+  url TEXT NOT NULL,
+  company_name TEXT,
+  description TEXT,
+  logo_url TEXT,
+  published BOOLEAN NOT NULL DEFAULT false,
+  sort_order INT NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_company_websites_campaign
+  ON company_websites(campaign_id, published, sort_order);
+
+ALTER TABLE company_websites ENABLE ROW LEVEL SECURITY;
+ALTER TABLE company_websites NO FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS company_websites_app_access ON company_websites;
+CREATE POLICY company_websites_app_access ON company_websites
+  FOR ALL USING (true) WITH CHECK (true);
+

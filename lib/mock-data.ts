@@ -1,8 +1,8 @@
 import type {
-  AnalyticsMetric,
   Billboard,
   CampaignSettings,
   CampaignSubmission,
+  CompanyWebsite,
   MediaCategory,
   Poster,
   PosterVersion,
@@ -11,8 +11,6 @@ import type {
 } from "./types";
 
 const now = new Date().toISOString();
-const daysAgo = (n: number) =>
-  new Date(Date.now() - n * 86400000).toISOString().split("T")[0];
 
 const fullFeatures = {
   billboards: true,
@@ -221,21 +219,21 @@ export const mockVideoVersions: VideoVersion[] = [
   { id: "vv-3", videoId: "v-2", versionNumber: 1, videoUrl: "https://www.w3schools.com/html/movie.mp4", thumbnailUrl: "https://images.unsplash.com/photo-1611162616305-c69b3fa7a162?w=400&h=225&fit=crop", duration: "0:15", notes: "نهایی", status: "final", isFinal: true, date: "2025-01-10", createdAt: now },
 ];
 
-export const mockAnalyticsMetrics: AnalyticsMetric[] = Array.from({ length: 14 }, (_, i) => ({
-  id: `am-site-${i}`,
-  campaignId: "campaign-1",
-  channel: "site" as const,
-  date: daysAgo(13 - i),
-  visitors: 800 + Math.floor(Math.random() * 400),
-  uniqueVisitors: 600 + Math.floor(Math.random() * 300),
-  pageViews: 1200 + Math.floor(Math.random() * 600),
-  avgSessionDuration: 120 + Math.floor(Math.random() * 60),
-  source: (["direct", "google", "referral", "other"] as const)[i % 4],
-  device: (["mobile", "desktop", "tablet"] as const)[i % 3],
-  page: ["/", "/about", "/contact", "/campaign"][i % 4],
-  city: ["تهران", "مشهد", "اصفهان", "شیراز", "تبریز"][i % 5],
-  createdAt: now,
-}));
+export const mockCompanyWebsites: CompanyWebsite[] = [
+  {
+    id: "cw-1",
+    campaignId: "campaign-1",
+    title: "سایت رسمی شرکت نمونه",
+    url: "https://example.com",
+    companyName: "شرکت نمونه",
+    description: "معرفی خدمات و اخبار شرکت",
+    logoUrl: null,
+    published: true,
+    sortOrder: 1,
+    createdAt: now,
+    updatedAt: now,
+  },
+];
 
 export const mockSocialPlatformStats: import("./types").SocialPlatformStat[] = [
   { id: "sps-1", campaignId: "campaign-1", platform: "instagram", followers: 125000, posts: 342, profileUrl: "https://instagram.com/", sortOrder: 1, createdAt: now, updatedAt: now },
@@ -283,7 +281,7 @@ let mockStore = {
   videoCategories: [...mockVideoCategories],
   videos: [...mockVideos],
   videoVersions: [...mockVideoVersions],
-  analytics: [...mockAnalyticsMetrics],
+  companyWebsites: [...mockCompanyWebsites],
   socialPlatformStats: [...mockSocialPlatformStats],
   submissions: [...mockSubmissions],
   files: [] as import("./types").CampaignFile[],
@@ -313,7 +311,7 @@ export function getMockStoreForCampaign(campaignId: string) {
     videoVersions: store.videoVersions.filter((v) =>
       store.videos.filter((vid) => vid.campaignId === campaignId).some((vid) => vid.id === v.videoId)
     ),
-    analytics: store.analytics.filter((a) => a.campaignId === campaignId),
+    companyWebsites: store.companyWebsites.filter((item) => item.campaignId === campaignId),
     submissions: store.submissions.filter((s) => s.campaignId === campaignId),
     files: store.files.filter((file) => file.campaignId === campaignId),
     socialPosts: store.socialPosts.filter((post) => post.campaignId === campaignId),
@@ -334,7 +332,7 @@ export function resetMockStore() {
     videoCategories: [...mockVideoCategories],
     videos: [...mockVideos],
     videoVersions: [...mockVideoVersions],
-    analytics: [...mockAnalyticsMetrics],
+    companyWebsites: [...mockCompanyWebsites],
     submissions: [...mockSubmissions],
     files: [],
     socialPosts: [],

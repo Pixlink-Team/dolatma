@@ -1,16 +1,23 @@
 import { redirect } from "next/navigation";
 import { getAdminData } from "@/lib/data-access/admin";
 import { resolveAdminCampaignId } from "@/lib/admin-campaign";
-import { AnalyticsAdmin } from "@/components/admin/analytics-admin";
+import { requireContributorAccess } from "@/lib/auth/require-contributor-access";
+import { CompanyWebsitesAdmin } from "@/components/admin/company-websites-admin";
 
 interface PageProps {
   searchParams: Promise<{ campaign?: string }>;
 }
 
-export default async function AnalyticsPage({ searchParams }: PageProps) {
+export default async function CompanyWebsitesPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const { campaignId } = await resolveAdminCampaignId(params.campaign);
   if (!campaignId) redirect("/admin");
+  await requireContributorAccess(campaignId, "analytics");
   const data = await getAdminData(campaignId, ["analytics"]);
-  return <AnalyticsAdmin campaignId={campaignId} initialMetrics={data.analytics} />;
+  return (
+    <CompanyWebsitesAdmin
+      campaignId={campaignId}
+      initialItems={data.companyWebsites ?? []}
+    />
+  );
 }

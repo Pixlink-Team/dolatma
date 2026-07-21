@@ -1,6 +1,18 @@
 {
   "entries": [
     {
+      "hash": "0d8d059d3de67d2856dd0f49de020a59bc8aba3c",
+      "committedAt": "2026-07-21T17:06:41+03:30",
+      "title": "امکان ویرایش پاسخ‌های پرشده فرم‌ها مثل ویرایش تبلیغات محیطی",
+      "subject": "Allow editing submitted campaign form responses"
+    },
+    {
+      "hash": "ff8194ddee6853af412a4b5d397e70f28e467e96",
+      "committedAt": "2026-07-21T16:53:15+03:30",
+      "title": "افزودن نقشه ظرفیت، قیف اجرا، کتابخانه بهترین اقدامات، حالت بحران، تقویم ملی و ثبت مانع",
+      "subject": "Add command-center features for capacity, funnel, and calendar"
+    },
+    {
       "hash": "fa8554f5d58a197468fb30ef13a0923c54a4ea41",
       "committedAt": "2026-07-21T16:43:40+03:30",
       "title": "حذف امکان ساخت و مدیریت چند اقدام — فقط اقدامات دولت باقی ماند",

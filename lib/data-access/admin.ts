@@ -7,11 +7,11 @@ import type { AdminDataSection } from "@/lib/db/repository";
 import type { ParsedSubmissionRow } from "@/lib/services/submissions-excel-parser";
 import * as pgExt from "@/lib/db/repository-extended";
 import type {
-  AnalyticsMetric,
   Billboard,
   CampaignFile,
   CampaignSettings,
   CampaignSubmission,
+  CompanyWebsite,
   MediaCategory,
   Poster,
   PosterVersion,
@@ -71,7 +71,9 @@ export async function getAdminData(campaignId: string, sections?: AdminDataSecti
       videoCategories: [...store.videoCategories].sort((a, b) => a.sortOrder - b.sortOrder),
       videos: filterByOwner([...store.videos]).sort((a, b) => a.sortOrder - b.sortOrder),
       videoVersions: [...store.videoVersions],
-      analytics: filterByOwner([...store.analytics]),
+      companyWebsites: filterByOwner([...(store.companyWebsites ?? [])]).sort(
+        (a, b) => a.sortOrder - b.sortOrder || b.createdAt.localeCompare(a.createdAt)
+      ),
       submissions: filterByOwner([...store.submissions]).sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
       files: filterByOwner([...(store.files ?? [])]).sort((a, b) => a.sortOrder - b.sortOrder),
       socialPosts: filterByOwner([...(store.socialPosts ?? [])]).sort((a, b) => a.sortOrder - b.sortOrder),
@@ -91,7 +93,7 @@ export async function getAdminData(campaignId: string, sections?: AdminDataSecti
   if (!supabase) return withFileAccessTokensDeep(getAdminDataMock(campaignId));
 
   try {
-    const [campaigns, settings, billboards, posterCategories, posters, posterVersions, videoCategories, videos, videoVersions, analytics, submissions] =
+    const [campaigns, settings, billboards, posterCategories, posters, posterVersions, videoCategories, videos, videoVersions, companyWebsites, submissions] =
       await Promise.all([
         supabase.from("campaign_settings").select("*").order("updated_at", { ascending: false }),
         supabase.from("campaign_settings").select("*").eq("id", campaignId).single(),
@@ -102,7 +104,7 @@ export async function getAdminData(campaignId: string, sections?: AdminDataSecti
         supabase.from("media_categories").select("*").eq("campaign_id", campaignId).eq("type", "video").order("sort_order"),
         supabase.from("videos").select("*").eq("campaign_id", campaignId).order("sort_order"),
         supabase.from("video_versions").select("*"),
-        supabase.from("analytics_metrics").select("*").eq("campaign_id", campaignId).order("date", { ascending: false }),
+        supabase.from("company_websites").select("*").eq("campaign_id", campaignId).order("sort_order"),
         supabase.from("campaign_submissions").select("*").eq("campaign_id", campaignId).order("created_at", { ascending: false }),
       ]);
 
@@ -116,7 +118,7 @@ export async function getAdminData(campaignId: string, sections?: AdminDataSecti
       videoCategories: videoCategories.data ?? [],
       videos: filterByOwner(videos.data ?? []),
       videoVersions: videoVersions.data ?? [],
-      analytics: filterByOwner(analytics.data ?? []),
+      companyWebsites: filterByOwner(companyWebsites.data ?? []),
       submissions: filterByOwner(submissions.data ?? []),
       files: [],
       socialPosts: [],
@@ -134,7 +136,7 @@ export async function getAdminData(campaignId: string, sections?: AdminDataSecti
       billboards: filterByOwner(mock.billboards),
       posters: filterByOwner(mock.posters),
       videos: filterByOwner(mock.videos),
-      analytics: filterByOwner(mock.analytics),
+      companyWebsites: filterByOwner(mock.companyWebsites ?? []),
       submissions: filterByOwner(mock.submissions),
       files: filterByOwner(mock.files ?? []),
       socialPosts: filterByOwner(mock.socialPosts ?? []),
@@ -159,7 +161,9 @@ function getAdminDataMock(campaignId: string) {
     videoCategories: [...store.videoCategories].sort((a, b) => a.sortOrder - b.sortOrder),
     videos: [...store.videos].sort((a, b) => a.sortOrder - b.sortOrder),
     videoVersions: [...store.videoVersions],
-    analytics: [...store.analytics],
+    companyWebsites: [...(store.companyWebsites ?? [])].sort(
+      (a, b) => a.sortOrder - b.sortOrder || b.createdAt.localeCompare(a.createdAt)
+    ),
     submissions: [...store.submissions].sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
     files: [...(store.files ?? [])].sort((a, b) => a.sortOrder - b.sortOrder),
     socialPosts: [...(store.socialPosts ?? [])].sort((a, b) => a.sortOrder - b.sortOrder),
@@ -247,7 +251,7 @@ export async function deleteCampaign(id: string): Promise<{ success: boolean; er
       posters: store.posters.filter((p) => p.campaignId !== id),
       videoCategories: store.videoCategories.filter((c) => c.campaignId !== id),
       videos: store.videos.filter((v) => v.campaignId !== id),
-      analytics: store.analytics.filter((a) => a.campaignId !== id),
+      companyWebsites: (store.companyWebsites ?? []).filter((item) => item.campaignId !== id),
       submissions: store.submissions.filter((s) => s.campaignId !== id),
       files: (store.files ?? []).filter((file) => file.campaignId !== id),
     }));
@@ -570,47 +574,47 @@ export async function deleteVideoVersion(id: string) {
   return { success: true };
 }
 
-export async function saveAnalyticsMetric(data: Partial<AnalyticsMetric> & { id?: string }) {
-  if (isPostgresConfigured()) return pg.pgSaveAnalyticsMetric(data);
+export async function saveCompanyWebsite(data: Partial<CompanyWebsite> & { id?: string }) {
+  if (isPostgresConfigured()) return pg.pgSaveCompanyWebsite(data);
   const now = new Date().toISOString();
   if (!isSupabaseConfigured()) {
     updateMockStore((store) => {
+      const list = store.companyWebsites ?? [];
       if (data.id) {
         return {
           ...store,
-          analytics: store.analytics.map((a) =>
-            a.id === data.id ? { ...a, ...data } as AnalyticsMetric : a
+          companyWebsites: list.map((item) =>
+            item.id === data.id ? ({ ...item, ...data, updatedAt: now } as CompanyWebsite) : item
           ),
         };
       }
-      const newItem: AnalyticsMetric = {
+      const newItem: CompanyWebsite = {
         id: generateId(),
         campaignId: data.campaignId ?? "",
-        channel: data.channel ?? "site",
-        date: data.date ?? now.split("T")[0],
-        visitors: data.visitors ?? 0,
-        uniqueVisitors: data.uniqueVisitors ?? 0,
-        pageViews: data.pageViews ?? 0,
-        avgSessionDuration: data.avgSessionDuration ?? 0,
-        source: data.source,
-        device: data.device,
-        page: data.page,
-        city: data.city,
+        title: data.title ?? "",
+        url: data.url ?? "",
+        companyName: data.companyName ?? null,
+        description: data.description ?? null,
+        logoUrl: data.logoUrl ?? null,
+        published: data.published ?? true,
+        sortOrder: data.sortOrder ?? 0,
+        ownerUserId: data.ownerUserId ?? null,
         createdAt: now,
+        updatedAt: now,
       };
-      return { ...store, analytics: [...store.analytics, newItem] };
+      return { ...store, companyWebsites: [...list, newItem] };
     });
     return { success: true };
   }
   return { success: true };
 }
 
-export async function deleteAnalyticsMetric(id: string) {
-  if (isPostgresConfigured()) return pg.pgDeleteAnalyticsMetric(id);
+export async function deleteCompanyWebsite(id: string) {
+  if (isPostgresConfigured()) return pg.pgDeleteCompanyWebsite(id);
   if (!isSupabaseConfigured()) {
     updateMockStore((store) => ({
       ...store,
-      analytics: store.analytics.filter((a) => a.id !== id),
+      companyWebsites: (store.companyWebsites ?? []).filter((item) => item.id !== id),
     }));
     return { success: true };
   }

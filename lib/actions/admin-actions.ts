@@ -5,9 +5,9 @@ import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
 import { assertCanMutateOwnedContent } from "@/lib/auth/assert-content-ownership";
 import { assertTutorialForPossibleCreate } from "@/lib/auth/require-tutorial-completion";
 import {
-  deleteAnalyticsMetric,
   deleteBillboard,
   deleteCampaignFile,
+  deleteCompanyWebsite,
   deleteMediaCategory,
   deletePoster,
   deletePosterVersion,
@@ -15,10 +15,10 @@ import {
   deleteSubmission,
   deleteVideo,
   deleteVideoVersion,
-  saveAnalyticsMetric,
   saveBillboard,
   saveCampaign,
   saveCampaignFile,
+  saveCompanyWebsite,
   saveMediaCategory,
   savePoster,
   savePosterVersion,
@@ -29,11 +29,11 @@ import {
   updateSubmission,
 } from "@/lib/data-access/admin";
 import type {
-  AnalyticsMetric,
   AuthSession,
   Billboard,
   CampaignFile,
   CampaignSettings,
+  CompanyWebsite,
   MediaCategory,
   Poster,
   PosterVersion,
@@ -382,38 +382,40 @@ export async function deleteVideoVersionAction(id: string) {
   return result;
 }
 
-export async function saveAnalyticsAction(data: Partial<AnalyticsMetric> & { id?: string }) {
+export async function saveCompanyWebsiteAction(data: Partial<CompanyWebsite> & { id?: string }) {
   const auth = await requireSession();
   if (isAuthError(auth)) return auth;
+  const validationError = validateTitlePayload(data);
+  if (validationError) return validationError;
   if (data.id) {
-    const denied = await assertCanMutateOwnedContent(auth, "analytics_metrics", data.id);
+    const denied = await assertCanMutateOwnedContent(auth, "company_websites", data.id);
     if (denied) return denied;
   }
   const tutorialDenied = await assertTutorialForPossibleCreate(
     "analytics",
-    "analytics_metrics",
+    "company_websites",
     data.id
   );
   if (tutorialDenied) return tutorialDenied;
-  const result = await saveAnalyticsMetric(await withOwnerScope(auth, data));
+  const result = await saveCompanyWebsite(await withOwnerScope(auth, data));
   await auditContentChange({
     isUpdate: Boolean(data.id),
-    entityType: "analytics_metric",
+    entityType: "company_website",
     entityId: data.id,
     campaignId: data.campaignId,
-    label: "آمار سایت",
+    label: data.title,
   });
   await revalidateAll();
   return result;
 }
 
-export async function deleteAnalyticsAction(id: string) {
+export async function deleteCompanyWebsiteAction(id: string) {
   const auth = await requireSession();
   if (isAuthError(auth)) return auth;
-  const denied = await assertCanMutateOwnedContent(auth, "analytics_metrics", id);
+  const denied = await assertCanMutateOwnedContent(auth, "company_websites", id);
   if (denied) return denied;
-  const result = await deleteAnalyticsMetric(id);
-  await auditContentDelete({ entityType: "analytics_metric", entityId: id });
+  const result = await deleteCompanyWebsite(id);
+  await auditContentDelete({ entityType: "company_website", entityId: id });
   await revalidateAll();
   return result;
 }

@@ -77,6 +77,7 @@ export function computeFilteredCampaignKpis(
   const billboards = filterItemsByOwnerLocation(data.billboards, filter);
   const posters = filterItemsByOwnerLocation(data.posters, filter);
   const videos = filterItemsByOwnerLocation(data.videos, filter);
+  const companyWebsites = filterItemsByOwnerLocation(data.companyWebsites, filter);
   const socialPosts = filterItemsByOwnerLocation(data.socialPosts, filter);
   const sitePublications = filterItemsByOwnerLocation(data.sitePublications, filter);
   const broadcastReports = filterItemsByOwnerLocation(data.broadcastReports, filter);
@@ -90,7 +91,7 @@ export function computeFilteredCampaignKpis(
     totalBillboards: sections.billboards ? billboards.length : 0,
     totalPosters: sections.posters ? posters.length : 0,
     totalVideos: sections.videos ? videos.length : 0,
-    totalSiteVisitors: 0,
+    totalCompanyWebsites: sections.analytics ? companyWebsites.length : 0,
     totalSocialFollowers: sections.socialAnalytics
       ? socialPlatforms.reduce((sum, platform) => sum + platform.followers, 0)
       : 0,

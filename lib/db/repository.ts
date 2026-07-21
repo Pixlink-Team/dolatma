@@ -1,12 +1,12 @@
 import { getSql } from "@/lib/db/client";
 import { pgGetCampaignActivities, pgGetMeetingsWithTasks, pgGetPublicMeetingPreviews } from "@/lib/db/repository-extended";
 import {
-  mapAnalyticsFromDb,
   mapBillboardFromDb,
   mapBillboardDisplayPeriodFromDb,
   mapBroadcastReportFromDb,
   mapCampaignFileFromDb,
   mapCategoryFromDb,
+  mapCompanyWebsiteFromDb,
   mapPosterFromDb,
   mapPosterVersionFromDb,
   mapRawMediaUploadFromDb,
@@ -25,6 +25,7 @@ import type {
   CampaignFile,
   CampaignSettings,
   CampaignSubmission,
+  CompanyWebsite,
   MediaCategory,
   Poster,
   PosterVersion,
@@ -196,7 +197,7 @@ export async function pgGetAdminData(
     videoCategories,
     videos,
     videoVersions,
-    analytics,
+    companyWebsites,
     submissions,
     files,
     socialPosts,
@@ -303,16 +304,16 @@ export async function pgGetAdminData(
       : emptyRows,
     want.has("analytics")
       ? sql`
-      SELECT a.*, u.name AS owner_name, u.province AS owner_province, u.city AS owner_city, u.ministry_id AS owner_ministry_id, om.name AS owner_ministry_name, u.organization_id AS owner_organization_id, oo.name AS owner_organization_name
-      FROM analytics_metrics a
-      LEFT JOIN users u ON u.id = a.owner_user_id
+      SELECT cw.*, u.name AS owner_name, u.province AS owner_province, u.city AS owner_city, u.ministry_id AS owner_ministry_id, om.name AS owner_ministry_name, u.organization_id AS owner_organization_id, oo.name AS owner_organization_name
+      FROM company_websites cw
+      LEFT JOIN users u ON u.id = cw.owner_user_id
 
       LEFT JOIN ministries om ON om.id = u.ministry_id
 
       LEFT JOIN ministry_organizations oo ON oo.id = u.organization_id
-      WHERE a.campaign_id = ${campaignId}
+      WHERE cw.campaign_id = ${campaignId}
       ${ownerFilter}
-      ORDER BY a.date DESC
+      ORDER BY cw.sort_order, cw.created_at DESC
     `
       : emptyRows,
     want.has("submissions")
@@ -413,7 +414,7 @@ export async function pgGetAdminData(
     videoCategories: videoCategories.map(mapCategoryFromDb),
     videos: videos.map(mapVideoFromDb),
     videoVersions: videoVersions.map(mapVideoVersionFromDb),
-    analytics: analytics.map(mapAnalyticsFromDb),
+    companyWebsites: companyWebsites.map(mapCompanyWebsiteFromDb),
     submissions: submissions.map(mapSubmissionFromDb),
     files: files.map(mapCampaignFileFromDb),
     socialPosts: socialPosts.map(mapSocialPostFromDb),
@@ -988,6 +989,52 @@ export async function pgDeleteAnalyticsMetric(id: string) {
   return { success: true };
 }
 
+export async function pgSaveCompanyWebsite(data: Partial<CompanyWebsite> & { id?: string }) {
+  const sql = getSql();
+  const now = new Date().toISOString();
+  const id = data.id ?? generateId();
+
+  await sql`
+    INSERT INTO company_websites (
+      id, campaign_id, owner_user_id, title, url, company_name, description, logo_url,
+      published, sort_order, created_at, updated_at
+    ) VALUES (
+      ${id},
+      ${data.campaignId ?? ""},
+      ${data.ownerUserId ?? null},
+      ${data.title ?? ""},
+      ${data.url ?? ""},
+      ${data.companyName ?? null},
+      ${data.description ?? null},
+      ${data.logoUrl ?? null},
+      ${data.published ?? true},
+      ${data.sortOrder ?? 0},
+      ${now},
+      ${now}
+    )
+    ON CONFLICT (id) DO UPDATE SET
+      title = EXCLUDED.title,
+      url = EXCLUDED.url,
+      company_name = EXCLUDED.company_name,
+      description = EXCLUDED.description,
+      logo_url = EXCLUDED.logo_url,
+      published = EXCLUDED.published,
+      sort_order = EXCLUDED.sort_order,
+      owner_user_id = COALESCE(EXCLUDED.owner_user_id, company_websites.owner_user_id),
+      updated_at = EXCLUDED.updated_at
+  `;
+
+  return { success: true, id };
+}
+
+export async function pgDeleteCompanyWebsite(id: string) {
+  const sql = getSql();
+  const rows = await sql`SELECT logo_url FROM company_websites WHERE id = ${id} LIMIT 1`;
+  await sql`DELETE FROM company_websites WHERE id = ${id}`;
+  await tryDeleteUploadedFile(rows[0]?.logo_url as string | undefined);
+  return { success: true };
+}
+
 export async function pgUpdateSubmission(id: string, data: Partial<CampaignSubmission>) {
   const sql = getSql();
   const now = new Date().toISOString();
@@ -1114,7 +1161,7 @@ export async function pgGetPublicCampaignData(campaignId: string) {
     videoCategories,
     videos,
     videoVersions,
-    analytics,
+    companyWebsites,
     submissions,
     files,
     socialPosts,
@@ -1197,15 +1244,15 @@ export async function pgGetPublicCampaignData(campaignId: string) {
       ORDER BY vv.version_number
     `,
     sql`
-      SELECT a.*, u.name AS owner_name, u.province AS owner_province, u.city AS owner_city, u.ministry_id AS owner_ministry_id, om.name AS owner_ministry_name, u.organization_id AS owner_organization_id, oo.name AS owner_organization_name
-      FROM analytics_metrics a
-      LEFT JOIN users u ON u.id = a.owner_user_id
+      SELECT cw.*, u.name AS owner_name, u.province AS owner_province, u.city AS owner_city, u.ministry_id AS owner_ministry_id, om.name AS owner_ministry_name, u.organization_id AS owner_organization_id, oo.name AS owner_organization_name
+      FROM company_websites cw
+      LEFT JOIN users u ON u.id = cw.owner_user_id
 
       LEFT JOIN ministries om ON om.id = u.ministry_id
 
       LEFT JOIN ministry_organizations oo ON oo.id = u.organization_id
-      WHERE a.campaign_id = ${campaignId}
-      ORDER BY a.date
+      WHERE cw.campaign_id = ${campaignId} AND cw.published = true
+      ORDER BY cw.sort_order, cw.created_at DESC
     `,
     sql`
       SELECT s.*, u.name AS owner_name, u.province AS owner_province, u.city AS owner_city, u.ministry_id AS owner_ministry_id, om.name AS owner_ministry_name, u.organization_id AS owner_organization_id, oo.name AS owner_organization_name
@@ -1285,7 +1332,7 @@ export async function pgGetPublicCampaignData(campaignId: string) {
     videoCategories: videoCategories.map(mapCategoryFromDb),
     videos: videos.map(mapVideoFromDb),
     videoVersions: videoVersions.map(mapVideoVersionFromDb),
-    analytics: analytics.map(mapAnalyticsFromDb),
+    companyWebsites: companyWebsites.map(mapCompanyWebsiteFromDb),
     submissions: submissions.map(mapSubmissionFromDb),
     files: files.map(mapCampaignFileFromDb),
     socialPosts: socialPosts.map(mapSocialPostFromDb),

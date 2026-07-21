@@ -40,7 +40,7 @@ export const contributorPermissionLabels: Record<ContributorPermissionKey, strin
   videos: "ویدیوها",
   files: "فایل‌ها",
   rawMedia: "راش تصویر",
-  analytics: "آمار سایت",
+  analytics: "سایت‌های شرکت‌ها",
   socialPosts: "پست‌ها و شبکه‌های اجتماعی",
   sitePublications: "انتشار در سایت",
   broadcast: "پخش صدا و سیما",

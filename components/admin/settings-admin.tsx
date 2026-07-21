@@ -90,7 +90,7 @@ const featureLabels: { key: keyof CampaignFeatures; label: string }[] = [
   { key: "billboards", label: "تبلیغات محیطی" },
   { key: "posters", label: "پوستر" },
   { key: "videos", label: "ویدیو" },
-  { key: "analytics", label: "آمار سایت" },
+  { key: "analytics", label: "سایت‌های شرکت‌ها" },
   { key: "socialAnalytics", label: "شبکه‌های اجتماعی" },
   { key: "socialPosts", label: "پست‌های شبکه اجتماعی" },
   { key: "sitePublications", label: "انتشار در سایت" },
@@ -332,7 +332,7 @@ export function SettingsAdmin({
         <h1 className="text-2xl font-bold">تنظیمات اقدام</h1>
         <p className="text-sm text-muted-foreground">
           {canEditFullSettings
-            ? "اطلاعات، پیامک، آمار سایت و شبکه‌های اجتماعی"
+            ? "اطلاعات، پیامک و شبکه‌های اجتماعی"
             : "رمز دسترسی به صفحه نمایش اقدام"}
         </p>
       </div>
@@ -585,24 +585,12 @@ export function SettingsAdmin({
             </div>
 
             <ChannelAnalyticsSettings
-              title="تنظیمات آمار سایت"
-              description="Metabase یا داده دستی برای بازدید سایت"
-              sourceName="siteAnalytics"
-              metabasePrefix="siteAnalytics"
-              form={form}
-            />
-
-            <ChannelAnalyticsSettings
               title="تنظیمات آمار شبکه‌های اجتماعی"
               description="Metabase یا داده دستی برای اینستاگرام، تلگرام و سایر پلتفرم‌ها"
               sourceName="socialAnalyticsConfig"
               metabasePrefix="socialAnalyticsConfig"
               form={form}
             />
-
-            <p className="text-xs text-muted-foreground">
-              ستون‌های پیشنهادی Metabase: date, visitors, unique_visitors, page_views, avg_session_duration, source, device, page, city
-            </p>
 
             <Button type="submit" disabled={isPending}>{isPending ? "در حال ذخیره..." : "ذخیره تغییرات"}</Button>
           </form>

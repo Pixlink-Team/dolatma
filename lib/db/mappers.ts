@@ -8,6 +8,7 @@ import type {
   CampaignMeeting,
   CampaignSettings,
   CampaignSubmission,
+  CompanyWebsite,
   MediaCategory,
   MeetingDecision,
   MeetingTask,
@@ -608,6 +609,24 @@ export function mapCampaignFileFromDb(row: any): CampaignFile {
     fileName: row.file_name,
     mimeType: row.mime_type,
     fileSize: Number(row.file_size ?? 0),
+    published: row.published ?? false,
+    sortOrder: row.sort_order ?? 0,
+    ...mapOwnerFromDb(row),
+    createdAt: toIsoString(row.created_at),
+    updatedAt: toIsoString(row.updated_at),
+  };
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function mapCompanyWebsiteFromDb(row: any): CompanyWebsite {
+  return {
+    id: row.id,
+    campaignId: row.campaign_id,
+    title: row.title,
+    url: row.url,
+    companyName: row.company_name ?? null,
+    description: row.description ?? null,
+    logoUrl: row.logo_url ?? null,
     published: row.published ?? false,
     sortOrder: row.sort_order ?? 0,
     ...mapOwnerFromDb(row),

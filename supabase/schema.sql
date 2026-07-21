@@ -169,6 +169,28 @@ CREATE POLICY "Public read video versions" ON video_versions FOR SELECT USING (
 CREATE POLICY "Public read analytics" ON analytics_metrics FOR SELECT USING (true);
 CREATE POLICY "Public read approved submissions" ON campaign_submissions FOR SELECT USING (published = true AND status = 'approved');
 
+CREATE TABLE IF NOT EXISTS company_websites (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  campaign_id UUID NOT NULL REFERENCES campaign_settings(id) ON DELETE CASCADE,
+  owner_user_id UUID,
+  title TEXT NOT NULL,
+  url TEXT NOT NULL,
+  company_name TEXT,
+  description TEXT,
+  logo_url TEXT,
+  published BOOLEAN NOT NULL DEFAULT false,
+  sort_order INT NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_company_websites_campaign
+  ON company_websites(campaign_id, published, sort_order);
+
+ALTER TABLE company_websites ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public read company websites" ON company_websites FOR SELECT USING (published = true);
+CREATE POLICY "Admin all company_websites" ON company_websites FOR ALL USING (auth.role() = 'authenticated');
+
 -- Authenticated full access (admin)
 CREATE POLICY "Admin all campaign_settings" ON campaign_settings FOR ALL USING (auth.role() = 'authenticated');
 CREATE POLICY "Admin all billboards" ON billboards FOR ALL USING (auth.role() = 'authenticated');
