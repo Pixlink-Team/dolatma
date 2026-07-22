@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "3391ddaee8db8788312d33203b1208e4a17936ed",
+      "committedAt": "2026-07-22T14:57:06+03:30",
+      "title": "افزودن میز فرمان رسانه‌ای برای مدیریت محتوا، تقویم انتشار و حساب‌های متصل",
+      "subject": "Add Media Command Center module for PR operations"
+    },
+    {
       "hash": "77d5b12b33b1e5b47435af53d3d739c264237b68",
       "committedAt": "2026-07-22T14:37:41+03:30",
       "title": "افزودن تنظیمات هوش مصنوعی در بخش تنظیمات ادمین",

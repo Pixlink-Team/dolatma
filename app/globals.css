@@ -167,11 +167,6 @@
   box-shadow: var(--shadow-apple-hover);
 }
 
-.apple-lift:active {
-  transform: translateY(-1px) scale(0.99);
-  transition-duration: var(--duration-apple-fast);
-}
-
 .apple-press {
   transition:
     transform var(--duration-apple-fast) var(--ease-apple),
@@ -184,10 +179,6 @@
 
 .apple-press:hover {
   transform: translateY(-1px);
-}
-
-.apple-press:active {
-  transform: scale(0.97);
 }
 
 .apple-media-zoom {
@@ -243,9 +234,7 @@
   }
 
   .apple-lift:hover,
-  .apple-lift:active,
   .apple-press:hover,
-  .apple-press:active,
   .apple-nav-item:hover,
   .group:hover .apple-media-zoom {
     transform: none !important;
