@@ -14,6 +14,9 @@ export type AdminRole =
   | "client"
   | "ministry_parent"
   | "sub_user";
+
+/** Upstream authority for directives and user accounts. */
+export type DirectiveAuthorityLevel = import("./directive-authority").DirectiveAuthorityLevel;
 export type SocialPlatform = "instagram" | "x" | "telegram" | "linkedin" | "youtube" | "aparat" | "rubika" | "eitaa" | "soroush" | "bale" | "other";
 export type SocialPostPlatform = SocialPlatform | "site";
 export type ActivityType =
@@ -645,6 +648,10 @@ export interface AdminUser {
   /** Parent ministry user for sub_user rows. */
   parentUserId?: string | null;
   parentUserName?: string | null;
+  /** Upstream authority level for this account. */
+  authorityLevel?: DirectiveAuthorityLevel;
+  /** Free-text label when authorityLevel is "other". */
+  authorityOther?: string | null;
   campaignIds: string[];
   campaignPermissions: Record<string, ContributorPermissions>;
   createdAt: string;
@@ -830,6 +837,10 @@ export interface CampaignDirective {
   title: string;
   body: string;
   priority: DirectivePriority;
+  /** Upstream authority that issued this directive. */
+  authorityLevel?: DirectiveAuthorityLevel;
+  /** Free-text label when authorityLevel is "other". */
+  authorityOther?: string | null;
   /** @deprecated Prefer endDate. Kept for older rows. */
   dueDate?: string | null;
   startDate?: string | null;

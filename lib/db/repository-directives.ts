@@ -1,5 +1,9 @@
 import { getSql } from "@/lib/db/client";
 import {
+  mapDirectiveAuthorityLevel,
+  type DirectiveAuthorityLevel,
+} from "@/lib/directive-authority";
+import {
   isDirectiveInternalTarget,
   mapDirectiveCtaKind,
   type DirectiveCtaKind,
@@ -109,6 +113,22 @@ export async function ensureDirectiveCommandSchema(): Promise<void> {
     ALTER TABLE directive_recipients
       ADD COLUMN IF NOT EXISTS execution_verified_by UUID REFERENCES users(id) ON DELETE SET NULL
   `;
+  await sql`
+    ALTER TABLE campaign_directives
+      ADD COLUMN IF NOT EXISTS authority_level TEXT NOT NULL DEFAULT 'internal'
+  `;
+  await sql`
+    ALTER TABLE campaign_directives
+      ADD COLUMN IF NOT EXISTS authority_other TEXT
+  `;
+  await sql`
+    ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS authority_level TEXT NOT NULL DEFAULT 'internal'
+  `;
+  await sql`
+    ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS authority_other TEXT
+  `;
 }
 
 function mapAudienceType(value: unknown): DirectiveAudienceType {
@@ -174,6 +194,8 @@ function mapDirectiveRow(
     title: String(row.title ?? ""),
     body: String(row.body ?? ""),
     priority: mapPriority(row.priority),
+    authorityLevel: mapDirectiveAuthorityLevel(row.authority_level),
+    authorityOther: row.authority_other ? String(row.authority_other).trim() || null : null,
     dueDate,
     startDate,
     endDate,
@@ -689,6 +711,8 @@ export interface SaveDirectiveInput {
   title: string;
   body: string;
   priority: DirectivePriority;
+  authorityLevel?: DirectiveAuthorityLevel | null;
+  authorityOther?: string | null;
   startDate?: string | null;
   endDate?: string | null;
   letterFileUrl?: string | null;
@@ -763,6 +787,9 @@ export async function pgSaveDirective(input: SaveDirectiveInput): Promise<{ id: 
   );
   const topic = input.topic?.trim() || "";
   const urgency = crisisMode ? "critical" : undefined;
+  const authorityLevel = mapDirectiveAuthorityLevel(input.authorityLevel);
+  const authorityOther =
+    authorityLevel === "other" ? input.authorityOther?.trim() || null : null;
 
   const existing = input.id
     ? await sql`SELECT id, published_at FROM campaign_directives WHERE id = ${id} LIMIT 1`
@@ -782,7 +809,8 @@ export async function pgSaveDirective(input: SaveDirectiveInput): Promise<{ id: 
       cta_kind, cta_label, cta_url, cta_target,
       audience_type, audience_region, audience_ministry_id, audience_organization_id, audience_device_id, audience_cities,
       published, published_at, sort_order, created_at, updated_at,
-      crisis_mode, escalation_after_minutes, topic, urgency
+      crisis_mode, escalation_after_minutes, topic, urgency,
+      authority_level, authority_other
     ) VALUES (
       ${id},
       ${input.campaignId},
@@ -815,7 +843,9 @@ export async function pgSaveDirective(input: SaveDirectiveInput): Promise<{ id: 
       ${crisisMode},
       ${escalationAfterMinutes},
       ${topic},
-      ${urgency ?? "normal"}
+      ${urgency ?? "normal"},
+      ${authorityLevel},
+      ${authorityOther}
     )
     ON CONFLICT (id) DO UPDATE SET
       title = EXCLUDED.title,
@@ -847,6 +877,8 @@ export async function pgSaveDirective(input: SaveDirectiveInput): Promise<{ id: 
         WHEN EXCLUDED.crisis_mode THEN 'critical'
         ELSE campaign_directives.urgency
       END,
+      authority_level = EXCLUDED.authority_level,
+      authority_other = EXCLUDED.authority_other,
       updated_at = EXCLUDED.updated_at
   `;
 

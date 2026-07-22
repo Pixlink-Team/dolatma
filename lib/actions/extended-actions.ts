@@ -16,6 +16,10 @@ import { hashPassword } from "@/lib/auth/password";
 import * as pgExt from "@/lib/db/repository-extended";
 import type { MeetingDecisionPayload, MeetingTaskPayload } from "@/lib/db/repository-extended";
 import type { AdminRole, BroadcastReport, CampaignActivity, CampaignMeeting, SocialMediaPost, SocialPlatformStat } from "@/lib/types";
+import {
+  isDirectiveAuthorityLevel,
+  type DirectiveAuthorityLevel,
+} from "@/lib/directive-authority";
 import { isMinistryParentRole } from "@/lib/user-roles";
 import { isSitePublication } from "@/lib/social-posts";
 import { isPostgresConfigured } from "@/lib/utils";
@@ -630,6 +634,8 @@ export async function saveUserAction(data: {
   ministryId?: string | null;
   organizationId?: string | null;
   parentUserId?: string | null;
+  authorityLevel?: DirectiveAuthorityLevel | null;
+  authorityOther?: string | null;
   campaignIds?: string[];
   campaignPermissions?: Record<string, ContributorPermissions>;
 }) {
@@ -652,6 +658,8 @@ export async function saveUserAction(data: {
   let parentUserId = data.parentUserId ?? null;
   let campaignIds = data.campaignIds;
   let campaignPermissions = data.campaignPermissions;
+  let authorityLevel: DirectiveAuthorityLevel | null | undefined = data.authorityLevel;
+  let authorityOther = data.authorityOther ?? null;
 
   if (isParent) {
     if (!session.userId) return { success: false, error: "Unauthorized" };
@@ -695,6 +703,13 @@ export async function saveUserAction(data: {
     ministryId = ministryId ?? null;
   }
 
+  if (authorityLevel != null && !isDirectiveAuthorityLevel(authorityLevel)) {
+    return { success: false, error: "سطح بالادستی نامعتبر است" };
+  }
+  if (authorityLevel === "other" && !authorityOther?.trim()) {
+    return { success: false, error: "برای سطح «سایر» توضیح الزامی است" };
+  }
+
   let accountManagerName = data.accountManagerName;
   let phone = data.phone;
   if (data.id) {
@@ -706,6 +721,10 @@ export async function saveUserAction(data: {
     if (phone === undefined) {
       phone = existing?.phone ?? null;
     }
+    if (authorityLevel === undefined) {
+      authorityLevel = existing?.authorityLevel ?? null;
+      authorityOther = existing?.authorityOther ?? null;
+    }
   }
 
   const result = await pgExt.pgSaveUser({
@@ -714,6 +733,8 @@ export async function saveUserAction(data: {
     ministryId,
     organizationId,
     parentUserId,
+    authorityLevel,
+    authorityOther,
     campaignIds,
     campaignPermissions,
     accountManagerName,
@@ -725,7 +746,14 @@ export async function saveUserAction(data: {
     entityType: "user",
     entityId: data.id,
     label: data.name,
-    metadata: { role, email: data.email, ministryId, organizationId, parentUserId },
+    metadata: {
+      role,
+      email: data.email,
+      ministryId,
+      organizationId,
+      parentUserId,
+      authorityLevel,
+    },
   });
   await revalidateExtended();
   return result;

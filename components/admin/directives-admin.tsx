@@ -60,6 +60,12 @@ import {
   type DirectiveInternalTarget,
 } from "@/lib/directive-cta";
 import { DIRECTIVE_URGENCY_OPTIONS } from "@/lib/directive-workspace";
+import {
+  compareByAuthority,
+  DIRECTIVE_AUTHORITY_OPTIONS,
+  getAuthorityBadgeLabel,
+  type DirectiveAuthorityLevel,
+} from "@/lib/directive-authority";
 import type {
   CampaignDirective,
   DirectiveAudienceType,
@@ -71,10 +77,23 @@ import { IRAN_PROVINCES } from "@/lib/iran-locations";
 import { USER_REGIONS, getUserRegionLabel, type UserRegion } from "@/lib/user-regions";
 import { adminHref, cn, formatPersianDate, formatPersianDateTime, formatPersianNumber } from "@/lib/utils";
 
+const AUTHORITY_FILTER_ALL = "all";
+
 const schema = z.object({
   title: z.string().min(1).max(CONTENT_TITLE_MAX_LENGTH, CONTENT_TITLE_MAX_LENGTH_MESSAGE),
   body: z.string().min(1, "متن دستورکار الزامی است"),
   priority: z.enum(["normal", "urgent"]),
+  authorityLevel: z.enum([
+    "government",
+    "presidency",
+    "ministry",
+    "organization",
+    "province",
+    "municipality",
+    "internal",
+    "other",
+  ]),
+  authorityOther: z.string().optional(),
   urgency: z.enum(["low", "normal", "high", "critical"]),
   crisisMode: z.boolean().optional(),
   escalationAfterMinutes: z.coerce.number().min(5).max(1440).optional(),
@@ -175,6 +194,9 @@ interface DirectivesAdminProps {
   canManage: boolean;
   /** Global = full campaign; subordinates = only the issuer's sub-users. */
   audienceScope?: "global" | "subordinates";
+  /** Default authority level from the current issuer account. */
+  issuerAuthorityLevel?: DirectiveAuthorityLevel;
+  issuerAuthorityOther?: string | null;
   /** Active (non-archived) campaign directives for managers. */
   initialDirectives: CampaignDirective[];
   /** Archived campaign directives for managers. */
@@ -183,6 +205,17 @@ interface DirectivesAdminProps {
   inboxDirectives: CampaignDirective[];
   campaignUsers: CampaignUserOption[];
   ministries?: Ministry[];
+}
+
+function sortDirectivesByAuthority(rows: CampaignDirective[]): CampaignDirective[] {
+  return [...rows].sort((a, b) => {
+    const byAuthority = compareByAuthority(a.authorityLevel, b.authorityLevel);
+    if (byAuthority !== 0) return byAuthority;
+    const aUrgent = a.priority === "urgent" ? 0 : 1;
+    const bUrgent = b.priority === "urgent" ? 0 : 1;
+    if (aUrgent !== bUrgent) return aUrgent - bUrgent;
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  });
 }
 
 function formatAudienceLabel(
@@ -304,6 +337,8 @@ export function DirectivesAdmin({
   campaignId,
   canManage,
   audienceScope = "global",
+  issuerAuthorityLevel = "internal",
+  issuerAuthorityOther = null,
   initialDirectives,
   archivedDirectives: initialArchived = [],
   inboxDirectives: initialInbox,
@@ -316,6 +351,7 @@ export function DirectivesAdmin({
   const [managerView, setManagerView] = useState<ManagerView>("manage");
   const [manageListTab, setManageListTab] = useState<ManageListTab>("active");
   const [inboxTab, setInboxTab] = useState<InboxTab>("new");
+  const [authorityFilter, setAuthorityFilter] = useState<string>(AUTHORITY_FILTER_ALL);
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
@@ -347,6 +383,8 @@ export function DirectivesAdmin({
       title: "",
       body: "",
       priority: "normal",
+      authorityLevel: issuerAuthorityLevel,
+      authorityOther: issuerAuthorityOther ?? "",
       urgency: "normal",
       crisisMode: false,
       escalationAfterMinutes: 30,
@@ -373,6 +411,7 @@ export function DirectivesAdmin({
   const audienceOrganizationId = form.watch("audienceOrganizationId");
   const ctaKind = form.watch("ctaKind");
   const ctaTarget = form.watch("ctaTarget");
+  const authorityLevel = form.watch("authorityLevel");
 
   const audienceOrganizations = useMemo(() => {
     if (!audienceMinistryId) return [] as NonNullable<Ministry["organizations"]>;
@@ -396,13 +435,30 @@ export function DirectivesAdmin({
   const showingArchive = !showingInbox && manageListTab === "archive";
 
   const listRows = useMemo(() => {
+    let base: CampaignDirective[];
     if (!showingInbox) {
-      return manageListTab === "archive" ? archivedRows : rows;
+      base = manageListTab === "archive" ? archivedRows : rows;
+    } else if (inboxTab === "new") {
+      base = inboxRowsState.filter((row) => !row.confirmed);
+    } else if (inboxTab === "seen") {
+      base = inboxRowsState.filter((row) => row.confirmed);
+    } else {
+      base = inboxRowsState;
     }
-    if (inboxTab === "new") return inboxRowsState.filter((row) => !row.confirmed);
-    if (inboxTab === "seen") return inboxRowsState.filter((row) => row.confirmed);
-    return inboxRowsState;
-  }, [showingInbox, manageListTab, archivedRows, rows, inboxTab, inboxRowsState]);
+    const filtered =
+      authorityFilter === AUTHORITY_FILTER_ALL
+        ? base
+        : base.filter((row) => (row.authorityLevel ?? "internal") === authorityFilter);
+    return sortDirectivesByAuthority(filtered);
+  }, [
+    showingInbox,
+    manageListTab,
+    archivedRows,
+    rows,
+    inboxTab,
+    inboxRowsState,
+    authorityFilter,
+  ]);
 
   const openCreate = () => {
     setEditingId(null);
@@ -415,6 +471,8 @@ export function DirectivesAdmin({
       title: "",
       body: "",
       priority: "normal",
+      authorityLevel: issuerAuthorityLevel,
+      authorityOther: issuerAuthorityOther ?? "",
       urgency: "normal",
       crisisMode: false,
       escalationAfterMinutes: 30,
@@ -454,6 +512,8 @@ export function DirectivesAdmin({
       title: item.title,
       body: item.body,
       priority: item.priority,
+      authorityLevel: item.authorityLevel ?? issuerAuthorityLevel,
+      authorityOther: item.authorityOther ?? "",
       urgency: "normal",
       crisisMode: Boolean(item.crisisMode),
       escalationAfterMinutes: item.escalationAfterMinutes ?? 30,
@@ -530,6 +590,11 @@ export function DirectivesAdmin({
       }
     }
 
+    if (data.authorityLevel === "other" && !data.authorityOther?.trim()) {
+      toast.error("برای منبع «سایر» توضیح الزامی است");
+      return;
+    }
+
     startTransition(async () => {
       const conflictCheck = await checkDirectiveCalendarConflictAction({
         campaignId,
@@ -555,6 +620,9 @@ export function DirectivesAdmin({
         title: data.title,
         body: data.body,
         priority: data.priority,
+        authorityLevel: data.authorityLevel,
+        authorityOther:
+          data.authorityLevel === "other" ? data.authorityOther?.trim() || null : null,
         startDate: data.startDate,
         endDate: data.endDate,
         letterFileUrl: letterUpload.url,
@@ -775,6 +843,23 @@ export function DirectivesAdmin({
         </Tabs>
       )}
 
+      <div className="flex flex-wrap items-center gap-3">
+        <Label className="text-sm text-muted-foreground">فیلتر منبع</Label>
+        <Select value={authorityFilter} onValueChange={setAuthorityFilter}>
+          <SelectTrigger className="w-[240px]">
+            <SelectValue placeholder="همه منابع" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={AUTHORITY_FILTER_ALL}>همه منابع</SelectItem>
+            {DIRECTIVE_AUTHORITY_OPTIONS.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
       <div className="space-y-3">
         {listRows.length === 0 ? (
           <div className="rounded-xl border border-dashed p-10 text-center text-muted-foreground">
@@ -796,6 +881,9 @@ export function DirectivesAdmin({
                 <div className="space-y-2 min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <h2 className="text-lg font-semibold">{item.title}</h2>
+                    <Badge variant="secondary">
+                      {getAuthorityBadgeLabel(item.authorityLevel, item.authorityOther)}
+                    </Badge>
                     {item.priority === "urgent" && <Badge variant="destructive">فوری</Badge>}
                     {!showingInbox && (
                       <Badge variant="outline">{formatAudienceLabel(item, audienceScope)}</Badge>
@@ -973,9 +1061,38 @@ export function DirectivesAdmin({
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>موضوع (برای تقویم ملی)</Label>
-                <Input {...form.register("topic")} placeholder="مثلاً سلامت / آموزش" />
+                <Label>منبع بالادستی</Label>
+                <Select
+                  value={authorityLevel}
+                  onValueChange={(value) =>
+                    form.setValue("authorityLevel", value as DirectiveAuthorityLevel)
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {DIRECTIVE_AUTHORITY_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
+            </div>
+            {authorityLevel === "other" && (
+              <div className="space-y-2">
+                <Label>توضیح منبع (سایر)</Label>
+                <Input
+                  {...form.register("authorityOther")}
+                  placeholder="مثلاً شورای عالی …"
+                />
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label>موضوع (برای تقویم ملی)</Label>
+              <Input {...form.register("topic")} placeholder="مثلاً سلامت / آموزش" />
             </div>
 
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3">
@@ -1516,6 +1633,9 @@ export function DirectivesAdmin({
               <DialogHeader>
                 <DialogTitle className="flex flex-wrap items-center gap-2">
                   {detailItem.title}
+                  <Badge variant="secondary">
+                    {getAuthorityBadgeLabel(detailItem.authorityLevel, detailItem.authorityOther)}
+                  </Badge>
                   {detailItem.priority === "urgent" && (
                     <Badge variant="destructive">فوری</Badge>
                   )}

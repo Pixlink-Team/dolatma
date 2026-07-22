@@ -10,6 +10,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { confirmDirectiveSeenAction } from "@/lib/actions/directive-actions";
+import {
+  compareByAuthority,
+  getAuthorityBadgeLabel,
+} from "@/lib/directive-authority";
 import type { CampaignDirective } from "@/lib/types";
 import { adminHref, cn, formatPersianDate, formatPersianDateTime, formatPersianNumber } from "@/lib/utils";
 import { DirectiveCtaButton } from "@/components/admin/directive-cta-button";
@@ -73,6 +77,8 @@ function DirectiveDateRange({ item }: { item: CampaignDirective }) {
 
 function sortPreview(rows: CampaignDirective[]): CampaignDirective[] {
   return [...rows].sort((a, b) => {
+    const byAuthority = compareByAuthority(a.authorityLevel, b.authorityLevel);
+    if (byAuthority !== 0) return byAuthority;
     const aUrgent = a.priority === "urgent" ? 0 : 1;
     const bUrgent = b.priority === "urgent" ? 0 : 1;
     if (aUrgent !== bUrgent) return aUrgent - bUrgent;
@@ -201,6 +207,9 @@ export function DashboardDirectivesPanel({
                   <div className="min-w-0 flex-1 space-y-2">
                     <div className="flex flex-wrap items-center gap-2">
                       <h3 className="font-semibold">{item.title}</h3>
+                      <Badge variant="secondary">
+                        {getAuthorityBadgeLabel(item.authorityLevel, item.authorityOther)}
+                      </Badge>
                       {item.priority === "urgent" && <Badge variant="destructive">فوری</Badge>}
                       {!item.confirmed ? (
                         <Badge>جدید</Badge>
@@ -258,6 +267,9 @@ export function DashboardDirectivesPanel({
               <DialogHeader>
                 <DialogTitle className="flex flex-wrap items-center gap-2">
                   {detailItem.title}
+                  <Badge variant="secondary">
+                    {getAuthorityBadgeLabel(detailItem.authorityLevel, detailItem.authorityOther)}
+                  </Badge>
                   {detailItem.priority === "urgent" && (
                     <Badge variant="destructive">فوری</Badge>
                   )}

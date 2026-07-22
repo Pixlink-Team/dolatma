@@ -8,7 +8,8 @@ import {
   isScopedDirectiveIssuer,
 } from "@/lib/auth/access";
 import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
-import { pgGetUserPermissionsForCampaign } from "@/lib/db/repository-extended";
+import { mapDirectiveAuthorityLevel } from "@/lib/directive-authority";
+import { pgGetUserPermissionsForCampaign, pgGetUserById } from "@/lib/db/repository-extended";
 import {
   pgListArchivedDirectivesForCampaign,
   pgListCampaignUsersForDirectives,
@@ -87,11 +88,20 @@ export default async function DirectivesPage({ searchParams }: PageProps) {
 
   const initialDirectives = canManage ? manageDirectives : inboxDirectives;
 
+  const issuerUser =
+    session.userId && isPostgresConfigured()
+      ? await pgGetUserById(session.userId)
+      : null;
+  const issuerAuthorityLevel = mapDirectiveAuthorityLevel(issuerUser?.authorityLevel);
+  const issuerAuthorityOther = issuerUser?.authorityOther ?? null;
+
   return (
     <DirectivesAdmin
       campaignId={campaignId}
       canManage={canManage}
       audienceScope={audienceScope}
+      issuerAuthorityLevel={issuerAuthorityLevel}
+      issuerAuthorityOther={issuerAuthorityOther}
       initialDirectives={withFileAccessTokensDeep(initialDirectives)}
       archivedDirectives={withFileAccessTokensDeep(archivedDirectives)}
       inboxDirectives={withFileAccessTokensDeep(inboxDirectives)}

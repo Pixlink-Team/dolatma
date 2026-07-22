@@ -25,6 +25,10 @@ import type {
   VideoVersion,
 } from "@/lib/types";
 import type { ContributorPermissions } from "@/lib/contributor-permissions";
+import {
+  inferDefaultAuthorityLevel,
+  mapDirectiveAuthorityLevel,
+} from "@/lib/directive-authority";
 import { normalizeAnalyticsConfig } from "@/lib/analytics-config";
 import {
   contentPlansFromTopics,
@@ -590,6 +594,16 @@ export function mapUserFromDb(
     deviceName: typeof row.device_name === "string" ? row.device_name : null,
     parentUserId: row.parent_user_id ? String(row.parent_user_id) : null,
     parentUserName: typeof row.parent_user_name === "string" ? row.parent_user_name : null,
+    authorityLevel: mapDirectiveAuthorityLevel(
+      row.authority_level ??
+        inferDefaultAuthorityLevel({
+          role: row.role,
+          organizationId: row.organization_id ? String(row.organization_id) : null,
+        })
+    ),
+    authorityOther: row.authority_other
+      ? String(row.authority_other).trim() || null
+      : null,
     campaignIds: campaignAccess.map((access) => access.campaignId),
     campaignPermissions: Object.fromEntries(
       campaignAccess.map((access) => [access.campaignId, access.permissions])

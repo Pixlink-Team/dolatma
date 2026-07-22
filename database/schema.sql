@@ -1350,6 +1350,48 @@ ALTER TABLE campaign_directives
 ALTER TABLE campaign_directives
   ADD COLUMN IF NOT EXISTS topic TEXT NOT NULL DEFAULT '';
 
+-- Upstream authority level for directives and user accounts
+ALTER TABLE users
+  ADD COLUMN IF NOT EXISTS authority_level TEXT NOT NULL DEFAULT 'internal';
+ALTER TABLE users
+  ADD COLUMN IF NOT EXISTS authority_other TEXT;
+ALTER TABLE users DROP CONSTRAINT IF EXISTS users_authority_level_check;
+ALTER TABLE users
+  ADD CONSTRAINT users_authority_level_check
+  CHECK (authority_level IN (
+    'government', 'presidency', 'ministry', 'organization',
+    'province', 'municipality', 'internal', 'other'
+  ));
+
+ALTER TABLE campaign_directives
+  ADD COLUMN IF NOT EXISTS authority_level TEXT NOT NULL DEFAULT 'internal';
+ALTER TABLE campaign_directives
+  ADD COLUMN IF NOT EXISTS authority_other TEXT;
+ALTER TABLE campaign_directives DROP CONSTRAINT IF EXISTS campaign_directives_authority_level_check;
+ALTER TABLE campaign_directives
+  ADD CONSTRAINT campaign_directives_authority_level_check
+  CHECK (authority_level IN (
+    'government', 'presidency', 'ministry', 'organization',
+    'province', 'municipality', 'internal', 'other'
+  ));
+
+CREATE INDEX IF NOT EXISTS idx_campaign_directives_authority
+  ON campaign_directives(campaign_id, authority_level);
+CREATE INDEX IF NOT EXISTS idx_users_authority
+  ON users(authority_level);
+
+-- Backfill user authority from role / organization when still default
+UPDATE users
+SET authority_level = 'organization'
+WHERE authority_level = 'internal'
+  AND organization_id IS NOT NULL;
+
+UPDATE users
+SET authority_level = 'ministry'
+WHERE authority_level = 'internal'
+  AND role = 'ministry_parent'
+  AND organization_id IS NULL;
+
 CREATE TABLE IF NOT EXISTS directive_blockers (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   directive_id UUID NOT NULL REFERENCES campaign_directives(id) ON DELETE CASCADE,

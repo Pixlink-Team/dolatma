@@ -34,10 +34,28 @@ import {
   normalizeContributorPermissions,
   type ContributorPermissions,
 } from "@/lib/contributor-permissions";
+import {
+  inferDefaultAuthorityLevel,
+  isDirectiveAuthorityLevel,
+  type DirectiveAuthorityLevel,
+} from "@/lib/directive-authority";
 import type { ParsedUserImportRow } from "@/lib/services/users-excel-parser";
 import { normalizePlanLabels } from "@/lib/content-topics";
 import { generateId } from "@/lib/utils";
 import { hashPassword } from "@/lib/auth/password";
+
+/** Ensure authority columns exist on older databases without a full migrate. */
+export async function ensureUserAuthoritySchema(): Promise<void> {
+  const sql = getSql();
+  await sql`
+    ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS authority_level TEXT NOT NULL DEFAULT 'internal'
+  `;
+  await sql`
+    ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS authority_other TEXT
+  `;
+}
 
 function resolvePlanFields(data: Partial<Ownable>) {
   const planLabels = normalizePlanLabels(data.planLabels, data.planLabel);
@@ -116,6 +134,7 @@ export async function pgGetUserAuthByLogin(identifier: string) {
 
 export async function pgGetUserById(id: string) {
   const sql = getSql();
+  await ensureUserAuthoritySchema();
   const rows = await sql`
     SELECT
       u.*,
@@ -171,6 +190,7 @@ export async function pgGetUserPermissionsForCampaign(userId: string, campaignId
 
 export async function pgGetAllUsers(): Promise<AdminUser[]> {
   const sql = getSql();
+  await ensureUserAuthoritySchema();
   const rows = await sql`
     SELECT
       u.*,
@@ -195,6 +215,7 @@ export async function pgGetAllUsers(): Promise<AdminUser[]> {
 
 export async function pgGetSubUsersForParent(parentUserId: string): Promise<AdminUser[]> {
   const sql = getSql();
+  await ensureUserAuthoritySchema();
   const rows = await sql`
     SELECT
       u.*,
@@ -233,10 +254,13 @@ export async function pgSaveUser(data: {
   ministryId?: string | null;
   organizationId?: string | null;
   parentUserId?: string | null;
+  authorityLevel?: DirectiveAuthorityLevel | null;
+  authorityOther?: string | null;
   campaignIds?: string[];
   campaignPermissions?: Record<string, ContributorPermissions>;
 }) {
   const sql = getSql();
+  await ensureUserAuthoritySchema();
   const id = data.id ?? generateId();
   const email = normalizeStoredUserEmail(data.email);
   const now = new Date().toISOString();
@@ -263,6 +287,11 @@ export async function pgSaveUser(data: {
   let organizationId = data.organizationId?.trim() || null;
   const parentUserId = data.parentUserId?.trim() || null;
   let deviceId: string | null = organizationId ?? ministryId ?? null;
+  const authorityLevel = isDirectiveAuthorityLevel(data.authorityLevel)
+    ? data.authorityLevel
+    : inferDefaultAuthorityLevel({ role: data.role, organizationId });
+  const authorityOther =
+    authorityLevel === "other" ? data.authorityOther?.trim() || null : null;
 
   if (organizationId) {
     const orgRows = await sql`
@@ -331,6 +360,8 @@ export async function pgSaveUser(data: {
           organization_id = ${organizationId},
           device_id = ${deviceId},
           parent_user_id = ${parentUserId},
+          authority_level = ${authorityLevel},
+          authority_other = ${authorityOther},
           password_hash = ${passwordHash}
         WHERE id = ${id}
       `;
@@ -350,7 +381,9 @@ export async function pgSaveUser(data: {
           ministry_id = ${ministryId},
           organization_id = ${organizationId},
           device_id = ${deviceId},
-          parent_user_id = ${parentUserId}
+          parent_user_id = ${parentUserId},
+          authority_level = ${authorityLevel},
+          authority_other = ${authorityOther}
         WHERE id = ${id}
       `;
     }
@@ -363,13 +396,14 @@ export async function pgSaveUser(data: {
       INSERT INTO users (
         id, email, password_hash, name, role, province, city, region, phone,
         account_manager_name, alternate_contact_name, alternate_contact_phone,
-        ministry_id, organization_id, device_id, parent_user_id, created_at
+        ministry_id, organization_id, device_id, parent_user_id,
+        authority_level, authority_other, created_at
       )
       VALUES (
         ${id}, ${email}, ${passwordHash}, ${data.name}, ${data.role}, ${province}, ${city},
         ${region}, ${phone}, ${accountManagerName}, ${alternateContactName}, ${alternateContactPhone},
         ${ministryId}, ${organizationId},
-        ${deviceId}, ${parentUserId}, ${now}
+        ${deviceId}, ${parentUserId}, ${authorityLevel}, ${authorityOther}, ${now}
       )
     `;
   }

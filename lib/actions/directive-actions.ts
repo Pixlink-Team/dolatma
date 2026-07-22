@@ -16,6 +16,11 @@ import {
   type DirectiveCtaKind,
 } from "@/lib/directive-cta";
 import {
+  isDirectiveAuthorityLevel,
+  mapDirectiveAuthorityLevel,
+  type DirectiveAuthorityLevel,
+} from "@/lib/directive-authority";
+import {
   buildDirectiveSmsText,
   sendSms,
 } from "@/lib/sms/provider";
@@ -160,6 +165,8 @@ export async function saveDirectiveAction(input: {
   title: string;
   body: string;
   priority: DirectivePriority;
+  authorityLevel?: DirectiveAuthorityLevel | null;
+  authorityOther?: string | null;
   startDate?: string | null;
   endDate?: string | null;
   letterFileUrl?: string | null;
@@ -313,6 +320,26 @@ export async function saveDirectiveAction(input: {
     }
   }
 
+  let authorityLevel = input.authorityLevel ?? null;
+  let authorityOther = input.authorityOther?.trim() || null;
+  if (authorityLevel != null && !isDirectiveAuthorityLevel(authorityLevel)) {
+    return { success: false as const, error: "منبع بالادستی نامعتبر است" };
+  }
+  if (!authorityLevel && access.session.userId) {
+    const issuer = await pgExt.pgGetUserById(access.session.userId);
+    authorityLevel = issuer?.authorityLevel ?? "internal";
+    if (authorityLevel === "other" && !authorityOther) {
+      authorityOther = issuer?.authorityOther ?? null;
+    }
+  }
+  authorityLevel = mapDirectiveAuthorityLevel(authorityLevel);
+  if (authorityLevel === "other" && !authorityOther?.trim()) {
+    return { success: false as const, error: "برای منبع «سایر» توضیح الزامی است" };
+  }
+  if (authorityLevel !== "other") {
+    authorityOther = null;
+  }
+
   const cleaned = stripFileAccessTokensDeep({
     ...input,
     body: input.body?.trim() ?? "",
@@ -360,6 +387,8 @@ export async function saveDirectiveAction(input: {
     title: cleaned.title.trim(),
     body: cleaned.body,
     priority: cleaned.priority,
+    authorityLevel,
+    authorityOther,
     startDate: cleaned.startDate,
     endDate: cleaned.endDate,
     letterFileUrl: cleaned.letterFileUrl,
