@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "f9237e5d44c4be6f79c625ebb77dfe55ba9406cc",
+      "committedAt": "2026-07-22T12:23:40+03:30",
+      "title": "دسته‌بندی دستورکارها بر اساس منبع بالادستی با برچسب و فیلتر",
+      "subject": "Add upstream authority levels for directives and accounts"
+    },
+    {
       "hash": "531236c86570d9d6d536ca13eba46cb7b30e1762",
       "committedAt": "2026-07-21T17:57:46+03:30",
       "title": "رفع تقویم ملی و انتقال نقشه ظرفیت به تنظیمات مدیریت",

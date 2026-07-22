@@ -18,6 +18,7 @@ import { updateSettingsAction } from "@/lib/actions/admin-actions";
 import { saveCampaignPagePasswordAction } from "@/lib/actions/extended-actions";
 import { CampaignTools } from "@/components/admin/campaign-tools";
 import { SmsSettingsCard } from "@/components/admin/sms-settings-card";
+import { AiSettingsCard } from "@/components/admin/ai-settings-card";
 import { LoginPageSettingsCard } from "@/components/admin/login-page-settings-card";
 import {
   contentPlansFromTopics,
@@ -385,6 +386,8 @@ export function SettingsAdmin({
       {canEditFullSettings && <LoginPageSettingsCard />}
 
       {canEditFullSettings && <SmsSettingsCard />}
+
+      {canEditFullSettings && <AiSettingsCard />}
 
       {canEditFullSettings && (
       <Card>
