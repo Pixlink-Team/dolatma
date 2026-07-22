@@ -26,6 +26,7 @@ import { pgListMinistries } from "@/lib/db/repository-ministries";
 import { isPostgresConfigured } from "@/lib/utils";
 import { withFileAccessTokensDeep } from "@/lib/uploads";
 import { processCrisisEscalationAction } from "@/lib/actions/directive-actions";
+import { pgGetMediaOpsSnapshot } from "@/lib/db/repository-media-command";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -73,25 +74,27 @@ export default async function DirectiveWorkspacePage({ params, searchParams }: P
       ? "subordinates"
       : "global";
 
-  const [bundle, alerts, campaignUsers, ministries, recipients, blockers] = await Promise.all([
-    pgGetDirectiveWorkspaceBundle(id, {
-      pendingAlertsForUserId: canManage ? null : session.userId,
-    }),
-    canManage
-      ? pgListReplacementAlertsForDirective(id)
-      : session.userId
-        ? pgListReplacementAlertsForUser(session.userId, { directiveId: id })
+  const [bundle, alerts, campaignUsers, ministries, recipients, blockers, mediaSnapshot] =
+    await Promise.all([
+      pgGetDirectiveWorkspaceBundle(id, {
+        pendingAlertsForUserId: canManage ? null : session.userId,
+      }),
+      canManage
+        ? pgListReplacementAlertsForDirective(id)
+        : session.userId
+          ? pgListReplacementAlertsForUser(session.userId, { directiveId: id })
+          : Promise.resolve([]),
+      canManage
+        ? pgListCampaignUsersForDirectives(campaignId, {
+            parentUserId:
+              audienceScope === "subordinates" ? session.userId ?? undefined : undefined,
+          })
         : Promise.resolve([]),
-    canManage
-      ? pgListCampaignUsersForDirectives(campaignId, {
-          parentUserId:
-            audienceScope === "subordinates" ? session.userId ?? undefined : undefined,
-        })
-      : Promise.resolve([]),
-    pgListMinistries({ includeOrganizations: true }),
-    pgListDirectiveRecipients(id),
-    pgListDirectiveBlockers(id),
-  ]);
+      pgListMinistries({ includeOrganizations: true }),
+      pgListDirectiveRecipients(id),
+      pgListDirectiveBlockers(id),
+      pgGetMediaOpsSnapshot(campaignId, id).catch(() => null),
+    ]);
 
   if (!bundle) {
     redirect(`/admin/directives?campaign=${campaignId}`);
@@ -117,6 +120,7 @@ export default async function DirectiveWorkspacePage({ params, searchParams }: P
         initialAlerts={withFileAccessTokensDeep(alerts)}
         campaignUsers={campaignUsers}
         ministries={ministries}
+        mediaSnapshot={mediaSnapshot}
       />
     </div>
   );

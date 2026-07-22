@@ -7,6 +7,7 @@ import {
   Bell,
   Building2,
   CalendarDays,
+  ChevronDown,
   ClipboardCheck,
   ClipboardList,
   FileStack,
@@ -22,6 +23,7 @@ import {
   LogOut,
   Map,
   Menu,
+  Megaphone,
   Radio,
   Rocket,
   ScrollText,
@@ -53,6 +55,7 @@ import {
   type ContributorPermissionKey,
   type ContributorPermissions,
 } from "@/lib/contributor-permissions";
+import { MEDIA_COMMAND_NAV } from "@/lib/media-command/labels";
 
 const allNavItems: {
   href: string;
@@ -96,6 +99,8 @@ const allNavItems: {
   { href: "/admin/audit", label: "رصد کاربران", icon: ScrollText, adminOnly: true },
 ];
 
+const MEDIA_COMMAND_ROOT = "/admin/media-command";
+
 const managementNavHrefs = new Set([
   "/admin/users",
   "/admin/ministries",
@@ -120,6 +125,7 @@ export function AdminSidebar() {
   const [isClientRole, setIsClientRole] = useState(false);
   const [isMinistryParent, setIsMinistryParent] = useState(false);
   const [permissions, setPermissions] = useState<ContributorPermissions | null>(null);
+  const [mediaCommandOpen, setMediaCommandOpen] = useState(false);
   const { campaignId, campaigns, currentCampaign, setCampaignId } = useAdminCampaign();
 
   useEffect(() => {
@@ -131,6 +137,12 @@ export function AdminSidebar() {
       setPermissions(session.permissions ?? null);
     });
   }, [campaignId]);
+
+  useEffect(() => {
+    if (pathname.startsWith(MEDIA_COMMAND_ROOT)) {
+      setMediaCommandOpen(true);
+    }
+  }, [pathname]);
 
   const navItems = allNavItems.filter((item) => {
     if (item.alwaysVisible) return true;
@@ -145,6 +157,9 @@ export function AdminSidebar() {
     if (!item.permissionKey) return true;
     return hasContributorPermission(permissions, item.permissionKey);
   });
+
+  const showMediaCommand =
+    isFullAdminUser || hasContributorPermission(permissions, "mediaCommand");
 
   /** Pin directives as a red alert CTA at the top for every panel user. */
   const showDirectivesAlert = true;
@@ -238,6 +253,57 @@ export function AdminSidebar() {
             );
           })}
         </div>
+
+        {showMediaCommand && (
+          <div className="mt-3 space-y-1 border-t pt-3">
+            <button
+              type="button"
+              onClick={() => setMediaCommandOpen((open) => !open)}
+              className={cn(
+                "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium",
+                pathname.startsWith(MEDIA_COMMAND_ROOT)
+                  ? "bg-primary/10 text-primary"
+                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+              )}
+            >
+              <Megaphone className="h-4 w-4 shrink-0" />
+              <span className="flex-1 truncate text-right">میز فرمان رسانه‌ای</span>
+              <ChevronDown
+                className={cn(
+                  "h-4 w-4 shrink-0 transition-transform",
+                  mediaCommandOpen && "rotate-180"
+                )}
+              />
+            </button>
+            {mediaCommandOpen && (
+              <div className="space-y-0.5 pr-2">
+                {MEDIA_COMMAND_NAV.map((item) => {
+                  const href = adminHref(item.href, campaignId);
+                  const isActive =
+                    "exact" in item && item.exact
+                      ? pathname === item.href
+                      : pathname === item.href || pathname.startsWith(`${item.href}/`);
+                  return (
+                    <Link
+                      key={item.href}
+                      href={href}
+                      prefetch={false}
+                      onClick={() => setMobileOpen(false)}
+                      className={cn(
+                        "block rounded-lg px-3 py-1.5 text-xs",
+                        isActive
+                          ? "bg-primary text-primary-foreground"
+                          : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                      )}
+                    >
+                      {item.label}
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
 
         {managementNavItems.length > 0 && (
           <div className="mt-4 border-t pt-3">

@@ -59,6 +59,10 @@ import {
   formatPersianNumber,
   generateId,
 } from "@/lib/utils";
+import {
+  MediaOpsCommandPanel,
+  type MediaOpsSnapshot,
+} from "@/components/admin/media-command/media-ops-command-panel";
 
 interface CampaignUserOption {
   id: string;
@@ -73,6 +77,7 @@ interface DirectiveWorkspaceAdminProps {
   initialAlerts: DirectiveReplacementAlert[];
   campaignUsers: CampaignUserOption[];
   ministries: Ministry[];
+  mediaSnapshot?: MediaOpsSnapshot | null;
 }
 
 function linesToList(value: string): string[] {
@@ -93,6 +98,7 @@ export function DirectiveWorkspaceAdmin({
   initialAlerts,
   campaignUsers,
   ministries,
+  mediaSnapshot = null,
 }: DirectiveWorkspaceAdminProps) {
   const [bundle, setBundle] = useState(initialBundle);
   const [alerts, setAlerts] = useState(initialAlerts);
@@ -438,6 +444,7 @@ export function DirectiveWorkspaceAdmin({
           <TabsTrigger value="actions">اقدامات و KPI</TabsTrigger>
           <TabsTrigger value="assets">فایل‌ها و نسخه‌ها</TabsTrigger>
           <TabsTrigger value="guides">راهنما و FAQ</TabsTrigger>
+          <TabsTrigger value="media-command">فرمان رسانه‌ای</TabsTrigger>
           {canManage && <TabsTrigger value="alerts">هشدارها</TabsTrigger>}
         </TabsList>
 
@@ -1065,6 +1072,20 @@ export function DirectiveWorkspaceAdmin({
               </div>
             )}
           </div>
+        </TabsContent>
+
+        <TabsContent value="media-command" className="space-y-4">
+          {mediaSnapshot ? (
+            <MediaOpsCommandPanel
+              campaignId={campaignId}
+              directiveId={bundle.directive.id}
+              snapshot={mediaSnapshot}
+            />
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              خلاصه فرمان رسانه‌ای در دسترس نیست. از منوی «میز فرمان رسانه‌ای» وارد شوید.
+            </p>
+          )}
         </TabsContent>
 
         {canManage && (

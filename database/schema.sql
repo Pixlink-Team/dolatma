@@ -1474,3 +1474,166 @@ DROP POLICY IF EXISTS company_websites_app_access ON company_websites;
 CREATE POLICY company_websites_app_access ON company_websites
   FOR ALL USING (true) WITH CHECK (true);
 
+-- Media Command Center (میز فرمان رسانه‌ای)
+CREATE TABLE IF NOT EXISTS media_accounts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  campaign_id UUID NOT NULL REFERENCES campaign_settings(id) ON DELETE CASCADE,
+  platform TEXT NOT NULL,
+  account_name TEXT NOT NULL DEFAULT '',
+  organization_name TEXT NOT NULL DEFAULT '',
+  avatar_url TEXT,
+  status TEXT NOT NULL DEFAULT 'pending_approval',
+  last_synced_at TIMESTAMPTZ,
+  last_published_at TIMESTAMPTZ,
+  recent_error_count INT NOT NULL DEFAULT 0,
+  allows_central_publish BOOLEAN NOT NULL DEFAULT false,
+  requires_local_approval BOOLEAN NOT NULL DEFAULT true,
+  active_permissions JSONB NOT NULL DEFAULT '[]'::jsonb,
+  access_user_ids UUID[] NOT NULL DEFAULT '{}',
+  metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+  owner_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS media_contents (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  campaign_id UUID NOT NULL REFERENCES campaign_settings(id) ON DELETE CASCADE,
+  internal_title TEXT NOT NULL DEFAULT '',
+  topic TEXT NOT NULL DEFAULT '',
+  audience TEXT NOT NULL DEFAULT '',
+  main_message TEXT NOT NULL DEFAULT '',
+  base_text TEXT NOT NULL DEFAULT '',
+  media_urls JSONB NOT NULL DEFAULT '[]'::jsonb,
+  video_url TEXT,
+  attachment_urls JSONB NOT NULL DEFAULT '[]'::jsonb,
+  link TEXT,
+  hashtags JSONB NOT NULL DEFAULT '[]'::jsonb,
+  call_to_action TEXT NOT NULL DEFAULT '',
+  sensitivity_level TEXT NOT NULL DEFAULT 'medium',
+  expires_at TIMESTAMPTZ,
+  status TEXT NOT NULL DEFAULT 'draft',
+  publish_mode TEXT NOT NULL DEFAULT 'normal',
+  directive_id UUID REFERENCES campaign_directives(id) ON DELETE SET NULL,
+  owner_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  approver_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  scheduled_at TIMESTAMPTZ,
+  published_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS media_content_variants (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  content_id UUID NOT NULL REFERENCES media_contents(id) ON DELETE CASCADE,
+  platform TEXT NOT NULL,
+  body_text TEXT NOT NULL DEFAULT '',
+  title TEXT NOT NULL DEFAULT '',
+  description TEXT NOT NULL DEFAULT '',
+  hashtags JSONB NOT NULL DEFAULT '[]'::jsonb,
+  link TEXT,
+  media_urls JSONB NOT NULL DEFAULT '[]'::jsonb,
+  cover_image_url TEXT,
+  scheduled_at TIMESTAMPTZ,
+  preview_note TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (content_id, platform)
+);
+
+CREATE TABLE IF NOT EXISTS media_content_targets (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  content_id UUID NOT NULL REFERENCES media_contents(id) ON DELETE CASCADE,
+  account_id UUID NOT NULL REFERENCES media_accounts(id) ON DELETE CASCADE,
+  variant_id UUID REFERENCES media_content_variants(id) ON DELETE SET NULL,
+  status TEXT NOT NULL DEFAULT 'draft',
+  published_at TIMESTAMPTZ,
+  error_message TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (content_id, account_id)
+);
+
+CREATE TABLE IF NOT EXISTS media_content_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  content_id UUID NOT NULL REFERENCES media_contents(id) ON DELETE CASCADE,
+  event_type TEXT NOT NULL,
+  actor_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  summary TEXT NOT NULL DEFAULT '',
+  payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS media_publish_orders (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  campaign_id UUID NOT NULL REFERENCES campaign_settings(id) ON DELETE CASCADE,
+  title TEXT NOT NULL DEFAULT '',
+  objective TEXT NOT NULL DEFAULT '',
+  main_message TEXT NOT NULL DEFAULT '',
+  approved_content TEXT NOT NULL DEFAULT '',
+  directive_id UUID REFERENCES campaign_directives(id) ON DELETE SET NULL,
+  mode TEXT NOT NULL DEFAULT 'content_mission',
+  status TEXT NOT NULL DEFAULT 'draft',
+  priority TEXT NOT NULL DEFAULT 'normal',
+  sensitivity_level TEXT NOT NULL DEFAULT 'medium',
+  target_platforms JSONB NOT NULL DEFAULT '[]'::jsonb,
+  target_account_ids UUID[] NOT NULL DEFAULT '{}',
+  target_provinces JSONB NOT NULL DEFAULT '[]'::jsonb,
+  publish_at TIMESTAMPTZ,
+  deadline_at TIMESTAMPTZ,
+  allows_localization BOOLEAN NOT NULL DEFAULT true,
+  requires_local_approval BOOLEAN NOT NULL DEFAULT true,
+  expected_evidence TEXT NOT NULL DEFAULT '',
+  reference_urls JSONB NOT NULL DEFAULT '[]'::jsonb,
+  suggested_variants JSONB NOT NULL DEFAULT '{}'::jsonb,
+  owner_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS media_interactions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  campaign_id UUID NOT NULL REFERENCES campaign_settings(id) ON DELETE CASCADE,
+  account_id UUID REFERENCES media_accounts(id) ON DELETE SET NULL,
+  platform TEXT NOT NULL DEFAULT 'other',
+  kind TEXT NOT NULL DEFAULT 'comment',
+  author_name TEXT NOT NULL DEFAULT '',
+  body TEXT NOT NULL DEFAULT '',
+  related_content_id UUID REFERENCES media_contents(id) ON DELETE SET NULL,
+  status TEXT NOT NULL DEFAULT 'new',
+  importance TEXT NOT NULL DEFAULT 'normal',
+  topic_tag TEXT,
+  sentiment TEXT,
+  assignee_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  suggested_reply TEXT,
+  final_reply TEXT,
+  received_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS media_library_items (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  campaign_id UUID NOT NULL REFERENCES campaign_settings(id) ON DELETE CASCADE,
+  title TEXT NOT NULL DEFAULT '',
+  category TEXT NOT NULL DEFAULT 'publishable_files',
+  version_label TEXT NOT NULL DEFAULT '1',
+  file_url TEXT,
+  body_text TEXT NOT NULL DEFAULT '',
+  valid_until TIMESTAMPTZ,
+  access_level TEXT NOT NULL DEFAULT 'campaign',
+  can_edit BOOLEAN NOT NULL DEFAULT true,
+  can_publish BOOLEAN NOT NULL DEFAULT true,
+  suitable_platforms JSONB NOT NULL DEFAULT '[]'::jsonb,
+  owner_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  usage_count INT NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_media_accounts_campaign ON media_accounts(campaign_id, status);
+CREATE INDEX IF NOT EXISTS idx_media_contents_campaign ON media_contents(campaign_id, status, scheduled_at);
+CREATE INDEX IF NOT EXISTS idx_media_orders_campaign ON media_publish_orders(campaign_id, status, deadline_at);
+CREATE INDEX IF NOT EXISTS idx_media_interactions_campaign ON media_interactions(campaign_id, status, received_at DESC);
+CREATE INDEX IF NOT EXISTS idx_media_library_campaign ON media_library_items(campaign_id, category);
+

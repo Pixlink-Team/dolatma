@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "77d5b12b33b1e5b47435af53d3d739c264237b68",
+      "committedAt": "2026-07-22T14:37:41+03:30",
+      "title": "افزودن تنظیمات هوش مصنوعی در بخش تنظیمات ادمین",
+      "subject": "Add AI settings infrastructure for admin"
+    },
+    {
       "hash": "f9237e5d44c4be6f79c625ebb77dfe55ba9406cc",
       "committedAt": "2026-07-22T12:23:40+03:30",
       "title": "دسته‌بندی دستورکارها بر اساس منبع بالادستی با برچسب و فیلتر",
