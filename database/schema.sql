@@ -1637,3 +1637,14 @@ CREATE INDEX IF NOT EXISTS idx_media_orders_campaign ON media_publish_orders(cam
 CREATE INDEX IF NOT EXISTS idx_media_interactions_campaign ON media_interactions(campaign_id, status, received_at DESC);
 CREATE INDEX IF NOT EXISTS idx_media_library_campaign ON media_library_items(campaign_id, category);
 
+-- Section content form schemas (admin form builder for content-add UIs)
+CREATE TABLE IF NOT EXISTS section_content_forms (
+  section_key TEXT PRIMARY KEY,
+  title TEXT NOT NULL DEFAULT '',
+  fields JSONB NOT NULL DEFAULT '[]'::jsonb,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+ALTER TABLE posters ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE billboards ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
+

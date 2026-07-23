@@ -119,6 +119,19 @@ export async function POST(request: Request) {
     .map((value) => String(value).trim())
     .filter(Boolean);
 
+  let metadata: Record<string, unknown> = {};
+  const metadataRaw = formData.get("metadata");
+  if (typeof metadataRaw === "string" && metadataRaw.trim()) {
+    try {
+      const parsed = JSON.parse(metadataRaw) as unknown;
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        metadata = parsed as Record<string, unknown>;
+      }
+    } catch {
+      metadata = {};
+    }
+  }
+
   try {
     const periods = parseRequiredPeriods(formData);
 
@@ -148,6 +161,7 @@ export async function POST(request: Request) {
       status: "published",
       planLabel: planLabels[0] ?? planLabel,
       planLabels: planLabels.length > 0 ? planLabels : planLabel ? [planLabel] : undefined,
+      metadata,
       periods,
       ownerUserId,
     });

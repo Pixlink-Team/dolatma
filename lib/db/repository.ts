@@ -38,6 +38,7 @@ import { serializeAnalyticsConfig } from "@/lib/analytics-config";
 import { normalizePlanLabels, normalizeContentTopics } from "@/lib/content-topics";
 import { resolveUploadFilePath } from "@/lib/uploads";
 import { unlink } from "fs/promises";
+import { ensureSectionContentFormsSchema } from "@/lib/db/repository-section-forms";
 import type { Ownable } from "@/lib/types";
 
 function resolvePlanFields(data: Partial<Ownable>) {
@@ -515,6 +516,7 @@ export async function pgUpdateCampaignSettings(data: Partial<CampaignSettings>) 
 }
 
 export async function pgSaveBillboard(data: Partial<Billboard> & { id?: string }) {
+  await ensureSectionContentFormsSchema();
   const sql = getSql();
   const now = new Date().toISOString();
   const id = data.id ?? generateId();
@@ -530,7 +532,7 @@ export async function pgSaveBillboard(data: Partial<Billboard> & { id?: string }
       id, campaign_id, title, description, province, city, location, date,
       thumbnail_url, image_url, external_url, latitude, longitude, source, external_id,
       category, area_sqm, status, tags, notes, published, sort_order, owner_user_id, plan_label, plan_labels, score,
-      created_at, updated_at
+      metadata, created_at, updated_at
     ) VALUES (
       ${id},
       ${data.campaignId ?? ""},
@@ -558,6 +560,7 @@ export async function pgSaveBillboard(data: Partial<Billboard> & { id?: string }
       ${planLabel},
       ${sql.json(planLabels)},
       ${data.score ?? null},
+      ${sql.json(JSON.parse(JSON.stringify(data.metadata ?? {})))},
       ${now},
       ${now}
     )
@@ -586,6 +589,7 @@ export async function pgSaveBillboard(data: Partial<Billboard> & { id?: string }
       plan_label = EXCLUDED.plan_label,
       plan_labels = EXCLUDED.plan_labels,
       score = COALESCE(EXCLUDED.score, billboards.score),
+      metadata = EXCLUDED.metadata,
       updated_at = EXCLUDED.updated_at
   `;
 
@@ -728,6 +732,7 @@ export async function pgDeleteMediaCategory(id: string) {
 }
 
 export async function pgSavePoster(data: Partial<Poster> & { id?: string }) {
+  await ensureSectionContentFormsSchema();
   const sql = getSql();
   const now = new Date().toISOString();
   const id = data.id ?? generateId();
@@ -740,7 +745,7 @@ export async function pgSavePoster(data: Partial<Poster> & { id?: string }) {
 
   await sql`
     INSERT INTO posters (
-      id, campaign_id, category_id, title, description, published, sort_order, owner_user_id, plan_label, plan_labels, score, created_at, updated_at
+      id, campaign_id, category_id, title, description, published, sort_order, owner_user_id, plan_label, plan_labels, score, metadata, created_at, updated_at
     ) VALUES (
       ${id},
       ${data.campaignId ?? ""},
@@ -753,6 +758,7 @@ export async function pgSavePoster(data: Partial<Poster> & { id?: string }) {
       ${planLabel},
       ${sql.json(planLabels)},
       ${data.score ?? null},
+      ${sql.json(JSON.parse(JSON.stringify(data.metadata ?? {})))},
       ${now},
       ${now}
     )
@@ -766,6 +772,7 @@ export async function pgSavePoster(data: Partial<Poster> & { id?: string }) {
       plan_label = EXCLUDED.plan_label,
       plan_labels = EXCLUDED.plan_labels,
       score = COALESCE(EXCLUDED.score, posters.score),
+      metadata = EXCLUDED.metadata,
       updated_at = EXCLUDED.updated_at
   `;
 

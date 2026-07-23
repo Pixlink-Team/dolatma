@@ -2,32 +2,33 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ImageIcon, Trash2, Upload } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { MediaUpload } from "@/components/ui/media-upload";
-import { MediaThumbnail } from "@/components/ui/media-thumbnail";
-import { PlanLabelSelect } from "@/components/admin/plan-label-select";
-import { ContentScoreControl } from "@/components/admin/content-score-control";
+import {
+  ContentSectionFormRenderer,
+  type PosterSectionFormValues,
+} from "@/components/admin/content-section-form-renderer";
 import {
   deletePosterAction,
   deletePosterVersionAction,
   savePosterAction,
   savePosterVersionAction,
 } from "@/lib/actions/admin-actions";
+import { getSectionContentFormAction } from "@/lib/actions/section-form-actions";
 import { normalizePlanLabels, type ContentTopic } from "@/lib/content-topics";
-import { CONTENT_TITLE_MAX_LENGTH } from "@/lib/content-constraints";
+import {
+  defaultContentFormFields,
+  fieldByWidget,
+  parseMetadataObject,
+} from "@/lib/section-content-forms";
 import {
   isDefaultPosterTitle,
   type EditSuggestionMissingField,
 } from "@/lib/edit-suggestions";
 import { todayISO } from "@/lib/jalali";
 import { resolveDisplayVersion } from "@/lib/media-utils";
-import type { MediaCategory, Poster, PosterVersion } from "@/lib/types";
-import { cn } from "@/lib/utils";
+import type { ContentFormField, MediaCategory, Poster, PosterVersion } from "@/lib/types";
 
 interface AdminPosterEditorProps {
   poster: Poster;
@@ -56,28 +57,51 @@ export function AdminPosterEditor({
   const router = useRouter();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const [isPending, startTransition] = useTransition();
+  const [fields, setFields] = useState<ContentFormField[]>(() =>
+    defaultContentFormFields("posters")
+  );
+  const [fieldsLoaded, setFieldsLoaded] = useState(false);
 
   const displayVersion = useMemo(() => resolveDisplayVersion(versions), [versions]);
 
-  const [imageUrl, setImageUrl] = useState(displayVersion?.imageUrl || "");
-  const [notes, setNotes] = useState(displayVersion?.notes ?? "");
-  const [editTitle, setEditTitle] = useState(poster.title);
-  const [editDescription, setEditDescription] = useState(poster.description ?? "");
+  const [values, setValues] = useState<PosterSectionFormValues>(() => ({
+    imageUrl: displayVersion?.imageUrl || "",
+    title: poster.title,
+    description: poster.description ?? "",
+    planLabels: normalizePlanLabels(poster.planLabels, poster.planLabel),
+    notes: displayVersion?.notes ?? "",
+    score: poster.score,
+    metadata: parseMetadataObject(poster.metadata),
+  }));
   const [editCategoryId, setEditCategoryId] = useState(poster.categoryId);
-  const [editPlanLabels, setEditPlanLabels] = useState<string[]>(() =>
-    normalizePlanLabels(poster.planLabels, poster.planLabel)
-  );
-  const [editScore, setEditScore] = useState<number | null | undefined>(poster.score);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const result = await getSectionContentFormAction("posters");
+      if (cancelled) return;
+      if (result.success) {
+        setFields(result.form.fields);
+      }
+      setFieldsLoaded(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     const current = resolveDisplayVersion(versions);
-    setEditTitle(poster.title);
-    setEditDescription(poster.description ?? "");
+    setValues({
+      imageUrl: current?.imageUrl || "",
+      title: poster.title,
+      description: poster.description ?? "",
+      planLabels: normalizePlanLabels(poster.planLabels, poster.planLabel),
+      notes: current?.notes ?? "",
+      score: poster.score,
+      metadata: parseMetadataObject(poster.metadata),
+    });
     setEditCategoryId(poster.categoryId);
-    setEditPlanLabels(normalizePlanLabels(poster.planLabels, poster.planLabel));
-    setEditScore(poster.score);
-    setImageUrl(current?.imageUrl || "");
-    setNotes(current?.notes ?? "");
   }, [
     poster.id,
     poster.title,
@@ -86,27 +110,53 @@ export function AdminPosterEditor({
     poster.planLabel,
     poster.planLabels,
     poster.score,
+    poster.metadata,
     versions,
   ]);
 
   const refresh = () => router.refresh();
 
+  const patchValues = (patch: Partial<PosterSectionFormValues>) => {
+    setValues((prev) => ({ ...prev, ...patch }));
+  };
+
   const handleSaveAll = () => {
-    if (!imageUrl.trim()) {
+    const imageField = fieldByWidget(fields, "image");
+    if (imageField?.required !== false && !values.imageUrl.trim()) {
       toast.error("تصویر پوستر لازم است");
       return;
     }
 
+    const titleField = fieldByWidget(fields, "title");
+    if (titleField?.required && !values.title.trim()) {
+      toast.error(`فیلد «${titleField.label}» الزامی است`);
+      return;
+    }
+
+    for (const field of fields) {
+      if (field.kind !== "custom" || !field.required) continue;
+      const raw = values.metadata[field.key];
+      const empty =
+        raw == null ||
+        (typeof raw === "string" && !raw.trim()) ||
+        (typeof raw === "number" && Number.isNaN(raw));
+      if (empty && field.type !== "checkbox") {
+        toast.error(`فیلد «${field.label}» الزامی است`);
+        return;
+      }
+    }
+
     startTransition(async () => {
-      const savedPoster = {
+      const savedPoster: Poster = {
         ...poster,
-        title: editTitle,
-        description: editDescription,
+        title: values.title.trim() || poster.title || "پوستر جدید",
+        description: values.description,
         categoryId: editCategoryId,
         published: true,
-        planLabels: editPlanLabels,
-        planLabel: editPlanLabels[0] ?? null,
-        score: editScore,
+        planLabels: values.planLabels,
+        planLabel: values.planLabels[0] ?? null,
+        score: values.score,
+        metadata: values.metadata,
         updatedAt: new Date().toISOString(),
       };
 
@@ -117,9 +167,9 @@ export function AdminPosterEditor({
         id: keepId,
         posterId: poster.id,
         versionNumber: displayVersion?.versionNumber ?? 1,
-        imageUrl,
-        thumbnailUrl: imageUrl,
-        notes: notes || undefined,
+        imageUrl: values.imageUrl,
+        thumbnailUrl: values.imageUrl,
+        notes: values.notes || undefined,
         date: displayVersion?.date ?? todayISO(),
         isFinal: true,
         status: "final",
@@ -151,113 +201,70 @@ export function AdminPosterEditor({
   };
 
   const highlightTitle =
-    highlightFields.includes("title") && isDefaultPosterTitle(editTitle);
+    highlightFields.includes("title") && isDefaultPosterTitle(values.title);
   const highlightDescription =
-    highlightFields.includes("description") && !editDescription.trim();
-  const highlightMedia = highlightFields.includes("media") && !imageUrl.trim();
+    highlightFields.includes("description") && !values.description.trim();
+  const highlightMedia =
+    highlightFields.includes("media") && !values.imageUrl.trim();
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div ref={scrollAreaRef} className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-y-contain pr-1">
-        <MediaUpload
-          label="تصویر پوستر"
-          value={imageUrl}
-          onChange={setImageUrl}
-          showPreview={false}
-          showLinkInput={false}
-          dropzoneContent={
-            <div
-              className={cn(
-                "relative h-72 w-full overflow-hidden rounded-[10px] bg-muted sm:h-80",
-                highlightMedia && "ring-2 ring-destructive ring-offset-2"
-              )}
-            >
-              {imageUrl ? (
-                <MediaThumbnail
-                  src={imageUrl}
-                  alt={editTitle}
-                  kind="poster"
-                  sizes="100vw"
-                  objectFit="contain"
-                />
-              ) : (
-                <div className="flex h-full flex-col items-center justify-center gap-2 px-3 text-center text-sm text-muted-foreground">
-                  <ImageIcon className="h-10 w-10" />
-                  <span className="text-sm">تصویر را بکشید و رها کنید یا انتخاب کنید</span>
-                  <span className="inline-flex items-center gap-1.5 rounded-md border bg-background px-3 py-1.5 text-xs font-medium text-foreground shadow-sm">
-                    <Upload className="h-3.5 w-3.5" />
-                    انتخاب تصویر
-                  </span>
-                </div>
-              )}
-            </div>
-          }
-        />
-
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex-1 space-y-3">
-            <div>
-              <Label className={cn(highlightTitle && "text-destructive")}>عنوان</Label>
-              <Input
-                value={editTitle}
-                maxLength={CONTENT_TITLE_MAX_LENGTH}
-                onChange={(e) => setEditTitle(e.target.value)}
-                placeholder="عنوان پوستر"
-                className={cn(highlightTitle && "border-destructive focus-visible:ring-destructive")}
-              />
-              {highlightTitle && (
-                <p className="mt-1 text-xs text-destructive">عنوان پیش‌فرض است؛ یک عنوان اختصاصی وارد کنید.</p>
-              )}
-            </div>
-            <div>
-              <Label className={cn(highlightDescription && "text-amber-700 dark:text-amber-300")}>توضیحات</Label>
-              <Textarea
-                value={editDescription}
-                onChange={(e) => setEditDescription(e.target.value)}
-                rows={2}
-                placeholder="توضیحات (اختیاری)"
-                className={cn(
-                  highlightDescription && "border-amber-500 focus-visible:ring-amber-500"
-                )}
-              />
-              {highlightDescription && (
-                <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">توضیحات خالی است؛ بهتر است تکمیل شود.</p>
-              )}
-            </div>
-            <PlanLabelSelect
-              topics={contentTopics}
-              plans={contentPlans}
-              values={editPlanLabels}
-              onChangeMultiple={setEditPlanLabels}
-            />
-            {!isNew && (
-              <ContentScoreControl
+      <div
+        ref={scrollAreaRef}
+        className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-y-contain pr-1"
+      >
+        {!fieldsLoaded ? (
+          <p className="text-sm text-muted-foreground">در حال بارگذاری فرم...</p>
+        ) : (
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <ContentSectionFormRenderer
+                sectionKey="posters"
+                fields={fields}
+                values={values}
+                onChange={patchValues}
+                contentTopics={contentTopics}
+                contentPlans={contentPlans}
                 campaignId={poster.campaignId}
-                contentType="poster"
                 contentId={poster.id}
-                score={editScore}
                 canScore={canScore}
-                onScoreSaved={setEditScore}
+                isNew={isNew}
+                highlightTitle={highlightTitle}
+                highlightDescription={highlightDescription}
+                highlightMedia={highlightMedia}
               />
-            )}
-            {highlightMedia && (
-              <p className="text-xs text-destructive">تصویر پوستر هنوز آپلود نشده است.</p>
-            )}
-            <div>
-              <Label>یادداشت (اختیاری)</Label>
-              <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
+              {highlightMedia ? (
+                <p className="mt-2 text-xs text-destructive">
+                  تصویر پوستر هنوز آپلود نشده است.
+                </p>
+              ) : null}
+              {highlightTitle ? (
+                <p className="mt-2 text-xs text-destructive">
+                  عنوان پیش‌فرض است؛ یک عنوان اختصاصی وارد کنید.
+                </p>
+              ) : null}
+              {highlightDescription ? (
+                <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">
+                  توضیحات خالی است؛ بهتر است تکمیل شود.
+                </p>
+              ) : null}
+            </div>
+            <div className="flex flex-col items-center gap-2 pt-6">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleDeletePoster}
+                disabled={isPending}
+              >
+                <Trash2 className="h-4 w-4 text-destructive" />
+              </Button>
             </div>
           </div>
-          <div className="flex flex-col items-center gap-2 pt-6">
-            <Button variant="ghost" size="icon" onClick={handleDeletePoster} disabled={isPending}>
-              <Trash2 className="h-4 w-4 text-destructive" />
-            </Button>
-          </div>
-        </div>
+        )}
       </div>
 
       <div className="mt-3 flex shrink-0 gap-2 border-t bg-card pt-3">
-        <Button onClick={handleSaveAll} disabled={isPending} className="flex-1">
+        <Button onClick={handleSaveAll} disabled={isPending || !fieldsLoaded} className="flex-1">
           {isPending ? "در حال ذخیره..." : "ذخیره"}
         </Button>
       </div>

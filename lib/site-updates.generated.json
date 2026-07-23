@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "859a3cdac0de5aeb714deb0590fa53f395050eed",
+      "committedAt": "2026-07-23T10:12:13+03:30",
+      "title": "افزودن ساخت هوشمند دستورکار با اتاق عملیات تطبیقی و دستیار اقدام",
+      "subject": "Wire smart directive creation and adaptive ops room"
+    },
+    {
       "hash": "9457c906d0427974983ccacf8658beb6469c88d2",
       "committedAt": "2026-07-22T15:09:42+03:30",
       "title": "حذف انیمیشن فشردن کارت‌ها هنگام کلیک",

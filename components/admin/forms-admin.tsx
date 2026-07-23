@@ -1,20 +1,25 @@
 "use client";
 
-import { useCallback, useEffect, useState, useTransition } from "react";
-import { ClipboardList, Pencil, Plus, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { ClipboardList, FormInput } from "lucide-react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { FormBuilderDialog } from "@/components/admin/form-builder-dialog";
-import { FormFillDialog } from "@/components/admin/form-fill-dialog";
-import { FormResponsesPanel } from "@/components/admin/form-responses-panel";
 import {
-  deleteCampaignFormAction,
-  listCampaignFormsAction,
-  listFormResponsesAction,
-} from "@/lib/actions/form-actions";
-import { campaignFormStatusLabels } from "@/lib/campaign-forms";
-import { formatPersianNumber } from "@/lib/utils";
-import type { CampaignForm, CampaignFormResponse } from "@/lib/types";
+  ContentFormBuilderPanel,
+  type ContentFormBuilderDraft,
+} from "@/components/admin/content-form-builder-panel";
+import {
+  ContentSectionFormRenderer,
+  emptyBillboardFormValues,
+  emptyPosterFormValues,
+} from "@/components/admin/content-section-form-renderer";
+import { createDisplayPeriod } from "@/components/admin/billboard-display-periods-editor";
+import { listSectionContentFormsAction } from "@/lib/actions/section-form-actions";
+import {
+  CONTENT_FORM_SECTION_KEYS,
+  contentFormSectionLabels,
+  defaultSectionContentForm,
+} from "@/lib/section-content-forms";
+import type { ContentFormSectionKey, SectionContentForm } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 interface FormsAdminProps {
@@ -23,256 +28,147 @@ interface FormsAdminProps {
 }
 
 export function FormsAdmin({ campaignId, canManage }: FormsAdminProps) {
-  const [forms, setForms] = useState<CampaignForm[]>([]);
-  const [responses, setResponses] = useState<CampaignFormResponse[]>([]);
-  const [selectedFormId, setSelectedFormId] = useState<string | null>(null);
+  const [forms, setForms] = useState<SectionContentForm[]>([]);
+  const [sectionKey, setSectionKey] = useState<ContentFormSectionKey>("posters");
   const [loading, setLoading] = useState(true);
-  const [builderOpen, setBuilderOpen] = useState(false);
-  const [editingForm, setEditingForm] = useState<CampaignForm | null>(null);
-  const [fillOpen, setFillOpen] = useState(false);
-  const [fillForm, setFillForm] = useState<CampaignForm | null>(null);
-  const [editingResponse, setEditingResponse] = useState<CampaignFormResponse | null>(
-    null
-  );
-  const [isPending, startTransition] = useTransition();
+  const [draft, setDraft] = useState<ContentFormBuilderDraft | null>(null);
 
-  const selectedForm = forms.find((form) => form.id === selectedFormId) ?? null;
+  const selectedForm = useMemo(() => {
+    return (
+      forms.find((form) => form.sectionKey === sectionKey) ??
+      defaultSectionContentForm(sectionKey)
+    );
+  }, [forms, sectionKey]);
 
   const loadForms = useCallback(async () => {
     setLoading(true);
-    const result = await listCampaignFormsAction(campaignId);
+    const result = await listSectionContentFormsAction();
     if (!result.success) {
       toast.error(result.error ?? "بارگذاری فرم‌ها ناموفق بود");
       setLoading(false);
       return;
     }
     setForms(result.forms);
-    setSelectedFormId((prev) => {
-      if (prev && result.forms.some((form) => form.id === prev)) return prev;
-      return result.forms[0]?.id ?? null;
-    });
     setLoading(false);
-  }, [campaignId]);
-
-  const loadResponses = useCallback(
-    async (formId: string | null) => {
-      if (!formId) {
-        setResponses([]);
-        return;
-      }
-      const result = await listFormResponsesAction({ campaignId, formId });
-      if (!result.success) {
-        toast.error(result.error ?? "بارگذاری پاسخ‌ها ناموفق بود");
-        return;
-      }
-      setResponses(result.responses);
-    },
-    [campaignId]
-  );
+  }, []);
 
   useEffect(() => {
     void loadForms();
   }, [loadForms]);
 
-  useEffect(() => {
-    void loadResponses(selectedFormId);
-  }, [loadResponses, selectedFormId]);
+  const previewFields = draft?.fields ?? selectedForm.fields;
 
-  const refreshAll = async () => {
-    await loadForms();
-    await loadResponses(selectedFormId);
-  };
-
-  const openCreate = () => {
-    setEditingForm(null);
-    setBuilderOpen(true);
-  };
-
-  const openEdit = (form: CampaignForm) => {
-    setEditingForm(form);
-    setBuilderOpen(true);
-  };
-
-  const openFill = (form: CampaignForm) => {
-    setEditingResponse(null);
-    setFillForm(form);
-    setFillOpen(true);
-  };
-
-  const openEditResponse = (response: CampaignFormResponse) => {
-    const form = forms.find((item) => item.id === response.formId) ?? selectedForm;
-    if (!form) {
-      toast.error("فرم مربوط به این پاسخ یافت نشد");
-      return;
-    }
-    setFillForm(form);
-    setEditingResponse(response);
-    setFillOpen(true);
-  };
-
-  const handleDelete = (form: CampaignForm) => {
-    if (!confirm(`فرم «${form.title}» و همه پاسخ‌هایش حذف شود؟`)) return;
-    startTransition(async () => {
-      const result = await deleteCampaignFormAction(form.id, campaignId);
-      if (!result.success) {
-        toast.error(result.error ?? "حذف فرم ناموفق بود");
-        return;
-      }
-      toast.success("فرم حذف شد");
-      await refreshAll();
-    });
-  };
+  if (!canManage) {
+    return (
+      <div className="rounded-xl border bg-muted/20 p-10 text-center space-y-2">
+        <FormInput className="h-10 w-10 mx-auto text-muted-foreground" />
+        <p className="font-medium">دسترسی به ویرایش فرم‌ها ندارید</p>
+        <p className="text-sm text-muted-foreground">
+          فقط مدیر و کارفرما می‌توانند فرم‌های افزودن محتوا را ویرایش کنند.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <ClipboardList className="h-6 w-6 text-primary" />
-            <h1 className="text-2xl font-bold">فرم‌ها</h1>
-          </div>
-          <p className="text-sm text-muted-foreground">
-            {canManage
-              ? "فرم بسازید، فیلدها را ویرایش کنید و پاسخ‌های کاربران را ببینید و ویرایش کنید"
-              : "فرم‌های منتشرشده را پر کنید و پاسخ‌های خود را ببینید و ویرایش کنید"}
-          </p>
+      <div>
+        <div className="flex items-center gap-2 mb-1">
+          <ClipboardList className="h-6 w-6 text-primary" />
+          <h1 className="text-2xl font-bold">فرم‌ساز محتوا</h1>
         </div>
-        {canManage ? (
-          <Button onClick={openCreate}>
-            <Plus className="h-4 w-4" />
-            فرم جدید
-          </Button>
-        ) : null}
+        <p className="text-sm text-muted-foreground">
+          فرم افزودن محتوای هر بخش را ویرایش کنید. پیش‌نمایش زنده در کنار فرم‌ساز نمایش داده می‌شود.
+        </p>
       </div>
 
       {loading ? (
         <div className="rounded-xl border p-8 text-center text-sm text-muted-foreground">
           در حال بارگذاری...
         </div>
-      ) : forms.length === 0 ? (
-        <div className="rounded-xl border bg-muted/20 p-10 text-center space-y-3">
-          <ClipboardList className="h-10 w-10 mx-auto text-muted-foreground" />
-          <p className="font-medium">
-            {canManage ? "هنوز فرمی ساخته نشده" : "فرم منتشرشده‌ای وجود ندارد"}
-          </p>
-          {canManage ? (
-            <Button onClick={openCreate}>
-              <Plus className="h-4 w-4" />
-              ساخت اولین فرم
-            </Button>
-          ) : null}
-        </div>
       ) : (
-        <div className="grid gap-6 lg:grid-cols-[340px_1fr]">
-          <div className="space-y-3">
-            {forms.map((form) => {
-              const isSelected = form.id === selectedFormId;
-              const canFill = form.status === "published";
+        <div className="grid gap-6 xl:grid-cols-[240px_minmax(0,1fr)_minmax(0,1fr)]">
+          <div className="space-y-2">
+            {CONTENT_FORM_SECTION_KEYS.map((key) => {
+              const isSelected = key === sectionKey;
+              const form = forms.find((item) => item.sectionKey === key);
               return (
-                <div
-                  key={form.id}
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setSectionKey(key)}
                   className={cn(
-                    "rounded-xl border p-4 space-y-3 transition-colors cursor-pointer",
+                    "w-full rounded-xl border p-4 text-right transition-colors",
                     isSelected ? "border-primary bg-primary/5" : "hover:bg-muted/30"
                   )}
-                  onClick={() => setSelectedFormId(form.id)}
                 >
-                  <div className="space-y-1">
-                    <p className="font-semibold">{form.title}</p>
-                    {form.description ? (
-                      <p className="text-xs text-muted-foreground line-clamp-2">
-                        {form.description}
-                      </p>
-                    ) : null}
-                  </div>
-                  <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
-                    <span>{campaignFormStatusLabels[form.status]}</span>
-                    <span>
-                      {formatPersianNumber(form.fields.length)} فیلد
-                      {typeof form.responseCount === "number"
-                        ? ` · ${formatPersianNumber(form.responseCount)} پاسخ`
-                        : ""}
-                    </span>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {canFill ? (
-                      <Button
-                        type="button"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openFill(form);
-                        }}
-                      >
-                        پر کردن
-                      </Button>
-                    ) : null}
-                    {canManage ? (
-                      <>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openEdit(form);
-                          }}
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                          ویرایش
-                        </Button>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="ghost"
-                          disabled={isPending}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDelete(form);
-                          }}
-                        >
-                          <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                        </Button>
-                      </>
-                    ) : null}
-                  </div>
-                </div>
+                  <p className="font-semibold">
+                    {form?.title || contentFormSectionLabels[key]}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {(form?.fields.length ?? 0) || "پیش‌فرض"} فیلد
+                  </p>
+                </button>
               );
             })}
           </div>
 
-          <FormResponsesPanel
-            campaignId={campaignId}
-            form={selectedForm}
-            responses={responses}
-            canManage={canManage}
-            onChanged={() => void loadResponses(selectedFormId)}
-            onEdit={openEditResponse}
-          />
+          <div className="rounded-xl border p-4 min-h-[480px]">
+            <ContentFormBuilderPanel
+              form={selectedForm}
+              resetKey={`${selectedForm.sectionKey}:${selectedForm.updatedAt}`}
+              onDraftChange={setDraft}
+              onSaved={(saved) => {
+                setForms((prev) => {
+                  const without = prev.filter((item) => item.sectionKey !== saved.sectionKey);
+                  return [...without, saved];
+                });
+                setDraft({ title: saved.title, fields: saved.fields });
+              }}
+            />
+          </div>
+
+          <div className="rounded-xl border p-4 min-h-[480px] bg-muted/10">
+            <div className="mb-4">
+              <h2 className="text-lg font-semibold">پیش‌نمایش فرم</h2>
+              <p className="text-xs text-muted-foreground">
+                همان فرمی که هنگام افزودن محتوا در بخش «
+                {contentFormSectionLabels[sectionKey]}» دیده می‌شود.
+              </p>
+            </div>
+
+            {sectionKey === "posters" ? (
+              <ContentSectionFormRenderer
+                sectionKey="posters"
+                fields={previewFields}
+                values={{
+                  ...emptyPosterFormValues(),
+                  title: "نمونه عنوان پوستر",
+                }}
+                onChange={() => undefined}
+                campaignId={campaignId}
+                isNew
+                readOnly
+              />
+            ) : (
+              <ContentSectionFormRenderer
+                sectionKey="billboards"
+                fields={previewFields}
+                values={{
+                  ...emptyBillboardFormValues(),
+                  axis: "نمونه محور",
+                  periods: [createDisplayPeriod()],
+                }}
+                onChange={() => undefined}
+                campaignId={campaignId}
+                isNew
+                readOnly
+                showAdminNotes
+              />
+            )}
+          </div>
         </div>
       )}
-
-      {canManage ? (
-        <FormBuilderDialog
-          open={builderOpen}
-          onOpenChange={setBuilderOpen}
-          campaignId={campaignId}
-          form={editingForm}
-          onSaved={() => void refreshAll()}
-        />
-      ) : null}
-
-      <FormFillDialog
-        open={fillOpen}
-        onOpenChange={(open) => {
-          setFillOpen(open);
-          if (!open) setEditingResponse(null);
-        }}
-        campaignId={campaignId}
-        form={fillForm}
-        editingResponse={editingResponse}
-        onSubmitted={() => void refreshAll()}
-      />
     </div>
   );
 }

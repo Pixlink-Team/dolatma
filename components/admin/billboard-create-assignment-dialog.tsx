@@ -4,36 +4,23 @@ import { useEffect, useState, useTransition, type ReactNode } from "react";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { PlanLabelSelect } from "@/components/admin/plan-label-select";
-import { ContentScoreControl } from "@/components/admin/content-score-control";
-import { BillboardLocationMapPicker } from "@/components/admin/billboard-location-map-picker";
-import { ProvinceCityFields } from "@/components/admin/province-city-fields";
+import {
+  ContentSectionFormRenderer,
+  type BillboardSectionFormValues,
+} from "@/components/admin/content-section-form-renderer";
 import {
   appendPeriodFilesToFormData,
-  BillboardDisplayPeriodsEditor,
   buildPeriodsFormPayload,
   createDisplayPeriod,
   type DisplayPeriodDraft,
 } from "@/components/admin/billboard-display-periods-editor";
 import {
-  BILLBOARD_CATEGORIES,
-  billboardCategoryLabels,
   matchBillboardCategoryKey,
   type BillboardCategory,
 } from "@/lib/billboard-categories";
@@ -42,15 +29,25 @@ import {
   parseAreaSqmFromBillboard,
   parseProvinceFromBillboard,
 } from "@/lib/billboard-form-utils";
+import { getSectionContentFormAction } from "@/lib/actions/section-form-actions";
 import { normalizePlanLabels, type ContentTopic } from "@/lib/content-topics";
+import {
+  defaultContentFormFields,
+  fieldByWidget,
+  hasSystemWidget,
+  parseMetadataObject,
+} from "@/lib/section-content-forms";
 import {
   isDefaultBillboardTitle,
   isPlaceholderBillboardImage,
   type EditSuggestionMissingField,
 } from "@/lib/edit-suggestions";
 import { getLocationCenter, resolveLocationNames } from "@/lib/iran-location-center";
-import type { Billboard, BillboardDisplayPeriod } from "@/lib/types";
-import { cn } from "@/lib/utils";
+import type {
+  Billboard,
+  BillboardDisplayPeriod,
+  ContentFormField,
+} from "@/lib/types";
 
 interface ContributorProfile {
   province?: string | null;
@@ -129,6 +126,25 @@ function fallbackDraftFromBillboard(billboard: Billboard): DisplayPeriodDraft[] 
   ];
 }
 
+function emptyValues(): BillboardSectionFormValues {
+  return {
+    category: "billboard",
+    province: "",
+    city: "",
+    axis: "",
+    areaSqm: "",
+    address: "",
+    latitude: 35.6892,
+    longitude: 51.389,
+    mapCenter: { lat: 35.6892, lng: 51.389 },
+    notes: "",
+    planLabels: [],
+    periods: [createDisplayPeriod()],
+    score: null,
+    metadata: {},
+  };
+}
+
 export function BillboardCreateAssignmentDialog({
   open,
   onOpenChange,
@@ -149,37 +165,47 @@ export function BillboardCreateAssignmentDialog({
   bulkTypeSwitcher,
 }: BillboardCreateAssignmentDialogProps) {
   const [isPending, startTransition] = useTransition();
-  const [province, setProvince] = useState("");
-  const [city, setCity] = useState("");
-  const [category, setCategory] = useState<BillboardCategory>("billboard");
-  const [axis, setAxis] = useState("");
-  const [areaSqm, setAreaSqm] = useState("");
-  const [address, setAddress] = useState("");
-  const [notes, setNotes] = useState("");
-  const [coords, setCoords] = useState({ latitude: 35.6892, longitude: 51.389 });
-  const [mapCenter, setMapCenter] = useState<{
-    lat: number;
-    lng: number;
-    revision?: number;
-  } | null>(null);
-  const [periods, setPeriods] = useState<DisplayPeriodDraft[]>([createDisplayPeriod()]);
-  const [planLabels, setPlanLabels] = useState<string[]>([]);
-  const [editScore, setEditScore] = useState<number | null | undefined>(null);
+  const [fields, setFields] = useState<ContentFormField[]>(() =>
+    defaultContentFormFields("billboards")
+  );
+  const [fieldsLoaded, setFieldsLoaded] = useState(false);
+  const [values, setValues] = useState<BillboardSectionFormValues>(emptyValues);
 
   const isEditing = Boolean(editingBillboard);
 
-  const hasPeriodMedia = periods.some(
+  const hasPeriodMedia = values.periods.some(
     (period) =>
       Boolean(period.billboardImageFile) ||
-      Boolean(period.existingBillboardImageUrl?.trim() && !isPlaceholderBillboardImage(period.existingBillboardImageUrl))
+      Boolean(
+        period.existingBillboardImageUrl?.trim() &&
+          !isPlaceholderBillboardImage(period.existingBillboardImageUrl)
+      )
   );
   const highlightTitle =
     highlightFields.includes("title") &&
-    (!axis.trim() || isDefaultBillboardTitle(axis));
-  const highlightCity = highlightFields.includes("city") && !city.trim();
-  const highlightLocation = highlightFields.includes("location") && !address.trim();
-  const highlightDescription = highlightFields.includes("description") && !address.trim();
+    (!values.axis.trim() || isDefaultBillboardTitle(values.axis));
+  const highlightCity = highlightFields.includes("city") && !values.city.trim();
+  const highlightLocation =
+    highlightFields.includes("location") && !values.address.trim();
+  const highlightDescription =
+    highlightFields.includes("description") && !values.address.trim();
   const highlightMedia = highlightFields.includes("media") && !hasPeriodMedia;
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    void (async () => {
+      const result = await getSectionContentFormAction("billboards");
+      if (cancelled) return;
+      if (result.success) {
+        setFields(result.form.fields);
+      }
+      setFieldsLoaded(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -190,40 +216,42 @@ export function BillboardCreateAssignmentDialog({
         const resolvedCity = editingBillboard.city;
         const center = getLocationCenter(resolvedProvince, resolvedCity);
 
-        setProvince(resolvedProvince);
-        setCity(resolvedCity);
-        setCategory(
-          matchBillboardCategoryKey(editingBillboard.category) || "billboard"
-        );
-        setAxis(editingBillboard.title);
-        setAreaSqm(parseAreaSqmFromBillboard(editingBillboard));
-        setAddress(parseAddressFromBillboard(editingBillboard));
-        setNotes(editingBillboard.notes ?? "");
-        setPlanLabels(normalizePlanLabels(editingBillboard.planLabels, editingBillboard.planLabel));
-        setEditScore(editingBillboard.score);
-        setCoords({
-          latitude: editingBillboard.latitude ?? center.lat,
-          longitude: editingBillboard.longitude ?? center.lng,
-        });
-        setMapCenter({
-          lat: editingBillboard.latitude ?? center.lat,
-          lng: editingBillboard.longitude ?? center.lng,
-          revision: Date.now(),
-        });
-
+        let nextPeriods = fallbackDraftFromBillboard(editingBillboard);
         try {
           const response = await fetch(
             `/api/billboard/periods?billboardId=${encodeURIComponent(editingBillboard.id)}`
           );
           const data = (await response.json()) as { periods?: BillboardDisplayPeriod[] };
-          setPeriods(
-            data.periods && data.periods.length > 0
-              ? periodsToDrafts(data.periods)
-              : fallbackDraftFromBillboard(editingBillboard)
-          );
+          if (data.periods && data.periods.length > 0) {
+            nextPeriods = periodsToDrafts(data.periods);
+          }
         } catch {
-          setPeriods(fallbackDraftFromBillboard(editingBillboard));
+          // keep fallback
         }
+
+        setValues({
+          category: matchBillboardCategoryKey(editingBillboard.category) || "billboard",
+          province: resolvedProvince,
+          city: resolvedCity,
+          axis: editingBillboard.title,
+          areaSqm: parseAreaSqmFromBillboard(editingBillboard),
+          address: parseAddressFromBillboard(editingBillboard),
+          latitude: editingBillboard.latitude ?? center.lat,
+          longitude: editingBillboard.longitude ?? center.lng,
+          mapCenter: {
+            lat: editingBillboard.latitude ?? center.lat,
+            lng: editingBillboard.longitude ?? center.lng,
+            revision: Date.now(),
+          },
+          notes: editingBillboard.notes ?? "",
+          planLabels: normalizePlanLabels(
+            editingBillboard.planLabels,
+            editingBillboard.planLabel
+          ),
+          periods: nextPeriods,
+          score: editingBillboard.score,
+          metadata: parseMetadataObject(editingBillboard.metadata),
+        });
         return;
       }
 
@@ -232,59 +260,86 @@ export function BillboardCreateAssignmentDialog({
       const resolved = resolveLocationNames(profileProvince, profileCity);
       const center = getLocationCenter(resolved.province, resolved.city);
 
-      setProvince(resolved.province);
-      setCity(resolved.city);
-      setCategory(initialValues?.category || "billboard");
-      setAxis(initialValues?.axis?.trim() || "");
-      setAreaSqm("");
-      setAddress(initialValues?.address?.trim() || "");
-      setNotes(initialValues?.notes?.trim() || "");
-      setPlanLabels([]);
-      setEditScore(null);
-      setCoords({ latitude: center.lat, longitude: center.lng });
-      setMapCenter({ lat: center.lat, lng: center.lng, revision: Date.now() });
+      const nextPeriods =
+        initialValues?.periods && initialValues.periods.length > 0
+          ? initialValues.periods.map((period) => ({
+              id: crypto.randomUUID(),
+              title: period.title ?? "",
+              startDate: period.startDate,
+              endDate: period.endDate,
+              imageFile: null,
+              billboardImageFile: null,
+              existingBillboardImageUrl: period.existingBillboardImageUrl ?? null,
+              existingConfirmationImageUrl: null,
+            }))
+          : [createDisplayPeriod()];
 
-      if (initialValues?.periods && initialValues.periods.length > 0) {
-        setPeriods(
-          initialValues.periods.map((period) => ({
-            id: crypto.randomUUID(),
-            title: period.title ?? "",
-            startDate: period.startDate,
-            endDate: period.endDate,
-            imageFile: null,
-            billboardImageFile: null,
-            existingBillboardImageUrl: period.existingBillboardImageUrl ?? null,
-            existingConfirmationImageUrl: null,
-          }))
-        );
-      } else {
-        setPeriods([createDisplayPeriod()]);
-      }
+      setValues({
+        category: initialValues?.category || "billboard",
+        province: resolved.province,
+        city: resolved.city,
+        axis: initialValues?.axis?.trim() || "",
+        areaSqm: "",
+        address: initialValues?.address?.trim() || "",
+        latitude: center.lat,
+        longitude: center.lng,
+        mapCenter: { lat: center.lat, lng: center.lng, revision: Date.now() },
+        notes: initialValues?.notes?.trim() || "",
+        planLabels: [],
+        periods: nextPeriods,
+        score: null,
+        metadata: {},
+      });
     };
 
     void loadForm();
   }, [open, contributorProfile, editingBillboard, initialValues, initialValuesKey]);
 
+  const patchValues = (patch: Partial<BillboardSectionFormValues>) => {
+    setValues((prev) => ({ ...prev, ...patch }));
+  };
+
   const handleLocationCenterChange = (center: { lat: number; lng: number }) => {
-    setMapCenter({ lat: center.lat, lng: center.lng, revision: Date.now() });
-    setCoords({ latitude: center.lat, longitude: center.lng });
+    patchValues({
+      mapCenter: { lat: center.lat, lng: center.lng, revision: Date.now() },
+      latitude: center.lat,
+      longitude: center.lng,
+    });
   };
 
   const handleSubmit = () => {
-    if (axis.trim().length < 2) {
+    const axisField = fieldByWidget(fields, "axis");
+    if ((axisField?.required ?? true) && values.axis.trim().length < 2) {
       toast.error("محور باید حداقل ۲ کاراکتر باشد");
       return;
     }
 
-    for (const [index, period] of periods.entries()) {
-      if (!period.startDate || !period.endDate) {
-        toast.error(`تاریخ دوره ${index + 1} الزامی است`);
-        return;
+    if (hasSystemWidget(fields, "periods")) {
+      for (const [index, period] of values.periods.entries()) {
+        if (!period.startDate || !period.endDate) {
+          toast.error(`تاریخ دوره ${index + 1} الزامی است`);
+          return;
+        }
+        const hasBillboardImage =
+          Boolean(period.billboardImageFile) ||
+          Boolean(period.existingBillboardImageUrl?.trim());
+        const periodsField = fieldByWidget(fields, "periods");
+        if ((periodsField?.required ?? true) && !hasBillboardImage) {
+          toast.error(`عکس بیلبورد در دوره ${index + 1} الزامی است`);
+          return;
+        }
       }
-      const hasBillboardImage =
-        Boolean(period.billboardImageFile) || Boolean(period.existingBillboardImageUrl?.trim());
-      if (!hasBillboardImage) {
-        toast.error(`عکس بیلبورد در دوره ${index + 1} الزامی است`);
+    }
+
+    for (const field of fields) {
+      if (field.kind !== "custom" || !field.required) continue;
+      const raw = values.metadata[field.key];
+      const empty =
+        raw == null ||
+        (typeof raw === "string" && !raw.trim()) ||
+        (typeof raw === "number" && Number.isNaN(raw));
+      if (empty && field.type !== "checkbox") {
+        toast.error(`فیلد «${field.label}» الزامی است`);
         return;
       }
     }
@@ -293,28 +348,32 @@ export function BillboardCreateAssignmentDialog({
       const formData = new FormData();
       formData.append("campaignId", campaignId);
       if (editingBillboard?.id) formData.append("billboardId", editingBillboard.id);
-      formData.append("category", category);
-      formData.append("axis", axis.trim());
-      formData.append("address", address.trim());
-      formData.append("area_sqm", areaSqm.trim());
-      formData.append("latitude", String(coords.latitude));
-      formData.append("longitude", String(coords.longitude));
+      formData.append("category", values.category);
+      formData.append("axis", values.axis.trim() || "محور");
+      formData.append("address", values.address.trim());
+      formData.append("area_sqm", values.areaSqm.trim());
+      formData.append("latitude", String(values.latitude));
+      formData.append("longitude", String(values.longitude));
 
-      const resolvedProvince = province || contributorProfile?.province?.trim() || "";
-      const resolvedCity = city || contributorProfile?.city?.trim() || "";
+      const resolvedProvince =
+        values.province || contributorProfile?.province?.trim() || "";
+      const resolvedCity = values.city || contributorProfile?.city?.trim() || "";
       if (resolvedProvince) formData.append("province", resolvedProvince);
       if (resolvedCity) formData.append("city", resolvedCity);
-      if (notes.trim()) formData.append("notes", notes.trim());
+      if (values.notes.trim()) formData.append("notes", values.notes.trim());
       if (!editingBillboard?.id && ownerUserId) {
         formData.append("ownerUserId", ownerUserId);
       }
       formData.append("published", "true");
       formData.append("status", "published");
-      for (const label of planLabels) {
+      for (const label of values.planLabels) {
         formData.append("planLabels", label);
       }
-      if (planLabels[0]) formData.append("planLabel", planLabels[0]);
+      if (values.planLabels[0]) formData.append("planLabel", values.planLabels[0]);
+      formData.append("metadata", JSON.stringify(values.metadata ?? {}));
 
+      const periods =
+        values.periods.length > 0 ? values.periods : [createDisplayPeriod()];
       formData.append("periods", JSON.stringify(buildPeriodsFormPayload(periods)));
       appendPeriodFilesToFormData(formData, periods);
 
@@ -328,7 +387,9 @@ export function BillboardCreateAssignmentDialog({
         return;
       }
 
-      toast.success(isEditing ? "تبلیغات محیطی ویرایش شد" : "تبلیغات محیطی جدید ثبت شد");
+      toast.success(
+        isEditing ? "تبلیغات محیطی ویرایش شد" : "تبلیغات محیطی جدید ثبت شد"
+      );
       onCreated?.();
       onOpenChange(false);
     });
@@ -338,147 +399,56 @@ export function BillboardCreateAssignmentDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{isEditing ? "ویرایش تبلیغات محیطی" : "ثبت تبلیغات محیطی جدید"}</DialogTitle>
+          <DialogTitle>
+            {isEditing ? "ویرایش تبلیغات محیطی" : "ثبت تبلیغات محیطی جدید"}
+          </DialogTitle>
           <p className="text-sm text-muted-foreground">
             {initialValues
               ? "داده‌های Excel پر شده‌اند؛ بقیه فیلدها (مثل موقعیت دقیق روی نقشه) را تکمیل کنید."
-              : contributorProfile?.province && contributorProfile?.city && !isEditing
+              : contributorProfile?.province &&
+                  contributorProfile?.city &&
+                  !isEditing
                 ? `استان و شهر از پروفایل ${contributorProfile.name} پر شده‌اند.`
-                : "استان و شهر را انتخاب کنید تا نقشه به همان موقعیت برود."}
-            {" "}می‌توانید چند دوره نمایش اضافه کنید.
+                : "استان و شهر را انتخاب کنید تا نقشه به همان موقعیت برود."}{" "}
+            می‌توانید چند دوره نمایش اضافه کنید.
           </p>
         </DialogHeader>
 
         {bulkTypeSwitcher}
 
         <div className="space-y-4">
-          <div className="space-y-2">
-            <Label>دسته‌بندی *</Label>
-            <Select value={category} onValueChange={(value) => setCategory(value as BillboardCategory)}>
-              <SelectTrigger>
-                <SelectValue placeholder="انتخاب دسته" />
-              </SelectTrigger>
-              <SelectContent>
-                {BILLBOARD_CATEGORIES.map((item) => (
-                  <SelectItem key={item} value={item}>
-                    {billboardCategoryLabels[item]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div
-            className={cn(
-              highlightCity && "rounded-lg border border-destructive bg-destructive/5 p-3"
-            )}
-          >
-            <ProvinceCityFields
-              province={province}
-              city={city}
-              onProvinceChange={setProvince}
-              onCityChange={setCity}
-              onLocationCenterChange={handleLocationCenterChange}
-            />
-            {highlightCity && (
-              <p className="mt-2 text-xs text-destructive">شهر انتخاب نشده است؛ لطفاً تکمیل کنید.</p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label className={cn(highlightTitle && "text-destructive")}>محور / خیابان / بزرگراه *</Label>
-            <Input
-              value={axis}
-              onChange={(event) => setAxis(event.target.value)}
-              className={cn(highlightTitle && "border-destructive focus-visible:ring-destructive")}
-            />
-            {highlightTitle && (
-              <p className="text-xs text-destructive">عنوان پیش‌فرض یا خالی است؛ یک عنوان اختصاصی وارد کنید.</p>
-            )}
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label>متراژ (متر مربع)</Label>
-              <Input
-                type="number"
-                min="0"
-                step="0.1"
-                value={areaSqm}
-                onChange={(event) => setAreaSqm(event.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label
-                className={cn(
-                  highlightLocation && "text-destructive",
-                  !highlightLocation && highlightDescription && "text-amber-700 dark:text-amber-300"
-                )}
-              >
-                آدرس توصیفی
-              </Label>
-              <Input
-                value={address}
-                onChange={(event) => setAddress(event.target.value)}
-                className={cn(
-                  highlightLocation && "border-destructive focus-visible:ring-destructive",
-                  !highlightLocation &&
-                    highlightDescription &&
-                    "border-amber-500 focus-visible:ring-amber-500"
-                )}
-              />
-              {highlightLocation && (
-                <p className="text-xs text-destructive">آدرس/موقعیت خالی است؛ بهتر است تکمیل شود.</p>
-              )}
-              {highlightDescription && !highlightLocation && (
-                <p className="text-xs text-amber-700 dark:text-amber-300">
-                  توضیحات خالی است؛ بهتر است تکمیل شود.
-                </p>
-              )}
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label>موقعیت روی نقشه *</Label>
-            <BillboardLocationMapPicker
-              latitude={coords.latitude}
-              longitude={coords.longitude}
-              mapCenter={mapCenter}
-              onChange={setCoords}
-            />
-          </div>
-
-          {mode === "admin" && (
-            <div className="space-y-2">
-              <Label>یادداشت داخلی</Label>
-              <Textarea value={notes} onChange={(event) => setNotes(event.target.value)} rows={2} />
-            </div>
-          )}
-
-          <PlanLabelSelect
-            topics={contentTopics}
-            plans={contentPlans}
-            values={planLabels}
-            onChangeMultiple={setPlanLabels}
-          />
-
-          {isEditing && editingBillboard && (
-            <ContentScoreControl
+          {!fieldsLoaded ? (
+            <p className="text-sm text-muted-foreground">در حال بارگذاری فرم...</p>
+          ) : (
+            <ContentSectionFormRenderer
+              sectionKey="billboards"
+              fields={fields}
+              values={values}
+              onChange={patchValues}
+              contentTopics={contentTopics}
+              contentPlans={contentPlans}
               campaignId={campaignId}
-              contentType="billboard"
-              contentId={editingBillboard.id}
-              score={editScore}
+              contentId={editingBillboard?.id}
               canScore={canScore}
-              onScoreSaved={setEditScore}
+              isNew={!isEditing}
+              highlightTitle={highlightTitle}
+              highlightCity={highlightCity}
+              highlightLocation={highlightLocation}
+              highlightDescription={highlightDescription}
+              highlightMedia={highlightMedia}
+              onLocationCenterChange={handleLocationCenterChange}
+              showAdminNotes={mode === "admin"}
             />
           )}
 
-          <BillboardDisplayPeriodsEditor
-            periods={periods}
-            onChange={setPeriods}
-            requireBillboardImage
-            highlightMedia={highlightMedia}
-          />
+          {highlightCity ? (
+            <p className="text-xs text-destructive">شهر انتخاب نشده است؛ لطفاً تکمیل کنید.</p>
+          ) : null}
+          {highlightTitle ? (
+            <p className="text-xs text-destructive">
+              عنوان پیش‌فرض یا خالی است؛ یک عنوان اختصاصی وارد کنید.
+            </p>
+          ) : null}
 
           <div className="flex flex-col gap-2 sm:flex-row">
             {onSkip ? (
@@ -492,7 +462,12 @@ export function BillboardCreateAssignmentDialog({
                 {skipLabel}
               </Button>
             ) : null}
-            <Button type="button" className="w-full" disabled={isPending} onClick={handleSubmit}>
+            <Button
+              type="button"
+              className="w-full"
+              disabled={isPending || !fieldsLoaded}
+              onClick={handleSubmit}
+            >
               {isPending ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />

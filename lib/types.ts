@@ -264,6 +264,47 @@ export interface FormField {
   accept?: string;
 }
 
+/** Sections that currently have a wired content form builder. */
+export type ContentFormSectionKey = "posters" | "billboards";
+
+export type ContentSystemWidget =
+  | "image"
+  | "title"
+  | "description"
+  | "planLabels"
+  | "notes"
+  | "score"
+  | "category"
+  | "provinceCity"
+  | "axis"
+  | "areaSqm"
+  | "address"
+  | "map"
+  | "periods";
+
+export interface ContentFormField {
+  id: string;
+  /** Stable key: system widget name or custom_* */
+  key: string;
+  kind: "system" | "custom";
+  /** Required when kind is system. */
+  widget?: ContentSystemWidget;
+  /** Used for custom fields; system fields keep a nominal type. */
+  type: FormFieldType;
+  label: string;
+  required: boolean;
+  placeholder?: string;
+  options?: string[];
+  accept?: string;
+}
+
+export interface SectionContentForm {
+  sectionKey: ContentFormSectionKey;
+  title: string;
+  fields: ContentFormField[];
+  updatedAt: string;
+}
+
 export type CampaignFormStatus = "draft" | "published" | "archived";
 
 export interface CampaignForm {
@@ -447,6 +488,8 @@ export interface Billboard extends Ownable {
   status: ItemStatus;
   tags: string[];
   notes?: string | null;
+  /** Custom form-builder field values. */
+  metadata?: Record<string, unknown>;
   published: boolean;
   sortOrder: number;
   displayPeriods?: BillboardDisplayPeriod[];
@@ -479,6 +522,8 @@ export interface Poster extends Ownable {
   published: boolean;
   sortOrder: number;
   planLabel?: string | null;
+  /** Custom form-builder field values. */
+  metadata?: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
 }

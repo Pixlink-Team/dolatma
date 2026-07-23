@@ -56,6 +56,11 @@ function parsePlanLabelsColumn(value: unknown): string[] {
     .filter((item) => item.length > 0);
 }
 
+function parseMetadataColumn(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return { ...(value as Record<string, unknown>) };
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function mapOwnerFromDb(row: any): Ownable {
   const planLabels = normalizePlanLabels(
@@ -217,6 +222,7 @@ export function mapBillboardFromDb(row: any): Billboard {
     status: row.status,
     tags: row.tags ?? [],
     notes: row.notes,
+    metadata: parseMetadataColumn(row.metadata),
     published: row.published,
     sortOrder: row.sort_order,
     ...mapOwnerFromDb(row),
@@ -249,6 +255,7 @@ export function mapPosterFromDb(row: any): Poster {
     description: row.description,
     published: row.published,
     sortOrder: row.sort_order,
+    metadata: parseMetadataColumn(row.metadata),
     ...mapOwnerFromDb(row),
     createdAt: toIsoString(row.created_at),
     updatedAt: toIsoString(row.updated_at),
