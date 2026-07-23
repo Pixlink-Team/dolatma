@@ -1263,10 +1263,15 @@ export async function pgListCalendarDirectives(campaignId?: string | null) {
 
 export async function pgListCalendarCampaigns() {
   const sql = getSql();
+  // campaign_settings has updated_at only (no created_at).
+  await sql`
+    ALTER TABLE campaign_settings
+      ADD COLUMN IF NOT EXISTS content_plans JSONB NOT NULL DEFAULT '[]'::jsonb
+  `;
   const rows = await sql`
     SELECT id, title, start_date, end_date, content_plans
     FROM campaign_settings
-    ORDER BY COALESCE(start_date, end_date, created_at::date) ASC
+    ORDER BY COALESCE(start_date, end_date, updated_at::date) ASC
   `;
   return rows.map((row) => {
     const rawPlans = row.content_plans;
