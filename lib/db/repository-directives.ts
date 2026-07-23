@@ -9,6 +9,15 @@ import {
   type DirectiveCtaKind,
   type DirectiveInternalTarget,
 } from "@/lib/directive-cta";
+import {
+  isDirectiveCreationMode,
+  isDirectiveMissionType,
+  normalizeSmartPayload,
+  type DirectiveCreationMode,
+  type DirectiveMissionType,
+  type SmartDirectivePayload,
+} from "@/lib/directive-smart";
+import { ensureDirectiveSmartExtraSchema } from "@/lib/db/repository-directive-smart";
 import type {
   CampaignDirective,
   DirectiveAttachment,
@@ -129,6 +138,31 @@ export async function ensureDirectiveCommandSchema(): Promise<void> {
     ALTER TABLE users
       ADD COLUMN IF NOT EXISTS authority_other TEXT
   `;
+  await sql`
+    ALTER TABLE campaign_directives
+      ADD COLUMN IF NOT EXISTS creation_mode TEXT NOT NULL DEFAULT 'normal'
+  `;
+  await sql`
+    ALTER TABLE campaign_directives
+      ADD COLUMN IF NOT EXISTS mission_type TEXT
+  `;
+  await sql`
+    ALTER TABLE campaign_directives
+      ADD COLUMN IF NOT EXISTS smart_payload JSONB
+  `;
+  await sql`
+    ALTER TABLE campaign_directives
+      ADD COLUMN IF NOT EXISTS ai_understanding_confirmed_at TIMESTAMPTZ
+  `;
+  await sql`
+    CREATE INDEX IF NOT EXISTS idx_campaign_directives_mission_type
+    ON campaign_directives (mission_type)
+  `;
+  await sql`
+    CREATE INDEX IF NOT EXISTS idx_campaign_directives_creation_mode
+    ON campaign_directives (creation_mode)
+  `;
+  await ensureDirectiveSmartExtraSchema();
 }
 
 function mapAudienceType(value: unknown): DirectiveAudienceType {
@@ -161,6 +195,14 @@ function mapSmsStatus(value: unknown): DirectiveSmsStatus {
     return value;
   }
   return "pending";
+}
+
+function mapCreationMode(value: unknown): DirectiveCreationMode {
+  return isDirectiveCreationMode(value) ? value : "normal";
+}
+
+function mapMissionType(value: unknown): DirectiveMissionType | null {
+  return isDirectiveMissionType(value) ? value : null;
 }
 
 function mapCtaTarget(value: unknown): DirectiveInternalTarget | null {
@@ -235,6 +277,10 @@ function mapDirectiveRow(
       row.escalation_after_minutes != null ? Number(row.escalation_after_minutes) : 30,
     escalatedAt: toIsoString(row.escalated_at),
     topic: row.topic != null ? String(row.topic) : "",
+    creationMode: mapCreationMode(row.creation_mode),
+    missionType: mapMissionType(row.mission_type),
+    smartPayload: normalizeSmartPayload(row.smart_payload),
+    aiUnderstandingConfirmedAt: toIsoString(row.ai_understanding_confirmed_at),
     sortOrder: Number(row.sort_order ?? 0),
     attachments,
     seenCount: row.seen_count != null ? Number(row.seen_count) : undefined,
@@ -743,6 +789,10 @@ export interface SaveDirectiveInput {
   crisisMode?: boolean;
   escalationAfterMinutes?: number;
   topic?: string | null;
+  creationMode?: DirectiveCreationMode;
+  missionType?: DirectiveMissionType | null;
+  smartPayload?: SmartDirectivePayload | null;
+  aiUnderstandingConfirmedAt?: string | null;
 }
 
 export async function pgSaveDirective(input: SaveDirectiveInput): Promise<{ id: string }> {
@@ -792,7 +842,18 @@ export async function pgSaveDirective(input: SaveDirectiveInput): Promise<{ id: 
     authorityLevel === "other" ? input.authorityOther?.trim() || null : null;
 
   const existing = input.id
-    ? await sql`SELECT id, published_at FROM campaign_directives WHERE id = ${id} LIMIT 1`
+    ? await sql`
+        SELECT
+          id,
+          published_at,
+          creation_mode,
+          mission_type,
+          smart_payload,
+          ai_understanding_confirmed_at
+        FROM campaign_directives
+        WHERE id = ${id}
+        LIMIT 1
+      `
     : [];
   const wasNew = existing.length === 0;
   const previousPublishedAt = existing[0]?.published_at
@@ -800,6 +861,39 @@ export async function pgSaveDirective(input: SaveDirectiveInput): Promise<{ id: 
     : null;
   const publishedAt = published
     ? previousPublishedAt ?? now
+    : null;
+
+  const existingRow = existing[0] as Record<string, unknown> | undefined;
+  const creationMode =
+    input.creationMode !== undefined
+      ? mapCreationMode(input.creationMode)
+      : existingRow
+        ? mapCreationMode(existingRow.creation_mode)
+        : "normal";
+  const missionType =
+    input.missionType !== undefined
+      ? input.missionType && isDirectiveMissionType(input.missionType)
+        ? input.missionType
+        : null
+      : existingRow
+        ? mapMissionType(existingRow.mission_type)
+        : null;
+  const smartPayload =
+    input.smartPayload !== undefined
+      ? input.smartPayload == null
+        ? null
+        : normalizeSmartPayload(input.smartPayload)
+      : existingRow
+        ? normalizeSmartPayload(existingRow.smart_payload)
+        : null;
+  const aiUnderstandingConfirmedAt =
+    input.aiUnderstandingConfirmedAt !== undefined
+      ? input.aiUnderstandingConfirmedAt?.trim() || null
+      : existingRow
+        ? toIsoString(existingRow.ai_understanding_confirmed_at)
+        : null;
+  const smartPayloadJson = smartPayload
+    ? sql.json(JSON.parse(JSON.stringify(smartPayload)))
     : null;
 
   await sql`
@@ -810,7 +904,8 @@ export async function pgSaveDirective(input: SaveDirectiveInput): Promise<{ id: 
       audience_type, audience_region, audience_ministry_id, audience_organization_id, audience_device_id, audience_cities,
       published, published_at, sort_order, created_at, updated_at,
       crisis_mode, escalation_after_minutes, topic, urgency,
-      authority_level, authority_other
+      authority_level, authority_other,
+      creation_mode, mission_type, smart_payload, ai_understanding_confirmed_at
     ) VALUES (
       ${id},
       ${input.campaignId},
@@ -845,7 +940,11 @@ export async function pgSaveDirective(input: SaveDirectiveInput): Promise<{ id: 
       ${topic},
       ${urgency ?? "normal"},
       ${authorityLevel},
-      ${authorityOther}
+      ${authorityOther},
+      ${creationMode},
+      ${missionType},
+      ${smartPayloadJson},
+      ${aiUnderstandingConfirmedAt}
     )
     ON CONFLICT (id) DO UPDATE SET
       title = EXCLUDED.title,
@@ -879,6 +978,10 @@ export async function pgSaveDirective(input: SaveDirectiveInput): Promise<{ id: 
       END,
       authority_level = EXCLUDED.authority_level,
       authority_other = EXCLUDED.authority_other,
+      creation_mode = EXCLUDED.creation_mode,
+      mission_type = EXCLUDED.mission_type,
+      smart_payload = EXCLUDED.smart_payload,
+      ai_understanding_confirmed_at = EXCLUDED.ai_understanding_confirmed_at,
       updated_at = EXCLUDED.updated_at
   `;
 
@@ -1226,4 +1329,25 @@ export async function pgGetPendingSmsRecipients(directiveId: string): Promise<
     phone: typeof row.phone === "string" && row.phone.trim() ? String(row.phone).trim() : null,
     userName: String(row.name ?? ""),
   }));
+}
+
+export async function pgConvertDirectiveToSmart(input: {
+  id: string;
+  missionType: DirectiveMissionType;
+  smartPayload: SmartDirectivePayload;
+}): Promise<boolean> {
+  const sql = getSql();
+  await ensureDirectiveCommandSchema();
+  const now = new Date().toISOString();
+  const payloadJson = sql.json(JSON.parse(JSON.stringify(input.smartPayload)));
+  const rows = await sql`
+    UPDATE campaign_directives
+    SET creation_mode = 'smart',
+        mission_type = ${input.missionType},
+        smart_payload = ${payloadJson},
+        updated_at = ${now}
+    WHERE id = ${input.id}
+    RETURNING id
+  `;
+  return rows.length > 0;
 }

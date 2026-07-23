@@ -883,6 +883,11 @@ export interface CampaignDirective {
   escalatedAt?: string | null;
   /** Topic label used for national calendar conflict detection. */
   topic?: string;
+  /** normal = classic form; smart = ساخت هوشمند wizard. */
+  creationMode?: import("./directive-smart").DirectiveCreationMode;
+  missionType?: import("./directive-smart").DirectiveMissionType | null;
+  smartPayload?: import("./directive-smart").SmartDirectivePayload | null;
+  aiUnderstandingConfirmedAt?: string | null;
   sortOrder: number;
   attachments: DirectiveAttachment[];
   /** Present for managers; optional summary counts. */

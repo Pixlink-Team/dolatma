@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
-import { Check, ClipboardCheck, Download, Eye } from "lucide-react";
+import { Check, ClipboardCheck, Download, Eye, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,10 +10,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { confirmDirectiveSeenAction } from "@/lib/actions/directive-actions";
+import { listMyOpenAiSuggestionsAction } from "@/lib/actions/directive-smart-actions";
 import {
   compareByAuthority,
   getAuthorityBadgeLabel,
 } from "@/lib/directive-authority";
+import type { DirectiveAiSuggestion } from "@/lib/db/repository-directive-smart";
 import type { CampaignDirective } from "@/lib/types";
 import { adminHref, cn, formatPersianDate, formatPersianDateTime, formatPersianNumber } from "@/lib/utils";
 import { DirectiveCtaButton } from "@/components/admin/directive-cta-button";
@@ -95,6 +97,13 @@ export function DashboardDirectivesPanel({
   const [inboxTab, setInboxTab] = useState<InboxTab>("new");
   const [detailItem, setDetailItem] = useState<CampaignDirective | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [aiSuggestions, setAiSuggestions] = useState<DirectiveAiSuggestion[]>([]);
+
+  useEffect(() => {
+    void listMyOpenAiSuggestionsAction({ limit: 20 }).then((result) => {
+      if (result.success) setAiSuggestions(result.suggestions);
+    });
+  }, []);
 
   const unreadCount = useMemo(
     () => inboxRows.filter((row) => !row.confirmed).length,
@@ -142,6 +151,39 @@ export function DashboardDirectivesPanel({
 
   return (
     <>
+      {aiSuggestions.length > 0 ? (
+        <Card className="border-primary/20 bg-primary/[0.03]">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Sparkles className="h-5 w-5 text-primary" />
+              اقدامات پیشنهادی امروز
+            </CardTitle>
+            <p className="text-sm text-muted-foreground">
+              پیشنهادهای دستیار اقدام راستا برای دستورکارهای هوشمند شما
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {aiSuggestions.map((item) => (
+              <div key={item.id} className="rounded-lg border bg-background p-3 text-sm">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div className="min-w-0 space-y-1">
+                    <p className="font-medium">{item.title}</p>
+                    {item.reason ? (
+                      <p className="text-xs text-muted-foreground line-clamp-2">{item.reason}</p>
+                    ) : null}
+                  </div>
+                  <Button size="sm" variant="outline" asChild>
+                    <Link href={adminHref(`/admin/directives/${item.directiveId}`, campaignId)}>
+                      اتاق عملیات
+                    </Link>
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      ) : null}
+
       <Card
         className={cn(
           unreadCount > 0 && "border-red-500/40 bg-red-500/[0.04]"
@@ -210,6 +252,9 @@ export function DashboardDirectivesPanel({
                       <Badge variant="secondary">
                         {getAuthorityBadgeLabel(item.authorityLevel, item.authorityOther)}
                       </Badge>
+                      {item.creationMode === "smart" ? (
+                        <Badge variant="outline">هوشمند</Badge>
+                      ) : null}
                       {item.priority === "urgent" && <Badge variant="destructive">فوری</Badge>}
                       {!item.confirmed ? (
                         <Badge>جدید</Badge>

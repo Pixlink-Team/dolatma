@@ -102,6 +102,7 @@ export default async function DirectivesPage({ searchParams }: PageProps) {
       audienceScope={audienceScope}
       issuerAuthorityLevel={issuerAuthorityLevel}
       issuerAuthorityOther={issuerAuthorityOther}
+      isFullAdmin={isFullAdmin(session)}
       initialDirectives={withFileAccessTokensDeep(initialDirectives)}
       archivedDirectives={withFileAccessTokensDeep(archivedDirectives)}
       inboxDirectives={withFileAccessTokensDeep(inboxDirectives)}

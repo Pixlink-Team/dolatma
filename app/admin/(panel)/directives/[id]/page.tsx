@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { DirectiveOpsPanels } from "@/components/admin/directive-ops-panels";
+import { DirectiveSmartOpsRoom } from "@/components/admin/directive-smart-ops-room";
 import { DirectiveWorkspaceAdmin } from "@/components/admin/directive-workspace-admin";
 import { resolveAdminCampaignId } from "@/lib/admin-campaign";
 import {
@@ -42,7 +43,9 @@ export default async function DirectiveWorkspacePage({ params, searchParams }: P
   const session = await getAuthSession();
   if (!session || !canViewDirectives(session)) redirect("/admin/login");
 
-  if (!isFullAdmin(session)) {
+  const fullAdmin = isFullAdmin(session);
+
+  if (!fullAdmin) {
     if (!session.userId || !isPostgresConfigured()) redirect("/admin");
     const membership = await pgGetUserPermissionsForCampaign(session.userId, campaignId);
     if (!membership) redirect("/admin");
@@ -66,6 +69,20 @@ export default async function DirectiveWorkspacePage({ params, searchParams }: P
     }
   } else if (!canManage) {
     redirect(`/admin/directives?campaign=${campaignId}`);
+  }
+
+  if (directive.creationMode === "smart") {
+    return (
+      <div className="space-y-6">
+        <DirectiveSmartOpsRoom
+          campaignId={campaignId}
+          canManage={canManage}
+          directive={directive}
+          currentUserId={session.userId}
+          isFullAdmin={fullAdmin}
+        />
+      </div>
+    );
   }
 
   const audienceScope = canManageDirectivesGlobally(session)

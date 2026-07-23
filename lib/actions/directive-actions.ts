@@ -35,6 +35,16 @@ import type {
 import type { UserRegion } from "@/lib/user-regions";
 import { isPostgresConfigured } from "@/lib/utils";
 import { stripFileAccessTokensDeep } from "@/lib/uploads";
+import type {
+  DirectiveCreationMode,
+  DirectiveMissionType,
+  SmartDirectivePayload,
+} from "@/lib/directive-smart";
+import {
+  isDirectiveCreationMode,
+  isDirectiveMissionType,
+  normalizeSmartPayload,
+} from "@/lib/directive-smart";
 
 async function assertDirectivesAccess(campaignId: string) {
   const session = await getAuthSession();
@@ -196,6 +206,10 @@ export async function saveDirectiveAction(input: {
   crisisMode?: boolean;
   escalationAfterMinutes?: number;
   topic?: string | null;
+  creationMode?: DirectiveCreationMode;
+  missionType?: DirectiveMissionType | null;
+  smartPayload?: SmartDirectivePayload | null;
+  aiUnderstandingConfirmedAt?: string | null;
 }) {
   const titleError = getContentTitleValidationError(input.title);
   if (titleError) return { success: false as const, error: titleError };
@@ -340,6 +354,33 @@ export async function saveDirectiveAction(input: {
     authorityOther = null;
   }
 
+  let creationMode: DirectiveCreationMode | undefined = undefined;
+  if (input.creationMode !== undefined) {
+    if (!isDirectiveCreationMode(input.creationMode)) {
+      return { success: false as const, error: "حالت ایجاد دستورکار نامعتبر است" };
+    }
+    creationMode = input.creationMode;
+  }
+
+  let missionType: DirectiveMissionType | null | undefined = undefined;
+  if (input.missionType !== undefined) {
+    if (input.missionType != null && !isDirectiveMissionType(input.missionType)) {
+      return { success: false as const, error: "نوع مأموریت نامعتبر است" };
+    }
+    missionType = input.missionType;
+  }
+
+  let smartPayload: SmartDirectivePayload | null | undefined = undefined;
+  if (input.smartPayload !== undefined) {
+    smartPayload =
+      input.smartPayload == null ? null : normalizeSmartPayload(input.smartPayload);
+  }
+
+  const aiUnderstandingConfirmedAt =
+    input.aiUnderstandingConfirmedAt !== undefined
+      ? input.aiUnderstandingConfirmedAt?.trim() || null
+      : undefined;
+
   const cleaned = stripFileAccessTokensDeep({
     ...input,
     body: input.body?.trim() ?? "",
@@ -411,6 +452,10 @@ export async function saveDirectiveAction(input: {
     crisisMode: cleaned.crisisMode,
     escalationAfterMinutes: cleaned.escalationAfterMinutes,
     topic: cleaned.topic,
+    creationMode,
+    missionType,
+    smartPayload,
+    aiUnderstandingConfirmedAt,
   });
 
   const shouldSendSms =

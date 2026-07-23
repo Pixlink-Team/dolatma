@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "9457c906d0427974983ccacf8658beb6469c88d2",
+      "committedAt": "2026-07-22T15:09:42+03:30",
+      "title": "حذف انیمیشن فشردن کارت‌ها هنگام کلیک",
+      "subject": "Remove card press-in/out click animation"
+    },
+    {
       "hash": "3391ddaee8db8788312d33203b1208e4a17936ed",
       "committedAt": "2026-07-22T14:57:06+03:30",
       "title": "افزودن میز فرمان رسانه‌ای برای مدیریت محتوا، تقویم انتشار و حساب‌های متصل",

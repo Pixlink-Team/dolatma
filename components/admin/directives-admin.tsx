@@ -20,6 +20,9 @@ import { toast } from "sonner";
 import Link from "next/link";
 import { DirectiveActionPlanDialog } from "@/components/admin/directive-action-plan-dialog";
 import { DirectiveCtaButton } from "@/components/admin/directive-cta-button";
+import { DirectiveGlobalMemoryAdmin } from "@/components/admin/directive-global-memory-admin";
+import { DirectivePlaybooksAdmin } from "@/components/admin/directive-playbooks-admin";
+import { DirectiveSmartWizard } from "@/components/admin/directive-smart-wizard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -43,6 +46,7 @@ import {
   getDirectiveRecipientsAction,
   saveDirectiveAction,
 } from "@/lib/actions/directive-actions";
+import { convertDirectiveToSmartAction } from "@/lib/actions/directive-smart-actions";
 import { checkDirectiveCalendarConflictAction } from "@/lib/actions/calendar-actions";
 import {
   getDirectiveWorkspaceAction,
@@ -66,6 +70,12 @@ import {
   getAuthorityBadgeLabel,
   type DirectiveAuthorityLevel,
 } from "@/lib/directive-authority";
+import {
+  DIRECTIVE_MISSION_TYPE_LABELS,
+  DIRECTIVE_MISSION_TYPES,
+  type DirectiveCreationMode,
+  type DirectiveMissionType,
+} from "@/lib/directive-smart";
 import type {
   CampaignDirective,
   DirectiveAudienceType,
@@ -129,7 +139,7 @@ type FormValues = z.infer<typeof schema>;
 
 type InboxTab = "new" | "seen" | "all";
 type ManagerView = "manage" | "inbox";
-type ManageListTab = "active" | "archive";
+type ManageListTab = "active" | "archive" | "patterns";
 
 interface AttachmentDraft {
   key: string;
@@ -197,6 +207,8 @@ interface DirectivesAdminProps {
   /** Default authority level from the current issuer account. */
   issuerAuthorityLevel?: DirectiveAuthorityLevel;
   issuerAuthorityOther?: string | null;
+  /** Full system admin (env admin / role admin). */
+  isFullAdmin?: boolean;
   /** Active (non-archived) campaign directives for managers. */
   initialDirectives: CampaignDirective[];
   /** Archived campaign directives for managers. */
@@ -339,6 +351,7 @@ export function DirectivesAdmin({
   audienceScope = "global",
   issuerAuthorityLevel = "internal",
   issuerAuthorityOther = null,
+  isFullAdmin = false,
   initialDirectives,
   archivedDirectives: initialArchived = [],
   inboxDirectives: initialInbox,
@@ -353,7 +366,12 @@ export function DirectivesAdmin({
   const [inboxTab, setInboxTab] = useState<InboxTab>("new");
   const [authorityFilter, setAuthorityFilter] = useState<string>(AUTHORITY_FILTER_ALL);
   const [open, setOpen] = useState(false);
+  const [creationMode, setCreationMode] = useState<DirectiveCreationMode>("normal");
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingSmartItem, setEditingSmartItem] = useState<CampaignDirective | null>(null);
+  const [convertTarget, setConvertTarget] = useState<CampaignDirective | null>(null);
+  const [convertMissionType, setConvertMissionType] =
+    useState<DirectiveMissionType>("communication_campaign");
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [selectedProvinces, setSelectedProvinces] = useState<string[]>([]);
   const [letterUpload, setLetterUpload] = useState({
@@ -433,8 +451,10 @@ export function DirectivesAdmin({
 
   const showingInbox = !canManage || managerView === "inbox";
   const showingArchive = !showingInbox && manageListTab === "archive";
+  const showingPatterns = !showingInbox && manageListTab === "patterns";
 
   const listRows = useMemo(() => {
+    if (showingPatterns) return [] as CampaignDirective[];
     let base: CampaignDirective[];
     if (!showingInbox) {
       base = manageListTab === "archive" ? archivedRows : rows;
@@ -452,6 +472,7 @@ export function DirectivesAdmin({
     return sortDirectivesByAuthority(filtered);
   }, [
     showingInbox,
+    showingPatterns,
     manageListTab,
     archivedRows,
     rows,
@@ -462,6 +483,8 @@ export function DirectivesAdmin({
 
   const openCreate = () => {
     setEditingId(null);
+    setEditingSmartItem(null);
+    setCreationMode("normal");
     setFormTab("basics");
     setSelectedUserIds([]);
     setSelectedProvinces([]);
@@ -496,7 +519,17 @@ export function DirectivesAdmin({
   };
 
   const openEdit = (item: CampaignDirective) => {
+    if (item.creationMode === "smart") {
+      setEditingId(item.id);
+      setEditingSmartItem(item);
+      setCreationMode("smart");
+      setOpen(true);
+      return;
+    }
+
     setEditingId(item.id);
+    setEditingSmartItem(null);
+    setCreationMode("normal");
     setFormTab("basics");
     setLetterUpload({
       url: item.letterFileUrl ?? "",
@@ -558,7 +591,40 @@ export function DirectivesAdmin({
   const closeDialog = () => {
     setOpen(false);
     setEditingId(null);
+    setEditingSmartItem(null);
+    setCreationMode("normal");
     setFormTab("basics");
+  };
+
+  const convertToSmart = () => {
+    if (!convertTarget) return;
+    startTransition(async () => {
+      const result = await convertDirectiveToSmartAction(
+        convertTarget.id,
+        convertMissionType
+      );
+      if (!result.success) {
+        toast.error(result.error ?? "تبدیل انجام نشد");
+        return;
+      }
+      setRows((prev) =>
+        prev.map((row) =>
+          row.id === convertTarget.id
+            ? {
+                ...row,
+                creationMode: "smart",
+                missionType: convertMissionType,
+              }
+            : row
+        )
+      );
+      toast.success("دستورکار به ساخت هوشمند تبدیل شد");
+      setConvertTarget(null);
+      window.location.href = adminHref(
+        `/admin/directives/${convertTarget.id}`,
+        campaignId
+      );
+    });
   };
 
   const toggleUser = (userId: string) => {
@@ -819,6 +885,7 @@ export function DirectivesAdmin({
             <TabsTrigger value="archive">
               آرشیو ({formatPersianNumber(archivedRows.length)})
             </TabsTrigger>
+            {isFullAdmin ? <TabsTrigger value="patterns">الگو و حافظه</TabsTrigger> : null}
           </TabsList>
         </Tabs>
       )}
@@ -843,6 +910,7 @@ export function DirectivesAdmin({
         </Tabs>
       )}
 
+      {!showingPatterns ? (
       <div className="flex flex-wrap items-center gap-3">
         <Label className="text-sm text-muted-foreground">فیلتر منبع</Label>
         <Select value={authorityFilter} onValueChange={setAuthorityFilter}>
@@ -859,7 +927,14 @@ export function DirectivesAdmin({
           </SelectContent>
         </Select>
       </div>
+      ) : null}
 
+      {showingPatterns && isFullAdmin ? (
+        <div className="space-y-8">
+          <DirectivePlaybooksAdmin />
+          <DirectiveGlobalMemoryAdmin campaignId={campaignId} />
+        </div>
+      ) : (
       <div className="space-y-3">
         {listRows.length === 0 ? (
           <div className="rounded-xl border border-dashed p-10 text-center text-muted-foreground">
@@ -884,6 +959,14 @@ export function DirectivesAdmin({
                     <Badge variant="secondary">
                       {getAuthorityBadgeLabel(item.authorityLevel, item.authorityOther)}
                     </Badge>
+                    {item.creationMode === "smart" ? (
+                      <Badge variant="outline">ساخت هوشمند</Badge>
+                    ) : null}
+                    {item.missionType ? (
+                      <Badge variant="secondary">
+                        {DIRECTIVE_MISSION_TYPE_LABELS[item.missionType]}
+                      </Badge>
+                    ) : null}
                     {item.priority === "urgent" && <Badge variant="destructive">فوری</Badge>}
                     {!showingInbox && (
                       <Badge variant="outline">{formatAudienceLabel(item, audienceScope)}</Badge>
@@ -956,6 +1039,21 @@ export function DirectivesAdmin({
                           <Button variant="outline" size="sm" onClick={() => openEdit(item)}>
                             ویرایش مشخصات
                           </Button>
+                          {item.creationMode !== "smart" ? (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              disabled={isPending}
+                              onClick={() => {
+                                setConvertMissionType(
+                                  item.missionType ?? "communication_campaign"
+                                );
+                                setConvertTarget(item);
+                              }}
+                            >
+                              تبدیل به هوشمند
+                            </Button>
+                          ) : null}
                           <Button
                             variant="outline"
                             size="sm"
@@ -1000,20 +1098,89 @@ export function DirectivesAdmin({
           ))
         )}
       </div>
+      )}
 
       {/* Create / Edit — basics + operations workspace together */}
       <Dialog open={open} onOpenChange={(next) => (next ? setOpen(true) : closeDialog())}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto" dir="rtl">
+        <DialogContent
+          className={cn(
+            "max-h-[90vh] overflow-y-auto",
+            creationMode === "smart" ? "max-w-4xl" : "max-w-3xl"
+          )}
+          dir="rtl"
+        >
           <DialogHeader className="text-right">
             <DialogTitle>
-              {editingId ? "ویرایش دستورکار و اتاق عملیات" : "ثبت دستورکار و اتاق عملیات"}
+              {editingId
+                ? creationMode === "smart"
+                  ? "ویرایش دستورکار هوشمند"
+                  : "ویرایش دستورکار و اتاق عملیات"
+                : "ثبت دستورکار و اتاق عملیات"}
             </DialogTitle>
             <p className="text-sm text-muted-foreground">
-              مشخصات دستورکار و هدف‌های اتاق عملیات را همین‌جا پر کنید؛ بعد از ذخیره صفحه کامل
-              فایل‌ها، KPI و نسخه‌ها باز می‌شود.
+              {creationMode === "smart"
+                ? "ویزارد چندمرحله‌ای ساخت هوشمند — نوع مأموریت، راهبرد، سنجش و برداشت AI"
+                : "مشخصات دستورکار و هدف‌های اتاق عملیات را همین‌جا پر کنید؛ بعد از ذخیره صفحه کامل فایل‌ها، KPI و نسخه‌ها باز می‌شود."}
             </p>
           </DialogHeader>
 
+          {!editingId || creationMode === "normal" ? (
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3">
+              <div>
+                <Label>حالت ساخت</Label>
+                <p className="text-xs text-muted-foreground">
+                  عادی: فرم فعلی · هوشمند: ویزارد ساختاریافته
+                </p>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <span className={creationMode === "normal" ? "font-medium" : "text-muted-foreground"}>
+                  عادی
+                </span>
+                <Switch
+                  checked={creationMode === "smart"}
+                  onCheckedChange={(checked) =>
+                    setCreationMode(checked ? "smart" : "normal")
+                  }
+                  disabled={Boolean(editingId)}
+                />
+                <span className={creationMode === "smart" ? "font-medium" : "text-muted-foreground"}>
+                  هوشمند
+                </span>
+              </div>
+            </div>
+          ) : null}
+
+          {creationMode === "smart" ? (
+            <DirectiveSmartWizard
+              campaignId={campaignId}
+              editingId={editingId}
+              initialMissionType={editingSmartItem?.missionType ?? null}
+              initialPayload={editingSmartItem?.smartPayload ?? null}
+              initialTitle={editingSmartItem?.title ?? ""}
+              initialBody={editingSmartItem?.body ?? ""}
+              initialPriority={editingSmartItem?.priority ?? "normal"}
+              initialStartDate={editingSmartItem?.startDate ?? ""}
+              initialEndDate={
+                editingSmartItem?.endDate ?? editingSmartItem?.dueDate ?? ""
+              }
+              initialTopic={editingSmartItem?.topic ?? ""}
+              initialLetter={
+                editingSmartItem?.letterFileUrl
+                  ? {
+                      url: editingSmartItem.letterFileUrl,
+                      fileName: editingSmartItem.letterFileName ?? "نامه رسمی",
+                      fileSize: editingSmartItem.letterFileSize ?? 0,
+                      mimeType:
+                        editingSmartItem.letterMimeType ?? "application/octet-stream",
+                    }
+                  : undefined
+              }
+              issuerAuthorityLevel={issuerAuthorityLevel}
+              issuerAuthorityOther={issuerAuthorityOther}
+              onCancel={closeDialog}
+              onSaved={() => closeDialog()}
+            />
+          ) : (
           <form onSubmit={onSubmit} className="space-y-4 text-right" dir="rtl">
             <Tabs
               value={formTab}
@@ -1622,6 +1789,51 @@ export function DirectivesAdmin({
               </Button>
             </div>
           </form>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(convertTarget)}
+        onOpenChange={(next) => !next && setConvertTarget(null)}
+      >
+        <DialogContent className="max-w-md" dir="rtl">
+          <DialogHeader className="text-right">
+            <DialogTitle>تبدیل به ساخت هوشمند</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 text-right">
+            <p className="text-sm text-muted-foreground">
+              نوع مأموریت را برای دستورکار «{convertTarget?.title}» انتخاب کنید.
+            </p>
+            <div className="space-y-2">
+              <Label>نوع مأموریت</Label>
+              <Select
+                value={convertMissionType}
+                onValueChange={(value) =>
+                  setConvertMissionType(value as DirectiveMissionType)
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {DIRECTIVE_MISSION_TYPES.map((type) => (
+                    <SelectItem key={type} value={type}>
+                      {DIRECTIVE_MISSION_TYPE_LABELS[type]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => setConvertTarget(null)}>
+                انصراف
+              </Button>
+              <Button type="button" disabled={isPending} onClick={convertToSmart}>
+                تبدیل و باز کردن اتاق هوشمند
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
 
