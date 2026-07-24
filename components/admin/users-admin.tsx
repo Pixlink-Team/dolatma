@@ -4,7 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Filter, Plus, RotateCcw } from "lucide-react";
+import { Filter, KeyRound, Plus, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +20,7 @@ import { UsersImportPanel } from "@/components/admin/users-import-panel";
 import { getLoginUsernameFromEmail, normalizeStoredUserEmail } from "@/lib/auth/user-login";
 import { normalizeImportedCity, normalizeImportedProvince } from "@/lib/iran-locations";
 import {
+  bulkUpdateUsersAccessAction,
   deleteUserAction,
   deleteUsersAction,
   saveUserAction,
@@ -41,6 +42,7 @@ import {
 } from "@/lib/directive-authority";
 import { Badge } from "@/components/ui/badge";
 import type { AdminRole, AdminUser, CampaignSettings, Ministry } from "@/lib/types";
+import { formatPersianNumber } from "@/lib/utils";
 
 const NO_MINISTRY = "__none__";
 const NO_ORGANIZATION = "__none__";
@@ -112,6 +114,13 @@ export function UsersAdmin({
   const [filterCity, setFilterCity] = useState(FILTER_ALL);
   const [campaignPermissions, setCampaignPermissions] = useState<Record<string, ContributorPermissions>>({});
   const [isPending, startTransition] = useTransition();
+  const [bulkAccessOpen, setBulkAccessOpen] = useState(false);
+  const [bulkSelectedUsers, setBulkSelectedUsers] = useState<AdminUser[]>([]);
+  const [bulkClearSelection, setBulkClearSelection] = useState<(() => void) | null>(null);
+  const [bulkCampaignIds, setBulkCampaignIds] = useState<string[]>([]);
+  const [bulkPermissions, setBulkPermissions] = useState<ContributorPermissions>(
+    defaultContributorPermissions()
+  );
 
   const parentOptions = useMemo(
     () => rows.filter((user) => user.role === "ministry_parent"),
@@ -258,6 +267,75 @@ export function UsersAdmin({
         [key]: value,
       },
     }));
+  };
+
+  const openBulkAccess = (users: AdminUser[], clearSelection: () => void) => {
+    const editable = users.filter((user) => rolesWithCampaignAccess.includes(user.role));
+    if (editable.length === 0) {
+      toast.error("برای کاربران انتخاب‌شده امکان تنظیم دسترسی پنل وجود ندارد");
+      return;
+    }
+    setBulkSelectedUsers(editable);
+    setBulkClearSelection(() => clearSelection);
+    setBulkCampaignIds([]);
+    setBulkPermissions(defaultContributorPermissions());
+    setBulkAccessOpen(true);
+  };
+
+  const toggleBulkCampaign = (campaignId: string) => {
+    setBulkCampaignIds((prev) =>
+      prev.includes(campaignId) ? prev.filter((id) => id !== campaignId) : [...prev, campaignId]
+    );
+  };
+
+  const applyBulkAccess = () => {
+    if (bulkSelectedUsers.length === 0) {
+      toast.error("هیچ کاربری انتخاب نشده است");
+      return;
+    }
+
+    startTransition(async () => {
+      const result = await bulkUpdateUsersAccessAction({
+        userIds: bulkSelectedUsers.map((user) => user.id),
+        campaignIds: bulkCampaignIds,
+        permissions: bulkPermissions,
+      });
+      if (!result.success) {
+        toast.error(result.error ?? "بروزرسانی دسترسی ناموفق بود");
+        return;
+      }
+
+      const sharedPermissions = Object.fromEntries(
+        bulkCampaignIds.map((campaignId) => [campaignId, bulkPermissions])
+      ) as Record<string, ContributorPermissions>;
+      const updatedIds = new Set(bulkSelectedUsers.map((user) => user.id));
+
+      setRows((prev) =>
+        prev.map((row) =>
+          updatedIds.has(row.id)
+            ? {
+                ...row,
+                campaignIds: [...bulkCampaignIds],
+                campaignPermissions: { ...sharedPermissions },
+              }
+            : row
+        )
+      );
+
+      const updated =
+        "updated" in result && typeof result.updated === "number" ? result.updated : bulkSelectedUsers.length;
+      const skipped =
+        "skipped" in result && typeof result.skipped === "number" ? result.skipped : 0;
+      toast.success(
+        skipped > 0
+          ? `دسترسی ${formatPersianNumber(updated)} کاربر به‌روزرسانی شد (${formatPersianNumber(skipped)} رد شد)`
+          : `دسترسی ${formatPersianNumber(updated)} کاربر به‌روزرسانی شد`
+      );
+      setBulkAccessOpen(false);
+      bulkClearSelection?.();
+      setBulkClearSelection(null);
+      setBulkSelectedUsers([]);
+    });
   };
 
   const onSubmit = form.handleSubmit((data) => {
@@ -629,6 +707,21 @@ export function UsersAdmin({
                 : []),
             ]}
             onEdit={openEdit}
+            renderBulkActions={
+              isFullMode
+                ? ({ selectedItems, clearSelection }) => (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => openBulkAccess(selectedItems, clearSelection)}
+                    >
+                      <KeyRound className="h-4 w-4" />
+                      ویرایش دسترسی
+                    </Button>
+                  )
+                : undefined
+            }
             onDelete={
               canManageUsers
                 ? (user) => {
@@ -981,6 +1074,81 @@ export function UsersAdmin({
               ذخیره
             </Button>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={bulkAccessOpen}
+        onOpenChange={(next) => {
+          setBulkAccessOpen(next);
+          if (!next) {
+            setBulkSelectedUsers([]);
+            setBulkClearSelection(null);
+          }
+        }}
+      >
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>ویرایش گروهی دسترسی</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              دسترسی {formatPersianNumber(bulkSelectedUsers.length)} کاربر انتخاب‌شده با تنظیمات زیر
+              جایگزین می‌شود. نقش مدیر سیستم از این لیست حذف شده است.
+            </p>
+
+            <div className="space-y-2">
+              <Label>دسترسی به اقدامات</Label>
+              <div className="space-y-2 rounded-lg border p-3 max-h-48 overflow-y-auto">
+                {campaigns.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">اقدامی تعریف نشده است.</p>
+                ) : (
+                  campaigns.map((campaign) => (
+                    <label key={campaign.id} className="flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={bulkCampaignIds.includes(campaign.id)}
+                        onChange={() => toggleBulkCampaign(campaign.id)}
+                      />
+                      {campaign.title}
+                    </label>
+                  ))
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                اگر هیچ اقدامی انتخاب نشود، دسترسی همه کاربران انتخاب‌شده به اقدامات پاک می‌شود.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label>دسترسی به بخش‌های پنل</Label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {permissionKeys.map((key) => (
+                  <label
+                    key={key}
+                    className="flex items-center justify-between gap-3 text-sm rounded-md border px-3 py-2"
+                  >
+                    <span>{contributorPermissionLabels[key]}</span>
+                    <Switch
+                      checked={bulkPermissions[key]}
+                      onCheckedChange={(value) =>
+                        setBulkPermissions((prev) => ({ ...prev, [key]: value }))
+                      }
+                    />
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <Button
+              type="button"
+              className="w-full"
+              disabled={isPending || bulkSelectedUsers.length === 0}
+              onClick={applyBulkAccess}
+            >
+              اعمال روی {formatPersianNumber(bulkSelectedUsers.length)} کاربر
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

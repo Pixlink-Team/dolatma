@@ -846,6 +846,70 @@ export async function deleteUsersAction(ids: string[]) {
   return result;
 }
 
+/** Replace campaign + section access for many users at once (admin only). */
+export async function bulkUpdateUsersAccessAction(input: {
+  userIds: string[];
+  campaignIds: string[];
+  permissions: ContributorPermissions;
+}) {
+  const session = await getAuthSession();
+  if (!session || !isFullAdmin(session)) {
+    return { success: false, error: "Unauthorized" };
+  }
+  if (!isPostgresConfigured()) return { success: false, error: "Database required" };
+
+  const userIds = [...new Set(input.userIds.map((id) => id.trim()).filter(Boolean))];
+  if (userIds.length === 0) {
+    return { success: false, error: "هیچ کاربری انتخاب نشده است" };
+  }
+
+  const users = await Promise.all(userIds.map((id) => pgExt.pgGetUserById(id)));
+  const editableIds: string[] = [];
+  for (const user of users) {
+    if (!user) continue;
+    if (
+      user.role === "contributor" ||
+      user.role === "client" ||
+      user.role === "ministry_parent" ||
+      user.role === "sub_user"
+    ) {
+      editableIds.push(user.id);
+    }
+  }
+
+  if (editableIds.length === 0) {
+    return {
+      success: false,
+      error: "برای کاربران انتخاب‌شده امکان تنظیم دسترسی پنل وجود ندارد",
+    };
+  }
+
+  const result = await pgExt.pgBulkUpdateUsersAccess({
+    userIds: editableIds,
+    campaignIds: input.campaignIds,
+    permissions: input.permissions,
+  });
+  if (!result.success) return result;
+
+  await logAuditForSession(session, {
+    category: "admin",
+    action: "user.access.bulk_update",
+    entityType: "user",
+    label: "ویرایش گروهی دسترسی کاربران",
+    metadata: {
+      count: editableIds.length,
+      skipped: userIds.length - editableIds.length,
+      campaignIds: input.campaignIds,
+    },
+  });
+  await revalidateExtended();
+  return {
+    success: true as const,
+    updated: result.updated,
+    skipped: userIds.length - editableIds.length,
+  };
+}
+
 export async function getSessionContextAction(campaignId?: string) {
   const session = await getAuthSession();
   if (!session) return null;

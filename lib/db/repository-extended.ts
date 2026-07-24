@@ -436,6 +436,46 @@ export async function pgSaveUser(data: {
   }
 }
 
+/** Replace campaign access for many users with a shared permission set. */
+export async function pgBulkUpdateUsersAccess(input: {
+  userIds: string[];
+  campaignIds: string[];
+  permissions: ContributorPermissions;
+}): Promise<{ success: true; updated: number } | { success: false; error: string }> {
+  const userIds = [...new Set(input.userIds.map((id) => id.trim()).filter(Boolean))];
+  if (userIds.length === 0) {
+    return { success: false, error: "هیچ کاربری انتخاب نشده است" };
+  }
+
+  const campaignIds = [...new Set(input.campaignIds.map((id) => id.trim()).filter(Boolean))];
+  const permissions = normalizeContributorPermissions(input.permissions);
+  const sql = getSql();
+  const now = new Date().toISOString();
+
+  try {
+    for (const userId of userIds) {
+      await sql`DELETE FROM user_campaign_access WHERE user_id = ${userId}`;
+      for (const campaignId of campaignIds) {
+        await sql`
+          INSERT INTO user_campaign_access (user_id, campaign_id, permissions, created_at)
+          VALUES (
+            ${userId},
+            ${campaignId},
+            ${sql.json(JSON.parse(JSON.stringify(permissions)))},
+            ${now}
+          )
+          ON CONFLICT (user_id, campaign_id) DO UPDATE SET
+            permissions = EXCLUDED.permissions
+        `;
+      }
+    }
+    return { success: true, updated: userIds.length };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "بروزرسانی دسترسی ناموفق بود";
+    return { success: false, error: message };
+  }
+}
+
 export async function pgUpdateUserRegion(userId: string, region: string | null) {
   const sql = getSql();
   const normalized =

@@ -14,7 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Trash2 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { AdminItemActions } from "@/components/admin/admin-item-actions";
 import { AdminInfiniteScrollSentinel } from "@/components/admin/admin-infinite-scroll-sentinel";
 import { useAdminInfiniteScroll } from "@/lib/hooks/use-admin-infinite-scroll";
@@ -31,6 +31,12 @@ interface AdminDataTableProps<T> {
   onEdit?: (item: T) => void;
   onDelete?: (item: T) => void;
   onBulkDelete?: (items: T[]) => void;
+  /** Extra actions shown next to bulk delete when rows are selected. */
+  renderBulkActions?: (ctx: {
+    selectedItems: T[];
+    selectedCount: number;
+    clearSelection: () => void;
+  }) => ReactNode;
   onTogglePublish?: (item: T) => void;
   getPublished?: (item: T) => boolean;
   isReadOnly?: (item: T) => boolean;
@@ -46,6 +52,7 @@ export function AdminDataTable<T extends { id: string }>({
   onEdit,
   onDelete,
   onBulkDelete,
+  renderBulkActions,
   onTogglePublish,
   getPublished,
   isReadOnly,
@@ -55,7 +62,7 @@ export function AdminDataTable<T extends { id: string }>({
   const [search, setSearch] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const hasActions = Boolean(onView || onEdit || onDelete || onTogglePublish);
-  const showSelection = selectable && Boolean(onBulkDelete);
+  const showSelection = selectable && Boolean(onBulkDelete || renderBulkActions);
 
   const filtered = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
@@ -116,11 +123,17 @@ export function AdminDataTable<T extends { id: string }>({
     });
   };
 
+  const clearSelection = () => setSelectedIds(new Set());
+
+  const selectedItems = useMemo(
+    () => data.filter((item) => selectedIds.has(item.id)),
+    [data, selectedIds]
+  );
+
   const handleBulkDelete = () => {
-    const selectedItems = data.filter((item) => selectedIds.has(item.id));
     if (selectedItems.length === 0) return;
     onBulkDelete?.(selectedItems);
-    setSelectedIds(new Set());
+    clearSelection();
   };
 
   return (
@@ -137,28 +150,35 @@ export function AdminDataTable<T extends { id: string }>({
         </div>
 
         {showSelection && selectedCount > 0 && (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <span className="text-sm text-muted-foreground">{selectedCount} مورد انتخاب شده</span>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="destructive" size="sm">
-                  <Trash2 className="h-4 w-4" />
-                  حذف دسته‌جمعی
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>حذف دسته‌جمعی</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    آیا از حذف {selectedCount} مورد انتخاب‌شده اطمینان دارید؟ این عمل قابل بازگشت نیست.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter className="flex-row-reverse gap-2">
-                  <AlertDialogAction onClick={handleBulkDelete}>حذف</AlertDialogAction>
-                  <AlertDialogCancel>انصراف</AlertDialogCancel>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+            {renderBulkActions?.({
+              selectedItems,
+              selectedCount,
+              clearSelection,
+            })}
+            {onBulkDelete && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" size="sm">
+                    <Trash2 className="h-4 w-4" />
+                    حذف دسته‌جمعی
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>حذف دسته‌جمعی</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      آیا از حذف {selectedCount} مورد انتخاب‌شده اطمینان دارید؟ این عمل قابل بازگشت نیست.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter className="flex-row-reverse gap-2">
+                    <AlertDialogAction onClick={handleBulkDelete}>حذف</AlertDialogAction>
+                    <AlertDialogCancel>انصراف</AlertDialogCancel>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
           </div>
         )}
       </div>
