@@ -1,0 +1,88 @@
+ROOT: C:\Users\Pix-01\Downloads\بسته
+Generated: 2026-07-18T15:12:46.9942587+03:30
+
+=== SUMMARY ===
+Directories: 1
+Files: 23
+Total size: 3.80 MB (3982403 bytes)
+
+=== DIRECTORY TREE (with sizes) ===
+├── images/
+│   ├── aeoi-amirabad-01.jpg  [96.26 KB | 98573 bytes]
+│   ├── aeoi-amirabad-02.jpg  [216.02 KB | 221200 bytes]
+│   ├── aeoi-amirabad-03.jpg  [202.70 KB | 207560 bytes]
+│   ├── aeoi-amirabad-04.jpg  [223.99 KB | 229361 bytes]
+│   ├── aeoi-amirabad-05.jpg  [185.82 KB | 190279 bytes]
+│   ├── aeoi-amirabad-06.jpg  [187.26 KB | 191751 bytes]
+│   ├── aeoi-amirabad-07.jpg  [180.20 KB | 184521 bytes]
+│   ├── aeoi-amirabad-08.jpg  [232.11 KB | 237678 bytes]
+│   ├── aeoi-amirabad-09.jpg  [169.08 KB | 173140 bytes]
+│   ├── aeoi-amirabad-10.jpg  [232.11 KB | 237678 bytes]
+│   ├── aeoi-amirabad-11.jpg  [182.70 KB | 187089 bytes]
+│   ├── aeoi-amirabad-12.jpg  [73.26 KB | 75017 bytes]
+│   ├── aeoi-bale-official-01.jpg  [71.11 KB | 72814 bytes]
+│   ├── aeoi-bale-personal-01.jpg  [60.47 KB | 61919 bytes]
+│   ├── aeoi-entrance-01.jpg  [174.63 KB | 178817 bytes]
+│   ├── aeoi-instagram-en-01.jpg  [63.64 KB | 65167 bytes]
+│   ├── aeoi-instagram-fa-01.jpg  [67.62 KB | 69243 bytes]
+│   ├── aeoi-intranet-01.jpg  [153.67 KB | 157363 bytes]
+│   ├── aeoi-telegram-01.jpg  [68.48 KB | 70120 bytes]
+│   ├── aeoi-virasty-01.jpg  [52.28 KB | 53534 bytes]
+│   ├── aeoi-website-01.png  [936.31 KB | 958781 bytes]
+│   └── aeoi-x-01.jpg  [54.40 KB | 55701 bytes]
+└── فهرست.xlsx  [4.98 KB | 5097 bytes]
+
+=== ALL FILES (relative path | size) ===
+images\aeoi-amirabad-01.jpg | 96.26 KB | 98573
+images\aeoi-amirabad-02.jpg | 216.02 KB | 221200
+images\aeoi-amirabad-03.jpg | 202.70 KB | 207560
+images\aeoi-amirabad-04.jpg | 223.99 KB | 229361
+images\aeoi-amirabad-05.jpg | 185.82 KB | 190279
+images\aeoi-amirabad-06.jpg | 187.26 KB | 191751
+images\aeoi-amirabad-07.jpg | 180.20 KB | 184521
+images\aeoi-amirabad-08.jpg | 232.11 KB | 237678
+images\aeoi-amirabad-09.jpg | 169.08 KB | 173140
+images\aeoi-amirabad-10.jpg | 232.11 KB | 237678
+images\aeoi-amirabad-11.jpg | 182.70 KB | 187089
+images\aeoi-amirabad-12.jpg | 73.26 KB | 75017
+images\aeoi-bale-official-01.jpg | 71.11 KB | 72814
+images\aeoi-bale-personal-01.jpg | 60.47 KB | 61919
+images\aeoi-entrance-01.jpg | 174.63 KB | 178817
+images\aeoi-instagram-en-01.jpg | 63.64 KB | 65167
+images\aeoi-instagram-fa-01.jpg | 67.62 KB | 69243
+images\aeoi-intranet-01.jpg | 153.67 KB | 157363
+images\aeoi-telegram-01.jpg | 68.48 KB | 70120
+images\aeoi-virasty-01.jpg | 52.28 KB | 53534
+images\aeoi-website-01.png | 936.31 KB | 958781
+images\aeoi-x-01.jpg | 54.40 KB | 55701
+فهرست.xlsx | 4.98 KB | 5097
+
+=== IMAGES (22) ===
+images\aeoi-amirabad-01.jpg | 96.26 KB
+images\aeoi-amirabad-02.jpg | 216.02 KB
+images\aeoi-amirabad-03.jpg | 202.70 KB
+images\aeoi-amirabad-04.jpg | 223.99 KB
+images\aeoi-amirabad-05.jpg | 185.82 KB
+images\aeoi-amirabad-06.jpg | 187.26 KB
+images\aeoi-amirabad-07.jpg | 180.20 KB
+images\aeoi-amirabad-08.jpg | 232.11 KB
+images\aeoi-amirabad-09.jpg | 169.08 KB
+images\aeoi-amirabad-10.jpg | 232.11 KB
+images\aeoi-amirabad-11.jpg | 182.70 KB
+images\aeoi-amirabad-12.jpg | 73.26 KB
+images\aeoi-bale-official-01.jpg | 71.11 KB
+images\aeoi-bale-personal-01.jpg | 60.47 KB
+images\aeoi-entrance-01.jpg | 174.63 KB
+images\aeoi-instagram-en-01.jpg | 63.64 KB
+images\aeoi-instagram-fa-01.jpg | 67.62 KB
+images\aeoi-intranet-01.jpg | 153.67 KB
+images\aeoi-telegram-01.jpg | 68.48 KB
+images\aeoi-virasty-01.jpg | 52.28 KB
+images\aeoi-website-01.png | 936.31 KB
+images\aeoi-x-01.jpg | 54.40 KB
+
+=== README / INSTRUCTIONS (0) ===
+(none matched by name)
+
+=== SPREADSHEETS (1) ===
+فهرست.xlsx | 4.98 KB | C:\Users\Pix-01\Downloads\بسته\فهرست.xlsx
