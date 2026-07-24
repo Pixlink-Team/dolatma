@@ -31,6 +31,7 @@ import {
   Settings,
   Share2,
   Sparkles,
+  Radar,
   Users,
   UserCircle,
   Video,
@@ -57,6 +58,7 @@ import {
   type ContributorPermissions,
 } from "@/lib/contributor-permissions";
 import { MEDIA_COMMAND_NAV } from "@/lib/media-command/labels";
+import { MONITORING_NAV } from "@/lib/monitoring/labels";
 
 const allNavItems: {
   href: string;
@@ -104,6 +106,8 @@ const allNavItems: {
 ];
 
 const MEDIA_COMMAND_ROOT = "/admin/media-command";
+const MONITORING_ROOT = "/admin/monitoring";
+const RAPID_RESPONSE_ROOT = "/admin/rapid-response";
 
 const managementNavHrefs = new Set([
   "/admin/users",
@@ -132,6 +136,7 @@ export function AdminSidebar() {
   const [isSubUser, setIsSubUser] = useState(false);
   const [permissions, setPermissions] = useState<ContributorPermissions | null>(null);
   const [mediaCommandOpen, setMediaCommandOpen] = useState(false);
+  const [monitoringOpen, setMonitoringOpen] = useState(false);
   const { campaignId, campaigns, currentCampaign, setCampaignId } = useAdminCampaign();
 
   useEffect(() => {
@@ -148,6 +153,9 @@ export function AdminSidebar() {
   useEffect(() => {
     if (pathname.startsWith(MEDIA_COMMAND_ROOT)) {
       setMediaCommandOpen(true);
+    }
+    if (pathname.startsWith(MONITORING_ROOT) || pathname.startsWith(RAPID_RESPONSE_ROOT)) {
+      setMonitoringOpen(true);
     }
   }, [pathname]);
 
@@ -170,6 +178,8 @@ export function AdminSidebar() {
 
   const showMediaCommand =
     isFullAdminUser || hasContributorPermission(permissions, "mediaCommand");
+  const showMonitoring =
+    isFullAdminUser || isClientRole || hasContributorPermission(permissions, "monitoring");
 
   /** Pin directives as a red alert CTA at the top for every panel user. */
   const showDirectivesAlert = true;
@@ -263,6 +273,57 @@ export function AdminSidebar() {
             );
           })}
         </div>
+
+        {showMonitoring && (
+          <div className="mt-3 space-y-1 border-t pt-3">
+            <button
+              type="button"
+              onClick={() => setMonitoringOpen((open) => !open)}
+              className={cn(
+                "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium",
+                pathname.startsWith(MONITORING_ROOT) || pathname.startsWith(RAPID_RESPONSE_ROOT)
+                  ? "bg-primary/10 text-primary"
+                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+              )}
+            >
+              <Radar className="h-4 w-4 shrink-0" />
+              <span className="flex-1 truncate text-right">رصد و واکنش سریع</span>
+              <ChevronDown
+                className={cn(
+                  "h-4 w-4 shrink-0 transition-transform",
+                  monitoringOpen && "rotate-180"
+                )}
+              />
+            </button>
+            {monitoringOpen && (
+              <div className="space-y-0.5 pr-2">
+                {MONITORING_NAV.map((item) => {
+                  const href = adminHref(item.href, campaignId);
+                  const isActive =
+                    "exact" in item && item.exact
+                      ? pathname === item.href
+                      : pathname === item.href || pathname.startsWith(`${item.href}/`);
+                  return (
+                    <Link
+                      key={item.href}
+                      href={href}
+                      prefetch={false}
+                      onClick={() => setMobileOpen(false)}
+                      className={cn(
+                        "block rounded-lg px-3 py-1.5 text-xs",
+                        isActive
+                          ? "bg-primary text-primary-foreground"
+                          : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                      )}
+                    >
+                      {item.label}
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
 
         {showMediaCommand && (
           <div className="mt-3 space-y-1 border-t pt-3">
