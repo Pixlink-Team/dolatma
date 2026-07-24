@@ -18,6 +18,7 @@ import {
   ImageIcon,
   Images,
   Globe,
+  Layers,
   LayoutDashboard,
   LayoutGrid,
   LogOut,
@@ -76,6 +77,7 @@ const allNavItems: {
   { href: "/admin/calendar", label: "تقویم ملی", icon: CalendarDays, alwaysVisible: true },
   { href: "/admin/tutorials", label: "آموزش بخش‌ها", icon: GraduationCap, adminOnly: true },
   { href: "/admin/ministries", label: "دستگاه‌ها", icon: Building2, adminOnly: true },
+  { href: "/admin/group-edit", label: "ویرایش گروهی", icon: Layers, adminOnly: true },
   { href: "/admin/billboards", label: "تبلیغات محیطی", icon: LayoutGrid, permissionKey: "billboards" },
   { href: "/admin/posters", label: "پوسترها", icon: ImageIcon, permissionKey: "posters" },
   { href: "/admin/videos", label: "ویدیوها", icon: Video, permissionKey: "videos" },
@@ -104,6 +106,7 @@ const MEDIA_COMMAND_ROOT = "/admin/media-command";
 const managementNavHrefs = new Set([
   "/admin/users",
   "/admin/ministries",
+  "/admin/group-edit",
   "/admin/audit",
   "/admin/settings",
   "/admin/capacity-map",

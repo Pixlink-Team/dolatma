@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "ceaee8df46bceebc41d395396f83d61aaee4fa0a",
+      "committedAt": "2026-07-24T18:26:47+03:30",
+      "title": "حذف کارت خلاصه اقدام از داشبورد مدیریت",
+      "subject": "Remove campaign summary card from admin dashboard"
+    },
+    {
       "hash": "6f179bfe3d437017864a23c358490dae713bf0ac",
       "committedAt": "2026-07-24T18:06:03+03:30",
       "title": "بهبود امنیت ورود، آپلود و دسترسی به فایل‌ها برای آماده‌سازی پروداکشن",
