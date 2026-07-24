@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Settings } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { DashboardCompletenessCards } from "@/components/admin/dashboard-completeness-cards";
 import { DashboardDirectivesPanel } from "@/components/admin/dashboard-directives-panel";
@@ -197,27 +197,6 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
         suggestions={editSuggestions}
         storageKey={editSuggestionsStorageKey}
       />
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">{data.settings.title}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">{data.settings.description}</p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            <Badge status={data.settings.status}>
-              {data.settings.status === "live" ? "زنده" : "پایان‌یافته"}
-            </Badge>
-            {canManageAll && (
-              <Link href={`/campaign/${data.settings.slug}`} target="_blank">
-                <Badge variant="outline" className="cursor-pointer">
-                  مشاهده صفحه عمومی
-                </Badge>
-              </Link>
-            )}
-          </div>
-        </CardContent>
-      </Card>
 
       {stats.length > 0 ? (
         <div className="space-y-3">
