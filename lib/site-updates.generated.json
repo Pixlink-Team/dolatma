@@ -1,6 +1,18 @@
 {
   "entries": [
     {
+      "hash": "5083e700f340b2545f8db036e7ce75cd8037042a",
+      "committedAt": "2026-07-24T21:26:46+03:30",
+      "title": "امکان ویرایش گروهی دسترسی کاربران به اقدامات و بخش‌های پنل",
+      "subject": "Add bulk user access editing beside bulk delete"
+    },
+    {
+      "hash": "5873e2940394e388da44f786a17915f2f2279922",
+      "committedAt": "2026-07-24T21:26:39+03:30",
+      "title": "امکان ثبت و مدیریت کارکنان برای وزارتخانه و زیرمجموعه‌ها",
+      "subject": "Allow ministry and sub-users to manage staff on their devices"
+    },
+    {
       "hash": "a1d5a701d014cce1cac4509cdeca85c94a841eb6",
       "committedAt": "2026-07-24T21:20:42+03:30",
       "title": "نمایش ساختار و ارتباط دستگاه به صورت پلکانی",

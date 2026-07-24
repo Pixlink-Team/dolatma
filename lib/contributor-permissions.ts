@@ -14,6 +14,7 @@ export interface ContributorPermissions {
   directives: boolean;
   forms: boolean;
   mediaCommand: boolean;
+  monitoring: boolean;
 }
 
 export type ContributorPermissionKey = keyof ContributorPermissions;
@@ -34,6 +35,7 @@ export const defaultContributorPermissions = (): ContributorPermissions => ({
   directives: true,
   forms: true,
   mediaCommand: true,
+  monitoring: true,
 });
 
 export const contributorPermissionLabels: Record<ContributorPermissionKey, string> = {
@@ -52,6 +54,7 @@ export const contributorPermissionLabels: Record<ContributorPermissionKey, strin
   directives: "دستورکارها",
   forms: "فرم‌ها",
   mediaCommand: "میز فرمان رسانه‌ای",
+  monitoring: "رصد و واکنش سریع",
 };
 
 export function normalizeContributorPermissions(
@@ -77,6 +80,7 @@ export function normalizeContributorPermissions(
     directives: record.directives ?? defaults.directives,
     forms: record.forms ?? defaults.forms,
     mediaCommand: record.mediaCommand ?? defaults.mediaCommand,
+    monitoring: record.monitoring ?? defaults.monitoring,
   };
 }
 

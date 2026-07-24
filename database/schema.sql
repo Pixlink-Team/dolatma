@@ -1685,3 +1685,348 @@ CREATE TABLE IF NOT EXISTS section_content_forms (
 ALTER TABLE posters ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
 ALTER TABLE billboards ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
 
+-- ============================================================
+-- Media Monitoring & Rapid Response
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS monitoring_organizations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  short_name TEXT NOT NULL DEFAULT '',
+  logo TEXT,
+  parent_organization_id UUID REFERENCES monitoring_organizations(id) ON DELETE SET NULL,
+  organization_type TEXT NOT NULL DEFAULT 'organization',
+  ministry_id UUID REFERENCES ministries(id) ON DELETE SET NULL,
+  province_id TEXT,
+  city_id TEXT,
+  importance_score NUMERIC(5,2) NOT NULL DEFAULT 50,
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS monitoring_keywords (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES monitoring_organizations(id) ON DELETE CASCADE,
+  keyword TEXT NOT NULL,
+  keyword_type TEXT NOT NULL DEFAULT 'custom',
+  is_negative_sensitive BOOLEAN NOT NULL DEFAULT false,
+  priority INT NOT NULL DEFAULT 50,
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS media_sources (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  source_type TEXT NOT NULL DEFAULT 'other',
+  platform TEXT NOT NULL DEFAULT 'other',
+  url TEXT,
+  username TEXT,
+  profile_image TEXT,
+  follower_count INT NOT NULL DEFAULT 0,
+  credibility_score NUMERIC(5,2) NOT NULL DEFAULT 50,
+  influence_score NUMERIC(5,2) NOT NULL DEFAULT 50,
+  province_id TEXT,
+  city_id TEXT,
+  is_verified BOOLEAN NOT NULL DEFAULT false,
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS monitored_items (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES monitoring_organizations(id) ON DELETE CASCADE,
+  source_id UUID REFERENCES media_sources(id) ON DELETE SET NULL,
+  campaign_id UUID REFERENCES campaign_settings(id) ON DELETE SET NULL,
+  directive_id UUID REFERENCES campaign_directives(id) ON DELETE SET NULL,
+  title TEXT NOT NULL,
+  summary TEXT NOT NULL DEFAULT '',
+  full_text TEXT NOT NULL DEFAULT '',
+  source_url TEXT,
+  thumbnail TEXT,
+  platform TEXT NOT NULL DEFAULT 'other',
+  published_at TIMESTAMPTZ,
+  detected_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  ingestion_type TEXT NOT NULL DEFAULT 'manual',
+  external_id TEXT,
+  author_name TEXT,
+  author_username TEXT,
+  sentiment TEXT NOT NULL DEFAULT 'neutral',
+  relevance_score NUMERIC(5,2) NOT NULL DEFAULT 0,
+  negativity_score NUMERIC(5,2) NOT NULL DEFAULT 0,
+  risk_score NUMERIC(5,2) NOT NULL DEFAULT 0,
+  urgency_level TEXT NOT NULL DEFAULT 'normal',
+  status TEXT NOT NULL DEFAULT 'new',
+  review_status TEXT NOT NULL DEFAULT 'pending',
+  view_count INT NOT NULL DEFAULT 0,
+  like_count INT NOT NULL DEFAULT 0,
+  comment_count INT NOT NULL DEFAULT 0,
+  share_count INT NOT NULL DEFAULT 0,
+  repost_count INT NOT NULL DEFAULT 0,
+  engagement_count INT NOT NULL DEFAULT 0,
+  growth_rate NUMERIC(8,2) NOT NULL DEFAULT 0,
+  geographic_scope TEXT,
+  province_id TEXT,
+  city_id TEXT,
+  first_detected_by UUID REFERENCES users(id) ON DELETE SET NULL,
+  assigned_reviewer_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  related_campaign_id UUID REFERENCES campaign_settings(id) ON DELETE SET NULL,
+  related_instruction_id UUID REFERENCES campaign_directives(id) ON DELETE SET NULL,
+  duplicate_of_id UUID REFERENCES monitored_items(id) ON DELETE SET NULL,
+  matched_keyword TEXT,
+  expert_notes TEXT,
+  ai_analysis_json JSONB,
+  suggested_response_type TEXT,
+  response_deadline_hours INT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS monitoring_trends (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES monitoring_organizations(id) ON DELETE CASCADE,
+  campaign_id UUID REFERENCES campaign_settings(id) ON DELETE SET NULL,
+  title TEXT NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
+  keywords JSONB NOT NULL DEFAULT '[]'::jsonb,
+  hashtags JSONB NOT NULL DEFAULT '[]'::jsonb,
+  sentiment TEXT NOT NULL DEFAULT 'neutral',
+  trend_type TEXT NOT NULL DEFAULT 'emerging',
+  growth_percentage NUMERIC(8,2) NOT NULL DEFAULT 0,
+  mention_count INT NOT NULL DEFAULT 0,
+  estimated_reach INT NOT NULL DEFAULT 0,
+  risk_score NUMERIC(5,2) NOT NULL DEFAULT 0,
+  started_at TIMESTAMPTZ,
+  peak_at TIMESTAMPTZ,
+  status TEXT NOT NULL DEFAULT 'active',
+  related_monitored_item_ids JSONB NOT NULL DEFAULT '[]'::jsonb,
+  related_campaign_id UUID REFERENCES campaign_settings(id) ON DELETE SET NULL,
+  sparkline JSONB NOT NULL DEFAULT '[]'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS rapid_response_cases (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  case_number TEXT NOT NULL UNIQUE,
+  organization_id UUID NOT NULL REFERENCES monitoring_organizations(id) ON DELETE CASCADE,
+  monitored_item_id UUID REFERENCES monitored_items(id) ON DELETE SET NULL,
+  campaign_id UUID REFERENCES campaign_settings(id) ON DELETE SET NULL,
+  directive_id UUID REFERENCES campaign_directives(id) ON DELETE SET NULL,
+  title TEXT NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
+  source_type TEXT NOT NULL DEFAULT 'monitoring_team',
+  created_by_type TEXT NOT NULL DEFAULT 'monitoring_team',
+  case_status TEXT NOT NULL DEFAULT 'draft',
+  risk_level TEXT NOT NULL DEFAULT 'medium',
+  urgency_level TEXT NOT NULL DEFAULT 'normal',
+  response_type TEXT NOT NULL DEFAULT 'clarification',
+  deadline TIMESTAMPTZ,
+  response_deadline_hours INT,
+  assigned_organization_id UUID REFERENCES monitoring_organizations(id) ON DELETE SET NULL,
+  assigned_manager_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  assigned_public_relations_manager_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  assigned_shift_officer_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  supervising_center_id UUID,
+  command_text TEXT,
+  required_actions JSONB NOT NULL DEFAULT '[]'::jsonb,
+  expected_output TEXT,
+  publish_channels JSONB NOT NULL DEFAULT '[]'::jsonb,
+  republish_organizations JSONB NOT NULL DEFAULT '[]'::jsonb,
+  ai_summary TEXT,
+  ai_recommendation TEXT,
+  ai_analysis_json JSONB,
+  negative_reach INT NOT NULL DEFAULT 0,
+  response_reach INT NOT NULL DEFAULT 0,
+  coverage_ratio NUMERIC(8,4) NOT NULL DEFAULT 0,
+  effectiveness_score NUMERIC(5,2),
+  sentiment_before TEXT,
+  sentiment_after TEXT,
+  opened_at TIMESTAMPTZ,
+  first_action_at TIMESTAMPTZ,
+  first_publish_at TIMESTAMPTZ,
+  peak_growth_at TIMESTAMPTZ,
+  narrative_controlled_at TIMESTAMPTZ,
+  alert_sent_at TIMESTAMPTZ,
+  closed_at TIMESTAMPTZ,
+  created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS response_actions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  rapid_response_case_id UUID NOT NULL REFERENCES rapid_response_cases(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
+  action_type TEXT NOT NULL DEFAULT 'other',
+  assigned_organization_id UUID REFERENCES monitoring_organizations(id) ON DELETE SET NULL,
+  assigned_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  status TEXT NOT NULL DEFAULT 'pending',
+  priority INT NOT NULL DEFAULT 50,
+  deadline TIMESTAMPTZ,
+  started_at TIMESTAMPTZ,
+  completed_at TIMESTAMPTZ,
+  result_description TEXT,
+  proof_url TEXT,
+  content_id UUID,
+  created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS case_metric_snapshots (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  rapid_response_case_id UUID NOT NULL REFERENCES rapid_response_cases(id) ON DELETE CASCADE,
+  recorded_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  negative_views INT NOT NULL DEFAULT 0,
+  negative_reach INT NOT NULL DEFAULT 0,
+  negative_mentions INT NOT NULL DEFAULT 0,
+  negative_shares INT NOT NULL DEFAULT 0,
+  response_views INT NOT NULL DEFAULT 0,
+  response_reach INT NOT NULL DEFAULT 0,
+  response_mentions INT NOT NULL DEFAULT 0,
+  response_shares INT NOT NULL DEFAULT 0,
+  negative_sentiment_percentage NUMERIC(5,2) NOT NULL DEFAULT 0,
+  positive_sentiment_percentage NUMERIC(5,2) NOT NULL DEFAULT 0,
+  official_narrative_share NUMERIC(5,2) NOT NULL DEFAULT 0,
+  growth_rate NUMERIC(8,2) NOT NULL DEFAULT 0,
+  platform_metrics_json JSONB NOT NULL DEFAULT '{}'::jsonb
+);
+
+CREATE TABLE IF NOT EXISTS monitoring_notifications (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  recipient_name TEXT,
+  recipient_phone TEXT,
+  organization_id UUID REFERENCES monitoring_organizations(id) ON DELETE SET NULL,
+  rapid_response_case_id UUID REFERENCES rapid_response_cases(id) ON DELETE SET NULL,
+  monitored_item_id UUID REFERENCES monitored_items(id) ON DELETE SET NULL,
+  notification_type TEXT NOT NULL DEFAULT 'alert',
+  channel TEXT NOT NULL DEFAULT 'in_app',
+  title TEXT NOT NULL,
+  message TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending',
+  priority TEXT NOT NULL DEFAULT 'normal',
+  sent_at TIMESTAMPTZ,
+  read_at TIMESTAMPTZ,
+  failure_reason TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS monitoring_archives (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES monitoring_organizations(id) ON DELETE CASCADE,
+  monitored_item_id UUID REFERENCES monitored_items(id) ON DELETE SET NULL,
+  trend_id UUID REFERENCES monitoring_trends(id) ON DELETE SET NULL,
+  rapid_response_case_id UUID REFERENCES rapid_response_cases(id) ON DELETE SET NULL,
+  archive_type TEXT NOT NULL DEFAULT 'negative_news',
+  topic TEXT NOT NULL DEFAULT '',
+  sub_topic TEXT,
+  final_classification TEXT,
+  final_risk_score NUMERIC(5,2),
+  final_sentiment TEXT,
+  response_summary TEXT,
+  final_result TEXT,
+  lessons_learned TEXT,
+  ai_analysis TEXT,
+  tags JSONB NOT NULL DEFAULT '[]'::jsonb,
+  archived_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  archived_by UUID REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS monitoring_case_audit_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  rapid_response_case_id UUID REFERENCES rapid_response_cases(id) ON DELETE CASCADE,
+  monitored_item_id UUID REFERENCES monitored_items(id) ON DELETE SET NULL,
+  actor_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  actor_name TEXT,
+  event_type TEXT NOT NULL,
+  summary TEXT NOT NULL,
+  metadata_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS monitoring_case_contents (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  rapid_response_case_id UUID NOT NULL REFERENCES rapid_response_cases(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  content_type TEXT NOT NULL DEFAULT 'text',
+  body_text TEXT NOT NULL DEFAULT '',
+  file_url TEXT,
+  production_status TEXT NOT NULL DEFAULT 'draft',
+  approval_status TEXT NOT NULL DEFAULT 'pending',
+  created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+  approved_by UUID REFERENCES users(id) ON DELETE SET NULL,
+  version_label TEXT NOT NULL DEFAULT '1',
+  publish_url TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS monitoring_case_publications (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  rapid_response_case_id UUID NOT NULL REFERENCES rapid_response_cases(id) ON DELETE CASCADE,
+  channel TEXT NOT NULL DEFAULT 'other',
+  account_name TEXT NOT NULL DEFAULT '',
+  url TEXT,
+  published_at TIMESTAMPTZ,
+  view_count INT NOT NULL DEFAULT 0,
+  engagement_count INT NOT NULL DEFAULT 0,
+  status TEXT NOT NULL DEFAULT 'published',
+  publishing_organization TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS campaign_monitoring_settings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  campaign_id UUID NOT NULL UNIQUE REFERENCES campaign_settings(id) ON DELETE CASCADE,
+  keywords JSONB NOT NULL DEFAULT '[]'::jsonb,
+  hashtags JSONB NOT NULL DEFAULT '[]'::jsonb,
+  slogans JSONB NOT NULL DEFAULT '[]'::jsonb,
+  spokesperson_names JSONB NOT NULL DEFAULT '[]'::jsonb,
+  organization_names JSONB NOT NULL DEFAULT '[]'::jsonb,
+  target_platforms JSONB NOT NULL DEFAULT '[]'::jsonb,
+  target_provinces JSONB NOT NULL DEFAULT '[]'::jsonb,
+  target_audience TEXT,
+  competitor_narratives JSONB NOT NULL DEFAULT '[]'::jsonb,
+  negative_keywords JSONB NOT NULL DEFAULT '[]'::jsonb,
+  start_date TIMESTAMPTZ,
+  end_date TIMESTAMPTZ,
+  baseline_period_days INT NOT NULL DEFAULT 14,
+  monitoring_status TEXT NOT NULL DEFAULT 'draft',
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS directive_monitoring_settings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  directive_id UUID NOT NULL UNIQUE REFERENCES campaign_directives(id) ON DELETE CASCADE,
+  monitoring_kind TEXT NOT NULL DEFAULT 'other',
+  keywords JSONB NOT NULL DEFAULT '[]'::jsonb,
+  negative_keywords JSONB NOT NULL DEFAULT '[]'::jsonb,
+  target_platforms JSONB NOT NULL DEFAULT '[]'::jsonb,
+  monitoring_status TEXT NOT NULL DEFAULT 'draft',
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_monitored_items_org_status
+  ON monitored_items(organization_id, status, detected_at DESC);
+CREATE INDEX IF NOT EXISTS idx_monitored_items_sentiment
+  ON monitored_items(sentiment, risk_score DESC);
+CREATE INDEX IF NOT EXISTS idx_monitored_items_campaign
+  ON monitored_items(related_campaign_id);
+CREATE INDEX IF NOT EXISTS idx_rapid_cases_status
+  ON rapid_response_cases(case_status, deadline);
+CREATE INDEX IF NOT EXISTS idx_rapid_cases_org
+  ON rapid_response_cases(organization_id, opened_at DESC);
+CREATE INDEX IF NOT EXISTS idx_case_metrics_case_time
+  ON case_metric_snapshots(rapid_response_case_id, recorded_at);
+CREATE INDEX IF NOT EXISTS idx_monitoring_keywords_org
+  ON monitoring_keywords(organization_id, is_active);
+CREATE INDEX IF NOT EXISTS idx_monitoring_notifications_case
+  ON monitoring_notifications(rapid_response_case_id, created_at DESC);
+
