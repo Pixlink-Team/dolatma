@@ -245,6 +245,8 @@ export interface DeviceReadiness {
 export interface DevicePassport {
   device: Device;
   parent: Device | null;
+  /** Ancestor chain from root down to immediate parent (excludes current device). */
+  ancestors: Device[];
   children: Device[];
   officials: DeviceOfficial[];
   staff: DeviceStaff[];

@@ -693,40 +693,115 @@ export function DevicePassportView({ initialPassport }: DevicePassportViewProps)
       </section>
 
       <section className="rounded-xl border bg-card p-5">
-        <h2 className="mb-3 text-lg font-semibold">ساختار و ارتباط</h2>
-        <div className="grid gap-4 md:grid-cols-2">
-          <div>
-            <p className="mb-2 text-sm text-muted-foreground">دستگاه بالادستی</p>
-            {passport.parent ? (
-              <Link
-                href={adminHref(`/admin/devices/${passport.parent.id}`, campaignId)}
-                className="font-medium text-primary hover:underline"
+        <h2 className="mb-4 text-lg font-semibold">ساختار و ارتباط</h2>
+        <div className="space-y-0">
+          {(passport.ancestors ?? []).map((ancestor, index) => (
+            <div key={ancestor.id}>
+              <div
+                className="rounded-lg border bg-muted/30 px-3 py-2.5 transition-colors hover:bg-muted/50"
+                style={{ marginRight: index * 20 }}
               >
-                {passport.parent.shortName || passport.parent.name}
-              </Link>
-            ) : (
-              <p className="text-sm">— (دستگاه ریشه)</p>
-            )}
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <Link
+                    href={adminHref(`/admin/devices/${ancestor.id}`, campaignId)}
+                    className="font-medium text-primary hover:underline"
+                  >
+                    {ancestor.shortName || ancestor.name}
+                  </Link>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="text-[10px]">
+                      {DEVICE_TYPE_LABELS[ancestor.type]}
+                    </Badge>
+                    <span className="text-[10px] text-muted-foreground">سطح {index + 1}</span>
+                  </div>
+                </div>
+                {ancestor.shortName && ancestor.name !== ancestor.shortName ? (
+                  <p className="mt-0.5 text-xs text-muted-foreground">{ancestor.name}</p>
+                ) : null}
+              </div>
+              <div
+                className="flex items-center py-1"
+                style={{ marginRight: index * 20 + 16 }}
+                aria-hidden
+              >
+                <div className="h-4 w-px bg-border" />
+              </div>
+            </div>
+          ))}
+
+          <div
+            className="rounded-lg border-2 border-primary/40 bg-primary/5 px-3 py-2.5"
+            style={{ marginRight: (passport.ancestors?.length ?? 0) * 20 }}
+          >
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <p className="font-semibold">
+                  {device.shortName || device.name}
+                </p>
+                {device.shortName && device.name !== device.shortName ? (
+                  <p className="mt-0.5 text-xs text-muted-foreground">{device.name}</p>
+                ) : null}
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary" className="text-[10px]">
+                  دستگاه فعلی
+                </Badge>
+                <Badge variant="outline" className="text-[10px]">
+                  {DEVICE_TYPE_LABELS[device.type]}
+                </Badge>
+                <span className="text-[10px] text-muted-foreground">
+                  سطح {(passport.ancestors?.length ?? 0) + 1}
+                </span>
+              </div>
+            </div>
           </div>
-          <div>
-            <p className="mb-2 text-sm text-muted-foreground">زیرمجموعه‌ها</p>
-            {passport.children.length === 0 ? (
-              <p className="text-sm">—</p>
-            ) : (
-              <ul className="space-y-1">
-                {passport.children.map((child) => (
-                  <li key={child.id}>
-                    <Link
-                      href={adminHref(`/admin/devices/${child.id}`, campaignId)}
-                      className="text-sm text-primary hover:underline"
-                    >
-                      {child.shortName || child.name}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
+
+          {passport.children.length > 0 ? (
+            <>
+              <div
+                className="flex items-center py-1"
+                style={{ marginRight: (passport.ancestors?.length ?? 0) * 20 + 16 }}
+                aria-hidden
+              >
+                <div className="h-4 w-px bg-border" />
+              </div>
+              <div
+                className="space-y-2"
+                style={{ marginRight: (passport.ancestors?.length ?? 0) * 20 + 20 }}
+              >
+                <p className="text-xs text-muted-foreground">زیرمجموعه‌ها</p>
+                <ul className="space-y-2">
+                  {passport.children.map((child) => (
+                    <li key={child.id}>
+                      <div className="rounded-lg border px-3 py-2.5 transition-colors hover:bg-muted/40">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <Link
+                            href={adminHref(`/admin/devices/${child.id}`, campaignId)}
+                            className="text-sm font-medium text-primary hover:underline"
+                          >
+                            {child.shortName || child.name}
+                          </Link>
+                          <Badge variant="outline" className="text-[10px]">
+                            {DEVICE_TYPE_LABELS[child.type]}
+                          </Badge>
+                        </div>
+                        {child.shortName && child.name !== child.shortName ? (
+                          <p className="mt-0.5 text-xs text-muted-foreground">{child.name}</p>
+                        ) : null}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </>
+          ) : (
+            <p
+              className="mt-3 text-sm text-muted-foreground"
+              style={{ marginRight: (passport.ancestors?.length ?? 0) * 20 }}
+            >
+              زیرمجموعه‌ای ثبت نشده است.
+            </p>
+          )}
         </div>
       </section>
 

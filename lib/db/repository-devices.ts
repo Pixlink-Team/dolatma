@@ -640,6 +640,28 @@ export async function pgGetDeviceById(id: string): Promise<Device | null> {
   return mapDevice(rows[0] as Record<string, unknown>);
 }
 
+/** Walk up from a device; returns ancestors ordered root → immediate parent. */
+export async function pgListDeviceAncestors(deviceId: string): Promise<Device[]> {
+  const sql = getSql();
+  await ensureDeviceSchema();
+  const rows = await sql`
+    WITH RECURSIVE chain AS (
+      SELECT d.*, 0 AS depth
+      FROM devices d
+      WHERE d.id = ${deviceId}
+      UNION ALL
+      SELECT p.*, c.depth + 1
+      FROM devices p
+      INNER JOIN chain c ON p.id = c.parent_id
+    )
+    SELECT *
+    FROM chain
+    WHERE id <> ${deviceId}
+    ORDER BY depth DESC
+  `;
+  return rows.map((row) => mapDevice(row as Record<string, unknown>));
+}
+
 export async function pgSaveDevice(data: {
   id?: string;
   name: string;
@@ -1452,9 +1474,12 @@ export async function pgGetDevicePassport(deviceId: string): Promise<DevicePassp
   const device = await pgGetDeviceById(deviceId);
   if (!device) return null;
 
-  const [parent, children, officials, staff, capacities, users, directiveStats, contentStats, campaignHistory] =
+  const [ancestors, children, officials, staff, capacities, users, directiveStats, contentStats, campaignHistory] =
     await Promise.all([
-      device.parentId ? pgGetDeviceById(device.parentId) : Promise.resolve(null),
+      pgListDeviceAncestors(deviceId).catch((error) => {
+        console.error("[device-passport] ancestors failed", error);
+        return [] as Device[];
+      }),
       pgListDevices({ parentId: deviceId }).catch((error) => {
         console.error("[device-passport] children failed", error);
         return [] as Device[];
@@ -1480,6 +1505,8 @@ export async function pgGetDevicePassport(deviceId: string): Promise<DevicePassp
       loadCampaignHistory(deviceId),
     ]);
 
+  const parent = ancestors.length > 0 ? ancestors[ancestors.length - 1] : null;
+
   const readiness = computeReadiness({
     device,
     officials,
@@ -1491,6 +1518,7 @@ export async function pgGetDevicePassport(deviceId: string): Promise<DevicePassp
   return {
     device,
     parent,
+    ancestors,
     children,
     officials,
     staff,

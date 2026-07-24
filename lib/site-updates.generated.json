@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "cfce0bd154f3fd98dc3197f0d801a32dc4027374",
+      "committedAt": "2026-07-24T19:06:23+03:30",
+      "title": "امکان مدیریت زیرمجموعه‌ها توسط وزارتخانه و کاربران زیرمجموعه",
+      "subject": "Allow ministry and sub-users to manage their device subtree"
+    },
+    {
       "hash": "200e8d983a1d864f37173ee211e4d833660637e1",
       "committedAt": "2026-07-24T18:59:20+03:30",
       "title": "امکان ثبت کارکنان در شناسنامه دستگاه",
