@@ -66,6 +66,8 @@ const allNavItems: {
   adminOrClientOnly?: boolean;
   /** Visible to admin, client, and ministry parent (sub-user management). */
   usersNav?: boolean;
+  /** Visible to admin and ministry/sub-user roles for their own org tree. */
+  devicesNav?: boolean;
   /** Always visible for every panel user (not gated by section permissions). */
   alwaysVisible?: boolean;
   permissionKey?: ContributorPermissionKey;
@@ -76,7 +78,7 @@ const allNavItems: {
   { href: "/admin/capacity-map", label: "نقشه ملی ظرفیت", icon: Map, adminOrClientOnly: true },
   { href: "/admin/calendar", label: "تقویم ملی", icon: CalendarDays, alwaysVisible: true },
   { href: "/admin/tutorials", label: "آموزش بخش‌ها", icon: GraduationCap, adminOnly: true },
-  { href: "/admin/ministries", label: "دستگاه‌ها", icon: Building2, adminOnly: true },
+  { href: "/admin/ministries", label: "دستگاه‌ها", icon: Building2, devicesNav: true },
   { href: "/admin/group-edit", label: "ویرایش گروهی", icon: Layers, adminOnly: true },
   { href: "/admin/billboards", label: "تبلیغات محیطی", icon: LayoutGrid, permissionKey: "billboards" },
   { href: "/admin/posters", label: "پوسترها", icon: ImageIcon, permissionKey: "posters" },
@@ -127,6 +129,7 @@ export function AdminSidebar() {
   const [isFullAdminUser, setIsFullAdminUser] = useState(true);
   const [isClientRole, setIsClientRole] = useState(false);
   const [isMinistryParent, setIsMinistryParent] = useState(false);
+  const [isSubUser, setIsSubUser] = useState(false);
   const [permissions, setPermissions] = useState<ContributorPermissions | null>(null);
   const [mediaCommandOpen, setMediaCommandOpen] = useState(false);
   const { campaignId, campaigns, currentCampaign, setCampaignId } = useAdminCampaign();
@@ -137,6 +140,7 @@ export function AdminSidebar() {
       setIsFullAdminUser(session.type === "env_admin" || session.role === "admin");
       setIsClientRole(session.role === "client");
       setIsMinistryParent(session.role === "ministry_parent");
+      setIsSubUser(session.role === "sub_user");
       setPermissions(session.permissions ?? null);
     });
   }, [campaignId]);
@@ -151,6 +155,9 @@ export function AdminSidebar() {
     if (item.alwaysVisible) return true;
     if (item.usersNav) {
       return isFullAdminUser || isClientRole || isMinistryParent;
+    }
+    if (item.devicesNav) {
+      return isFullAdminUser || isMinistryParent || isSubUser;
     }
     if (item.adminOrClientOnly) {
       return isFullAdminUser || isClientRole;

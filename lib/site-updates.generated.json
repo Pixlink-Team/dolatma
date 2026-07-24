@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "200e8d983a1d864f37173ee211e4d833660637e1",
+      "committedAt": "2026-07-24T18:59:20+03:30",
+      "title": "امکان ثبت کارکنان در شناسنامه دستگاه",
+      "subject": "Add staff registry to device passport"
+    },
+    {
       "hash": "b7acb2829b2f487f105a105a895e6ccea3f9f1c6",
       "committedAt": "2026-07-24T18:34:21+03:30",
       "title": "بازگردانی بخش ویرایش گروهی محتوا فقط برای مدیر",

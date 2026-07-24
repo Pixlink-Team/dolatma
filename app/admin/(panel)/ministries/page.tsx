@@ -1,22 +1,40 @@
 import { redirect } from "next/navigation";
 import { DevicesAdmin } from "@/components/admin/devices-admin";
-import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
 import {
-  pgEnsureDefaultDevices,
-  pgListDevices,
-} from "@/lib/db/repository-devices";
+  canAccessDevicesPage,
+  getSessionHomeDeviceId,
+  isDeviceTreeScopedRole,
+  listAccessibleDevices,
+} from "@/lib/auth/device-access";
+import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
+import { pgEnsureDefaultDevices } from "@/lib/db/repository-devices";
 import { isPostgresConfigured } from "@/lib/utils";
 
 export default async function MinistriesPage() {
   const session = await getAuthSession();
   if (!session) redirect("/admin/login");
-  if (!isFullAdmin(session)) redirect("/admin");
+  if (!canAccessDevicesPage(session)) redirect("/admin");
 
-  let devices: Awaited<ReturnType<typeof pgListDevices>> = [];
+  const fullAdmin = isFullAdmin(session);
+  let devices: Awaited<ReturnType<typeof listAccessibleDevices>> = [];
+  let homeDeviceId: string | null = null;
+
   if (isPostgresConfigured()) {
-    await pgEnsureDefaultDevices();
-    devices = await pgListDevices();
+    if (fullAdmin) {
+      await pgEnsureDefaultDevices();
+    }
+    devices = await listAccessibleDevices(session);
+    if (isDeviceTreeScopedRole(session)) {
+      homeDeviceId = await getSessionHomeDeviceId(session);
+    }
   }
 
-  return <DevicesAdmin initialDevices={devices} />;
+  return (
+    <DevicesAdmin
+      initialDevices={devices}
+      canCreateRoot={fullAdmin}
+      showPassport={fullAdmin}
+      homeDeviceId={homeDeviceId}
+    />
+  );
 }

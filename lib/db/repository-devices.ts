@@ -444,6 +444,22 @@ export async function ensureDeviceSchema(): Promise<void> {
   }
 }
 
+/** Walk up the device tree to the root (ministry) id. */
+async function pgResolveRootDeviceId(deviceId: string): Promise<string | null> {
+  const sql = getSql();
+  const rows = await sql`
+    WITH RECURSIVE chain AS (
+      SELECT id, parent_id FROM devices WHERE id = ${deviceId}
+      UNION ALL
+      SELECT d.id, d.parent_id
+      FROM devices d
+      INNER JOIN chain c ON d.id = c.parent_id
+    )
+    SELECT id FROM chain WHERE parent_id IS NULL LIMIT 1
+  `;
+  return rows[0]?.id ? String(rows[0].id) : null;
+}
+
 async function syncLegacyFromDevice(device: {
   id: string;
   name: string;
@@ -478,13 +494,16 @@ async function syncLegacyFromDevice(device: {
   }
 
   if (device.parentId) {
+    // Legacy org table is flat under ministry; deep nodes still map to the root ministry.
+    const ministryId =
+      (await pgResolveRootDeviceId(device.parentId)) ?? device.parentId;
     await sql`
       INSERT INTO ministry_organizations (
         id, ministry_id, name, full_name, is_active, created_at
       )
       VALUES (
         ${device.id},
-        ${device.parentId},
+        ${ministryId},
         ${shortName},
         ${fullName},
         ${device.isActive},
@@ -555,6 +574,56 @@ export async function pgListDevices(options?: {
         `;
 
   return rows.map((row) => mapDevice(row as Record<string, unknown>));
+}
+
+/** Root device plus all descendants (for scoped ministry/sub-user trees). */
+export async function pgListDeviceSubtree(rootId: string): Promise<Device[]> {
+  const sql = getSql();
+  await ensureDeviceSchema();
+  const rows = await sql`
+    WITH RECURSIVE subtree AS (
+      SELECT d.id FROM devices d WHERE d.id = ${rootId}
+      UNION ALL
+      SELECT c.id FROM devices c
+      INNER JOIN subtree s ON c.parent_id = s.id
+    )
+    SELECT
+      d.*,
+      p.name AS parent_name,
+      (SELECT COUNT(*)::int FROM devices c WHERE c.parent_id = d.id) AS children_count,
+      (SELECT COUNT(*)::int FROM users u
+        WHERE u.device_id = d.id
+           OR (u.ministry_id = d.id AND u.organization_id IS NULL)
+           OR u.organization_id = d.id
+      ) AS users_count
+    FROM devices d
+    INNER JOIN subtree s ON s.id = d.id
+    LEFT JOIN devices p ON p.id = d.parent_id
+    ORDER BY
+      CASE WHEN d.id = ${rootId} THEN 0 ELSE 1 END,
+      COALESCE(d.short_name, d.name) ASC
+  `;
+  return rows.map((row) => mapDevice(row as Record<string, unknown>));
+}
+
+/** True if deviceId is rootId or a descendant of rootId. */
+export async function pgIsDeviceInSubtree(
+  deviceId: string,
+  rootId: string
+): Promise<boolean> {
+  if (deviceId === rootId) return true;
+  const sql = getSql();
+  await ensureDeviceSchema();
+  const rows = await sql`
+    WITH RECURSIVE subtree AS (
+      SELECT id FROM devices WHERE id = ${rootId}
+      UNION ALL
+      SELECT c.id FROM devices c
+      INNER JOIN subtree s ON c.parent_id = s.id
+    )
+    SELECT 1 AS ok FROM subtree WHERE id = ${deviceId} LIMIT 1
+  `;
+  return Boolean(rows[0]);
 }
 
 export async function pgGetDeviceById(id: string): Promise<Device | null> {

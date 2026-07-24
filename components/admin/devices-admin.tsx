@@ -56,24 +56,44 @@ const deviceSchema = z.object({
   status: z.enum(["active", "inactive", "suspended"]),
 });
 
+type DeviceFormValues = z.infer<typeof deviceSchema>;
+
 interface DevicesAdminProps {
   initialDevices: Device[];
+  /** Full admin can create root ministries. */
+  canCreateRoot?: boolean;
+  /** Passport (360°) is admin-only for now. */
+  showPassport?: boolean;
+  /** Scoped user's home node — cannot be deleted. */
+  homeDeviceId?: string | null;
 }
 
-export function DevicesAdmin({ initialDevices }: DevicesAdminProps) {
+const CHILD_TYPES = (Object.keys(DEVICE_TYPE_LABELS) as DeviceType[]).filter(
+  (key) => key !== "ministry"
+);
+
+export function DevicesAdmin({
+  initialDevices,
+  canCreateRoot = true,
+  showPassport = true,
+  homeDeviceId = null,
+}: DevicesAdminProps) {
   const { campaignId } = useAdminCampaign();
   const [open, setOpen] = useState(false);
   const [childOpen, setChildOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingParentId, setEditingParentId] = useState<string | null>(null);
   const [parentIdForChild, setParentIdForChild] = useState<string | null>(null);
-  const [expandedIds, setExpandedIds] = useState<Set<string>>(() => new Set());
-  const [rows, setRows] = useState(initialDevices);
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(() => {
+    const initial = new Set<string>();
+    if (homeDeviceId) initial.add(homeDeviceId);
+    for (const device of initialDevices) {
+      if (!device.parentId) initial.add(device.id);
+    }
+    return initial;
+  });
+  const [rows] = useState(initialDevices);
   const [isPending, startTransition] = useTransition();
-
-  const roots = useMemo(
-    () => rows.filter((item) => !item.parentId),
-    [rows]
-  );
 
   const childrenByParent = useMemo(() => {
     const map = new Map<string, Device[]>();
@@ -86,34 +106,58 @@ export function DevicesAdmin({ initialDevices }: DevicesAdminProps) {
     return map;
   }, [rows]);
 
-  const form = useForm({
+  const rowIds = useMemo(() => new Set(rows.map((row) => row.id)), [rows]);
+
+  /** Nodes whose parent is missing from the loaded set (scoped subtree root or true roots). */
+  const displayRoots = useMemo(() => {
+    if (homeDeviceId) {
+      const home = rows.find((row) => row.id === homeDeviceId);
+      if (home) return [home];
+    }
+    return rows.filter((item) => !item.parentId || !rowIds.has(item.parentId));
+  }, [homeDeviceId, rowIds, rows]);
+
+  const form = useForm<DeviceFormValues>({
     resolver: zodResolver(deviceSchema),
     defaultValues: {
       name: "",
       shortName: "",
-      type: "ministry" as DeviceType,
+      type: "ministry",
       mission: "",
-      status: "active" as DeviceStatus,
+      status: "active",
     },
   });
 
-  const childForm = useForm({
+  const childForm = useForm<DeviceFormValues>({
     resolver: zodResolver(deviceSchema),
     defaultValues: {
       name: "",
       shortName: "",
-      type: "organization" as DeviceType,
+      type: "organization",
       mission: "",
-      status: "active" as DeviceStatus,
+      status: "active",
     },
   });
 
   const parentName = useMemo(
-    () => rows.find((row) => row.id === parentIdForChild)?.shortName
-      || rows.find((row) => row.id === parentIdForChild)?.name
-      || "",
+    () =>
+      rows.find((row) => row.id === parentIdForChild)?.shortName ||
+      rows.find((row) => row.id === parentIdForChild)?.name ||
+      "",
     [parentIdForChild, rows]
   );
+
+  const editTypeOptions = useMemo(() => {
+    const editing = editingId ? rows.find((row) => row.id === editingId) : null;
+    if (canCreateRoot && !editingParentId) {
+      return Object.keys(DEVICE_TYPE_LABELS) as DeviceType[];
+    }
+    // Home/root ministry node for scoped users must keep ministry in the type list.
+    if (editing && !editing.parentId && editing.type === "ministry") {
+      return Object.keys(DEVICE_TYPE_LABELS) as DeviceType[];
+    }
+    return CHILD_TYPES;
+  }, [canCreateRoot, editingId, editingParentId, rows]);
 
   const toggleExpanded = (id: string) => {
     setExpandedIds((prev) => {
@@ -126,6 +170,7 @@ export function DevicesAdmin({ initialDevices }: DevicesAdminProps) {
 
   const openCreateRoot = () => {
     setEditingId(null);
+    setEditingParentId(null);
     form.reset({
       name: "",
       shortName: "",
@@ -138,6 +183,7 @@ export function DevicesAdmin({ initialDevices }: DevicesAdminProps) {
 
   const openEdit = (device: Device) => {
     setEditingId(device.id);
+    setEditingParentId(device.parentId ?? null);
     form.reset({
       name: device.name,
       shortName: device.shortName ?? "",
@@ -160,14 +206,14 @@ export function DevicesAdmin({ initialDevices }: DevicesAdminProps) {
     setChildOpen(true);
   };
 
-  const onSaveRoot = form.handleSubmit((data) => {
+  const onSaveDevice = form.handleSubmit((data) => {
     startTransition(async () => {
       const result = await saveDeviceAction({
         id: editingId ?? undefined,
         name: data.name,
         shortName: data.shortName || null,
         type: data.type,
-        parentId: null,
+        parentId: editingId ? editingParentId : null,
         mission: data.mission || null,
         status: data.status,
         activityScope: "national",
@@ -200,11 +246,16 @@ export function DevicesAdmin({ initialDevices }: DevicesAdminProps) {
       }
       toast.success("زیرمجموعه ایجاد شد");
       setChildOpen(false);
+      setExpandedIds((prev) => new Set(prev).add(parentIdForChild));
       window.location.reload();
     });
   });
 
   const onDelete = (device: Device) => {
+    if (homeDeviceId && device.id === homeDeviceId) {
+      toast.error("نمی‌توانید دستگاه اصلی خودتان را حذف کنید");
+      return;
+    }
     if (!confirm(`حذف «${device.shortName || device.name}»؟`)) return;
     startTransition(async () => {
       const result = await deleteDeviceAction(device.id);
@@ -213,8 +264,108 @@ export function DevicesAdmin({ initialDevices }: DevicesAdminProps) {
         return;
       }
       toast.success("حذف شد");
-      setRows((prev) => prev.filter((item) => item.id !== device.id && item.parentId !== device.id));
+      window.location.reload();
     });
+  };
+
+  const renderNode = (device: Device, depth: number) => {
+    const children = childrenByParent.get(device.id) ?? [];
+    const expanded = expandedIds.has(device.id);
+    const isHome = homeDeviceId === device.id;
+    const paddingRight = 16 + depth * 20;
+
+    return (
+      <div key={device.id} className={depth === 0 ? "rounded-lg border bg-card" : ""}>
+        <div
+          className={`flex flex-wrap items-center gap-2 ${
+            depth === 0 ? "p-4" : "border-b px-4 py-3 last:border-b-0"
+          }`}
+          style={{ paddingRight }}
+        >
+          <button
+            type="button"
+            className="rounded p-1 hover:bg-muted"
+            onClick={() => toggleExpanded(device.id)}
+            aria-label="باز و بسته کردن"
+          >
+            {children.length > 0 || (device.childrenCount ?? 0) > 0 ? (
+              expanded ? (
+                <ChevronDown className="h-4 w-4" />
+              ) : (
+                <ChevronLeft className="h-4 w-4" />
+              )
+            ) : (
+              <span className="inline-block h-4 w-4" />
+            )}
+          </button>
+          {depth === 0 ? <Building2 className="h-5 w-5 text-muted-foreground" /> : null}
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className={depth === 0 ? "font-semibold" : "font-medium"}>
+                {device.shortName || device.name}
+              </span>
+              <Badge variant={depth === 0 ? "secondary" : "outline"}>
+                {DEVICE_TYPE_LABELS[device.type]}
+              </Badge>
+              {depth === 0 ? (
+                <Badge variant={device.status === "active" ? "default" : "outline"}>
+                  {DEVICE_STATUS_LABELS[device.status]}
+                </Badge>
+              ) : null}
+            </div>
+            <p className="truncate text-xs text-muted-foreground">
+              {device.name}
+              {typeof device.childrenCount === "number"
+                ? ` · ${device.childrenCount} زیرمجموعه`
+                : children.length
+                  ? ` · ${children.length} زیرمجموعه`
+                  : ""}
+              {typeof device.usersCount === "number" ? ` · ${device.usersCount} کاربر` : ""}
+            </p>
+          </div>
+          {showPassport ? (
+            <Button variant="outline" size="sm" asChild>
+              <Link href={adminHref(`/admin/devices/${device.id}`, campaignId)}>
+                <IdCard className="ml-1 h-4 w-4" />
+                شناسنامه
+              </Link>
+            </Button>
+          ) : null}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => openCreateChild(device.id)}
+            title="افزودن زیرمجموعه"
+          >
+            <Plus className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => openEdit(device)}
+            title="ویرایش"
+          >
+            <Pencil className="h-4 w-4" />
+          </Button>
+          {!isHome ? (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => onDelete(device)}
+              title="حذف"
+            >
+              <Trash2 className="h-4 w-4 text-destructive" />
+            </Button>
+          ) : null}
+        </div>
+
+        {expanded && children.length > 0 ? (
+          <div className={depth === 0 ? "border-t bg-muted/30" : "bg-muted/20"}>
+            {children.map((child) => renderNode(child, depth + 1))}
+          </div>
+        ) : null}
+      </div>
+    );
   };
 
   return (
@@ -223,121 +374,28 @@ export function DevicesAdmin({ initialDevices }: DevicesAdminProps) {
         <div>
           <h1 className="text-2xl font-bold">دستگاه‌ها</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            فهرست وزارتخانه‌ها و زیرمجموعه‌ها — برای جزئیات وارد شناسنامه ۳۶۰ درجه شوید.
+            {canCreateRoot
+              ? "فهرست وزارتخانه‌ها و زیرمجموعه‌ها — برای جزئیات وارد شناسنامه ۳۶۰ درجه شوید."
+              : "درخت دستگاه خودتان — می‌توانید زیرمجموعه‌های پایین‌تر اضافه یا ویرایش کنید."}
           </p>
         </div>
-        <Button onClick={openCreateRoot} disabled={isPending}>
-          <Plus className="ml-2 h-4 w-4" />
-          دستگاه جدید
-        </Button>
+        {canCreateRoot ? (
+          <Button onClick={openCreateRoot} disabled={isPending}>
+            <Plus className="ml-2 h-4 w-4" />
+            دستگاه جدید
+          </Button>
+        ) : null}
       </div>
 
       <div className="space-y-3">
-        {roots.length === 0 ? (
+        {displayRoots.length === 0 ? (
           <div className="rounded-lg border border-dashed p-8 text-center text-muted-foreground">
-            هنوز دستگاهی ثبت نشده است.
+            {homeDeviceId
+              ? "دستگاهی به حساب شما متصل نشده است. با مدیر سیستم هماهنگ کنید."
+              : "هنوز دستگاهی ثبت نشده است."}
           </div>
         ) : (
-          roots.map((root) => {
-            const children = childrenByParent.get(root.id) ?? [];
-            const expanded = expandedIds.has(root.id);
-            return (
-              <div key={root.id} className="rounded-lg border bg-card">
-                <div className="flex flex-wrap items-center gap-2 p-4">
-                  <button
-                    type="button"
-                    className="rounded p-1 hover:bg-muted"
-                    onClick={() => toggleExpanded(root.id)}
-                    aria-label="باز و بسته کردن"
-                  >
-                    {expanded ? (
-                      <ChevronDown className="h-4 w-4" />
-                    ) : (
-                      <ChevronLeft className="h-4 w-4" />
-                    )}
-                  </button>
-                  <Building2 className="h-5 w-5 text-muted-foreground" />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-semibold">
-                        {root.shortName || root.name}
-                      </span>
-                      <Badge variant="secondary">
-                        {DEVICE_TYPE_LABELS[root.type]}
-                      </Badge>
-                      <Badge variant={root.status === "active" ? "default" : "outline"}>
-                        {DEVICE_STATUS_LABELS[root.status]}
-                      </Badge>
-                    </div>
-                    <p className="truncate text-xs text-muted-foreground">
-                      {root.name}
-                      {typeof root.childrenCount === "number"
-                        ? ` · ${root.childrenCount} زیرمجموعه`
-                        : children.length
-                          ? ` · ${children.length} زیرمجموعه`
-                          : ""}
-                      {typeof root.usersCount === "number"
-                        ? ` · ${root.usersCount} کاربر`
-                        : ""}
-                    </p>
-                  </div>
-                  <Button variant="outline" size="sm" asChild>
-                    <Link href={adminHref(`/admin/devices/${root.id}`, campaignId)}>
-                      <IdCard className="ml-1 h-4 w-4" />
-                      شناسنامه
-                    </Link>
-                  </Button>
-                  <Button variant="ghost" size="icon" onClick={() => openCreateChild(root.id)}>
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                  <Button variant="ghost" size="icon" onClick={() => openEdit(root)}>
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button variant="ghost" size="icon" onClick={() => onDelete(root)}>
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
-                </div>
-
-                {expanded && children.length > 0 && (
-                  <div className="border-t bg-muted/30">
-                    {children.map((child) => (
-                      <div
-                        key={child.id}
-                        className="flex flex-wrap items-center gap-2 border-b px-4 py-3 last:border-b-0"
-                      >
-                        <div className="w-8" />
-                        <div className="min-w-0 flex-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="font-medium">
-                              {child.shortName || child.name}
-                            </span>
-                            <Badge variant="outline">
-                              {DEVICE_TYPE_LABELS[child.type]}
-                            </Badge>
-                          </div>
-                          <p className="truncate text-xs text-muted-foreground">
-                            {child.name}
-                          </p>
-                        </div>
-                        <Button variant="outline" size="sm" asChild>
-                          <Link href={adminHref(`/admin/devices/${child.id}`, campaignId)}>
-                            <IdCard className="ml-1 h-4 w-4" />
-                            شناسنامه
-                          </Link>
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => openEdit(child)}>
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => onDelete(child)}>
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })
+          displayRoots.map((root) => renderNode(root, 0))
         )}
       </div>
 
@@ -346,7 +404,7 @@ export function DevicesAdmin({ initialDevices }: DevicesAdminProps) {
           <DialogHeader>
             <DialogTitle>{editingId ? "ویرایش دستگاه" : "دستگاه جدید"}</DialogTitle>
           </DialogHeader>
-          <form className="space-y-4" onSubmit={onSaveRoot}>
+          <form className="space-y-4" onSubmit={onSaveDevice}>
             <div className="space-y-2">
               <Label>نام کامل</Label>
               <Input {...form.register("name")} />
@@ -365,7 +423,7 @@ export function DevicesAdmin({ initialDevices }: DevicesAdminProps) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {(Object.keys(DEVICE_TYPE_LABELS) as DeviceType[]).map((key) => (
+                  {editTypeOptions.map((key) => (
                     <SelectItem key={key} value={key}>
                       {DEVICE_TYPE_LABELS[key]}
                     </SelectItem>
@@ -426,7 +484,7 @@ export function DevicesAdmin({ initialDevices }: DevicesAdminProps) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {(Object.keys(DEVICE_TYPE_LABELS) as DeviceType[]).map((key) => (
+                  {CHILD_TYPES.map((key) => (
                     <SelectItem key={key} value={key}>
                       {DEVICE_TYPE_LABELS[key]}
                     </SelectItem>

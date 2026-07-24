@@ -1,6 +1,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import {
+  canAccessDevicesPage,
+  canCreateDeviceUnder,
+  canMutateDevice,
+  getSessionHomeDeviceId,
+  isDeviceTreeScopedRole,
+  listAccessibleDevices,
+} from "@/lib/auth/device-access";
 import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
 import {
   pgDeleteDevice,
@@ -8,6 +16,7 @@ import {
   pgDeleteDeviceStaff,
   pgEndDeviceOfficial,
   pgEnsureDefaultDevices,
+  pgGetDeviceById,
   pgGetDevicePassport,
   pgListDevices,
   pgSaveDevice,
@@ -40,9 +49,17 @@ export async function listDevicesAction(options?: {
   rootsOnly?: boolean;
 }) {
   const session = await getAuthSession();
-  if (!session) return { success: false as const, error: "Unauthorized", devices: [] };
+  if (!session || !canAccessDevicesPage(session)) {
+    return { success: false as const, error: "Unauthorized", devices: [] };
+  }
   if (!isPostgresConfigured()) return { success: true as const, devices: [] };
-  const devices = await pgListDevices(options);
+
+  if (isFullAdmin(session)) {
+    const devices = await pgListDevices(options);
+    return { success: true as const, devices };
+  }
+
+  const devices = await listAccessibleDevices(session);
   return { success: true as const, devices };
 }
 
@@ -77,22 +94,108 @@ export async function saveDeviceAction(data: {
   status?: DeviceStatus;
 }) {
   const session = await getAuthSession();
-  if (!session || !isFullAdmin(session)) {
+  if (!session || !canAccessDevicesPage(session)) {
     return { success: false as const, error: "Unauthorized" };
   }
   if (!isPostgresConfigured()) return { success: false as const, error: "Database required" };
 
-  const result = await pgSaveDevice(data);
+  const parentId = data.parentId?.trim() || null;
+  const isUpdate = Boolean(data.id);
+
+  if (isFullAdmin(session)) {
+    const result = await pgSaveDevice(data);
+    if (result.success) await revalidateDevicePages(result.id);
+    return result;
+  }
+
+  // Scoped roles: only their subtree; no new root ministries.
+  if (!isDeviceTreeScopedRole(session)) {
+    return { success: false as const, error: "Unauthorized" };
+  }
+
+  if (data.type === "ministry" && !parentId) {
+    return {
+      success: false as const,
+      error: "فقط مدیر می‌تواند وزارتخانه ریشه ایجاد کند",
+    };
+  }
+
+  if (isUpdate && data.id) {
+    const allowed = await canMutateDevice(session, data.id);
+    if (!allowed) {
+      return { success: false as const, error: "دسترسی به این دستگاه ندارید" };
+    }
+
+    const existing = await pgGetDeviceById(data.id);
+    if (!existing) {
+      return { success: false as const, error: "دستگاه یافت نشد" };
+    }
+
+    // Keep placement inside the caller's tree; do not allow orphaning to root.
+    const nextParentId = parentId ?? existing.parentId;
+    if (!nextParentId) {
+      // Editing the home/root node of their tree is OK (ministry_parent on ministry).
+      const homeId = await getSessionHomeDeviceId(session);
+      if (homeId !== data.id) {
+        return {
+          success: false as const,
+          error: "نمی‌توانید این دستگاه را به ریشه منتقل کنید",
+        };
+      }
+    } else {
+      const parentAllowed = await canMutateDevice(session, nextParentId);
+      if (!parentAllowed) {
+        return { success: false as const, error: "والد خارج از محدوده دسترسی شماست" };
+      }
+    }
+
+    const result = await pgSaveDevice({
+      ...data,
+      parentId: nextParentId,
+      // Scoped users cannot promote a node into a root ministry type without parent.
+      type: nextParentId ? (data.type === "ministry" ? "organization" : data.type) : existing.type,
+    });
+    if (result.success) await revalidateDevicePages(result.id);
+    return result;
+  }
+
+  const canCreate = await canCreateDeviceUnder(session, parentId);
+  if (!canCreate || !parentId) {
+    return {
+      success: false as const,
+      error: "فقط می‌توانید زیرمجموعه زیر درخت خودتان ایجاد کنید",
+    };
+  }
+
+  const result = await pgSaveDevice({
+    ...data,
+    parentId,
+    type: data.type === "ministry" ? "organization" : data.type,
+  });
   if (result.success) await revalidateDevicePages(result.id);
   return result;
 }
 
 export async function deleteDeviceAction(id: string) {
   const session = await getAuthSession();
-  if (!session || !isFullAdmin(session)) {
+  if (!session || !canAccessDevicesPage(session)) {
     return { success: false as const, error: "Unauthorized" };
   }
   if (!isPostgresConfigured()) return { success: false as const, error: "Database required" };
+
+  if (!isFullAdmin(session)) {
+    const allowed = await canMutateDevice(session, id);
+    if (!allowed) {
+      return { success: false as const, error: "دسترسی به این دستگاه ندارید" };
+    }
+    const homeId = await getSessionHomeDeviceId(session);
+    if (homeId === id) {
+      return {
+        success: false as const,
+        error: "نمی‌توانید دستگاه اصلی خودتان را حذف کنید",
+      };
+    }
+  }
 
   const result = await pgDeleteDevice(id);
   if (result.success) await revalidateDevicePages();
