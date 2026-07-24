@@ -1,6 +1,18 @@
 {
   "entries": [
     {
+      "hash": "b8a06f893582dd223cc558f19916d4977ca40ac8",
+      "committedAt": "2026-07-25T00:53:37+03:30",
+      "title": "افزودن بخش رصد و واکنش سریع به نوار کناری پنل مدیریت",
+      "subject": "Add monitoring section to admin sidebar"
+    },
+    {
+      "hash": "d7d92876df9fd8d53b695e3a3e8ceefe4556a305",
+      "committedAt": "2026-07-25T00:45:25+03:30",
+      "title": "افزودن صفحات رصد رسانه‌ای و واکنش سریع به پنل مدیریت",
+      "subject": "Add monitoring and rapid response admin UI"
+    },
+    {
       "hash": "5083e700f340b2545f8db036e7ce75cd8037042a",
       "committedAt": "2026-07-24T21:26:46+03:30",
       "title": "امکان ویرایش گروهی دسترسی کاربران به اقدامات و بخش‌های پنل",

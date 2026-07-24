@@ -310,7 +310,7 @@ export function MonitoringDashboardAdmin({ campaignId }: { campaignId: string })
       >
         <NarrativeComparisonChart data={chartData} />
         <p className="text-xs text-muted-foreground">
-          راهنما ریسک: {Object.entries(RISK_LABELS).map(([k, v]) => `${v}`).join("، ")} | فوریت:{" "}
+          راهنما ریسک: {Object.values(RISK_LABELS).join("، ")} | فوریت:{" "}
           {Object.values(URGENCY_LABELS).join("، ")}
         </p>
       </MonitoringSection>

@@ -1306,7 +1306,7 @@ export async function pgCreateCaseContent(
   await ensureMonitoringSchema();
   const sql = getSql();
   const id = input.id ?? generateId();
-  const rows = await sql`
+  await sql`
     INSERT INTO monitoring_case_contents (
       id, rapid_response_case_id, title, content_type, body_text, file_url, production_status,
       approval_status, created_by, approved_by, version_label, publish_url
@@ -1315,7 +1315,6 @@ export async function pgCreateCaseContent(
       ${input.fileUrl}, ${input.productionStatus}, ${input.approvalStatus}, ${input.createdBy},
       ${input.approvedBy}, ${input.versionLabel}, ${input.publishUrl}
     )
-    RETURNING *
   `;
   const list = await pgListCaseContents(input.rapidResponseCaseId);
   return list.find((c) => c.id === id) ?? list[0];

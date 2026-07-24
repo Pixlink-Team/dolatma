@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getAuthSession } from "@/lib/auth/get-session";
-import { generateId, isPostgresConfigured } from "@/lib/utils";
+import { isPostgresConfigured } from "@/lib/utils";
 import { assertMonitoringCapability } from "@/lib/monitoring/access";
 import { seedMonitoringModule } from "@/lib/monitoring/seed";
 import { runMonitoringIngestionJob } from "@/lib/monitoring/jobs/ingestion";
@@ -23,6 +23,7 @@ import type {
   MonitoringSystemSettings,
   ResponseType,
   ReviewStatus,
+  RiskLevel,
   UrgencyLevel,
 } from "@/lib/monitoring/types";
 import {
@@ -394,7 +395,7 @@ async function convertItemToCaseInternal(
     createdByType?: CaseCreatedByType;
     title?: string;
     description?: string;
-    riskLevel?: MonitoredItem["urgencyLevel"] extends infer _ ? import("@/lib/monitoring/types").RiskLevel : never;
+    riskLevel?: RiskLevel;
     urgencyLevel?: UrgencyLevel;
     responseType?: ResponseType;
     responseDeadlineHours?: number;
@@ -568,7 +569,7 @@ export async function convertMonitoredItemToCaseAction(input: {
   createdByType?: CaseCreatedByType;
   title?: string;
   description?: string;
-  riskLevel?: import("@/lib/monitoring/types").RiskLevel;
+  riskLevel?: RiskLevel;
   urgencyLevel?: UrgencyLevel;
   responseType?: ResponseType;
   responseDeadlineHours?: number;
@@ -655,7 +656,7 @@ export async function updateRapidResponseCaseAction(
   id: string,
   patch: Partial<{
     caseStatus: CaseStatus;
-    riskLevel: import("@/lib/monitoring/types").RiskLevel;
+    riskLevel: RiskLevel;
     urgencyLevel: UrgencyLevel;
     responseType: ResponseType;
     assignedManagerId: string | null;
@@ -1404,6 +1405,3 @@ export async function pollingMonitoringUpdatesAction(sinceIso?: string) {
     };
   }
 }
-
-/** Keep generateId import used for potential future draft ids */
-void generateId;

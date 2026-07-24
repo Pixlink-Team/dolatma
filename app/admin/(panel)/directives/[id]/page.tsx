@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { DirectiveOpsPanels } from "@/components/admin/directive-ops-panels";
 import { DirectiveSmartOpsRoom } from "@/components/admin/directive-smart-ops-room";
 import { DirectiveWorkspaceAdmin } from "@/components/admin/directive-workspace-admin";
+import { DirectiveMonitoringPanel } from "@/components/admin/directive-monitoring-panel";
 import { resolveAdminCampaignId } from "@/lib/admin-campaign";
 import {
   canManageDirectiveRecord,
@@ -81,6 +82,7 @@ export default async function DirectiveWorkspacePage({ params, searchParams }: P
           currentUserId={session.userId}
           isFullAdmin={fullAdmin}
         />
+        <DirectiveMonitoringPanel campaignId={campaignId} directiveId={id} />
       </div>
     );
   }

@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { DirectiveMonitoringPanel } from "@/components/admin/directive-monitoring-panel";
 import {
   ackDirectiveReplacementAlertAction,
   addDirectiveWorkspaceAssetVersionAction,
@@ -445,6 +446,7 @@ export function DirectiveWorkspaceAdmin({
           <TabsTrigger value="assets">فایل‌ها و نسخه‌ها</TabsTrigger>
           <TabsTrigger value="guides">راهنما و FAQ</TabsTrigger>
           <TabsTrigger value="media-command">فرمان رسانه‌ای</TabsTrigger>
+          <TabsTrigger value="monitoring">رصد</TabsTrigger>
           {canManage && <TabsTrigger value="alerts">هشدارها</TabsTrigger>}
         </TabsList>
 
@@ -1086,6 +1088,13 @@ export function DirectiveWorkspaceAdmin({
               خلاصه فرمان رسانه‌ای در دسترس نیست. از منوی «میز فرمان رسانه‌ای» وارد شوید.
             </p>
           )}
+        </TabsContent>
+
+        <TabsContent value="monitoring" className="space-y-4">
+          <DirectiveMonitoringPanel
+            campaignId={campaignId}
+            directiveId={bundle.directive.id}
+          />
         </TabsContent>
 
         {canManage && (

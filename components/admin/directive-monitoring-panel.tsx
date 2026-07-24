@@ -34,7 +34,7 @@ export function DirectiveMonitoringPanel({
   const [negativeText, setNegativeText] = useState("");
   const [pending, startTransition] = useTransition();
 
-  const load = () => {
+  useEffect(() => {
     startTransition(async () => {
       const result = await getDirectiveMonitoringAction(directiveId);
       if (!result.success) {
@@ -46,11 +46,6 @@ export function DirectiveMonitoringPanel({
       setKeywordsText(result.settings.keywords.join("، "));
       setNegativeText(result.settings.negativeKeywords.join("، "));
     });
-  };
-
-  useEffect(() => {
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [directiveId]);
 
   if (!settings) {
