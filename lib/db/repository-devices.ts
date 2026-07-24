@@ -21,6 +21,9 @@ import type {
   DevicePassport,
   DeviceReadiness,
   DeviceSocialLinks,
+  DeviceStaff,
+  DeviceStaffEducation,
+  DeviceStaffGender,
   DeviceStatus,
   DeviceType,
 } from "@/lib/types";
@@ -178,6 +181,56 @@ function mapOfficial(row: Record<string, unknown>): DeviceOfficial {
   };
 }
 
+function asStaffGender(value: unknown): DeviceStaffGender {
+  return value === "female" ? "female" : "male";
+}
+
+function asStaffEducation(value: unknown): DeviceStaffEducation {
+  const allowed: DeviceStaffEducation[] = [
+    "below_diploma",
+    "diploma",
+    "associate",
+    "bachelor",
+    "master",
+    "doctorate",
+    "seminary",
+    "other",
+  ];
+  return allowed.includes(value as DeviceStaffEducation)
+    ? (value as DeviceStaffEducation)
+    : "other";
+}
+
+function toDateOnly(value: unknown): string | null {
+  if (!value) return null;
+  if (value instanceof Date) {
+    const y = value.getUTCFullYear();
+    const m = String(value.getUTCMonth() + 1).padStart(2, "0");
+    const d = String(value.getUTCDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  }
+  const text = String(value).trim();
+  if (/^\d{4}-\d{2}-\d{2}/.test(text)) return text.slice(0, 10);
+  return null;
+}
+
+function mapStaff(row: Record<string, unknown>): DeviceStaff {
+  return {
+    id: String(row.id),
+    deviceId: String(row.device_id),
+    firstName: String(row.first_name ?? ""),
+    lastName: String(row.last_name ?? ""),
+    mobile: String(row.mobile ?? ""),
+    gender: asStaffGender(row.gender),
+    birthDate: toDateOnly(row.birth_date),
+    position: String(row.position ?? ""),
+    education: asStaffEducation(row.education),
+    isActive: row.is_active !== false,
+    createdAt: toIso(row.created_at),
+    updatedAt: toIso(row.updated_at),
+  };
+}
+
 function asOptionalText(value: unknown): string | null {
   if (typeof value !== "string") return null;
   const trimmed = value.trim();
@@ -257,6 +310,23 @@ export async function ensureDeviceSchema(): Promise<void> {
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     )
   `;
+  await sql`
+    CREATE TABLE IF NOT EXISTS device_staff (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      device_id UUID NOT NULL REFERENCES devices(id) ON DELETE CASCADE,
+      first_name TEXT NOT NULL,
+      last_name TEXT NOT NULL,
+      mobile TEXT NOT NULL,
+      gender TEXT NOT NULL,
+      birth_date DATE,
+      position TEXT NOT NULL,
+      education TEXT NOT NULL,
+      is_active BOOLEAN NOT NULL DEFAULT true,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    )
+  `;
+  await sql`CREATE INDEX IF NOT EXISTS idx_device_staff_device ON device_staff(device_id, is_active)`;
   await sql`
     CREATE TABLE IF NOT EXISTS device_capacities (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -739,6 +809,95 @@ export async function pgEndDeviceOfficial(
     WHERE id = ${id}
   `;
   return { success: true };
+}
+
+export async function pgListDeviceStaff(deviceId: string): Promise<DeviceStaff[]> {
+  const sql = getSql();
+  await ensureDeviceSchema();
+  const rows = await sql`
+    SELECT * FROM device_staff
+    WHERE device_id = ${deviceId}
+    ORDER BY is_active DESC, last_name ASC, first_name ASC, created_at DESC
+  `;
+  return rows.map((row) => mapStaff(row as Record<string, unknown>));
+}
+
+export async function pgSaveDeviceStaff(data: {
+  id?: string;
+  deviceId: string;
+  firstName: string;
+  lastName: string;
+  mobile: string;
+  gender: DeviceStaffGender;
+  birthDate?: string | null;
+  position: string;
+  education: DeviceStaffEducation;
+  isActive?: boolean;
+}): Promise<{ success: true; id: string } | { success: false; error: string }> {
+  const sql = getSql();
+  await ensureDeviceSchema();
+
+  const id = data.id ?? generateId();
+  const firstName = data.firstName.trim();
+  const lastName = data.lastName.trim();
+  const mobile = data.mobile.trim();
+  const position = data.position.trim();
+  const birthDate = toDateOnly(data.birthDate);
+  const isActive = data.isActive !== false;
+  const now = new Date().toISOString();
+
+  if (!firstName) return { success: false, error: "نام الزامی است" };
+  if (!lastName) return { success: false, error: "نام خانوادگی الزامی است" };
+  if (!mobile) return { success: false, error: "شماره موبایل الزامی است" };
+  if (!position) return { success: false, error: "سمت الزامی است" };
+
+  try {
+    if (data.id) {
+      await sql`
+        UPDATE device_staff SET
+          first_name = ${firstName},
+          last_name = ${lastName},
+          mobile = ${mobile},
+          gender = ${data.gender},
+          birth_date = ${birthDate},
+          position = ${position},
+          education = ${data.education},
+          is_active = ${isActive},
+          updated_at = ${now}
+        WHERE id = ${id}
+      `;
+    } else {
+      await sql`
+        INSERT INTO device_staff (
+          id, device_id, first_name, last_name, mobile, gender,
+          birth_date, position, education, is_active, created_at, updated_at
+        )
+        VALUES (
+          ${id}, ${data.deviceId}, ${firstName}, ${lastName}, ${mobile},
+          ${data.gender}, ${birthDate}, ${position}, ${data.education},
+          ${isActive}, ${now}, ${now}
+        )
+      `;
+    }
+    return { success: true, id };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "ذخیره کارمند ناموفق بود";
+    return { success: false, error: message };
+  }
+}
+
+export async function pgDeleteDeviceStaff(
+  id: string
+): Promise<{ success: true } | { success: false; error: string }> {
+  const sql = getSql();
+  await ensureDeviceSchema();
+  try {
+    await sql`DELETE FROM device_staff WHERE id = ${id}`;
+    return { success: true };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "حذف کارمند ناموفق بود";
+    return { success: false, error: message };
+  }
 }
 
 export async function pgListDeviceCapacities(deviceId: string): Promise<DeviceCapacity[]> {
@@ -1224,7 +1383,7 @@ export async function pgGetDevicePassport(deviceId: string): Promise<DevicePassp
   const device = await pgGetDeviceById(deviceId);
   if (!device) return null;
 
-  const [parent, children, officials, capacities, users, directiveStats, contentStats, campaignHistory] =
+  const [parent, children, officials, staff, capacities, users, directiveStats, contentStats, campaignHistory] =
     await Promise.all([
       device.parentId ? pgGetDeviceById(device.parentId) : Promise.resolve(null),
       pgListDevices({ parentId: deviceId }).catch((error) => {
@@ -1234,6 +1393,10 @@ export async function pgGetDevicePassport(deviceId: string): Promise<DevicePassp
       pgListDeviceOfficials(deviceId, { includeInactive: true }).catch((error) => {
         console.error("[device-passport] officials failed", error);
         return [] as DeviceOfficial[];
+      }),
+      pgListDeviceStaff(deviceId).catch((error) => {
+        console.error("[device-passport] staff failed", error);
+        return [] as DeviceStaff[];
       }),
       pgListDeviceCapacities(deviceId).catch((error) => {
         console.error("[device-passport] capacities failed", error);
@@ -1261,6 +1424,7 @@ export async function pgGetDevicePassport(deviceId: string): Promise<DevicePassp
     parent,
     children,
     officials,
+    staff,
     capacities,
     users,
     directiveStats,

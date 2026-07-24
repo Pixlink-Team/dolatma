@@ -32,10 +32,12 @@ import {
 } from "@/components/ui/select";
 import {
   deleteDeviceCapacityAction,
+  deleteDeviceStaffAction,
   endDeviceOfficialAction,
   saveDeviceAction,
   saveDeviceCapacityAction,
   saveDeviceOfficialAction,
+  saveDeviceStaffAction,
 } from "@/lib/actions/device-actions";
 import {
   CapacityDetailsFields,
@@ -50,6 +52,8 @@ import {
   DEVICE_OFFICIAL_ROLE_LABELS,
   DEVICE_READINESS_LABELS,
   DEVICE_SCOPE_LABELS,
+  DEVICE_STAFF_EDUCATION_LABELS,
+  DEVICE_STAFF_GENDER_LABELS,
   DEVICE_STATUS_LABELS,
   DEVICE_TYPE_LABELS,
 } from "@/lib/device-labels";
@@ -59,11 +63,15 @@ import type {
   DeviceCapacityType,
   DeviceOfficialRole,
   DevicePassport,
+  DeviceStaff,
+  DeviceStaffEducation,
+  DeviceStaffGender,
   DeviceStatus,
   DeviceType,
 } from "@/lib/types";
 import { adminHref } from "@/lib/utils";
 import { useAdminCampaign } from "@/components/admin/admin-campaign-provider";
+import { PersianDateInput } from "@/components/ui/persian-date-input";
 
 const profileSchema = z.object({
   name: z.string().min(1),
@@ -94,6 +102,26 @@ const officialSchema = z.object({
   phone: z.string().optional(),
   email: z.string().optional(),
   contactNote: z.string().optional(),
+});
+
+const staffSchema = z.object({
+  firstName: z.string().min(1, "نام الزامی است"),
+  lastName: z.string().min(1, "نام خانوادگی الزامی است"),
+  mobile: z.string().min(1, "شماره موبایل الزامی است"),
+  gender: z.enum(["male", "female"]),
+  birthDate: z.string().optional(),
+  position: z.string().min(1, "سمت الزامی است"),
+  education: z.enum([
+    "below_diploma",
+    "diploma",
+    "associate",
+    "bachelor",
+    "master",
+    "doctorate",
+    "seminary",
+    "other",
+  ]),
+  isActive: z.boolean(),
 });
 
 const capacitySchema = z.object({
@@ -145,6 +173,8 @@ export function DevicePassportView({ initialPassport }: DevicePassportViewProps)
   const passport = initialPassport;
   const [profileOpen, setProfileOpen] = useState(false);
   const [officialOpen, setOfficialOpen] = useState(false);
+  const [staffOpen, setStaffOpen] = useState(false);
+  const [editingStaffId, setEditingStaffId] = useState<string | null>(null);
   const [capacityOpen, setCapacityOpen] = useState(false);
   const [editingCapacityId, setEditingCapacityId] = useState<string | null>(null);
   const [showOfficialHistory, setShowOfficialHistory] = useState(false);
@@ -181,6 +211,20 @@ export function DevicePassportView({ initialPassport }: DevicePassportViewProps)
     },
   });
 
+  const staffForm = useForm({
+    resolver: zodResolver(staffSchema),
+    defaultValues: {
+      firstName: "",
+      lastName: "",
+      mobile: "",
+      gender: "male" as DeviceStaffGender,
+      birthDate: "",
+      position: "",
+      education: "bachelor" as DeviceStaffEducation,
+      isActive: true,
+    },
+  });
+
   const capacityForm = useForm({
     resolver: zodResolver(capacitySchema),
     defaultValues: {
@@ -211,6 +255,36 @@ export function DevicePassportView({ initialPassport }: DevicePassportViewProps)
     () => passport.officials.filter((item) => !item.isActive),
     [passport.officials]
   );
+  const staffMembers = passport.staff ?? [];
+
+  const openStaffDialog = (item?: DeviceStaff) => {
+    if (item) {
+      setEditingStaffId(item.id);
+      staffForm.reset({
+        firstName: item.firstName,
+        lastName: item.lastName,
+        mobile: item.mobile,
+        gender: item.gender,
+        birthDate: item.birthDate ?? "",
+        position: item.position,
+        education: item.education,
+        isActive: item.isActive,
+      });
+    } else {
+      setEditingStaffId(null);
+      staffForm.reset({
+        firstName: "",
+        lastName: "",
+        mobile: "",
+        gender: "male",
+        birthDate: "",
+        position: "",
+        education: "bachelor",
+        isActive: true,
+      });
+    }
+    setStaffOpen(true);
+  };
 
   const refresh = () => window.location.reload();
 
@@ -262,6 +336,31 @@ export function DevicePassportView({ initialPassport }: DevicePassportViewProps)
       }
       toast.success("مسئول ثبت شد");
       setOfficialOpen(false);
+      refresh();
+    });
+  });
+
+  const onSaveStaff = staffForm.handleSubmit((data) => {
+    startTransition(async () => {
+      const result = await saveDeviceStaffAction({
+        id: editingStaffId ?? undefined,
+        deviceId: device.id,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        mobile: data.mobile,
+        gender: data.gender as DeviceStaffGender,
+        birthDate: data.birthDate || null,
+        position: data.position,
+        education: data.education as DeviceStaffEducation,
+        isActive: data.isActive,
+      });
+      if (!result.success) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success(editingStaffId ? "اطلاعات کارمند به‌روز شد" : "کارمند ثبت شد");
+      setStaffOpen(false);
+      setEditingStaffId(null);
       refresh();
     });
   });
@@ -468,6 +567,89 @@ export function DevicePassportView({ initialPassport }: DevicePassportViewProps)
                 </span>
               </div>
             ))}
+          </div>
+        )}
+      </section>
+
+      <section className="rounded-xl border bg-card p-5">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-lg font-semibold">کارکنان</h2>
+          <Button size="sm" onClick={() => openStaffDialog()}>
+            <Plus className="ml-1 h-4 w-4" />
+            افزودن کارمند
+          </Button>
+        </div>
+        {staffMembers.length === 0 ? (
+          <p className="text-sm text-muted-foreground">کارمندی ثبت نشده است.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[720px] text-sm">
+              <thead>
+                <tr className="border-b text-right text-muted-foreground">
+                  <th className="pb-2 font-medium">نام و نام خانوادگی</th>
+                  <th className="pb-2 font-medium">موبایل</th>
+                  <th className="pb-2 font-medium">جنسیت</th>
+                  <th className="pb-2 font-medium">تاریخ تولد</th>
+                  <th className="pb-2 font-medium">سمت</th>
+                  <th className="pb-2 font-medium">مدرک تحصیلی</th>
+                  <th className="pb-2 font-medium">وضعیت</th>
+                  <th className="pb-2 font-medium">عملیات</th>
+                </tr>
+              </thead>
+              <tbody>
+                {staffMembers.map((item) => (
+                  <tr key={item.id} className="border-b last:border-0">
+                    <td className="py-2.5 font-medium">
+                      {item.firstName} {item.lastName}
+                    </td>
+                    <td className="py-2.5">{item.mobile}</td>
+                    <td className="py-2.5">{DEVICE_STAFF_GENDER_LABELS[item.gender]}</td>
+                    <td className="py-2.5">
+                      {item.birthDate
+                        ? new Date(`${item.birthDate}T12:00:00`).toLocaleDateString("fa-IR")
+                        : "—"}
+                    </td>
+                    <td className="py-2.5">{item.position}</td>
+                    <td className="py-2.5">{DEVICE_STAFF_EDUCATION_LABELS[item.education]}</td>
+                    <td className="py-2.5">
+                      <Badge variant={item.isActive ? "secondary" : "outline"}>
+                        {item.isActive ? "فعال" : "غیرفعال"}
+                      </Badge>
+                    </td>
+                    <td className="py-2.5">
+                      <div className="flex gap-1">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          disabled={isPending}
+                          onClick={() => openStaffDialog(item)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          disabled={isPending}
+                          onClick={() => {
+                            startTransition(async () => {
+                              const result = await deleteDeviceStaffAction(item.id, device.id);
+                              if (!result.success) {
+                                toast.error(result.error);
+                                return;
+                              }
+                              toast.success("کارمند حذف شد");
+                              refresh();
+                            });
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </section>
@@ -821,6 +1003,93 @@ export function DevicePassportView({ initialPassport }: DevicePassportViewProps)
               با ثبت مسئول جدید برای همان نقش، مسئول قبلی به‌صورت خودکار در سوابق آرشیو می‌شود.
             </p>
             <Button type="submit" disabled={isPending} className="w-full">ثبت</Button>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={staffOpen}
+        onOpenChange={(open) => {
+          setStaffOpen(open);
+          if (!open) setEditingStaffId(null);
+        }}
+      >
+        <DialogContent dir="rtl" className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{editingStaffId ? "ویرایش کارمند" : "افزودن کارمند"}</DialogTitle>
+          </DialogHeader>
+          <form className="space-y-3" onSubmit={onSaveStaff}>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="نام">
+                <Input {...staffForm.register("firstName")} />
+              </Field>
+              <Field label="نام خانوادگی">
+                <Input {...staffForm.register("lastName")} />
+              </Field>
+            </div>
+            <Field label="شماره موبایل">
+              <Input
+                inputMode="tel"
+                dir="ltr"
+                className="text-left"
+                {...staffForm.register("mobile")}
+              />
+            </Field>
+            <Field label="جنسیت">
+              <Select
+                value={staffForm.watch("gender")}
+                onValueChange={(value) =>
+                  staffForm.setValue("gender", value as DeviceStaffGender)
+                }
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {(Object.keys(DEVICE_STAFF_GENDER_LABELS) as DeviceStaffGender[]).map((key) => (
+                    <SelectItem key={key} value={key}>
+                      {DEVICE_STAFF_GENDER_LABELS[key]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field label="تاریخ تولد">
+              <PersianDateInput
+                allowEmpty
+                placeholder="انتخاب تاریخ تولد"
+                value={staffForm.watch("birthDate") || undefined}
+                onChange={(isoDate) => staffForm.setValue("birthDate", isoDate)}
+              />
+            </Field>
+            <Field label="سمت">
+              <Input {...staffForm.register("position")} />
+            </Field>
+            <Field label="مدرک تحصیلی">
+              <Select
+                value={staffForm.watch("education")}
+                onValueChange={(value) =>
+                  staffForm.setValue("education", value as DeviceStaffEducation)
+                }
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {(Object.keys(DEVICE_STAFF_EDUCATION_LABELS) as DeviceStaffEducation[]).map(
+                    (key) => (
+                      <SelectItem key={key} value={key}>
+                        {DEVICE_STAFF_EDUCATION_LABELS[key]}
+                      </SelectItem>
+                    )
+                  )}
+                </SelectContent>
+              </Select>
+            </Field>
+            <div className="flex items-center justify-between gap-2">
+              <Label>فعال</Label>
+              <Switch
+                checked={staffForm.watch("isActive")}
+                onCheckedChange={(checked) => staffForm.setValue("isActive", checked)}
+              />
+            </div>
+            <Button type="submit" disabled={isPending} className="w-full">ذخیره</Button>
           </form>
         </DialogContent>
       </Dialog>

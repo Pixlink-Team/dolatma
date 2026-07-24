@@ -76,6 +76,18 @@ export type DeviceOfficialRole =
   | "campaign_exec"
   | "supervisor";
 
+export type DeviceStaffGender = "male" | "female";
+
+export type DeviceStaffEducation =
+  | "below_diploma"
+  | "diploma"
+  | "associate"
+  | "bachelor"
+  | "master"
+  | "doctorate"
+  | "seminary"
+  | "other";
+
 export type DeviceCapacityType =
   | "branches"
   | "website_app"
@@ -144,6 +156,22 @@ export interface DeviceOfficial {
   isActive: boolean;
   userId?: string | null;
   createdAt: string;
+}
+
+/** Individual staff member registered on a device passport. */
+export interface DeviceStaff {
+  id: string;
+  deviceId: string;
+  firstName: string;
+  lastName: string;
+  mobile: string;
+  gender: DeviceStaffGender;
+  birthDate?: string | null;
+  position: string;
+  education: DeviceStaffEducation;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 /** Type-specific structured fields for capacity reporting (JSONB). */
@@ -219,6 +247,7 @@ export interface DevicePassport {
   parent: Device | null;
   children: Device[];
   officials: DeviceOfficial[];
+  staff: DeviceStaff[];
   capacities: DeviceCapacity[];
   users: AdminUser[];
   directiveStats: DeviceDirectiveStats;

@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "b7acb2829b2f487f105a105a895e6ccea3f9f1c6",
+      "committedAt": "2026-07-24T18:34:21+03:30",
+      "title": "بازگردانی بخش ویرایش گروهی محتوا فقط برای مدیر",
+      "subject": "Restore admin-only group edit section in panel"
+    },
+    {
       "hash": "ceaee8df46bceebc41d395396f83d61aaee4fa0a",
       "committedAt": "2026-07-24T18:26:47+03:30",
       "title": "حذف کارت خلاصه اقدام از داشبورد مدیریت",

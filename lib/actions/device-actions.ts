@@ -5,6 +5,7 @@ import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
 import {
   pgDeleteDevice,
   pgDeleteDeviceCapacity,
+  pgDeleteDeviceStaff,
   pgEndDeviceOfficial,
   pgEnsureDefaultDevices,
   pgGetDevicePassport,
@@ -12,6 +13,7 @@ import {
   pgSaveDevice,
   pgSaveDeviceCapacity,
   pgSaveDeviceOfficial,
+  pgSaveDeviceStaff,
 } from "@/lib/db/repository-devices";
 import { isPostgresConfigured } from "@/lib/utils";
 import type {
@@ -19,6 +21,8 @@ import type {
   DeviceCapacityType,
   DeviceOfficialRole,
   DeviceSocialLinks,
+  DeviceStaffEducation,
+  DeviceStaffGender,
   DeviceStatus,
   DeviceType,
 } from "@/lib/types";
@@ -125,6 +129,41 @@ export async function endDeviceOfficialAction(id: string, deviceId: string) {
   if (!isPostgresConfigured()) return { success: false as const, error: "Database required" };
 
   const result = await pgEndDeviceOfficial(id);
+  if (result.success) await revalidateDevicePages(deviceId);
+  return result;
+}
+
+export async function saveDeviceStaffAction(data: {
+  id?: string;
+  deviceId: string;
+  firstName: string;
+  lastName: string;
+  mobile: string;
+  gender: DeviceStaffGender;
+  birthDate?: string | null;
+  position: string;
+  education: DeviceStaffEducation;
+  isActive?: boolean;
+}) {
+  const session = await getAuthSession();
+  if (!session || !isFullAdmin(session)) {
+    return { success: false as const, error: "Unauthorized" };
+  }
+  if (!isPostgresConfigured()) return { success: false as const, error: "Database required" };
+
+  const result = await pgSaveDeviceStaff(data);
+  if (result.success) await revalidateDevicePages(data.deviceId);
+  return result;
+}
+
+export async function deleteDeviceStaffAction(id: string, deviceId: string) {
+  const session = await getAuthSession();
+  if (!session || !isFullAdmin(session)) {
+    return { success: false as const, error: "Unauthorized" };
+  }
+  if (!isPostgresConfigured()) return { success: false as const, error: "Database required" };
+
+  const result = await pgDeleteDeviceStaff(id);
   if (result.success) await revalidateDevicePages(deviceId);
   return result;
 }

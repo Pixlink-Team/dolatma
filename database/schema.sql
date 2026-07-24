@@ -966,6 +966,35 @@ ALTER TABLE device_officials ADD CONSTRAINT device_officials_role_type_check
 CREATE INDEX IF NOT EXISTS idx_device_officials_device
   ON device_officials(device_id, is_active, role_type);
 
+CREATE TABLE IF NOT EXISTS device_staff (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  device_id UUID NOT NULL REFERENCES devices(id) ON DELETE CASCADE,
+  first_name TEXT NOT NULL,
+  last_name TEXT NOT NULL,
+  mobile TEXT NOT NULL,
+  gender TEXT NOT NULL,
+  birth_date DATE,
+  position TEXT NOT NULL,
+  education TEXT NOT NULL,
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+ALTER TABLE device_staff DROP CONSTRAINT IF EXISTS device_staff_gender_check;
+ALTER TABLE device_staff ADD CONSTRAINT device_staff_gender_check
+  CHECK (gender IN ('male', 'female'));
+
+ALTER TABLE device_staff DROP CONSTRAINT IF EXISTS device_staff_education_check;
+ALTER TABLE device_staff ADD CONSTRAINT device_staff_education_check
+  CHECK (education IN (
+    'below_diploma', 'diploma', 'associate', 'bachelor',
+    'master', 'doctorate', 'seminary', 'other'
+  ));
+
+CREATE INDEX IF NOT EXISTS idx_device_staff_device
+  ON device_staff(device_id, is_active);
+
 CREATE TABLE IF NOT EXISTS device_capacities (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   device_id UUID NOT NULL REFERENCES devices(id) ON DELETE CASCADE,
@@ -1075,6 +1104,14 @@ ALTER TABLE device_officials ENABLE ROW LEVEL SECURITY;
 ALTER TABLE device_officials NO FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS device_officials_app_access ON device_officials;
 CREATE POLICY device_officials_app_access ON device_officials
+  FOR ALL
+  USING (true)
+  WITH CHECK (true);
+
+ALTER TABLE device_staff ENABLE ROW LEVEL SECURITY;
+ALTER TABLE device_staff NO FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS device_staff_app_access ON device_staff;
+CREATE POLICY device_staff_app_access ON device_staff
   FOR ALL
   USING (true)
   WITH CHECK (true);

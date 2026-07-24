@@ -3,6 +3,8 @@ import type {
   DeviceCapacityType,
   DeviceOfficialRole,
   DeviceReadinessStatus,
+  DeviceStaffEducation,
+  DeviceStaffGender,
   DeviceStatus,
   DeviceType,
 } from "@/lib/types";
@@ -36,6 +38,22 @@ export const DEVICE_OFFICIAL_ROLE_LABELS: Record<DeviceOfficialRole, string> = {
   pr: "مسئول روابط عمومی",
   campaign_exec: "مسئول اجرای کمپین‌ها",
   supervisor: "ناظر / تأییدکننده",
+};
+
+export const DEVICE_STAFF_GENDER_LABELS: Record<DeviceStaffGender, string> = {
+  male: "مرد",
+  female: "زن",
+};
+
+export const DEVICE_STAFF_EDUCATION_LABELS: Record<DeviceStaffEducation, string> = {
+  below_diploma: "زیر دیپلم",
+  diploma: "دیپلم",
+  associate: "کاردانی",
+  bachelor: "کارشناسی",
+  master: "کارشناسی ارشد",
+  doctorate: "دکتری",
+  seminary: "حوزوی",
+  other: "سایر",
 };
 
 export const DEVICE_CAPACITY_TYPE_LABELS: Record<DeviceCapacityType, string> = {
