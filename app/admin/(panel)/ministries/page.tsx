@@ -33,7 +33,7 @@ export default async function MinistriesPage() {
     <DevicesAdmin
       initialDevices={devices}
       canCreateRoot={fullAdmin}
-      showPassport={fullAdmin}
+      showPassport
       homeDeviceId={homeDeviceId}
     />
   );

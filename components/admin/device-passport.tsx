@@ -166,9 +166,17 @@ function readinessBadgeClass(status: DevicePassport["readiness"]["status"]) {
 
 interface DevicePassportViewProps {
   initialPassport: DevicePassport;
+  /** Manage کارکنان registry (admin + scoped subtree owners). */
+  canManageStaff?: boolean;
+  /** Officials, capacities, and other admin-only passport tools. */
+  canManageAdminSections?: boolean;
 }
 
-export function DevicePassportView({ initialPassport }: DevicePassportViewProps) {
+export function DevicePassportView({
+  initialPassport,
+  canManageStaff = true,
+  canManageAdminSections = true,
+}: DevicePassportViewProps) {
   const { campaignId } = useAdminCampaign();
   const passport = initialPassport;
   const [profileOpen, setProfileOpen] = useState(false);
@@ -180,6 +188,7 @@ export function DevicePassportView({ initialPassport }: DevicePassportViewProps)
   const [showOfficialHistory, setShowOfficialHistory] = useState(false);
   const [isPending, startTransition] = useTransition();
 
+  const canEditProfile = canManageStaff || canManageAdminSections;
   const device = passport.device;
 
   const profileForm = useForm({
@@ -444,10 +453,12 @@ export function DevicePassportView({ initialPassport }: DevicePassportViewProps)
             <p className="text-sm leading-relaxed text-muted-foreground">
               {passport.readiness.reason}
             </p>
-            <Button size="sm" variant="outline" onClick={() => setProfileOpen(true)}>
-              <Pencil className="ml-1 h-4 w-4" />
-              ویرایش اطلاعات
-            </Button>
+            {canEditProfile ? (
+              <Button size="sm" variant="outline" onClick={() => setProfileOpen(true)}>
+                <Pencil className="ml-1 h-4 w-4" />
+                ویرایش اطلاعات
+              </Button>
+            ) : null}
           </div>
         </div>
       </section>
@@ -491,22 +502,24 @@ export function DevicePassportView({ initialPassport }: DevicePassportViewProps)
             >
               {showOfficialHistory ? "مخفی کردن سابقه" : "نمایش سابقه"}
             </Button>
-            <Button
-              size="sm"
-              onClick={() => {
-                officialForm.reset({
-                  roleType: "primary",
-                  fullName: "",
-                  phone: "",
-                  email: "",
-                  contactNote: "",
-                });
-                setOfficialOpen(true);
-              }}
-            >
-              <Plus className="ml-1 h-4 w-4" />
-              تعیین مسئول
-            </Button>
+            {canManageAdminSections ? (
+              <Button
+                size="sm"
+                onClick={() => {
+                  officialForm.reset({
+                    roleType: "primary",
+                    fullName: "",
+                    phone: "",
+                    email: "",
+                    contactNote: "",
+                  });
+                  setOfficialOpen(true);
+                }}
+              >
+                <Plus className="ml-1 h-4 w-4" />
+                تعیین مسئول
+              </Button>
+            ) : null}
           </div>
         </div>
         {activeOfficials.length === 0 ? (
@@ -526,25 +539,27 @@ export function DevicePassportView({ initialPassport }: DevicePassportViewProps)
                     {item.email ? ` · ${item.email}` : ""}
                   </p>
                 </div>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  disabled={isPending}
-                  onClick={() => {
-                    startTransition(async () => {
-                      const result = await endDeviceOfficialAction(item.id, device.id);
-                      if (!result.success) {
-                        toast.error(result.error);
-                        return;
-                      }
-                      toast.success("مسئولیت پایان یافت (سابقه حفظ شد)");
-                      refresh();
-                    });
-                  }}
-                >
-                  <UserMinus className="ml-1 h-4 w-4" />
-                  پایان مسئولیت
-                </Button>
+                {canManageAdminSections ? (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    disabled={isPending}
+                    onClick={() => {
+                      startTransition(async () => {
+                        const result = await endDeviceOfficialAction(item.id, device.id);
+                        if (!result.success) {
+                          toast.error(result.error);
+                          return;
+                        }
+                        toast.success("مسئولیت پایان یافت (سابقه حفظ شد)");
+                        refresh();
+                      });
+                    }}
+                  >
+                    <UserMinus className="ml-1 h-4 w-4" />
+                    پایان مسئولیت
+                  </Button>
+                ) : null}
               </div>
             ))}
           </div>
@@ -574,10 +589,12 @@ export function DevicePassportView({ initialPassport }: DevicePassportViewProps)
       <section className="rounded-xl border bg-card p-5">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-lg font-semibold">کارکنان</h2>
-          <Button size="sm" onClick={() => openStaffDialog()}>
-            <Plus className="ml-1 h-4 w-4" />
-            افزودن کارمند
-          </Button>
+          {canManageStaff ? (
+            <Button size="sm" onClick={() => openStaffDialog()}>
+              <Plus className="ml-1 h-4 w-4" />
+              افزودن کارمند
+            </Button>
+          ) : null}
         </div>
         {staffMembers.length === 0 ? (
           <p className="text-sm text-muted-foreground">کارمندی ثبت نشده است.</p>
@@ -617,34 +634,38 @@ export function DevicePassportView({ initialPassport }: DevicePassportViewProps)
                       </Badge>
                     </td>
                     <td className="py-2.5">
-                      <div className="flex gap-1">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          disabled={isPending}
-                          onClick={() => openStaffDialog(item)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          disabled={isPending}
-                          onClick={() => {
-                            startTransition(async () => {
-                              const result = await deleteDeviceStaffAction(item.id, device.id);
-                              if (!result.success) {
-                                toast.error(result.error);
-                                return;
-                              }
-                              toast.success("کارمند حذف شد");
-                              refresh();
-                            });
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </div>
+                      {canManageStaff ? (
+                        <div className="flex gap-1">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            disabled={isPending}
+                            onClick={() => openStaffDialog(item)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            disabled={isPending}
+                            onClick={() => {
+                              startTransition(async () => {
+                                const result = await deleteDeviceStaffAction(item.id, device.id);
+                                if (!result.success) {
+                                  toast.error(result.error);
+                                  return;
+                                }
+                                toast.success("کارمند حذف شد");
+                                refresh();
+                              });
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      ) : (
+                        "—"
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -808,28 +829,30 @@ export function DevicePassportView({ initialPassport }: DevicePassportViewProps)
       <section className="rounded-xl border bg-card p-5">
         <div className="mb-3 flex items-center justify-between gap-2">
           <h2 className="text-lg font-semibold">ظرفیت‌ها و دارایی‌ها</h2>
-          <Button
-            size="sm"
-            onClick={() => {
-              setEditingCapacityId(null);
-              capacityForm.reset({
-                capacityType: "other",
-                title: "",
-                description: "",
-                ownerName: "",
-                coverageScope: "",
-                province: "",
-                city: "",
-                address: "",
-                details: resetDetailsForType("other") as Record<string, unknown>,
-                isActive: true,
-              });
-              setCapacityOpen(true);
-            }}
-          >
-            <Plus className="ml-1 h-4 w-4" />
-            ثبت ظرفیت
-          </Button>
+          {canManageAdminSections ? (
+            <Button
+              size="sm"
+              onClick={() => {
+                setEditingCapacityId(null);
+                capacityForm.reset({
+                  capacityType: "other",
+                  title: "",
+                  description: "",
+                  ownerName: "",
+                  coverageScope: "",
+                  province: "",
+                  city: "",
+                  address: "",
+                  details: resetDetailsForType("other") as Record<string, unknown>,
+                  isActive: true,
+                });
+                setCapacityOpen(true);
+              }}
+            >
+              <Plus className="ml-1 h-4 w-4" />
+              ثبت ظرفیت
+            </Button>
+          ) : null}
         </div>
         {passport.capacities.length === 0 ? (
           <p className="text-sm text-muted-foreground">ظرفیتی ثبت نشده است.</p>
@@ -863,51 +886,53 @@ export function DevicePassportView({ initialPassport }: DevicePassportViewProps)
                     <p className="mt-1 text-xs text-foreground/80">{summary}</p>
                   ) : null}
                 </div>
-                <div className="flex gap-1">
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    onClick={() => {
-                      setEditingCapacityId(item.id);
-                      capacityForm.reset({
-                        capacityType: item.capacityType,
-                        title: item.title,
-                        description: item.description ?? "",
-                        ownerName: item.ownerName ?? "",
-                        coverageScope: item.coverageScope ?? "",
-                        province: item.province ?? "",
-                        city: item.city ?? "",
-                        address: item.address ?? "",
-                        details: normalizeCapacityDetails(
-                          item.capacityType,
-                          item.details
-                        ) as Record<string, unknown>,
-                        isActive: item.isActive,
-                      });
-                      setCapacityOpen(true);
-                    }}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    disabled={isPending}
-                    onClick={() => {
-                      startTransition(async () => {
-                        const result = await deleteDeviceCapacityAction(item.id, device.id);
-                        if (!result.success) {
-                          toast.error(result.error);
-                          return;
-                        }
-                        toast.success("ظرفیت حذف شد");
-                        refresh();
-                      });
-                    }}
-                  >
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
-                </div>
+                {canManageAdminSections ? (
+                  <div className="flex gap-1">
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => {
+                        setEditingCapacityId(item.id);
+                        capacityForm.reset({
+                          capacityType: item.capacityType,
+                          title: item.title,
+                          description: item.description ?? "",
+                          ownerName: item.ownerName ?? "",
+                          coverageScope: item.coverageScope ?? "",
+                          province: item.province ?? "",
+                          city: item.city ?? "",
+                          address: item.address ?? "",
+                          details: normalizeCapacityDetails(
+                            item.capacityType,
+                            item.details
+                          ) as Record<string, unknown>,
+                          isActive: item.isActive,
+                        });
+                        setCapacityOpen(true);
+                      }}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      disabled={isPending}
+                      onClick={() => {
+                        startTransition(async () => {
+                          const result = await deleteDeviceCapacityAction(item.id, device.id);
+                          if (!result.success) {
+                            toast.error(result.error);
+                            return;
+                          }
+                          toast.success("ظرفیت حذف شد");
+                          refresh();
+                        });
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
+                ) : null}
               </div>
               );
             })}

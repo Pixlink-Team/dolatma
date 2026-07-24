@@ -65,11 +65,17 @@ export async function listDevicesAction(options?: {
 
 export async function getDevicePassportAction(deviceId: string) {
   const session = await getAuthSession();
-  if (!session || !isFullAdmin(session)) {
+  if (!session || !canAccessDevicesPage(session)) {
     return { success: false as const, error: "Unauthorized", passport: null };
   }
   if (!isPostgresConfigured()) {
     return { success: false as const, error: "Database required", passport: null };
+  }
+  if (!isFullAdmin(session)) {
+    const allowed = await canMutateDevice(session, deviceId);
+    if (!allowed) {
+      return { success: false as const, error: "دسترسی به این دستگاه ندارید", passport: null };
+    }
   }
   const passport = await pgGetDevicePassport(deviceId);
   if (!passport) return { success: false as const, error: "دستگاه یافت نشد", passport: null };
@@ -249,10 +255,17 @@ export async function saveDeviceStaffAction(data: {
   isActive?: boolean;
 }) {
   const session = await getAuthSession();
-  if (!session || !isFullAdmin(session)) {
+  if (!session || !canAccessDevicesPage(session)) {
     return { success: false as const, error: "Unauthorized" };
   }
   if (!isPostgresConfigured()) return { success: false as const, error: "Database required" };
+
+  if (!isFullAdmin(session)) {
+    const allowed = await canMutateDevice(session, data.deviceId);
+    if (!allowed) {
+      return { success: false as const, error: "دسترسی به این دستگاه ندارید" };
+    }
+  }
 
   const result = await pgSaveDeviceStaff(data);
   if (result.success) await revalidateDevicePages(data.deviceId);
@@ -261,10 +274,17 @@ export async function saveDeviceStaffAction(data: {
 
 export async function deleteDeviceStaffAction(id: string, deviceId: string) {
   const session = await getAuthSession();
-  if (!session || !isFullAdmin(session)) {
+  if (!session || !canAccessDevicesPage(session)) {
     return { success: false as const, error: "Unauthorized" };
   }
   if (!isPostgresConfigured()) return { success: false as const, error: "Database required" };
+
+  if (!isFullAdmin(session)) {
+    const allowed = await canMutateDevice(session, deviceId);
+    if (!allowed) {
+      return { success: false as const, error: "دسترسی به این دستگاه ندارید" };
+    }
+  }
 
   const result = await pgDeleteDeviceStaff(id);
   if (result.success) await revalidateDevicePages(deviceId);
