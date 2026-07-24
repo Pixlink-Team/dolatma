@@ -7,13 +7,55 @@ const DEFAULT_UPSTREAMS = [
   "https://a.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png",
 ] as const;
 
+/** Host suffixes allowed for tile upstreams (blocks SSRF via MAP_TILE_UPSTREAM_URLS). */
+const DEFAULT_ALLOWED_HOST_SUFFIXES = [
+  "basemaps.cartocdn.com",
+  "tile.openstreetmap.de",
+  "tile.openstreetmap.fr",
+  "tile.openstreetmap.org",
+  "openstreetmap.org",
+] as const;
+
+function getAllowedHostSuffixes(): string[] {
+  const fromEnv = process.env.MAP_TILE_ALLOWED_HOSTS?.split(",")
+    .map((host) => host.trim().toLowerCase())
+    .filter(Boolean);
+  if (fromEnv && fromEnv.length > 0) return fromEnv;
+  return [...DEFAULT_ALLOWED_HOST_SUFFIXES];
+}
+
+function hostMatchesAllowlist(hostname: string, allowlist: string[]): boolean {
+  const host = hostname.toLowerCase();
+  return allowlist.some((suffix) => host === suffix || host.endsWith(`.${suffix}`));
+}
+
+export function isAllowedTileUpstream(template: string): boolean {
+  try {
+    const sample = template
+      .replaceAll("{z}", "0")
+      .replaceAll("{x}", "0")
+      .replaceAll("{y}", "0")
+      .replaceAll("{s}", "a");
+    const url = new URL(sample);
+    if (url.protocol !== "https:") return false;
+    if (url.username || url.password) return false;
+    return hostMatchesAllowlist(url.hostname, getAllowedHostSuffixes());
+  } catch {
+    return false;
+  }
+}
+
 export function getMapTileUpstreamUrls(): string[] {
   const fromEnv = process.env.MAP_TILE_UPSTREAM_URLS?.split(",")
     .map((url) => url.trim())
     .filter(Boolean);
 
   if (fromEnv && fromEnv.length > 0) {
-    return fromEnv;
+    const allowed = fromEnv.filter(isAllowedTileUpstream);
+    if (allowed.length > 0) return allowed;
+    console.error(
+      "[map-tiles] MAP_TILE_UPSTREAM_URLS had no allowlisted HTTPS hosts; using defaults."
+    );
   }
 
   return [...DEFAULT_UPSTREAMS];

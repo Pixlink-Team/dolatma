@@ -1,16 +1,12 @@
-import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { getAdminSessionCookieName } from "@/lib/auth/admin-session";
-import { isFullAdmin } from "@/lib/auth/get-session";
-import { parseSessionTokenSync } from "@/lib/auth/session-node";
+import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
 import { listStoredCampaignBackups } from "@/lib/services/campaign-backup";
 
 export const dynamic = "force-dynamic";
 
 /** List stored backup ZIP files for a campaign. */
 export async function GET(request: Request) {
-  const cookieStore = await cookies();
-  const session = parseSessionTokenSync(cookieStore.get(getAdminSessionCookieName())?.value);
+  const session = await getAuthSession();
   if (!session || !isFullAdmin(session)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

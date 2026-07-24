@@ -1,6 +1,18 @@
 {
   "entries": [
     {
+      "hash": "0b11b12b4b5e0e1e78ab7268786b888d71806d1b",
+      "committedAt": "2026-07-23T13:52:11+03:30",
+      "title": "رفع خطای بارگذاری تقویم ملی",
+      "subject": "Fix national calendar query using missing created_at column"
+    },
+    {
+      "hash": "9a46a047a0f06c1359031ef96e8df45594f5b56b",
+      "committedAt": "2026-07-23T13:09:55+03:30",
+      "title": "فرم‌ساز ویرایش فرم افزودن پوستر و تبلیغات محیطی با پیش‌نمایش زنده",
+      "subject": "Add section content form builder for posters and billboards"
+    },
+    {
       "hash": "859a3cdac0de5aeb714deb0590fa53f395050eed",
       "committedAt": "2026-07-23T10:12:13+03:30",
       "title": "افزودن ساخت هوشمند دستورکار با اتاق عملیات تطبیقی و دستیار اقدام",

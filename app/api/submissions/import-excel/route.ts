@@ -1,9 +1,6 @@
-import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
-import { getAdminSessionCookieName } from "@/lib/auth/admin-session";
-import { parseSessionTokenSync } from "@/lib/auth/session-node";
-import { isFullAdmin } from "@/lib/auth/get-session";
+import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
 import { assertContributorTutorialCompleted } from "@/lib/auth/require-tutorial-completion";
 import { resolveDefaultAdminOwnerUserId } from "@/lib/admin-content-owner";
 import { hasContributorPermission } from "@/lib/contributor-permissions";
@@ -14,8 +11,7 @@ import { parseSubmissionsExcel } from "@/lib/services/submissions-excel-parser";
 const MAX_EXCEL_BYTES = 25 * 1024 * 1024;
 
 export async function POST(request: Request) {
-  const cookieStore = await cookies();
-  const session = parseSessionTokenSync(cookieStore.get(getAdminSessionCookieName())?.value);
+  const session = await getAuthSession();
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

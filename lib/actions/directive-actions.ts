@@ -24,7 +24,7 @@ import {
   buildDirectiveSmsText,
   sendSms,
 } from "@/lib/sms/provider";
-import { pgGetSmsProviderSettings } from "@/lib/db/system-settings";
+import { pgGetSmsProviderSettingsForRuntime } from "@/lib/db/system-settings";
 import type {
   AuthSession,
   CampaignDirective,
@@ -475,7 +475,7 @@ async function dispatchDirectiveSms(
   campaignId: string
 ) {
   const pending = await pgDirectives.pgGetPendingSmsRecipients(directiveId);
-  const smsSettings = await pgGetSmsProviderSettings();
+  const smsSettings = await pgGetSmsProviderSettingsForRuntime();
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") || "";
   const path = `/admin/directives?campaign=${encodeURIComponent(campaignId)}`;
   const link = baseUrl ? `${baseUrl}${path}` : path;
@@ -646,7 +646,7 @@ export async function processCrisisEscalationAction(directiveId: string, campaig
     return { success: true as const, sent: 0 };
   }
 
-  const smsSettings = await pgGetSmsProviderSettings();
+  const smsSettings = await pgGetSmsProviderSettingsForRuntime();
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") || "";
   const path = `/admin/directives/${encodeURIComponent(directiveId)}?campaign=${encodeURIComponent(campaignId)}`;
   const link = baseUrl ? `${baseUrl}${path}` : path;

@@ -1,7 +1,15 @@
+import { timingSafeEqual } from "crypto";
 import { hashPassword, verifyPassword } from "@/lib/auth/password";
 import { normalizeStoredUserEmail } from "@/lib/auth/user-login";
 import { getSql } from "@/lib/db/client";
 import { isPostgresConfigured } from "@/lib/utils";
+
+function safeEqualString(a: string, b: string): boolean {
+  const left = Buffer.from(a);
+  const right = Buffer.from(b);
+  if (left.length !== right.length) return false;
+  return timingSafeEqual(left, right);
+}
 
 const ADMIN_CREDENTIALS_KEY = "admin_credentials";
 
@@ -102,8 +110,9 @@ export async function verifyEffectiveAdminCredentials(
   }
 
   return (
-    (loginEmail === envEmail || normalizeStoredUserEmail(loginEmail) === envEmail) &&
-    password === envPassword
+    (safeEqualString(loginEmail, envEmail) ||
+      safeEqualString(normalizeStoredUserEmail(loginEmail), envEmail)) &&
+    safeEqualString(password, envPassword)
   );
 }
 

@@ -17,6 +17,7 @@ export function verifyAdminCredentials(email: string, password: string): boolean
     const weak = new Set(["", "password", "admin", "1234", "123456", "admin123"]);
     if (weak.has(adminPassword.toLowerCase()) || adminPassword.length < 8) return false;
   }
+  // Keep Edge-safe (no Node crypto); login path uses verifyEffectiveAdminCredentials.
   return email.trim().toLowerCase() === adminEmail && password === adminPassword;
 }
 

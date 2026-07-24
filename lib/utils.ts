@@ -203,13 +203,23 @@ export function isValidUrl(url: string): boolean {
   }
 }
 
+/** Mock data is for local demos only — never force it in production builds. */
+function isMockDataForced(): boolean {
+  if (process.env.NEXT_PUBLIC_USE_MOCK_DATA !== "true") return false;
+  if (process.env.NODE_ENV === "production") {
+    console.warn("[config] NEXT_PUBLIC_USE_MOCK_DATA is ignored in production");
+    return false;
+  }
+  return true;
+}
+
 export function isPostgresConfigured(): boolean {
-  if (process.env.NEXT_PUBLIC_USE_MOCK_DATA === "true") return false;
+  if (isMockDataForced()) return false;
   return Boolean(process.env.DATABASE_URL);
 }
 
 export function isSupabaseConfigured(): boolean {
-  if (process.env.NEXT_PUBLIC_USE_MOCK_DATA === "true") return false;
+  if (isMockDataForced()) return false;
   if (isPostgresConfigured()) return false;
   return Boolean(
     process.env.NEXT_PUBLIC_SUPABASE_URL &&

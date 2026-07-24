@@ -1,3 +1,4 @@
+import { decryptSecret, encryptSecret } from "@/lib/ai/crypto";
 import { getSql } from "@/lib/db/client";
 import { DEFAULT_SMS_SETTINGS } from "@/lib/sms/provider";
 import type {
@@ -32,6 +33,36 @@ function normalizeSmsSettings(value: unknown): SmsProviderSettings {
   };
 }
 
+function decryptApiKey(value: string | null | undefined): string | null {
+  if (!value?.trim()) return null;
+  try {
+    const plain = decryptSecret(value).trim();
+    return plain || null;
+  } catch {
+    return null;
+  }
+}
+
+function resolveStoredApiKey(
+  incoming: string | null | undefined,
+  existingEncryptedOrPlain: string | null
+): string | null {
+  if (incoming === "" || incoming === null) {
+    return null;
+  }
+  if (incoming?.trim()) {
+    return encryptSecret(incoming.trim());
+  }
+  if (!existingEncryptedOrPlain?.trim()) {
+    return null;
+  }
+  // Migrate legacy plaintext keys on any save that keeps the existing key.
+  if (!existingEncryptedOrPlain.startsWith("enc:v1:")) {
+    return encryptSecret(existingEncryptedOrPlain.trim());
+  }
+  return existingEncryptedOrPlain;
+}
+
 export function isSmsProviderConfigured(settings: SmsProviderSettings): boolean {
   return Boolean(
     settings.enabled &&
@@ -63,6 +94,15 @@ export async function pgGetSmsProviderSettings(): Promise<SmsProviderSettings> {
   return normalizeSmsSettings(rows[0].value);
 }
 
+/** Decrypted credentials for server-side SMS sends. Never expose to the client. */
+export async function pgGetSmsProviderSettingsForRuntime(): Promise<SmsProviderSettings> {
+  const settings = await pgGetSmsProviderSettings();
+  return {
+    ...settings,
+    apiKey: decryptApiKey(settings.apiKey),
+  };
+}
+
 export async function pgSaveSmsProviderSettings(
   data: Partial<SmsProviderSettings>
 ): Promise<{ success: true } | { success: false; error: string }> {
@@ -74,16 +114,12 @@ export async function pgSaveSmsProviderSettings(
   const next: SmsProviderSettings = {
     enabled: data.enabled ?? existing.enabled,
     provider,
-    apiKey: data.apiKey?.trim() ? data.apiKey.trim() : existing.apiKey || null,
+    apiKey: resolveStoredApiKey(data.apiKey, existing.apiKey ?? null),
     sender:
       data.sender !== undefined
         ? data.sender?.trim() || null
         : existing.sender || null,
   };
-
-  if (data.apiKey === "") {
-    next.apiKey = null;
-  }
 
   if (provider === "none") {
     next.enabled = false;

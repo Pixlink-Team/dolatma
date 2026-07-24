@@ -5,8 +5,13 @@ import {
   isValidTileCoordinate,
   parseTileYParam,
 } from "@/lib/map-tile-providers";
+import { consumeRateLimit, getRequestClientIp } from "@/lib/security/rate-limit";
 
 const TILE_FETCH_TIMEOUT_MS = 8_000;
+/** Leaflet can request many tiles quickly; keep headroom while blocking scrapers. */
+const TILE_RATE_LIMIT = 240;
+const TILE_RATE_WINDOW_MS = 60_000;
+const TILE_RATE_LOCK_MS = 60_000;
 
 async function fetchTileFromUpstream(url: string): Promise<Response | null> {
   const controller = new AbortController();
@@ -35,9 +40,25 @@ async function fetchTileFromUpstream(url: string): Promise<Response | null> {
 }
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ z: string; x: string; y: string }> }
 ) {
+  const clientIp = getRequestClientIp(request);
+  const rate = consumeRateLimit(`map-tiles:${clientIp}`, {
+    limit: TILE_RATE_LIMIT,
+    windowMs: TILE_RATE_WINDOW_MS,
+    lockMs: TILE_RATE_LOCK_MS,
+  });
+  if (!rate.ok) {
+    return NextResponse.json(
+      { error: "Too many tile requests" },
+      {
+        status: 429,
+        headers: { "Retry-After": String(rate.retryAfterSec) },
+      }
+    );
+  }
+
   const { z: rawZ, x: rawX, y: rawY } = await params;
 
   const z = Number.parseInt(rawZ, 10);

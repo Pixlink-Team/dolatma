@@ -90,7 +90,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "اقدام یافت نشد" }, { status: 404 });
   }
 
-  const fullAdmin = session ? isFullAdmin(session) : true;
+  const fullAdmin = isFullAdmin(session);
   let ownerUserId: string | null = null;
   let province = String(formData.get("province") ?? "").trim() || null;
   let city = String(formData.get("city") ?? "").trim() || null;

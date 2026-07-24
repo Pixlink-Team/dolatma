@@ -3,10 +3,15 @@ import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth/get-session";
 import { assertMagicMatchesKind } from "@/lib/security/file-magic";
+import { consumeRateLimit, getRequestClientIp } from "@/lib/security/rate-limit";
 import { getUploadPublicUrl, getUploadsDir, withFileAccessToken } from "@/lib/uploads";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
+
+const UPLOAD_RATE_LIMIT = 40;
+const UPLOAD_RATE_WINDOW_MS = 60_000;
+const UPLOAD_RATE_LOCK_MS = 5 * 60_000;
 
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 const MAX_VIDEO_BYTES = 100 * 1024 * 1024;
@@ -192,6 +197,23 @@ export async function POST(request: Request) {
   const session = await getAuthSession();
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const clientIp = getRequestClientIp(request);
+  const rateKey = `upload:${session.userId ?? session.type}:${clientIp}`;
+  const rate = consumeRateLimit(rateKey, {
+    limit: UPLOAD_RATE_LIMIT,
+    windowMs: UPLOAD_RATE_WINDOW_MS,
+    lockMs: UPLOAD_RATE_LOCK_MS,
+  });
+  if (!rate.ok) {
+    return NextResponse.json(
+      { error: "تعداد آپلود بیش از حد مجاز است. کمی بعد دوباره تلاش کنید." },
+      {
+        status: 429,
+        headers: { "Retry-After": String(rate.retryAfterSec) },
+      }
+    );
   }
 
   const formData = await request.formData();

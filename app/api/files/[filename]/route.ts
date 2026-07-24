@@ -1,7 +1,9 @@
-import { open, stat } from "fs/promises";
+import { createReadStream } from "fs";
+import { stat } from "fs/promises";
 import path from "path";
+import { Readable } from "stream";
 import { NextResponse } from "next/server";
-import { getAuthSession } from "@/lib/auth/get-session";
+import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
 import { verifyFileAccessToken } from "@/lib/auth/file-access-token";
 import {
   getOrCreateUploadThumbnail,
@@ -38,12 +40,79 @@ function sanitizeFilename(raw: string): string | null {
   return safeName;
 }
 
-async function canAccessFile(request: Request, filename: string): Promise<boolean> {
-  const session = await getAuthSession();
-  if (session) return true;
+const INLINE_CONTENT_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+  "video/mp4",
+  "video/webm",
+  "video/quicktime",
+  "audio/mpeg",
+  "audio/mp3",
+  "audio/wav",
+  "audio/ogg",
+  "audio/webm",
+  "audio/mp4",
+  "audio/x-m4a",
+  "audio/aac",
+]);
 
+/**
+ * Signed URLs are the primary access path (tokens added before serving data).
+ * Full admins may open unsigned paths for ops; other sessions alone cannot IDOR.
+ */
+async function canAccessFile(request: Request, filename: string): Promise<boolean> {
   const { searchParams } = new URL(request.url);
-  return verifyFileAccessToken(filename, searchParams.get("exp"), searchParams.get("sig"));
+  if (verifyFileAccessToken(filename, searchParams.get("exp"), searchParams.get("sig"))) {
+    return true;
+  }
+
+  const session = await getAuthSession();
+  return Boolean(session && isFullAdmin(session));
+}
+
+function contentDispositionFor(contentType: string, filename: string): string {
+  if (INLINE_CONTENT_TYPES.has(contentType)) return "inline";
+  return `attachment; filename="${filename.replace(/"/g, "")}"`;
+}
+
+function streamFileResponse(
+  filePath: string,
+  contentType: string,
+  options: {
+    status?: number;
+    start?: number;
+    end?: number;
+    contentLength: number;
+    fileSize: number;
+    isPartial: boolean;
+  }
+) {
+  const nodeStream =
+    options.start !== undefined && options.end !== undefined
+      ? createReadStream(filePath, { start: options.start, end: options.end })
+      : createReadStream(filePath);
+
+  const webStream = Readable.toWeb(nodeStream) as ReadableStream;
+
+  const headers: Record<string, string> = {
+    "Content-Type": contentType,
+    "Content-Length": String(options.contentLength),
+    "Content-Disposition": contentDispositionFor(contentType, path.basename(filePath)),
+    "Accept-Ranges": "bytes",
+    "Cache-Control": "private, max-age=3600",
+    "X-Content-Type-Options": "nosniff",
+  };
+
+  if (options.isPartial && options.start !== undefined && options.end !== undefined) {
+    headers["Content-Range"] = `bytes ${options.start}-${options.end}/${options.fileSize}`;
+  }
+
+  return new NextResponse(webStream, {
+    status: options.status ?? 200,
+    headers,
+  });
 }
 
 export async function GET(
@@ -78,6 +147,7 @@ export async function GET(
           headers: {
             "Content-Type": thumb.contentType,
             "Content-Length": String(thumb.buffer.length),
+            "Content-Disposition": "inline",
             "Cache-Control": "private, max-age=86400",
             "X-Content-Type-Options": "nosniff",
           },
@@ -105,44 +175,21 @@ export async function GET(
         }
 
         const chunkSize = end - start + 1;
-        const fileHandle = await open(filePath, "r");
-        const buffer = Buffer.alloc(chunkSize);
-
-        try {
-          await fileHandle.read(buffer, 0, chunkSize, start);
-        } finally {
-          await fileHandle.close();
-        }
-
-        return new NextResponse(buffer, {
+        return streamFileResponse(filePath, contentType, {
           status: 206,
-          headers: {
-            "Content-Type": contentType,
-            "Content-Length": String(chunkSize),
-            "Content-Range": `bytes ${start}-${end}/${fileSize}`,
-            "Accept-Ranges": "bytes",
-            "Cache-Control": "private, max-age=3600",
-          },
+          start,
+          end,
+          contentLength: chunkSize,
+          fileSize,
+          isPartial: true,
         });
       }
     }
 
-    const fileHandle = await open(filePath, "r");
-    const buffer = Buffer.alloc(fileSize);
-
-    try {
-      await fileHandle.read(buffer, 0, fileSize, 0);
-    } finally {
-      await fileHandle.close();
-    }
-
-    return new NextResponse(buffer, {
-      headers: {
-        "Content-Type": contentType,
-        "Content-Length": String(fileSize),
-        "Accept-Ranges": "bytes",
-        "Cache-Control": "private, max-age=3600",
-      },
+    return streamFileResponse(filePath, contentType, {
+      contentLength: fileSize,
+      fileSize,
+      isPartial: false,
     });
   } catch {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
