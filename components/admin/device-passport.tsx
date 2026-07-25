@@ -168,7 +168,7 @@ interface DevicePassportViewProps {
   initialPassport: DevicePassport;
   /** Manage کارکنان registry (admin + scoped subtree owners). */
   canManageStaff?: boolean;
-  /** Officials, capacities, and other admin-only passport tools. */
+  /** Officials, capacities, and other passport tools for device owners. */
   canManageAdminSections?: boolean;
 }
 

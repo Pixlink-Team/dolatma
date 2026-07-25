@@ -44,6 +44,24 @@ async function revalidateDevicePages(deviceId?: string) {
   if (deviceId) revalidatePath(`/admin/devices/${deviceId}`);
 }
 
+/** Full admin or scoped owner of this device's subtree may mutate passport data. */
+async function requireDeviceMutationAccess(deviceId: string) {
+  const session = await getAuthSession();
+  if (!session || !canAccessDevicesPage(session)) {
+    return { ok: false as const, error: "Unauthorized" };
+  }
+  if (!isPostgresConfigured()) {
+    return { ok: false as const, error: "Database required" };
+  }
+  if (!isFullAdmin(session)) {
+    const allowed = await canMutateDevice(session, deviceId);
+    if (!allowed) {
+      return { ok: false as const, error: "دسترسی به این دستگاه ندارید" };
+    }
+  }
+  return { ok: true as const, session };
+}
+
 export async function listDevicesAction(options?: {
   parentId?: string | null;
   rootsOnly?: boolean;
@@ -219,11 +237,8 @@ export async function saveDeviceOfficialAction(data: {
   userId?: string | null;
   startedAt?: string | null;
 }) {
-  const session = await getAuthSession();
-  if (!session || !isFullAdmin(session)) {
-    return { success: false as const, error: "Unauthorized" };
-  }
-  if (!isPostgresConfigured()) return { success: false as const, error: "Database required" };
+  const access = await requireDeviceMutationAccess(data.deviceId);
+  if (!access.ok) return { success: false as const, error: access.error };
 
   const result = await pgSaveDeviceOfficial(data);
   if (result.success) await revalidateDevicePages(data.deviceId);
@@ -231,11 +246,8 @@ export async function saveDeviceOfficialAction(data: {
 }
 
 export async function endDeviceOfficialAction(id: string, deviceId: string) {
-  const session = await getAuthSession();
-  if (!session || !isFullAdmin(session)) {
-    return { success: false as const, error: "Unauthorized" };
-  }
-  if (!isPostgresConfigured()) return { success: false as const, error: "Database required" };
+  const access = await requireDeviceMutationAccess(deviceId);
+  if (!access.ok) return { success: false as const, error: access.error };
 
   const result = await pgEndDeviceOfficial(id);
   if (result.success) await revalidateDevicePages(deviceId);
@@ -254,18 +266,8 @@ export async function saveDeviceStaffAction(data: {
   education: DeviceStaffEducation;
   isActive?: boolean;
 }) {
-  const session = await getAuthSession();
-  if (!session || !canAccessDevicesPage(session)) {
-    return { success: false as const, error: "Unauthorized" };
-  }
-  if (!isPostgresConfigured()) return { success: false as const, error: "Database required" };
-
-  if (!isFullAdmin(session)) {
-    const allowed = await canMutateDevice(session, data.deviceId);
-    if (!allowed) {
-      return { success: false as const, error: "دسترسی به این دستگاه ندارید" };
-    }
-  }
+  const access = await requireDeviceMutationAccess(data.deviceId);
+  if (!access.ok) return { success: false as const, error: access.error };
 
   const result = await pgSaveDeviceStaff(data);
   if (result.success) await revalidateDevicePages(data.deviceId);
@@ -273,18 +275,8 @@ export async function saveDeviceStaffAction(data: {
 }
 
 export async function deleteDeviceStaffAction(id: string, deviceId: string) {
-  const session = await getAuthSession();
-  if (!session || !canAccessDevicesPage(session)) {
-    return { success: false as const, error: "Unauthorized" };
-  }
-  if (!isPostgresConfigured()) return { success: false as const, error: "Database required" };
-
-  if (!isFullAdmin(session)) {
-    const allowed = await canMutateDevice(session, deviceId);
-    if (!allowed) {
-      return { success: false as const, error: "دسترسی به این دستگاه ندارید" };
-    }
-  }
+  const access = await requireDeviceMutationAccess(deviceId);
+  if (!access.ok) return { success: false as const, error: access.error };
 
   const result = await pgDeleteDeviceStaff(id);
   if (result.success) await revalidateDevicePages(deviceId);
@@ -305,11 +297,8 @@ export async function saveDeviceCapacityAction(data: {
   address?: string | null;
   details?: Record<string, unknown> | null;
 }) {
-  const session = await getAuthSession();
-  if (!session || !isFullAdmin(session)) {
-    return { success: false as const, error: "Unauthorized" };
-  }
-  if (!isPostgresConfigured()) return { success: false as const, error: "Database required" };
+  const access = await requireDeviceMutationAccess(data.deviceId);
+  if (!access.ok) return { success: false as const, error: access.error };
 
   const result = await pgSaveDeviceCapacity(data);
   if (result.success) await revalidateDevicePages(data.deviceId);
@@ -317,11 +306,8 @@ export async function saveDeviceCapacityAction(data: {
 }
 
 export async function deleteDeviceCapacityAction(id: string, deviceId: string) {
-  const session = await getAuthSession();
-  if (!session || !isFullAdmin(session)) {
-    return { success: false as const, error: "Unauthorized" };
-  }
-  if (!isPostgresConfigured()) return { success: false as const, error: "Database required" };
+  const access = await requireDeviceMutationAccess(deviceId);
+  if (!access.ok) return { success: false as const, error: access.error };
 
   const result = await pgDeleteDeviceCapacity(id);
   if (result.success) await revalidateDevicePages(deviceId);

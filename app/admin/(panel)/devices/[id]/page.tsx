@@ -15,8 +15,7 @@ export default async function DevicePassportPage({ params }: PageProps) {
   if (!canAccessDevicesPage(session)) redirect("/admin");
 
   const { id } = await params;
-  const fullAdmin = isFullAdmin(session);
-  if (!fullAdmin) {
+  if (!isFullAdmin(session)) {
     const allowed = await canMutateDevice(session, id);
     if (!allowed) redirect("/admin/ministries");
   }
@@ -32,11 +31,12 @@ export default async function DevicePassportPage({ params }: PageProps) {
   }
   if (!passport) notFound();
 
+  // Anyone who reaches this page already passed full-admin or subtree ownership checks.
   return (
     <DevicePassportView
       initialPassport={passport}
       canManageStaff
-      canManageAdminSections={fullAdmin}
+      canManageAdminSections
     />
   );
 }
