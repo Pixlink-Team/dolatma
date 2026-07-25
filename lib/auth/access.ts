@@ -124,18 +124,15 @@ export function canScoreContent(
   );
 }
 
-/** Whether an org user may manage users under their device subtree. */
-export function canManageSubtreeUsers(
-  session: AuthSession,
-  permissions?: ContributorPermissions | null
-): boolean {
+/**
+ * Whether an org user may manage users under their device subtree.
+ * All org positions may create/edit subtree users; section grants are still
+ * capped to what the actor themselves has (see limitCampaignPermissionsToGrantor).
+ */
+export function canManageSubtreeUsers(session: AuthSession): boolean {
   if (isFullAdmin(session)) return true;
   if (!isOrgUserRole(session.role)) return false;
-  return resolveOrgManagementFlag(
-    permissions,
-    "manageSubtreeUsers",
-    session.manageSubtreeUsers
-  );
+  return true;
 }
 
 /** Whether an org user may create/edit/delete devices in their subtree. */

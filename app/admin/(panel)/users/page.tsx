@@ -50,6 +50,7 @@ export default async function UsersPage() {
         parentUserId={session.userId}
         parentMinistryId={parentUser?.ministryId ?? null}
         parentOrganizationId={parentUser?.organizationId ?? null}
+        grantorCampaignPermissions={parentUser?.campaignPermissions ?? {}}
       />
     );
   }

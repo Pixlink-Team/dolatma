@@ -183,3 +183,54 @@ export const deniedContributorPermissions = (): ContributorPermissions => ({
   scoreSubtreeContent: false,
   manageSubtreeDevices: false,
 });
+
+export const allContributorPermissionKeys = Object.keys(
+  deniedContributorPermissions()
+) as ContributorPermissionKey[];
+
+/**
+ * A granter may only turn on flags they themselves have.
+ * Cascades down the org tree: nobody can grant more than they own.
+ */
+export function intersectContributorPermissions(
+  requested: ContributorPermissions,
+  grantor: ContributorPermissions
+): ContributorPermissions {
+  const result = deniedContributorPermissions();
+  for (const key of allContributorPermissionKeys) {
+    result[key] = Boolean(requested[key] && grantor[key]);
+  }
+  return result;
+}
+
+/** Clamp per-campaign permission maps to what the grantor can actually give. */
+export function limitCampaignPermissionsToGrantor(
+  requested: Record<string, ContributorPermissions> | undefined,
+  grantor: Record<string, ContributorPermissions> | undefined,
+  campaignIds: string[]
+): Record<string, ContributorPermissions> {
+  const out: Record<string, ContributorPermissions> = {};
+  for (const campaignId of campaignIds) {
+    const grantorPerms = grantor?.[campaignId];
+    if (!grantorPerms) {
+      out[campaignId] = deniedContributorPermissions();
+      continue;
+    }
+    const normalizedGrantor = normalizeContributorPermissions(grantorPerms);
+    const normalizedRequested = normalizeContributorPermissions(
+      requested?.[campaignId] ?? normalizedGrantor
+    );
+    out[campaignId] = intersectContributorPermissions(
+      normalizedRequested,
+      normalizedGrantor
+    );
+  }
+  return out;
+}
+
+/** Keys the grantor may expose in the UI (already true on their own access). */
+export function grantablePermissionKeys(
+  grantor: ContributorPermissions
+): ContributorPermissionKey[] {
+  return allContributorPermissionKeys.filter((key) => Boolean(grantor[key]));
+}

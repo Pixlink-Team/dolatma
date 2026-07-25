@@ -32,6 +32,8 @@ import { saveOrganizationAction } from "@/lib/actions/ministry-actions";
 import {
   contributorPermissionLabels,
   defaultContributorPermissions,
+  deniedContributorPermissions,
+  intersectContributorPermissions,
   normalizeContributorPermissions,
   panelManagementKeys,
   panelManagementPermissionLabels,
@@ -76,11 +78,7 @@ const permissionKeys = Object.keys(contributorPermissionLabels) as ContributorPe
 const rolesWithCampaignAccess: AdminRole[] = ["org_user", "client"];
 
 function isSubtreeParentUser(user: AdminUser): boolean {
-  if (!isOrgUserRole(user.role)) return false;
-  if (user.orgRole === "primary" || user.orgRole === "deputy") return true;
-  const campaignIds = user.campaignIds ?? [];
-  const permissions = user.campaignPermissions ?? {};
-  return campaignIds.some((id) => Boolean(permissions[id]?.manageSubtreeUsers));
+  return isOrgUserRole(user.role);
 }
 
 function compareUsersByName(a: AdminUser, b: AdminUser): number {
@@ -97,6 +95,11 @@ interface UsersAdminProps {
   parentMinistryId?: string | null;
   /** When set, subunit managers are locked to their own org subtree (not peer ministry orgs). */
   parentOrganizationId?: string | null;
+  /**
+   * Max permissions a subtree manager may grant (their own campaign access).
+   * Admin/full mode leaves this unset (no cap).
+   */
+  grantorCampaignPermissions?: Record<string, ContributorPermissions> | null;
 }
 
 export function UsersAdmin({
@@ -107,6 +110,7 @@ export function UsersAdmin({
   parentUserId,
   parentMinistryId = null,
   parentOrganizationId = null,
+  grantorCampaignPermissions = null,
 }: UsersAdminProps) {
   const isFullMode = mode === "full";
   const isSubUsersMode = mode === "sub_users";
@@ -114,6 +118,7 @@ export function UsersAdmin({
   const isMinistryOnlyMode = mode === "ministry";
   const canManageUsers = isFullMode || isSubUsersMode;
   const isScopedToOwnOrganization = isSubUsersMode && Boolean(parentOrganizationId);
+  const permissionCapActive = isSubUsersMode && Boolean(grantorCampaignPermissions);
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [rows, setRows] = useState(initialUsers);
@@ -265,6 +270,22 @@ export function UsersAdmin({
     return options;
   }, [rows, selectedParentUserId]);
 
+  const getGrantorPermissions = (campaignId: string): ContributorPermissions | null => {
+    if (!permissionCapActive || !grantorCampaignPermissions) return null;
+    const raw = grantorCampaignPermissions[campaignId];
+    if (!raw) return deniedContributorPermissions();
+    return normalizeContributorPermissions(raw);
+  };
+
+  const clampToGrantor = (
+    campaignId: string,
+    permissions: ContributorPermissions
+  ): ContributorPermissions => {
+    const grantor = getGrantorPermissions(campaignId);
+    if (!grantor) return permissions;
+    return intersectContributorPermissions(permissions, grantor);
+  };
+
   const bindSoleCampaignAccess = (preset: ContributorPermissions) => {
     if (soleCampaignIds.length === 0) {
       form.setValue("campaignIds", []);
@@ -273,12 +294,66 @@ export function UsersAdmin({
     }
     form.setValue("campaignIds", soleCampaignIds);
     setCampaignPermissions(
-      Object.fromEntries(soleCampaignIds.map((campaignId) => [campaignId, { ...preset }]))
+      Object.fromEntries(
+        soleCampaignIds.map((campaignId) => [
+          campaignId,
+          clampToGrantor(campaignId, { ...preset }),
+        ])
+      )
     );
   };
 
   const applyOrgRolePreset = (orgRole: OrgRole) => {
     bindSoleCampaignAccess(getOrgRolePermissionPreset(orgRole));
+  };
+
+  /** Enable every section the current actor is allowed to grant (one click). */
+  const enableAllGrantablePermissions = (campaignId: string) => {
+    const grantor = getGrantorPermissions(campaignId);
+    if (grantor) {
+      setCampaignPermissions((prev) => ({
+        ...prev,
+        [campaignId]: { ...grantor },
+      }));
+      return;
+    }
+    const allOn = deniedContributorPermissions();
+    for (const key of [
+      ...permissionKeys,
+      ...panelManagementKeys,
+      ...subtreeManagementKeys,
+    ] as ContributorPermissionKey[]) {
+      allOn[key] = true;
+    }
+    setCampaignPermissions((prev) => ({
+      ...prev,
+      [campaignId]: allOn,
+    }));
+  };
+
+  const disableAllPermissions = (campaignId: string) => {
+    setCampaignPermissions((prev) => ({
+      ...prev,
+      [campaignId]: deniedContributorPermissions(),
+    }));
+  };
+
+  const visiblePermissionKeys = (campaignId: string): ContributorPermissionKey[] => {
+    const grantor = getGrantorPermissions(campaignId);
+    if (!grantor) return permissionKeys;
+    return permissionKeys.filter((key) => grantor[key]);
+  };
+
+  const visiblePanelKeys = (campaignId: string): ContributorPermissionKey[] => {
+    const grantor = getGrantorPermissions(campaignId);
+    if (!grantor) return [...panelManagementKeys];
+    return panelManagementKeys.filter((key) => grantor[key]);
+  };
+
+  const visibleSubtreeKeys = (campaignId: string): ContributorPermissionKey[] => {
+    const grantor = getGrantorPermissions(campaignId);
+    if (!grantor) return [...subtreeManagementKeys];
+    return subtreeManagementKeys.filter((key) => grantor[key]);
   };
 
   const organizationOptions = useMemo(() => {
@@ -415,6 +490,11 @@ export function UsersAdmin({
   };
 
   const togglePermission = (campaignId: string, key: ContributorPermissionKey, value: boolean) => {
+    const grantor = getGrantorPermissions(campaignId);
+    if (grantor && value && !grantor[key]) {
+      toast.error("نمی‌توانید دسترسی‌ای را بدهید که خودتان ندارید");
+      return;
+    }
     setCampaignPermissions((prev) => ({
       ...prev,
       [campaignId]: {
@@ -567,9 +647,22 @@ export function UsersAdmin({
 
     startTransition(async () => {
       const nextCampaignIds = rolesWithCampaignAccess.includes(role) ? soleCampaignIds : [];
-      const nextCampaignPermissions = rolesWithCampaignAccess.includes(role)
+      let nextCampaignPermissions = rolesWithCampaignAccess.includes(role)
         ? campaignPermissions
         : {};
+      if (permissionCapActive && rolesWithCampaignAccess.includes(role)) {
+        nextCampaignPermissions = Object.fromEntries(
+          nextCampaignIds.map((campaignId) => [
+            campaignId,
+            clampToGrantor(
+              campaignId,
+              normalizeContributorPermissions(
+                nextCampaignPermissions[campaignId] ?? deniedContributorPermissions()
+              )
+            ),
+          ])
+        );
+      }
       const existing = rows.find((row) => row.id === editingId);
       const resolvedEmail = resolveStoredUserEmail(data.email, existing?.email);
       const result = await saveUserAction({
@@ -642,7 +735,13 @@ export function UsersAdmin({
     setEditingId(null);
     resetOrganizationCreate();
     const defaultOrgRole: OrgRole = "pr";
-    bindSoleCampaignAccess(getOrgRolePermissionPreset(defaultOrgRole));
+    if (permissionCapActive && primaryCampaignId) {
+      const grantor = getGrantorPermissions(primaryCampaignId);
+      // Child starts with everything the parent may grant — no one-by-one toggles required.
+      bindSoleCampaignAccess(grantor ?? getOrgRolePermissionPreset(defaultOrgRole));
+    } else {
+      bindSoleCampaignAccess(getOrgRolePermissionPreset(defaultOrgRole));
+    }
     form.reset({
       email: "",
       name: "",
@@ -685,7 +784,10 @@ export function UsersAdmin({
         Object.fromEntries(
           soleCampaignIds.map((campaignId) => [
             campaignId,
-            normalizeContributorPermissions(permissions[campaignId] ?? fallback),
+            clampToGrantor(
+              campaignId,
+              normalizeContributorPermissions(permissions[campaignId] ?? fallback)
+            ),
           ])
         )
       );
@@ -1448,35 +1550,84 @@ export function UsersAdmin({
 
                 {rolesWithCampaignAccess.includes(selectedRole) && primaryCampaignId ? (
                   <div className="space-y-3">
-                    <Label>دسترسی به بخش‌های پنل</Label>
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                      <Label>دسترسی به بخش‌های پنل</Label>
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            enableAllGrantablePermissions(primaryCampaignId);
+                            toast.success("همه دسترسی‌های مجاز فعال شد");
+                          }}
+                        >
+                          فعال‌سازی همه
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            disableAllPermissions(primaryCampaignId);
+                            toast.success("همه دسترسی‌ها خاموش شد");
+                          }}
+                        >
+                          خاموش کردن همه
+                        </Button>
+                      </div>
+                    </div>
+                    {permissionCapActive ? (
+                      <p className="text-xs text-muted-foreground">
+                        فقط دسترسی‌هایی را می‌توانید بدهید که خودتان دارید؛ این محدودیت تا پایین درخت ادامه دارد.
+                      </p>
+                    ) : null}
                     {(() => {
                       const campaignId = primaryCampaignId;
                       const permissions = normalizeContributorPermissions(
                         campaignPermissions[campaignId] ?? defaultContributorPermissions()
                       );
+                      const contentKeys = visiblePermissionKeys(campaignId);
+                      const panelKeys = visiblePanelKeys(campaignId);
+                      const subtreeKeys = visibleSubtreeKeys(campaignId);
+                      if (
+                        permissionCapActive &&
+                        contentKeys.length === 0 &&
+                        panelKeys.length === 0 &&
+                        subtreeKeys.length === 0
+                      ) {
+                        return (
+                          <p className="text-sm text-destructive">
+                            شما هیچ دسترسی پنلی ندارید؛ ابتدا از مدیر بالادست دسترسی بگیرید.
+                          </p>
+                        );
+                      }
                       return (
                         <div className="rounded-lg border p-3 space-y-3">
-                          <div className="space-y-2">
-                            <p className="text-xs font-medium text-muted-foreground">بخش‌های محتوا</p>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                              {permissionKeys.map((key) => (
-                                <label
-                                  key={key}
-                                  className="flex items-center justify-between gap-3 text-sm rounded-md border px-3 py-2"
-                                >
-                                  <span>{contributorPermissionLabels[key]}</span>
-                                  <Switch
-                                    checked={permissions[key]}
-                                    onCheckedChange={(value) =>
-                                      togglePermission(campaignId, key, value)
-                                    }
-                                  />
-                                </label>
-                              ))}
+                          {contentKeys.length > 0 ? (
+                            <div className="space-y-2">
+                              <p className="text-xs font-medium text-muted-foreground">بخش‌های محتوا</p>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                {contentKeys.map((key) => (
+                                  <label
+                                    key={key}
+                                    className="flex items-center justify-between gap-3 text-sm rounded-md border px-3 py-2"
+                                  >
+                                    <span>{contributorPermissionLabels[key]}</span>
+                                    <Switch
+                                      checked={permissions[key]}
+                                      onCheckedChange={(value) =>
+                                        togglePermission(campaignId, key, value)
+                                      }
+                                    />
+                                  </label>
+                                ))}
+                              </div>
                             </div>
-                          </div>
+                          ) : null}
                           {selectedRole === "org_user" && (
                             <>
+                            {panelKeys.length > 0 ? (
                             <div className="space-y-2">
                               <p className="text-xs font-medium text-muted-foreground">
                                 بخش‌های تنظیمات و مدیریت
@@ -1485,12 +1636,12 @@ export function UsersAdmin({
                                 به‌طور پیش‌فرض خاموش است؛ فقط در صورت نیاز فعال کنید.
                               </p>
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                {panelManagementKeys.map((key) => (
+                                {panelKeys.map((key) => (
                                   <label
                                     key={key}
                                     className="flex items-center justify-between gap-3 text-sm rounded-md border px-3 py-2"
                                   >
-                                    <span>{panelManagementPermissionLabels[key]}</span>
+                                    <span>{panelManagementPermissionLabels[key as keyof typeof panelManagementPermissionLabels]}</span>
                                     <Switch
                                       checked={permissions[key]}
                                       onCheckedChange={(value) =>
@@ -1501,17 +1652,19 @@ export function UsersAdmin({
                                 ))}
                               </div>
                             </div>
+                            ) : null}
+                            {subtreeKeys.length > 0 ? (
                             <div className="space-y-2">
                               <p className="text-xs font-medium text-muted-foreground">
                                 قابلیت‌های مدیریتی زیرشاخه
                               </p>
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                {subtreeManagementKeys.map((key) => (
+                                {subtreeKeys.map((key) => (
                                   <label
                                     key={key}
                                     className="flex items-center justify-between gap-3 text-sm rounded-md border px-3 py-2"
                                   >
-                                    <span>{subtreeManagementPermissionLabels[key]}</span>
+                                    <span>{subtreeManagementPermissionLabels[key as keyof typeof subtreeManagementPermissionLabels]}</span>
                                     <Switch
                                       checked={permissions[key]}
                                       onCheckedChange={(value) =>
@@ -1522,6 +1675,7 @@ export function UsersAdmin({
                                 ))}
                               </div>
                             </div>
+                            ) : null}
                             </>
                           )}
                         </div>
@@ -1560,7 +1714,43 @@ export function UsersAdmin({
             </p>
 
             <div className="space-y-2">
-              <Label>دسترسی به بخش‌های پنل</Label>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <Label>دسترسی به بخش‌های پنل</Label>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setBulkPermissions((prev) => {
+                        const next = { ...prev };
+                        for (const key of [
+                          ...permissionKeys,
+                          ...panelManagementKeys,
+                          ...subtreeManagementKeys,
+                        ]) {
+                          next[key] = true;
+                        }
+                        return next;
+                      });
+                      toast.success("همه دسترسی‌ها فعال شد");
+                    }}
+                  >
+                    فعال‌سازی همه
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setBulkPermissions(deniedContributorPermissions());
+                      toast.success("همه دسترسی‌ها خاموش شد");
+                    }}
+                  >
+                    خاموش کردن همه
+                  </Button>
+                </div>
+              </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {permissionKeys.map((key) => (
                   <label

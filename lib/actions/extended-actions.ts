@@ -12,6 +12,7 @@ import {
 } from "@/lib/auth/require-tutorial-completion";
 import {
   hasContributorPermission,
+  limitCampaignPermissionsToGrantor,
   type ContributorPermissions,
 } from "@/lib/contributor-permissions";
 import { hashPassword } from "@/lib/auth/password";
@@ -684,8 +685,16 @@ export async function saveUserAction(data: {
     parentUserId = session.userId;
     ministryId = actor.ministryId ?? null;
     organizationId = data.organizationId ?? actor.organizationId ?? null;
-    campaignIds = campaignIds?.length ? campaignIds : actor.campaignIds;
-    campaignPermissions = campaignPermissions ?? actor.campaignPermissions;
+    const actorCampaignIds = actor.campaignIds ?? [];
+    const requestedCampaignIds = campaignIds?.length ? campaignIds : actorCampaignIds;
+    // Never assign campaigns the actor themselves does not belong to.
+    campaignIds = requestedCampaignIds.filter((id) => actorCampaignIds.includes(id));
+    // Cannot grant section access the actor does not have — cascades down the tree.
+    campaignPermissions = limitCampaignPermissionsToGrantor(
+      campaignPermissions ?? actor.campaignPermissions,
+      actor.campaignPermissions,
+      campaignIds
+    );
 
     // Subunit managers may only assign their home org or device-tree descendants.
     if (actor.organizationId) {
