@@ -6,6 +6,7 @@ import {
 } from "@/lib/contributor-permissions";
 import { pgGetUserById } from "@/lib/db/repository-extended";
 import {
+  pgGetDeviceById,
   pgIsDeviceInSubtree,
   pgListDevices,
   pgListDeviceSubtree,
@@ -32,7 +33,33 @@ export async function getSessionHomeDeviceId(
   if (!session.userId || !isPostgresConfigured()) return null;
   const user = await pgGetUserById(session.userId);
   if (!user) return null;
-  return user.deviceId ?? user.organizationId ?? user.ministryId ?? null;
+
+  // Canonical attachment: org node wins over ministry root.
+  const canonical =
+    user.organizationId?.trim() || user.ministryId?.trim() || null;
+  const storedDeviceId = user.deviceId?.trim() || null;
+
+  // Trust device_id only when it matches the org/ministry attachment (or when
+  // those fields are empty). A stale device_id must not steal home resolution.
+  if (storedDeviceId && (!canonical || storedDeviceId === canonical)) {
+    const device = await pgGetDeviceById(storedDeviceId);
+    if (device) return storedDeviceId;
+  }
+
+  if (canonical) {
+    const device = await pgGetDeviceById(canonical);
+    if (device) return canonical;
+    // Keep canonical even if the row is temporarily missing so subtree checks
+    // still resolve to the intended node after migration/repair.
+    return canonical;
+  }
+
+  if (storedDeviceId) {
+    const device = await pgGetDeviceById(storedDeviceId);
+    if (device) return storedDeviceId;
+  }
+
+  return null;
 }
 
 export async function listAccessibleDevices(

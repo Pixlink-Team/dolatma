@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "cc28ca2b15dbce4efb26e7eb679802c329d3189c",
+      "committedAt": "2026-07-25T14:42:15+03:30",
+      "title": "پیگیری تولید محتوا برای هر دستورکار و ساخت موضوع محتوا از دستورکار",
+      "subject": "Track content production per directive topic"
+    },
+    {
       "hash": "5f329bf1c5ee9bfced7e8f3321e281b664e8f46f",
       "committedAt": "2026-07-25T14:20:53+03:30",
       "title": "نمایش پیشرفت راه‌اندازی با نمودار دایره‌ای و لیست مأموریت‌ها",

@@ -148,7 +148,6 @@ export function ProfileSettingsForm({
         city={selectedCity ?? ""}
         onProvinceChange={(value) => form.setValue("province", value)}
         onCityChange={(value) => form.setValue("city", value)}
-        hideCity
       />
 
       <Button type="submit" disabled={isPending}>

@@ -595,11 +595,13 @@ export async function saveProfileAction(data: {
     return { success: false, error: "کاربر یافت نشد" };
   }
 
+  // Preserve org/device placement — profile edits must not clear ministry linkage.
   const result = await pgExt.pgSaveUser({
     id: session.userId,
     email: user.email,
     name: data.name,
     role: user.role,
+    orgRole: user.orgRole ?? null,
     province: data.province,
     city: data.city,
     region: user.region,
@@ -607,6 +609,9 @@ export async function saveProfileAction(data: {
     accountManagerName: data.accountManagerName,
     alternateContactName: data.alternateContactName,
     alternateContactPhone: data.alternateContactPhone,
+    ministryId: user.ministryId ?? null,
+    organizationId: user.organizationId ?? null,
+    parentUserId: user.parentUserId ?? null,
     campaignIds: user.campaignIds,
     campaignPermissions: user.campaignPermissions,
   });
