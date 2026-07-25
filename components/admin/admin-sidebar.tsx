@@ -37,7 +37,7 @@ import {
   Video,
   X,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -126,6 +126,9 @@ const managementNavHrefs = new Set([
 
 const DIRECTIVES_HREF = "/admin/directives";
 
+/** Survives remounts so the right-side menu keeps its scroll after navigation. */
+let savedSidebarScrollTop = 0;
+
 export function AdminSidebar() {
   const pathname = usePathname();
   const router = useRouter();
@@ -137,6 +140,7 @@ export function AdminSidebar() {
   const [permissions, setPermissions] = useState<ContributorPermissions | null>(null);
   const [mediaCommandOpen, setMediaCommandOpen] = useState(false);
   const [monitoringOpen, setMonitoringOpen] = useState(false);
+  const desktopNavRef = useRef<HTMLElement>(null);
   const { campaignId, campaigns, currentCampaign, setCampaignId } = useAdminCampaign();
 
   useEffect(() => {
@@ -168,6 +172,21 @@ export function AdminSidebar() {
       setMonitoringOpen(true);
     }
   }, [pathname]);
+
+  useEffect(() => {
+    const el = desktopNavRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      savedSidebarScrollTop = el.scrollTop;
+    };
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => el.removeEventListener("scroll", onScroll);
+  }, []);
+
+  useLayoutEffect(() => {
+    const el = desktopNavRef.current;
+    if (el) el.scrollTop = savedSidebarScrollTop;
+  }, [pathname, mediaCommandOpen, monitoringOpen]);
 
   const navItems = allNavItems.filter((item) => {
     if (item.alwaysVisible) return true;
@@ -214,7 +233,8 @@ export function AdminSidebar() {
     router.refresh();
   };
 
-  const NavContent = () => (
+  // Render helper (not a nested component) so the <nav> DOM is not remounted on route changes.
+  const renderNavContent = (navRef?: RefObject<HTMLElement | null>) => (
     <>
       <div className="p-4 border-b space-y-3">
         <Link href="/admin" className="font-bold text-lg block">پنل مدیریت</Link>
@@ -239,7 +259,7 @@ export function AdminSidebar() {
           </div>
         )}
       </div>
-      <nav className="flex-1 overflow-y-auto p-3">
+      <nav ref={navRef} className="flex-1 overflow-y-auto p-3">
         {showDirectivesAlert && directivesNavItem && (
           <div className="mb-3">
             <Link
@@ -462,13 +482,13 @@ export function AdminSidebar() {
             >
               <X className="h-4 w-4" />
             </Button>
-            <NavContent />
+            {renderNavContent()}
           </aside>
         </div>
       )}
 
       <aside className="hidden lg:fixed lg:inset-y-0 lg:right-0 lg:z-[80] lg:flex lg:w-64 lg:flex-col border-l bg-card">
-        <NavContent />
+        {renderNavContent(desktopNavRef)}
       </aside>
     </>
   );
