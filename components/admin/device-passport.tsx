@@ -78,6 +78,8 @@ import {
 import { adminHref } from "@/lib/utils";
 import { useAdminCampaign } from "@/components/admin/admin-campaign-provider";
 import { PersianDateInput } from "@/components/ui/persian-date-input";
+import { MediaUpload } from "@/components/ui/media-upload";
+import { stripFileAccessToken } from "@/lib/uploads";
 
 const ORG_ROLE_SORT_ORDER: Record<OrgRole, number> = {
   primary: 0,
@@ -313,7 +315,7 @@ export function DevicePassportView({
         id: device.id,
         name: data.name,
         shortName: data.shortName || null,
-        logoUrl: data.logoUrl || null,
+        logoUrl: stripFileAccessToken(data.logoUrl || "") || null,
         type: data.type as DeviceType,
         parentId: device.parentId,
         province: data.province || null,
@@ -937,7 +939,19 @@ export function DevicePassportView({
           <form className="space-y-3" onSubmit={onSaveProfile}>
             <Field label="نام کامل"><Input {...profileForm.register("name")} /></Field>
             <Field label="نام کوتاه"><Input {...profileForm.register("shortName")} /></Field>
-            <Field label="آدرس لوگو"><Input {...profileForm.register("logoUrl")} /></Field>
+            <Field label="لوگو">
+              <MediaUpload
+                value={profileForm.watch("logoUrl") || ""}
+                onChange={(url) => profileForm.setValue("logoUrl", url)}
+                kind="image"
+                accept="image/jpeg,image/png,image/webp"
+                showLinkInput={false}
+                optimizeBeforeUpload={{ maxEdge: 512, targetMaxBytes: 150 * 1024 }}
+              />
+              <p className="mt-1 text-xs text-muted-foreground">
+                تصویر را بکشید و رها کنید؛ اندازه و حجم به‌صورت خودکار بهینه می‌شود.
+              </p>
+            </Field>
             {!canChangeMinistry ? (
               <Field label="وزارتخانه / محل قرارگیری">
                 <Input

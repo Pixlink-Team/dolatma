@@ -18,6 +18,10 @@ import {
   captureAndUploadVideoCoverFromUrl,
   videoNeedsAutoCover,
 } from "@/lib/client/video-cover";
+import {
+  optimizeImageFile,
+  type OptimizeImageOptions,
+} from "@/lib/client/optimize-image";
 import { forceClientReauth, redirectIfSessionExpired } from "@/lib/auth/client-reauth";
 import { Loader2, Trash2, Upload } from "lucide-react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
@@ -41,6 +45,8 @@ interface MediaUploadProps {
   onCoverImageUrlChange?: (url: string) => void;
   /** Auto-generate cover from second 3 for direct video uploads (default: true for video). */
   autoVideoCover?: boolean;
+  /** Resize/compress images client-side before upload (logos, icons, etc.). */
+  optimizeBeforeUpload?: boolean | OptimizeImageOptions;
   label?: string;
   kind?: "image" | "video" | "audio";
   uploadKind?: "image" | "video" | "audio" | "activity-video" | "raw-image" | "raw-video";
@@ -63,6 +69,7 @@ export function MediaUpload({
   coverImageUrl,
   onCoverImageUrlChange,
   autoVideoCover,
+  optimizeBeforeUpload = false,
   label,
   kind = "image",
   uploadKind,
@@ -162,8 +169,19 @@ export function MediaUpload({
 
     setUploading(true);
     try {
+      let uploadFile = file;
+      if (optimizeBeforeUpload && kind === "image" && file.type.startsWith("image/")) {
+        const optimizeOptions =
+          typeof optimizeBeforeUpload === "object" ? optimizeBeforeUpload : undefined;
+        try {
+          uploadFile = await optimizeImageFile(file, optimizeOptions);
+        } catch (error) {
+          console.warn("Image optimization failed, uploading original:", error);
+        }
+      }
+
       const formData = new FormData();
-      formData.append("file", file);
+      formData.append("file", uploadFile);
       formData.append("kind", uploadKind ?? kind);
 
       const response = await fetch("/api/upload", {
@@ -189,15 +207,19 @@ export function MediaUpload({
       };
       onChange(data.url);
       onUploaded?.(data.url);
-      onUploadedFile?.(file, data.url);
+      onUploadedFile?.(uploadFile, data.url);
       onUploadedMeta?.({
         url: data.url,
-        fileName: data.fileName ?? file.name,
-        fileSize: data.fileSize ?? file.size,
-        mimeType: data.mimeType ?? file.type,
+        fileName: data.fileName ?? uploadFile.name,
+        fileSize: data.fileSize ?? uploadFile.size,
+        mimeType: data.mimeType ?? uploadFile.type,
       });
       setShowLinkEditor(false);
-      toast.success("فایل با موفقیت آپلود شد");
+      toast.success(
+        uploadFile !== file && uploadFile.size < file.size
+          ? "تصویر آپلود و بهینه شد"
+          : "فایل با موفقیت آپلود شد"
+      );
 
       if (kind === "video" && file.type.startsWith("video/")) {
         await tryGenerateCoverFromFile(file, data.url);
