@@ -1,6 +1,18 @@
 {
   "entries": [
     {
+      "hash": "e02c218b6774d00102f2f48467df657c8babff8d",
+      "committedAt": "2026-07-25T16:07:35+03:30",
+      "title": "حذف دارایی‌ها و ظرفیت‌ها از پروفایل؛ مدیریت فقط در شناسنامه دستگاه",
+      "subject": "Remove assets and capacities from user profile"
+    },
+    {
+      "hash": "9ca04c30276e58eb9017dbf5e198339b6fd00b51",
+      "committedAt": "2026-07-25T16:07:08+03:30",
+      "title": "حذف نمایش راستا از تقویم ملی — فقط دستورکارها نمایش داده می‌شوند",
+      "subject": "Remove campaigns from national calendar view"
+    },
+    {
       "hash": "740b13d38d7f2fcabebf20aea85f726fb25af900",
       "committedAt": "2026-07-25T16:03:47+03:30",
       "title": "امکان آپلود لوگو با کشیدن و رها کردن و بهینه‌سازی خودکار اندازه",

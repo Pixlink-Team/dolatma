@@ -27,6 +27,7 @@ import {
   saveUserAction,
   saveUserMinistryAction,
 } from "@/lib/actions/extended-actions";
+import { saveOrganizationAction } from "@/lib/actions/ministry-actions";
 import {
   contributorPermissionLabels,
   defaultContributorPermissions,
@@ -45,11 +46,12 @@ import {
   inferDefaultAuthorityLevel,
 } from "@/lib/directive-authority";
 import { Badge } from "@/components/ui/badge";
-import type { AdminRole, AdminUser, CampaignSettings, Ministry } from "@/lib/types";
+import type { AdminRole, AdminUser, CampaignSettings, Ministry, MinistryOrganization } from "@/lib/types";
 import { formatPersianNumber } from "@/lib/utils";
 
 const NO_MINISTRY = "__none__";
 const NO_ORGANIZATION = "__none__";
+const CREATE_ORGANIZATION = "__create_org__";
 const NO_PARENT = "__none__";
 const FILTER_ALL = "all";
 
@@ -106,6 +108,9 @@ export function UsersAdmin({
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [rows, setRows] = useState(initialUsers);
+  const [ministriesList, setMinistriesList] = useState(ministries);
+  const [creatingOrganization, setCreatingOrganization] = useState(false);
+  const [newOrganizationName, setNewOrganizationName] = useState("");
   const [filterMinistryId, setFilterMinistryId] = useState(FILTER_ALL);
   const [filterOrganizationId, setFilterOrganizationId] = useState(FILTER_ALL);
   const [filterProvince, setFilterProvince] = useState(FILTER_ALL);
@@ -115,10 +120,14 @@ export function UsersAdmin({
   const [bulkAccessOpen, setBulkAccessOpen] = useState(false);
   const [bulkSelectedUsers, setBulkSelectedUsers] = useState<AdminUser[]>([]);
   const [bulkClearSelection, setBulkClearSelection] = useState<(() => void) | null>(null);
-  const [bulkCampaignIds, setBulkCampaignIds] = useState<string[]>([]);
   const [bulkPermissions, setBulkPermissions] = useState<ContributorPermissions>(
     defaultContributorPermissions()
   );
+  const soleCampaignIds = useMemo(
+    () => campaigns.map((campaign) => campaign.id).filter(Boolean),
+    [campaigns]
+  );
+  const primaryCampaignId = soleCampaignIds[0] ?? null;
   /** Parents in this set are collapsed; everyone else with children stays expanded. */
   const [collapsedParentIds, setCollapsedParentIds] = useState<Set<string>>(() => new Set());
 
@@ -129,13 +138,13 @@ export function UsersAdmin({
         map.set(user.ministryId, user.ministryName?.trim() || "وزارتخانه");
       }
     }
-    for (const ministry of ministries) {
+    for (const ministry of ministriesList) {
       map.set(ministry.id, ministry.name);
     }
     return [...map.entries()]
       .map(([id, name]) => ({ id, name }))
       .sort((a, b) => a.name.localeCompare(b.name, "fa"));
-  }, [rows, ministries]);
+  }, [rows, ministriesList]);
 
   const filterOrganizationOptions = useMemo(() => {
     if (filterMinistryId === FILTER_ALL) return [] as { id: string; name: string }[];
@@ -146,14 +155,14 @@ export function UsersAdmin({
       }
     }
     const ministryOrgs =
-      ministries.find((ministry) => ministry.id === filterMinistryId)?.organizations ?? [];
+      ministriesList.find((ministry) => ministry.id === filterMinistryId)?.organizations ?? [];
     for (const org of ministryOrgs) {
       map.set(org.id, org.name);
     }
     return [...map.entries()]
       .map(([id, name]) => ({ id, name }))
       .sort((a, b) => a.name.localeCompare(b.name, "fa"));
-  }, [rows, ministries, filterMinistryId]);
+  }, [rows, ministriesList, filterMinistryId]);
 
   const filterProvinceOptions = useMemo(() => {
     const set = new Set<string>();
@@ -286,7 +295,6 @@ export function UsersAdmin({
     },
   });
 
-  const selectedCampaignIds = form.watch("campaignIds") ?? [];
   const selectedRole = form.watch("role");
   const selectedOrgRole = form.watch("orgRole");
   const selectedProvince = form.watch("province");
@@ -307,23 +315,27 @@ export function UsersAdmin({
     return options;
   }, [rows, selectedParentUserId]);
 
-  const applyOrgRolePreset = (orgRole: OrgRole) => {
-    const preset = getOrgRolePermissionPreset(orgRole);
-    const campaignIds = form.getValues("campaignIds") ?? [];
-    if (campaignIds.length === 0) {
+  const bindSoleCampaignAccess = (preset: ContributorPermissions) => {
+    if (soleCampaignIds.length === 0) {
+      form.setValue("campaignIds", []);
       setCampaignPermissions({});
       return;
     }
+    form.setValue("campaignIds", soleCampaignIds);
     setCampaignPermissions(
-      Object.fromEntries(campaignIds.map((campaignId) => [campaignId, { ...preset }]))
+      Object.fromEntries(soleCampaignIds.map((campaignId) => [campaignId, { ...preset }]))
     );
+  };
+
+  const applyOrgRolePreset = (orgRole: OrgRole) => {
+    bindSoleCampaignAccess(getOrgRolePermissionPreset(orgRole));
   };
 
   const organizationOptions = useMemo(() => {
     const ministryId = selectedMinistryId || (isSubUsersMode ? parentMinistryId : null);
     if (!ministryId) return [] as NonNullable<Ministry["organizations"]>;
     const options = [
-      ...(ministries.find((ministry) => ministry.id === ministryId)?.organizations ?? []),
+      ...(ministriesList.find((ministry) => ministry.id === ministryId)?.organizations ?? []),
     ];
     if (
       selectedOrganizationId &&
@@ -343,7 +355,7 @@ export function UsersAdmin({
     }
     return options;
   }, [
-    ministries,
+    ministriesList,
     selectedMinistryId,
     isSubUsersMode,
     parentMinistryId,
@@ -352,26 +364,80 @@ export function UsersAdmin({
     rows,
   ]);
 
-  const toggleCampaign = (campaignId: string) => {
-    const current = form.getValues("campaignIds");
-    if (current.includes(campaignId)) {
-      form.setValue(
-        "campaignIds",
-        current.filter((id) => id !== campaignId)
-      );
+  const activeMinistryIdForOrg =
+    selectedMinistryId || (isSubUsersMode ? parentMinistryId : null) || null;
+
+  const resetOrganizationCreate = () => {
+    setCreatingOrganization(false);
+    setNewOrganizationName("");
+  };
+
+  const handleOrganizationSelect = (value: string) => {
+    if (value === CREATE_ORGANIZATION) {
+      setCreatingOrganization(true);
+      setNewOrganizationName("");
+      return;
+    }
+    resetOrganizationCreate();
+    form.setValue("organizationId", value === NO_ORGANIZATION ? null : value);
+  };
+
+  const createOrganizationInline = () => {
+    const ministryId = activeMinistryIdForOrg;
+    const name = newOrganizationName.trim();
+    if (!ministryId) {
+      toast.error("ابتدا وزارتخانه را انتخاب کنید");
+      return;
+    }
+    if (!name) {
+      toast.error("نام زیرمجموعه الزامی است");
       return;
     }
 
-    form.setValue("campaignIds", [...current, campaignId]);
-    const orgRole = form.getValues("orgRole");
-    const preset =
-      selectedRole === "org_user" && orgRole
-        ? getOrgRolePermissionPreset(orgRole)
-        : defaultContributorPermissions();
-    setCampaignPermissions((prev) => ({
-      ...prev,
-      [campaignId]: prev[campaignId] ?? preset,
-    }));
+    const existing = ministriesList
+      .find((ministry) => ministry.id === ministryId)
+      ?.organizations?.find((org) => org.name.trim() === name);
+    if (existing) {
+      form.setValue("organizationId", existing.id);
+      resetOrganizationCreate();
+      toast.success("زیرمجموعه از لیست انتخاب شد");
+      return;
+    }
+
+    startTransition(async () => {
+      const result = await saveOrganizationAction({
+        ministryId,
+        name,
+        isActive: true,
+      });
+      if (!result.success) {
+        toast.error(result.error);
+        return;
+      }
+
+      const nextOrg: MinistryOrganization = {
+        id: result.id,
+        ministryId,
+        ministryName: ministriesList.find((item) => item.id === ministryId)?.name ?? null,
+        name,
+        fullName: null,
+        isActive: true,
+        createdAt: new Date().toISOString(),
+      };
+
+      setMinistriesList((prev) =>
+        prev.map((ministry) => {
+          if (ministry.id !== ministryId) return ministry;
+          const organizations = [...(ministry.organizations ?? []), nextOrg].sort((a, b) =>
+            a.name.localeCompare(b.name, "fa")
+          );
+          return { ...ministry, organizations };
+        })
+      );
+      form.setValue("organizationId", result.id);
+      resetOrganizationCreate();
+      toast.success("زیرمجموعه ایجاد شد");
+    });
   };
 
   const togglePermission = (campaignId: string, key: ContributorPermissionKey, value: boolean) => {
@@ -390,17 +456,14 @@ export function UsersAdmin({
       toast.error("برای کاربران انتخاب‌شده امکان تنظیم دسترسی پنل وجود ندارد");
       return;
     }
+    if (soleCampaignIds.length === 0) {
+      toast.error("راستایی برای اختصاص دسترسی تعریف نشده است");
+      return;
+    }
     setBulkSelectedUsers(editable);
     setBulkClearSelection(() => clearSelection);
-    setBulkCampaignIds([]);
     setBulkPermissions(defaultContributorPermissions());
     setBulkAccessOpen(true);
-  };
-
-  const toggleBulkCampaign = (campaignId: string) => {
-    setBulkCampaignIds((prev) =>
-      prev.includes(campaignId) ? prev.filter((id) => id !== campaignId) : [...prev, campaignId]
-    );
   };
 
   const applyBulkAccess = () => {
@@ -408,11 +471,15 @@ export function UsersAdmin({
       toast.error("هیچ کاربری انتخاب نشده است");
       return;
     }
+    if (soleCampaignIds.length === 0) {
+      toast.error("راستایی برای اختصاص دسترسی تعریف نشده است");
+      return;
+    }
 
     startTransition(async () => {
       const result = await bulkUpdateUsersAccessAction({
         userIds: bulkSelectedUsers.map((user) => user.id),
-        campaignIds: bulkCampaignIds,
+        campaignIds: soleCampaignIds,
         permissions: bulkPermissions,
       });
       if (!result.success) {
@@ -421,7 +488,7 @@ export function UsersAdmin({
       }
 
       const sharedPermissions = Object.fromEntries(
-        bulkCampaignIds.map((campaignId) => [campaignId, bulkPermissions])
+        soleCampaignIds.map((campaignId) => [campaignId, bulkPermissions])
       ) as Record<string, ContributorPermissions>;
       const updatedIds = new Set(bulkSelectedUsers.map((user) => user.id));
 
@@ -430,7 +497,7 @@ export function UsersAdmin({
           updatedIds.has(row.id)
             ? {
                 ...row,
-                campaignIds: [...bulkCampaignIds],
+                campaignIds: [...soleCampaignIds],
                 campaignPermissions: { ...sharedPermissions },
               }
             : row
@@ -467,7 +534,7 @@ export function UsersAdmin({
           toast.error("error" in result ? result.error : "ذخیره نشد");
           return;
         }
-        const ministry = ministries.find((item) => item.id === data.ministryId);
+        const ministry = ministriesList.find((item) => item.id === data.ministryId);
         const ministryName = ministry?.name ?? null;
         const organizationName =
           ministry?.organizations?.find((item) => item.id === organizationId)?.name ?? null;
@@ -519,6 +586,10 @@ export function UsersAdmin({
     });
 
     startTransition(async () => {
+      const nextCampaignIds = rolesWithCampaignAccess.includes(role) ? soleCampaignIds : [];
+      const nextCampaignPermissions = rolesWithCampaignAccess.includes(role)
+        ? campaignPermissions
+        : {};
       const result = await saveUserAction({
         ...data,
         role,
@@ -531,7 +602,10 @@ export function UsersAdmin({
         ministryId,
         organizationId,
         parentUserId: nextParentUserId,
-        campaignPermissions: rolesWithCampaignAccess.includes(role) ? campaignPermissions : undefined,
+        campaignIds: nextCampaignIds,
+        campaignPermissions: rolesWithCampaignAccess.includes(role)
+          ? nextCampaignPermissions
+          : undefined,
       });
       if (!result.success) {
         toast.error(result.error ?? "ذخیره نشد");
@@ -540,7 +614,7 @@ export function UsersAdmin({
 
       const savedId = "id" in result ? result.id : (editingId ?? crypto.randomUUID());
       const existing = rows.find((row) => row.id === editingId);
-      const ministry = ministries.find((item) => item.id === ministryId);
+      const ministry = ministriesList.find((item) => item.id === ministryId);
       const ministryName = ministry?.name ?? existing?.ministryName ?? null;
       const organizationName =
         ministry?.organizations?.find((item) => item.id === organizationId)?.name ??
@@ -569,8 +643,8 @@ export function UsersAdmin({
         parentUserName: parentName,
         authorityLevel,
         authorityOther: null,
-        campaignIds: data.campaignIds,
-        campaignPermissions: rolesWithCampaignAccess.includes(role) ? campaignPermissions : {},
+        campaignIds: nextCampaignIds,
+        campaignPermissions: nextCampaignPermissions,
         createdAt: existing?.createdAt ?? new Date().toISOString(),
       };
 
@@ -585,8 +659,9 @@ export function UsersAdmin({
   const openCreate = () => {
     if (!canManageUsers) return;
     setEditingId(null);
+    resetOrganizationCreate();
     const defaultOrgRole: OrgRole = "pr";
-    setCampaignPermissions({});
+    bindSoleCampaignAccess(getOrgRolePermissionPreset(defaultOrgRole));
     form.reset({
       email: "",
       name: "",
@@ -599,31 +674,43 @@ export function UsersAdmin({
       ministryId: null,
       organizationId: null,
       parentUserId: parentUserId ?? null,
-      campaignIds: [],
+      campaignIds: soleCampaignIds,
     });
     setOpen(true);
   };
 
   const openEdit = (user: AdminUser) => {
     setEditingId(user.id);
+    resetOrganizationCreate();
     const permissions = user.campaignPermissions ?? {};
     const normalizedProvince =
       normalizeImportedProvince(user.province ?? "") ?? user.province?.trim() ?? "";
     const normalizedCity =
       normalizeImportedCity(normalizedProvince, user.city ?? "") ?? user.city?.trim() ?? "";
 
-    setCampaignPermissions(
-      Object.fromEntries(
-        Object.entries(permissions).map(([campaignId, value]) => [
-          campaignId,
-          normalizeContributorPermissions(value),
-        ])
-      )
-    );
     const role: AdminRole =
       user.role === "admin" || user.role === "client" || user.role === "org_user"
         ? user.role
         : "org_user";
+    const nextCampaignIds = rolesWithCampaignAccess.includes(role) ? soleCampaignIds : [];
+    if (rolesWithCampaignAccess.includes(role) && soleCampaignIds.length > 0) {
+      const fallback =
+        (primaryCampaignId ? permissions[primaryCampaignId] : undefined) ??
+        Object.values(permissions)[0] ??
+        (role === "org_user"
+          ? getOrgRolePermissionPreset(user.orgRole ?? "pr")
+          : defaultContributorPermissions());
+      setCampaignPermissions(
+        Object.fromEntries(
+          soleCampaignIds.map((campaignId) => [
+            campaignId,
+            normalizeContributorPermissions(permissions[campaignId] ?? fallback),
+          ])
+        )
+      );
+    } else {
+      setCampaignPermissions({});
+    }
     form.reset({
       email: getLoginUsernameFromEmail(user.email ?? ""),
       name: user.name ?? "",
@@ -636,7 +723,7 @@ export function UsersAdmin({
       ministryId: user.ministryId ?? null,
       organizationId: user.organizationId ?? null,
       parentUserId: user.parentUserId ?? parentUserId ?? null,
-      campaignIds: user.campaignIds ?? [],
+      campaignIds: nextCampaignIds,
     });
     setOpen(true);
   };
@@ -764,7 +851,7 @@ export function UsersAdmin({
 
             <UsersMinistryTree
               users={filteredRows}
-              ministries={ministries}
+              ministries={ministriesList}
               onEdit={openEdit}
               onDelete={
                 canManageUsers
@@ -986,18 +1073,6 @@ export function UsersAdmin({
                   </Badge>
                 ),
               },
-              ...(isFullMode
-                ? [
-                    {
-                      key: "campaignIds" as const,
-                      label: "راستاها",
-                      render: (item: AdminUser) =>
-                        (item.campaignIds ?? [])
-                          .map((id) => campaigns.find((campaign) => campaign.id === id)?.title ?? id)
-                          .join("، ") || "—",
-                    },
-                  ]
-                : []),
             ]}
             onEdit={openEdit}
             renderBulkActions={
@@ -1120,6 +1195,7 @@ export function UsersAdmin({
                     onValueChange={(value) => {
                       form.setValue("ministryId", value === NO_MINISTRY ? null : value);
                       form.setValue("organizationId", null);
+                      resetOrganizationCreate();
                     }}
                   >
                     <SelectTrigger>
@@ -1127,7 +1203,7 @@ export function UsersAdmin({
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value={NO_MINISTRY}>بدون وزارتخانه</SelectItem>
-                      {ministries.map((ministry) => (
+                      {ministriesList.map((ministry) => (
                         <SelectItem key={ministry.id} value={ministry.id}>
                           {ministry.name}
                           {ministry.fullName ? ` — ${ministry.fullName}` : ""}
@@ -1140,13 +1216,12 @@ export function UsersAdmin({
                 <div className="space-y-2">
                   <Label>زیرمجموعه (اختیاری)</Label>
                   <Select
-                    value={selectedOrganizationId ?? NO_ORGANIZATION}
-                    onValueChange={(value) =>
-                      form.setValue(
-                        "organizationId",
-                        value === NO_ORGANIZATION ? null : value
-                      )
+                    value={
+                      creatingOrganization
+                        ? CREATE_ORGANIZATION
+                        : (selectedOrganizationId ?? NO_ORGANIZATION)
                     }
+                    onValueChange={handleOrganizationSelect}
                     disabled={!selectedMinistryId}
                   >
                     <SelectTrigger>
@@ -1159,23 +1234,51 @@ export function UsersAdmin({
                           {org.name}
                         </SelectItem>
                       ))}
+                      <SelectItem value={CREATE_ORGANIZATION}>ایجاد زیرمجموعه جدید…</SelectItem>
                     </SelectContent>
                   </Select>
+                  {creatingOrganization && (
+                    <div className="flex gap-2">
+                      <Input
+                        value={newOrganizationName}
+                        onChange={(event) => setNewOrganizationName(event.target.value)}
+                        placeholder="نام زیرمجموعه جدید"
+                        disabled={isPending}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") {
+                            event.preventDefault();
+                            createOrganizationInline();
+                          }
+                        }}
+                      />
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        disabled={isPending || !newOrganizationName.trim()}
+                        onClick={createOrganizationInline}
+                      >
+                        ایجاد
+                      </Button>
+                    </div>
+                  )}
                   <p className="text-xs text-muted-foreground">
-                    اگر زیرمجموعه انتخاب نشود، کاربر به خود وزارتخانه وصل می‌شود.
+                    اگر زیرمجموعه انتخاب نشود، کاربر به خود وزارتخانه وصل می‌شود. اگر در لیست نبود،
+                    می‌توانید همان‌جا ایجاد کنید.
                   </p>
                 </div>
               </>
             )}
 
-            {isSubUsersMode && organizationOptions.length > 0 && (
+            {isSubUsersMode && Boolean(parentMinistryId) && (
               <div className="space-y-2">
                 <Label>زیرمجموعه (اختیاری)</Label>
                 <Select
-                  value={selectedOrganizationId ?? NO_ORGANIZATION}
-                  onValueChange={(value) =>
-                    form.setValue("organizationId", value === NO_ORGANIZATION ? null : value)
+                  value={
+                    creatingOrganization
+                      ? CREATE_ORGANIZATION
+                      : (selectedOrganizationId ?? NO_ORGANIZATION)
                   }
+                  onValueChange={handleOrganizationSelect}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="خود وزارتخانه یا یک زیرمجموعه" />
@@ -1187,8 +1290,33 @@ export function UsersAdmin({
                         {org.name}
                       </SelectItem>
                     ))}
+                    <SelectItem value={CREATE_ORGANIZATION}>ایجاد زیرمجموعه جدید…</SelectItem>
                   </SelectContent>
                 </Select>
+                {creatingOrganization && (
+                  <div className="flex gap-2">
+                    <Input
+                      value={newOrganizationName}
+                      onChange={(event) => setNewOrganizationName(event.target.value)}
+                      placeholder="نام زیرمجموعه جدید"
+                      disabled={isPending}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                          event.preventDefault();
+                          createOrganizationInline();
+                        }
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      disabled={isPending || !newOrganizationName.trim()}
+                      onClick={createOrganizationInline}
+                    >
+                      ایجاد
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
 
@@ -1231,9 +1359,15 @@ export function UsersAdmin({
                             const orgRole = (form.getValues("orgRole") ?? "pr") as OrgRole;
                             form.setValue("orgRole", orgRole);
                             applyOrgRolePreset(orgRole);
+                          } else if (nextRole === "client") {
+                            form.setValue("orgRole", null);
+                            form.setValue("parentUserId", null);
+                            bindSoleCampaignAccess(defaultContributorPermissions());
                           } else {
                             form.setValue("orgRole", null);
                             form.setValue("parentUserId", null);
+                            form.setValue("campaignIds", []);
+                            setCampaignPermissions({});
                           }
                         }}
                       >
@@ -1355,33 +1489,16 @@ export function UsersAdmin({
                   </div>
                 )}
 
-                <div className="space-y-2">
-                  <Label>دسترسی به راستاها</Label>
-                  <div className="space-y-2 rounded-lg border p-3">
-                    {campaigns.map((campaign) => (
-                      <label key={campaign.id} className="flex items-center gap-2 text-sm">
-                        <input
-                          type="checkbox"
-                          checked={selectedCampaignIds.includes(campaign.id)}
-                          onChange={() => toggleCampaign(campaign.id)}
-                        />
-                        {campaign.title}
-                      </label>
-                    ))}
-                  </div>
-                </div>
-
-                {rolesWithCampaignAccess.includes(selectedRole) && selectedCampaignIds.length > 0 && (
+                {rolesWithCampaignAccess.includes(selectedRole) && primaryCampaignId ? (
                   <div className="space-y-3">
-                    <Label>دسترسی به بخش‌های پنل (برای هر راستا)</Label>
-                    {selectedCampaignIds.map((campaignId) => {
-                      const campaign = campaigns.find((item) => item.id === campaignId);
+                    <Label>دسترسی به بخش‌های پنل</Label>
+                    {(() => {
+                      const campaignId = primaryCampaignId;
                       const permissions = normalizeContributorPermissions(
                         campaignPermissions[campaignId] ?? defaultContributorPermissions()
                       );
                       return (
-                        <div key={campaignId} className="rounded-lg border p-3 space-y-3">
-                          <p className="text-sm font-medium">{campaign?.title ?? campaignId}</p>
+                        <div className="rounded-lg border p-3 space-y-3">
                           <div className="space-y-2">
                             <p className="text-xs font-medium text-muted-foreground">بخش‌های محتوا</p>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -1452,9 +1569,9 @@ export function UsersAdmin({
                           )}
                         </div>
                       );
-                    })}
+                    })()}
                   </div>
-                )}
+                ) : null}
               </>
             )}
 
@@ -1484,29 +1601,6 @@ export function UsersAdmin({
               دسترسی {formatPersianNumber(bulkSelectedUsers.length)} کاربر انتخاب‌شده با تنظیمات زیر
               جایگزین می‌شود. نقش مدیر سیستم از این لیست حذف شده است.
             </p>
-
-            <div className="space-y-2">
-              <Label>دسترسی به راستاها</Label>
-              <div className="space-y-2 rounded-lg border p-3 max-h-48 overflow-y-auto">
-                {campaigns.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">راستایی تعریف نشده است.</p>
-                ) : (
-                  campaigns.map((campaign) => (
-                    <label key={campaign.id} className="flex items-center gap-2 text-sm">
-                      <input
-                        type="checkbox"
-                        checked={bulkCampaignIds.includes(campaign.id)}
-                        onChange={() => toggleBulkCampaign(campaign.id)}
-                      />
-                      {campaign.title}
-                    </label>
-                  ))
-                )}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                اگر هیچ راستایی انتخاب نشود، دسترسی همه کاربران انتخاب‌شده به راستاها پاک می‌شود.
-              </p>
-            </div>
 
             <div className="space-y-2">
               <Label>دسترسی به بخش‌های پنل</Label>

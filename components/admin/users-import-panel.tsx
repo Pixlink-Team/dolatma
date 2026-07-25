@@ -28,25 +28,20 @@ interface UsersImportPanelProps {
 export function UsersImportPanel({ campaigns, onImported }: UsersImportPanelProps) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
-  const [campaignIds, setCampaignIds] = useState<string[]>([]);
   const [permissions, setPermissions] = useState<ContributorPermissions>(defaultContributorPermissions());
   const [updateExisting, setUpdateExisting] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [isPending, startTransition] = useTransition();
 
-  const toggleCampaign = (campaignId: string) => {
-    setCampaignIds((prev) =>
-      prev.includes(campaignId) ? prev.filter((id) => id !== campaignId) : [...prev, campaignId]
-    );
-  };
+  const soleCampaignIds = campaigns.map((campaign) => campaign.id).filter(Boolean);
 
   const togglePermission = (key: ContributorPermissionKey, value: boolean) => {
     setPermissions((prev) => ({ ...prev, [key]: value }));
   };
 
   const handleImport = async (file: File) => {
-    if (campaignIds.length === 0) {
-      toast.error("حداقل یک راستا انتخاب کنید");
+    if (soleCampaignIds.length === 0) {
+      toast.error("راستایی برای اختصاص دسترسی تعریف نشده است");
       return;
     }
 
@@ -54,7 +49,7 @@ export function UsersImportPanel({ campaigns, onImported }: UsersImportPanelProp
     try {
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("campaignIds", JSON.stringify(campaignIds));
+      formData.append("campaignIds", JSON.stringify(soleCampaignIds));
       formData.append("permissions", JSON.stringify(permissions));
       formData.append("updateExisting", String(updateExisting));
 
@@ -105,22 +100,6 @@ export function UsersImportPanel({ campaigns, onImported }: UsersImportPanelProp
           {" "}
           ذخیره می‌شود.
         </p>
-
-        <div className="space-y-2">
-          <Label>دسترسی به راستاها</Label>
-          <div className="rounded-lg border p-3 space-y-2 max-h-48 overflow-y-auto">
-            {campaigns.map((campaign) => (
-              <label key={campaign.id} className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={campaignIds.includes(campaign.id)}
-                  onChange={() => toggleCampaign(campaign.id)}
-                />
-                {campaign.title}
-              </label>
-            ))}
-          </div>
-        </div>
 
         <div className="space-y-2">
           <Label>دسترسی به بخش‌های پنل</Label>
