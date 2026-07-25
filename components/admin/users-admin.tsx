@@ -30,6 +30,7 @@ import {
 import { getDeviceCeilingAction } from "@/lib/actions/device-access-actions";
 import { saveDeviceAction } from "@/lib/actions/device-actions";
 import { saveOrganizationAction } from "@/lib/actions/ministry-actions";
+import { useSectionCreateGate } from "@/lib/hooks/use-section-create-gate";
 import {
   contributorPermissionLabels,
   defaultContributorPermissions,
@@ -150,6 +151,7 @@ export function UsersAdmin({
   parentOrganizationId = null,
   grantorCampaignPermissions = null,
 }: UsersAdminProps) {
+  const { requestCreate, tutorialModal } = useSectionCreateGate("subsidiaries");
   const isFullMode = mode === "full";
   const isSubUsersMode = mode === "sub_users";
   const isViewSubtreeMode = mode === "view_subtree";
@@ -536,14 +538,16 @@ export function UsersAdmin({
 
   const handleOrganizationSelect = (value: string) => {
     if (value === CREATE_ORGANIZATION) {
-      const currentOrg = form.getValues("organizationId")?.trim() || null;
-      const parentForCreate =
-        currentOrg ||
-        (isScopedToOwnOrganization ? parentOrganizationId : null) ||
-        activeMinistryIdForOrg;
-      setCreateUnderParentId(parentForCreate);
-      setCreatingOrganization(true);
-      setNewOrganizationName("");
+      void requestCreate(() => {
+        const currentOrg = form.getValues("organizationId")?.trim() || null;
+        const parentForCreate =
+          currentOrg ||
+          (isScopedToOwnOrganization ? parentOrganizationId : null) ||
+          activeMinistryIdForOrg;
+        setCreateUnderParentId(parentForCreate);
+        setCreatingOrganization(true);
+        setNewOrganizationName("");
+      });
       return;
     }
     resetOrganizationCreate();
@@ -958,6 +962,7 @@ export function UsersAdmin({
 
   return (
     <div className="space-y-4">
+      {tutorialModal}
       <div>
         <h1 className="text-2xl font-bold">
           {isSubUsersMode || isViewSubtreeMode ? "کاربران زیرمجموعه" : "کاربران"}

@@ -1,6 +1,7 @@
 import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
 import { pgIdExists } from "@/lib/db/pg-id-exists";
 import {
+  pgEnsureDefaultSubsidiariesTutorial,
   pgGetTutorialCompletionStatus,
 } from "@/lib/db/repository-tutorials";
 import { pgAreSectionTutorialsEnabled } from "@/lib/db/tutorial-settings";
@@ -38,6 +39,10 @@ export async function assertContributorTutorialCompleted(
 
   if (!(await pgAreSectionTutorialsEnabled())) {
     return null;
+  }
+
+  if (sectionKey === "subsidiaries") {
+    await pgEnsureDefaultSubsidiariesTutorial();
   }
 
   const status = await pgGetTutorialCompletionStatus(session.userId, sectionKey);

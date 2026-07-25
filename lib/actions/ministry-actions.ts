@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { canManageSubtreeUsers, isClientUser } from "@/lib/auth/access";
+import { assertContributorTutorialCompleted } from "@/lib/auth/require-tutorial-completion";
 import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
 import { pgGetUserById } from "@/lib/db/repository-extended";
 import {
@@ -89,6 +90,11 @@ export async function saveOrganizationAction(data: {
   const allowed = await canSaveOrganization(session, data.ministryId, Boolean(data.id));
   if (!allowed) {
     return { success: false as const, error: "Unauthorized" };
+  }
+
+  if (!data.id) {
+    const tutorialDenied = await assertContributorTutorialCompleted("subsidiaries");
+    if (tutorialDenied) return tutorialDenied;
   }
 
   const result = await pgSaveOrganization(data);

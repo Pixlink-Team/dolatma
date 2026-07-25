@@ -5,6 +5,7 @@ import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
 import { hasAnyCampaignPermission } from "@/lib/auth/access";
 import {
   pgCompleteTutorial,
+  pgEnsureDefaultSubsidiariesTutorial,
   pgGetSectionTutorial,
   pgGetTutorialCompletionStatus,
   pgListSectionTutorials,
@@ -39,6 +40,10 @@ export async function getTutorialStatusAction(sectionKey: string) {
 
   const dbError = requirePostgres();
   if (dbError) return dbError;
+
+  if (sectionKey === "subsidiaries") {
+    await pgEnsureDefaultSubsidiariesTutorial();
+  }
 
   const tutorialsEnabled = await pgAreSectionTutorialsEnabled();
   if (!tutorialsEnabled || isFullAdmin(session) || session.role === "client" || !session.userId) {
@@ -142,6 +147,8 @@ export async function listTutorialsForAdminAction() {
 
   const dbError = requirePostgres();
   if (dbError) return dbError;
+
+  await pgEnsureDefaultSubsidiariesTutorial();
 
   const tutorials = await pgListSectionTutorials();
   return { success: true as const, tutorials };

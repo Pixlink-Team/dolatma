@@ -13,6 +13,7 @@ import {
   listAccessibleDevices,
 } from "@/lib/auth/device-access";
 import { canManageSubtreeDevices } from "@/lib/auth/access";
+import { assertContributorTutorialCompleted } from "@/lib/auth/require-tutorial-completion";
 import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
 import {
   pgDeleteDevice,
@@ -242,6 +243,9 @@ export async function saveDeviceAction(data: {
       error: "فقط می‌توانید زیرمجموعه زیر درخت خودتان ایجاد کنید",
     };
   }
+
+  const tutorialDenied = await assertContributorTutorialCompleted("subsidiaries");
+  if (tutorialDenied) return tutorialDenied;
 
   const result = await pgSaveDevice({
     ...data,

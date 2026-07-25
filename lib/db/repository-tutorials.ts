@@ -1,5 +1,6 @@
 import { getSql } from "@/lib/db/client";
 import {
+  DEFAULT_SUBSIDIARIES_TUTORIAL_STEPS,
   TUTORIAL_SECTION_KEYS,
   isTutorialSectionKey,
   normalizeTutorialSteps,
@@ -21,6 +22,22 @@ function mapTutorialFromDb(row: Record<string, unknown>): SectionTutorial | null
     steps: normalizeTutorialSteps(row.steps),
     updatedAt: String(row.updated_at ?? new Date().toISOString()),
   };
+}
+
+/**
+ * Seeds built-in subsidiaries tutorial once so create-gate is not blocked
+ * waiting for an empty admin draft.
+ */
+export async function pgEnsureDefaultSubsidiariesTutorial(): Promise<void> {
+  const existing = await pgGetSectionTutorial("subsidiaries");
+  if (existing && existing.steps.length > 0) return;
+
+  await pgSaveSectionTutorial({
+    sectionKey: "subsidiaries",
+    title: tutorialSectionLabels.subsidiaries,
+    steps: DEFAULT_SUBSIDIARIES_TUTORIAL_STEPS,
+    bumpVersion: false,
+  });
 }
 
 export async function pgListSectionTutorials(): Promise<SectionTutorial[]> {

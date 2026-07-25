@@ -1,6 +1,24 @@
 {
   "entries": [
     {
+      "hash": "b56dce62ad28074c34db325b033b3310ce965b14",
+      "committedAt": "2026-07-25T17:57:51+03:30",
+      "title": "فعال شدن خودکار دسترسی وزارت برای کاربران زیرمجموعه",
+      "subject": "Cascade device access grants to subtree users"
+    },
+    {
+      "hash": "041ba596a72671b2fb8e1097f2aa31f6fb89e343",
+      "committedAt": "2026-07-25T17:57:35+03:30",
+      "title": "ارتقای رصد کاربران با وضعیت همه کاربران، مدت آنلاین و گزارش روزانه",
+      "subject": "Port Dashboard-info user audit presence and day profile"
+    },
+    {
+      "hash": "2766befad4e946bf680a5361af8be83b025c8a02",
+      "committedAt": "2026-07-25T17:57:16+03:30",
+      "title": "ثبت سایت‌ها و شبکه‌های اجتماعی در دارایی‌های دستگاه",
+      "subject": "Sync sites and social channels into device assets"
+    },
+    {
       "hash": "0c1031964e1603a84b7aa026d74f10244a0eed50",
       "committedAt": "2026-07-25T17:43:05+03:30",
       "title": "مخفی شدن منوی کاربران و دستگاه‌ها وقتی دسترسی مدیریت زیرشاخه قطع باشد",

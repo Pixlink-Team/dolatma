@@ -39,6 +39,8 @@ import {
   saveDeviceSubtreeAccessAction,
 } from "@/lib/actions/device-access-actions";
 import { ContributorPermissionsEditor } from "@/components/admin/contributor-permissions-editor";
+import { useAdminCampaign } from "@/components/admin/admin-campaign-provider";
+import { useSectionCreateGate } from "@/lib/hooks/use-section-create-gate";
 import {
   DEVICE_STATUS_LABELS,
   DEVICE_TYPE_LABELS,
@@ -51,7 +53,6 @@ import {
 } from "@/lib/contributor-permissions";
 import type { Device, DeviceStatus, DeviceType } from "@/lib/types";
 import { adminHref } from "@/lib/utils";
-import { useAdminCampaign } from "@/components/admin/admin-campaign-provider";
 
 type AccessEditNode = {
   deviceId: string;
@@ -109,6 +110,7 @@ export function DevicesAdmin({
   homeDeviceId = null,
 }: DevicesAdminProps) {
   const { campaignId } = useAdminCampaign();
+  const { requestCreate, tutorialModal } = useSectionCreateGate("subsidiaries");
   const [open, setOpen] = useState(false);
   const [childOpen, setChildOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -229,15 +231,17 @@ export function DevicesAdmin({
   };
 
   const openCreateChild = (parentId: string) => {
-    setParentIdForChild(parentId);
-    childForm.reset({
-      name: "",
-      shortName: "",
-      type: "organization",
-      mission: "",
-      status: "active",
+    void requestCreate(() => {
+      setParentIdForChild(parentId);
+      childForm.reset({
+        name: "",
+        shortName: "",
+        type: "organization",
+        mission: "",
+        status: "active",
+      });
+      setChildOpen(true);
     });
-    setChildOpen(true);
   };
 
   const accessChildrenByParent = useMemo(() => {
@@ -706,6 +710,7 @@ export function DevicesAdmin({
 
   return (
     <div className="space-y-6" dir="rtl">
+      {tutorialModal}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">دستگاه‌ها</h1>
