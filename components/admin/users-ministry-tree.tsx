@@ -125,16 +125,16 @@ export function UsersMinistryTree({
     [users, ministries]
   );
 
-  /** Collapsed = hidden. Empty set means everything starts expanded. */
-  const [collapsedMinistryIds, setCollapsedMinistryIds] = useState<Set<string>>(
+  // Cards start collapsed; expand on demand via the chevron.
+  const [expandedMinistryIds, setExpandedMinistryIds] = useState<Set<string>>(
     () => new Set()
   );
-  const [collapsedParentIds, setCollapsedParentIds] = useState<Set<string>>(
+  const [expandedParentIds, setExpandedParentIds] = useState<Set<string>>(
     () => new Set()
   );
 
   const toggleMinistry = (id: string) => {
-    setCollapsedMinistryIds((prev) => {
+    setExpandedMinistryIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
@@ -143,7 +143,7 @@ export function UsersMinistryTree({
   };
 
   const toggleParent = (id: string) => {
-    setCollapsedParentIds((prev) => {
+    setExpandedParentIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
@@ -162,7 +162,7 @@ export function UsersMinistryTree({
   return (
     <div className="space-y-3" dir="rtl">
       {groups.map((group) => {
-        const ministryExpanded = !collapsedMinistryIds.has(group.id);
+        const ministryExpanded = expandedMinistryIds.has(group.id);
         const parentCount = group.parents.length;
         const subCount = group.parents.reduce(
           (sum, branch) => sum + branch.children.length,
@@ -211,7 +211,7 @@ export function UsersMinistryTree({
             {ministryExpanded ? (
               <div className="border-t bg-muted/30">
                 {group.parents.map((branch) => {
-                  const parentExpanded = !collapsedParentIds.has(branch.user.id);
+                  const parentExpanded = expandedParentIds.has(branch.user.id);
                   const hasChildren = branch.children.length > 0;
 
                   return (
