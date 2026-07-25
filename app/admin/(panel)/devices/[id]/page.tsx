@@ -31,7 +31,14 @@ export default async function DevicePassportPage({ params }: PageProps) {
     passport = await pgGetDevicePassport(id);
   } catch (error) {
     console.error("[device-passport] page load failed", id, error);
-    throw error;
+    return (
+      <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-6 text-sm">
+        <p className="font-medium text-destructive">بارگذاری شناسنامه دستگاه ناموفق بود.</p>
+        <p className="mt-2 text-muted-foreground">
+          لطفاً صفحه را تازه کنید. اگر مشکل ادامه داشت با پشتیبانی تماس بگیرید.
+        </p>
+      </div>
+    );
   }
   if (!passport) notFound();
 

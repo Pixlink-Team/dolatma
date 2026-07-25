@@ -270,7 +270,19 @@ function mapCapacity(row: Record<string, unknown>): DeviceCapacity {
 }
 
 /** Ensure device tables/columns exist on older databases without a fresh migrate. */
+let deviceSchemaReady: Promise<void> | null = null;
+
 export async function ensureDeviceSchema(): Promise<void> {
+  if (!deviceSchemaReady) {
+    deviceSchemaReady = ensureDeviceSchemaOnce().catch((error) => {
+      deviceSchemaReady = null;
+      throw error;
+    });
+  }
+  await deviceSchemaReady;
+}
+
+async function ensureDeviceSchemaOnce(): Promise<void> {
   const sql = getSql();
   await sql`
     CREATE TABLE IF NOT EXISTS devices (
