@@ -10,6 +10,7 @@ import {
   AdminCampaignProviderStatic,
 } from "@/components/admin/admin-campaign-provider";
 import { AuditTracker } from "@/components/admin/audit-tracker";
+import { AppErrorProvider } from "@/components/admin/app-error-provider";
 import { ProblemReportButton } from "@/components/admin/problem-report-button";
 import { ScrollToTopButton } from "@/components/ui/scroll-to-top-button";
 import type { CampaignSettings } from "@/lib/types";
@@ -70,25 +71,27 @@ function PanelChrome({
   withTracker?: boolean;
 }) {
   return (
-    <div className="min-h-screen bg-background">
-      {withTracker ? (
+    <AppErrorProvider>
+      <div className="min-h-screen bg-background">
+        {withTracker ? (
+          <Suspense fallback={null}>
+            <AuditTracker />
+          </Suspense>
+        ) : null}
+        <AdminSidebar />
+        <AdminElanhaButton />
         <Suspense fallback={null}>
-          <AuditTracker />
+          <ProblemReportButton />
         </Suspense>
-      ) : null}
-      <AdminSidebar />
-      <AdminElanhaButton />
-      <Suspense fallback={null}>
-        <ProblemReportButton />
-      </Suspense>
-      <Suspense fallback={null}>
-        <NavigationPendingOverlay />
-      </Suspense>
-      <main className="min-h-screen lg:mr-64">
-        <div className="container mx-auto px-4 py-8 pt-16 lg:pt-8">{children}</div>
-      </main>
-      <ScrollToTopButton clearProblemReport />
-    </div>
+        <Suspense fallback={null}>
+          <NavigationPendingOverlay />
+        </Suspense>
+        <main className="min-h-screen lg:mr-64">
+          <div className="container mx-auto px-4 py-8 pt-16 lg:pt-8">{children}</div>
+        </main>
+        <ScrollToTopButton clearProblemReport />
+      </div>
+    </AppErrorProvider>
   );
 }
 

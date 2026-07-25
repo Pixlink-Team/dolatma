@@ -911,10 +911,12 @@ export function AuditAdmin({ data, databaseReady }: AuditAdminProps) {
             )}
           </TabsTrigger>
           <TabsTrigger value="stuck">
-            رفتار مشکوک
-            {summary.stuckSignals > 0 && (
+            خطاها و رفتار مشکوک
+            {(summary.stuckSignals > 0 || (data.recentUserErrors?.length ?? 0) > 0) && (
               <Badge variant="destructive" className="ms-1.5">
-                {formatPersianNumber(summary.stuckSignals)}
+                {formatPersianNumber(
+                  Math.max(summary.stuckSignals, data.recentUserErrors?.length ?? 0)
+                )}
               </Badge>
             )}
           </TabsTrigger>

@@ -89,6 +89,16 @@ export function ProblemReportButton() {
     void loadMyReports();
   }, [open, tab, mineLoaded, loadingMine, loadMyReports]);
 
+  useEffect(() => {
+    const openFromError = () => {
+      setOpen(true);
+      setTab("new");
+    };
+    window.addEventListener("dolatma:open-problem-report", openFromError);
+    return () =>
+      window.removeEventListener("dolatma:open-problem-report", openFromError);
+  }, []);
+
   const handleSubmit = async () => {
     setSubmitting(true);
     try {

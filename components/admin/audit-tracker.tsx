@@ -2,7 +2,6 @@
 
 import { useEffect, useRef } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
-import { toast } from "sonner";
 
 const MAX_LABEL_LENGTH = 120;
 
@@ -75,19 +74,10 @@ function resolveClickTarget(target: EventTarget | null): {
   };
 }
 
-function extractToastMessage(message: unknown): string {
-  if (typeof message === "string") return message.trim();
-  if (typeof message === "number" || typeof message === "boolean") return String(message);
-  if (message && typeof message === "object" && "message" in message) {
-    const nested = (message as { message?: unknown }).message;
-    if (typeof nested === "string") return nested.trim();
-  }
-  return "خطای ناشناخته";
-}
-
 /**
  * Client-side audit tracker for the admin panel.
- * Records page views, clicks (flagging content actions), and UI errors from toast.error.
+ * Records page views, clicks (flagging content actions), and presence.
+ * UI errors are tracked by AppErrorProvider with richer metadata.
  */
 export function AuditTracker() {
   const pathname = usePathname();
@@ -131,27 +121,6 @@ export function AuditTracker() {
       document.removeEventListener("click", handleClick, {
         capture: true,
       } as EventListenerOptions);
-  }, []);
-
-  useEffect(() => {
-    const originalError = toast.error.bind(toast);
-
-    toast.error = ((message: unknown, data?: unknown) => {
-      const text = extractToastMessage(message).slice(0, MAX_LABEL_LENGTH);
-      if (text) {
-        sendTrack({
-          action: "ui.error",
-          path: currentPath(),
-          label: text,
-          metadata: { source: "toast.error" },
-        });
-      }
-      return originalError(message as never, data as never);
-    }) as typeof toast.error;
-
-    return () => {
-      toast.error = originalError as typeof toast.error;
-    };
   }, []);
 
   useEffect(() => {

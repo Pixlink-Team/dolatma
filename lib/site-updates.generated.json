@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "6d7191e5e1025bc7313955a0608d89908750261d",
+      "committedAt": "2026-07-25T20:30:23+03:30",
+      "title": "نمایش پیشرفت راه‌اندازی دستگاه در پرونده هر کاربر در رصد کاربران",
+      "subject": "Show device onboarding progress in user audit profile"
+    },
+    {
       "hash": "30795b5d9eaf58a2e6a5265ca4f1368db96f10bf",
       "committedAt": "2026-07-25T20:28:14+03:30",
       "title": "آموزش فیلدبه‌فیلد هنگام ساخت کاربر جدید",
