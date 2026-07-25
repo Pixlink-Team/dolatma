@@ -1,6 +1,18 @@
 {
   "entries": [
     {
+      "hash": "a544abfb44d9fa5c57b6c87d0713ee57e223a85a",
+      "committedAt": "2026-07-25T12:40:46+03:30",
+      "title": "افزودن کد شهر خودکار به شماره تماس دستگاه",
+      "subject": "Auto-fill landline area code from province"
+    },
+    {
+      "hash": "0ed4ef720d477ba7cff4fa203a0dd68b4955ffac",
+      "committedAt": "2026-07-25T12:36:50+03:30",
+      "title": "جایگزینی عنوان دبیرخانه با این نرم‌افزار در راستا",
+      "subject": "Replace legacy campaign org title with software label"
+    },
+    {
       "hash": "d8663d5d5c5c1abb7c37c11d2f27e2d3b46a5459",
       "committedAt": "2026-07-25T12:29:55+03:30",
       "title": "انتخاب شهر از لیست در تکمیل شناسنامه دستگاه",
