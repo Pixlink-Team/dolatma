@@ -65,12 +65,6 @@ import {
 } from "@/lib/directive-cta";
 import { DIRECTIVE_URGENCY_OPTIONS } from "@/lib/directive-workspace";
 import {
-  compareByAuthority,
-  DIRECTIVE_AUTHORITY_OPTIONS,
-  getAuthorityBadgeLabel,
-  type DirectiveAuthorityLevel,
-} from "@/lib/directive-authority";
-import {
   DIRECTIVE_MISSION_TYPE_LABELS,
   DIRECTIVE_MISSION_TYPES,
   type DirectiveCreationMode,
@@ -87,23 +81,10 @@ import { IRAN_PROVINCES } from "@/lib/iran-locations";
 import { USER_REGIONS, getUserRegionLabel, type UserRegion } from "@/lib/user-regions";
 import { adminHref, cn, formatPersianDate, formatPersianDateTime, formatPersianNumber } from "@/lib/utils";
 
-const AUTHORITY_FILTER_ALL = "all";
-
 const schema = z.object({
   title: z.string().min(1).max(CONTENT_TITLE_MAX_LENGTH, CONTENT_TITLE_MAX_LENGTH_MESSAGE),
   body: z.string().min(1, "متن دستورکار الزامی است"),
   priority: z.enum(["normal", "urgent"]),
-  authorityLevel: z.enum([
-    "government",
-    "presidency",
-    "ministry",
-    "organization",
-    "province",
-    "municipality",
-    "internal",
-    "other",
-  ]),
-  authorityOther: z.string().optional(),
   urgency: z.enum(["low", "normal", "high", "critical"]),
   crisisMode: z.boolean().optional(),
   escalationAfterMinutes: z.coerce.number().min(5).max(1440).optional(),
@@ -205,9 +186,6 @@ interface DirectivesAdminProps {
   canManage: boolean;
   /** Global = full campaign; subordinates = only the issuer's sub-users. */
   audienceScope?: "global" | "subordinates";
-  /** Default authority level from the current issuer account. */
-  issuerAuthorityLevel?: DirectiveAuthorityLevel;
-  issuerAuthorityOther?: string | null;
   /** Full system admin (env admin / role admin). */
   isFullAdmin?: boolean;
   /** Active (non-archived) campaign directives for managers. */
@@ -220,10 +198,8 @@ interface DirectivesAdminProps {
   ministries?: Ministry[];
 }
 
-function sortDirectivesByAuthority(rows: CampaignDirective[]): CampaignDirective[] {
+function sortDirectives(rows: CampaignDirective[]): CampaignDirective[] {
   return [...rows].sort((a, b) => {
-    const byAuthority = compareByAuthority(a.authorityLevel, b.authorityLevel);
-    if (byAuthority !== 0) return byAuthority;
     const aUrgent = a.priority === "urgent" ? 0 : 1;
     const bUrgent = b.priority === "urgent" ? 0 : 1;
     if (aUrgent !== bUrgent) return aUrgent - bUrgent;
@@ -350,8 +326,6 @@ export function DirectivesAdmin({
   campaignId,
   canManage,
   audienceScope = "global",
-  issuerAuthorityLevel = "internal",
-  issuerAuthorityOther = null,
   isFullAdmin = false,
   initialDirectives,
   archivedDirectives: initialArchived = [],
@@ -365,7 +339,6 @@ export function DirectivesAdmin({
   const [managerView, setManagerView] = useState<ManagerView>("manage");
   const [manageListTab, setManageListTab] = useState<ManageListTab>("active");
   const [inboxTab, setInboxTab] = useState<InboxTab>("new");
-  const [authorityFilter, setAuthorityFilter] = useState<string>(AUTHORITY_FILTER_ALL);
   const [open, setOpen] = useState(false);
   const [creationMode, setCreationMode] = useState<DirectiveCreationMode>("normal");
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -400,6 +373,8 @@ export function DirectivesAdmin({
   } | null>(null);
   const [isPending, startTransition] = useTransition();
   const [formTab, setFormTab] = useState<"basics" | "workspace">("basics");
+  /** When false, publish a simple directive without ops-room setup or redirect. */
+  const [includeOpsRoom, setIncludeOpsRoom] = useState(false);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -407,8 +382,6 @@ export function DirectivesAdmin({
       title: "",
       body: "",
       priority: "normal",
-      authorityLevel: issuerAuthorityLevel,
-      authorityOther: issuerAuthorityOther ?? "",
       urgency: "normal",
       crisisMode: false,
       escalationAfterMinutes: 30,
@@ -436,7 +409,6 @@ export function DirectivesAdmin({
   const audienceOrganizationId = form.watch("audienceOrganizationId");
   const ctaKind = form.watch("ctaKind");
   const ctaTarget = form.watch("ctaTarget");
-  const authorityLevel = form.watch("authorityLevel");
 
   const audienceOrganizations = useMemo(() => {
     if (!audienceMinistryId) return [] as NonNullable<Ministry["organizations"]>;
@@ -472,11 +444,7 @@ export function DirectivesAdmin({
     } else {
       base = inboxRowsState;
     }
-    const filtered =
-      authorityFilter === AUTHORITY_FILTER_ALL
-        ? base
-        : base.filter((row) => (row.authorityLevel ?? "internal") === authorityFilter);
-    return sortDirectivesByAuthority(filtered);
+    return sortDirectives(base);
   }, [
     showingInbox,
     showingPatterns,
@@ -485,7 +453,6 @@ export function DirectivesAdmin({
     rows,
     inboxTab,
     inboxRowsState,
-    authorityFilter,
   ]);
 
   const openCreate = () => {
@@ -493,6 +460,7 @@ export function DirectivesAdmin({
     setEditingSmartItem(null);
     setCreationMode("normal");
     setFormTab("basics");
+    setIncludeOpsRoom(false);
     setSelectedUserIds([]);
     setSelectedProvinces([]);
     setLetterUpload({ url: "", fileName: "", fileSize: 0, mimeType: "" });
@@ -501,8 +469,6 @@ export function DirectivesAdmin({
       title: "",
       body: "",
       priority: "normal",
-      authorityLevel: issuerAuthorityLevel,
-      authorityOther: issuerAuthorityOther ?? "",
       urgency: "normal",
       crisisMode: false,
       escalationAfterMinutes: 30,
@@ -539,6 +505,7 @@ export function DirectivesAdmin({
     setEditingSmartItem(null);
     setCreationMode("normal");
     setFormTab("basics");
+    setIncludeOpsRoom(false);
     setLetterUpload({
       url: item.letterFileUrl ?? "",
       fileName: item.letterFileName ?? "",
@@ -553,8 +520,6 @@ export function DirectivesAdmin({
       title: item.title,
       body: item.body,
       priority: item.priority,
-      authorityLevel: item.authorityLevel ?? issuerAuthorityLevel,
-      authorityOther: item.authorityOther ?? "",
       urgency: "normal",
       crisisMode: Boolean(item.crisisMode),
       escalationAfterMinutes: item.escalationAfterMinutes ?? 30,
@@ -585,6 +550,17 @@ export function DirectivesAdmin({
         form.setValue("expectedResults", meta.expectedResults);
         form.setValue("mandatoryActions", listToLines(meta.mandatoryActions));
         form.setValue("suggestedActions", listToLines(meta.suggestedActions));
+        const hasOpsContent =
+          Boolean(meta.objective?.trim()) ||
+          Boolean(meta.expectedResults?.trim()) ||
+          (meta.mandatoryActions?.length ?? 0) > 0 ||
+          (meta.suggestedActions?.length ?? 0) > 0 ||
+          meta.urgency !== "normal" ||
+          (meta.kpis?.length ?? 0) > 0 ||
+          Boolean(meta.brandGuide?.trim()) ||
+          Boolean(meta.executionGuide?.trim()) ||
+          (workspace.bundle.assets?.length ?? 0) > 0;
+        setIncludeOpsRoom(hasOpsContent);
       }
       if (item.audienceType === "users") {
         const result = await getDirectiveRecipientsAction(item.id);
@@ -603,6 +579,7 @@ export function DirectivesAdmin({
     setEditingSmartItem(null);
     setCreationMode("normal");
     setFormTab("basics");
+    setIncludeOpsRoom(false);
   };
 
   const convertToSmart = () => {
@@ -665,11 +642,6 @@ export function DirectivesAdmin({
       }
     }
 
-    if (data.authorityLevel === "other" && !data.authorityOther?.trim()) {
-      toast.error("برای منبع «سایر» توضیح الزامی است");
-      return;
-    }
-
     if (data.linkContentTopic && !data.topic?.trim()) {
       toast.error("برای ساخت موضوع محتوا، نام موضوع را وارد کنید");
       return;
@@ -700,9 +672,6 @@ export function DirectivesAdmin({
         title: data.title,
         body: data.body,
         priority: data.priority,
-        authorityLevel: data.authorityLevel,
-        authorityOther:
-          data.authorityLevel === "other" ? data.authorityOther?.trim() || null : null,
         startDate: data.startDate,
         endDate: data.endDate,
         letterFileUrl: letterUpload.url,
@@ -742,46 +711,54 @@ export function DirectivesAdmin({
       }
 
       const directiveId = result.id;
-      const existingWorkspace = await getDirectiveWorkspaceAction(directiveId);
-      const existingMeta = existingWorkspace.bundle?.meta;
-      const workspaceResult = await saveDirectiveWorkspaceMetaAction({
-        directiveId,
-        objective: data.objective?.trim() ?? "",
-        expectedResults: data.expectedResults?.trim() ?? "",
-        urgency: data.urgency as DirectiveUrgency,
-        mandatoryActions: linesToList(data.mandatoryActions),
-        suggestedActions: linesToList(data.suggestedActions),
-        kpis: existingMeta?.kpis ?? [],
-        brandGuide: existingMeta?.brandGuide ?? "",
-        executionGuide: existingMeta?.executionGuide ?? "",
-        approvalRequirements: existingMeta?.approvalRequirements ?? "",
-        centralOwnerUserId: existingMeta?.centralOwnerUserId ?? null,
-        centralOwnerLabel: existingMeta?.centralOwnerLabel ?? null,
-        faq: existingMeta?.faq ?? [],
-        targetMinistryIds: existingMeta?.targetMinistryIds ?? [],
-        targetOrganizationIds: existingMeta?.targetOrganizationIds ?? [],
-        targetProvinces:
-          data.audienceType === "ministry_city"
-            ? selectedProvinces
-            : existingMeta?.targetProvinces ?? [],
-        targetCities: existingMeta?.targetCities ?? [],
-      });
 
-      if (!workspaceResult.success) {
-        toast.error(
-          workspaceResult.error ??
-            "دستورکار ذخیره شد ولی اتاق عملیات کامل نشد؛ از صفحه اتاق عملیات ادامه دهید"
-        );
-      } else {
-        toast.success(
-          editingId
-            ? "دستورکار به‌روز شد — در حال باز کردن اتاق عملیات"
-            : "دستورکار منتشر شد — در حال باز کردن اتاق عملیات"
-        );
+      if (includeOpsRoom) {
+        const existingWorkspace = await getDirectiveWorkspaceAction(directiveId);
+        const existingMeta = existingWorkspace.bundle?.meta;
+        const workspaceResult = await saveDirectiveWorkspaceMetaAction({
+          directiveId,
+          objective: data.objective?.trim() ?? "",
+          expectedResults: data.expectedResults?.trim() ?? "",
+          urgency: data.urgency as DirectiveUrgency,
+          mandatoryActions: linesToList(data.mandatoryActions),
+          suggestedActions: linesToList(data.suggestedActions),
+          kpis: existingMeta?.kpis ?? [],
+          brandGuide: existingMeta?.brandGuide ?? "",
+          executionGuide: existingMeta?.executionGuide ?? "",
+          approvalRequirements: existingMeta?.approvalRequirements ?? "",
+          centralOwnerUserId: existingMeta?.centralOwnerUserId ?? null,
+          centralOwnerLabel: existingMeta?.centralOwnerLabel ?? null,
+          faq: existingMeta?.faq ?? [],
+          targetMinistryIds: existingMeta?.targetMinistryIds ?? [],
+          targetOrganizationIds: existingMeta?.targetOrganizationIds ?? [],
+          targetProvinces:
+            data.audienceType === "ministry_city"
+              ? selectedProvinces
+              : existingMeta?.targetProvinces ?? [],
+          targetCities: existingMeta?.targetCities ?? [],
+        });
+
+        if (!workspaceResult.success) {
+          toast.error(
+            workspaceResult.error ??
+              "دستورکار ذخیره شد ولی اتاق عملیات کامل نشد؛ از صفحه اتاق عملیات ادامه دهید"
+          );
+        } else {
+          toast.success(
+            editingId
+              ? "دستورکار به‌روز شد — در حال باز کردن اتاق عملیات"
+              : "دستورکار منتشر شد — در حال باز کردن اتاق عملیات"
+          );
+        }
+
+        closeDialog();
+        window.location.href = adminHref(`/admin/directives/${directiveId}`, campaignId);
+        return;
       }
 
+      toast.success(editingId ? "دستورکار به‌روز شد" : "دستورکار منتشر شد");
       closeDialog();
-      window.location.href = adminHref(`/admin/directives/${directiveId}`, campaignId);
+      window.location.href = adminHref("/admin/directives", campaignId);
     });
   });
 
@@ -862,15 +839,15 @@ export function DirectivesAdmin({
           <p className="text-sm text-muted-foreground">
             {canManage
               ? audienceScope === "subordinates"
-                ? "صدور دستورکار و تکمیل اتاق عملیات برای زیرمجموعه‌ها"
-                : "ثبت دستورکار همراه اتاق عملیات، فایل‌ها، KPI و پیگیری"
+                ? "صدور دستورکار ساده یا همراه اتاق عملیات برای زیرمجموعه‌ها"
+                : "ثبت دستورکار ساده یا همراه اتاق عملیات، فایل‌ها، KPI و پیگیری"
               : "دستورکارهای جدید را ببینید، تأیید مشاهده بزنید و برنامه اقدام ثبت کنید"}
           </p>
         </div>
         {canManage && managerView === "manage" && manageListTab === "active" && (
           <Button onClick={openCreate}>
             <Plus className="h-4 w-4" />
-            ثبت دستورکار و اتاق عملیات
+            ثبت دستورکار
           </Button>
         )}
       </div>
@@ -928,25 +905,6 @@ export function DirectivesAdmin({
         </Tabs>
       )}
 
-      {!showingPatterns ? (
-      <div className="flex flex-wrap items-center gap-3">
-        <Label className="text-sm text-muted-foreground">فیلتر منبع</Label>
-        <Select value={authorityFilter} onValueChange={setAuthorityFilter}>
-          <SelectTrigger className="w-[240px]">
-            <SelectValue placeholder="همه منابع" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={AUTHORITY_FILTER_ALL}>همه منابع</SelectItem>
-            {DIRECTIVE_AUTHORITY_OPTIONS.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      ) : null}
-
       {showingPatterns && isFullAdmin ? (
         <div className="space-y-8">
           <DirectivePlaybooksAdmin />
@@ -974,9 +932,6 @@ export function DirectivesAdmin({
                 <div className="space-y-2 min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <h2 className="text-lg font-semibold">{item.title}</h2>
-                    <Badge variant="secondary">
-                      {getAuthorityBadgeLabel(item.authorityLevel, item.authorityOther)}
-                    </Badge>
                     {item.creationMode === "smart" ? (
                       <Badge variant="outline">ساخت هوشمند</Badge>
                     ) : null}
@@ -1135,13 +1090,13 @@ export function DirectivesAdmin({
               {editingId
                 ? creationMode === "smart"
                   ? "ویرایش دستورکار هوشمند"
-                  : "ویرایش دستورکار و اتاق عملیات"
-                : "ثبت دستورکار و اتاق عملیات"}
+                  : "ویرایش دستورکار"
+                : "ثبت دستورکار"}
             </DialogTitle>
             <p className="text-sm text-muted-foreground">
               {creationMode === "smart"
                 ? "ویزارد چندمرحله‌ای ساخت هوشمند — نوع مأموریت، راهبرد، سنجش و برداشت AI"
-                : "مشخصات دستورکار و هدف‌های اتاق عملیات را همین‌جا پر کنید؛ بعد از ذخیره صفحه کامل فایل‌ها، KPI و نسخه‌ها باز می‌شود."}
+                : "می‌توانید فقط مشخصات دستورکار را ثبت کنید، یا در صورت نیاز اتاق عملیات را هم فعال کنید."}
             </p>
           </DialogHeader>
 
@@ -1197,21 +1152,47 @@ export function DirectivesAdmin({
                     }
                   : undefined
               }
-              issuerAuthorityLevel={issuerAuthorityLevel}
-              issuerAuthorityOther={issuerAuthorityOther}
               onCancel={closeDialog}
               onSaved={() => closeDialog()}
             />
           ) : (
           <form onSubmit={onSubmit} className="space-y-4 text-right" dir="rtl">
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3">
+              <div>
+                <Label>اتاق عملیات</Label>
+                <p className="text-xs text-muted-foreground">
+                  اختیاری — برای دستورکار ساده خاموش بگذارید
+                </p>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <span className={!includeOpsRoom ? "font-medium" : "text-muted-foreground"}>
+                  ساده
+                </span>
+                <Switch
+                  checked={includeOpsRoom}
+                  onCheckedChange={(checked) => {
+                    setIncludeOpsRoom(checked);
+                    if (!checked) setFormTab("basics");
+                  }}
+                />
+                <span className={includeOpsRoom ? "font-medium" : "text-muted-foreground"}>
+                  با اتاق عملیات
+                </span>
+              </div>
+            </div>
+
             <Tabs
-              value={formTab}
+              value={includeOpsRoom ? formTab : "basics"}
               onValueChange={(value) => setFormTab(value as "basics" | "workspace")}
               dir="rtl"
             >
               <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1">
-                <TabsTrigger value="basics">۱. مشخصات دستورکار</TabsTrigger>
-                <TabsTrigger value="workspace">۲. اتاق عملیات</TabsTrigger>
+                <TabsTrigger value="basics">
+                  {includeOpsRoom ? "۱. مشخصات دستورکار" : "مشخصات دستورکار"}
+                </TabsTrigger>
+                {includeOpsRoom ? (
+                  <TabsTrigger value="workspace">۲. اتاق عملیات</TabsTrigger>
+                ) : null}
               </TabsList>
 
               <TabsContent value="basics" className="mt-4 space-y-4">
@@ -1249,36 +1230,7 @@ export function DirectivesAdmin({
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label>منبع بالادستی</Label>
-                <Select
-                  value={authorityLevel}
-                  onValueChange={(value) =>
-                    form.setValue("authorityLevel", value as DirectiveAuthorityLevel)
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {DIRECTIVE_AUTHORITY_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
             </div>
-            {authorityLevel === "other" && (
-              <div className="space-y-2">
-                <Label>توضیح منبع (سایر)</Label>
-                <Input
-                  {...form.register("authorityOther")}
-                  placeholder="مثلاً شورای عالی …"
-                />
-              </div>
-            )}
             <div className="space-y-2">
               <Label>موضوع (برای تقویم ملی)</Label>
               <Input {...form.register("topic")} placeholder="مثلاً سلامت / آموزش" />
@@ -1802,7 +1754,7 @@ export function DirectivesAdmin({
               <Button type="button" variant="outline" onClick={closeDialog}>
                 انصراف
               </Button>
-              {formTab === "basics" ? (
+              {includeOpsRoom && formTab === "basics" ? (
                 <Button
                   type="button"
                   variant="secondary"
@@ -1810,7 +1762,8 @@ export function DirectivesAdmin({
                 >
                   ادامه: اتاق عملیات
                 </Button>
-              ) : (
+              ) : null}
+              {includeOpsRoom && formTab === "workspace" ? (
                 <Button
                   type="button"
                   variant="secondary"
@@ -1818,9 +1771,15 @@ export function DirectivesAdmin({
                 >
                   بازگشت به مشخصات
                 </Button>
-              )}
+              ) : null}
               <Button type="submit" disabled={isPending}>
-                {editingId ? "ذخیره و باز کردن اتاق عملیات" : "انتشار و باز کردن اتاق عملیات"}
+                {includeOpsRoom
+                  ? editingId
+                    ? "ذخیره و باز کردن اتاق عملیات"
+                    : "انتشار و باز کردن اتاق عملیات"
+                  : editingId
+                    ? "ذخیره دستورکار"
+                    : "انتشار دستورکار"}
               </Button>
             </div>
           </form>
@@ -1880,9 +1839,6 @@ export function DirectivesAdmin({
               <DialogHeader>
                 <DialogTitle className="flex flex-wrap items-center gap-2">
                   {detailItem.title}
-                  <Badge variant="secondary">
-                    {getAuthorityBadgeLabel(detailItem.authorityLevel, detailItem.authorityOther)}
-                  </Badge>
                   {detailItem.priority === "urgent" && (
                     <Badge variant="destructive">فوری</Badge>
                   )}

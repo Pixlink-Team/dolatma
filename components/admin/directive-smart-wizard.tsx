@@ -31,10 +31,6 @@ import {
 } from "@/lib/actions/directive-workspace-actions";
 import { CONTENT_TITLE_MAX_LENGTH } from "@/lib/content-constraints";
 import {
-  DIRECTIVE_AUTHORITY_OPTIONS,
-  type DirectiveAuthorityLevel,
-} from "@/lib/directive-authority";
-import {
   DIRECTIVE_MISSION_TYPE_LABELS,
   DIRECTIVE_MISSION_TYPES,
   SMART_WIZARD_STEP_LABELS,
@@ -130,8 +126,6 @@ interface DirectiveSmartWizardProps {
     fileSize: number;
     mimeType: string;
   };
-  issuerAuthorityLevel?: DirectiveAuthorityLevel;
-  issuerAuthorityOther?: string | null;
   onCancel: () => void;
   onSaved: (directiveId: string) => void;
 }
@@ -149,8 +143,6 @@ export function DirectiveSmartWizard({
   initialTopic = "",
   initialLinkContentTopic = false,
   initialLetter,
-  issuerAuthorityLevel = "internal",
-  issuerAuthorityOther = null,
   onCancel,
   onSaved,
 }: DirectiveSmartWizardProps) {
@@ -170,9 +162,6 @@ export function DirectiveSmartWizard({
   const [endDate, setEndDate] = useState(initialEndDate);
   const [topic, setTopic] = useState(initialTopic);
   const [linkContentTopic, setLinkContentTopic] = useState(initialLinkContentTopic);
-  const [authorityLevel, setAuthorityLevel] =
-    useState<DirectiveAuthorityLevel>(issuerAuthorityLevel);
-  const [authorityOther, setAuthorityOther] = useState(issuerAuthorityOther ?? "");
   const [audienceType, setAudienceType] = useState<DirectiveAudienceType>("all");
   const [audienceRegion, setAudienceRegion] = useState<UserRegion | null>(null);
   const [letterUpload, setLetterUpload] = useState({
@@ -335,10 +324,6 @@ export function DirectiveSmartWizard({
       toast.error("آپلود نامه رسمی الزامی است");
       return;
     }
-    if (authorityLevel === "other" && !authorityOther.trim()) {
-      toast.error("برای منبع «سایر» توضیح الزامی است");
-      return;
-    }
     if (linkContentTopic && !topic.trim()) {
       toast.error("برای ساخت موضوع محتوا، نام موضوع را وارد کنید");
       return;
@@ -371,9 +356,6 @@ export function DirectiveSmartWizard({
         title: title.trim().slice(0, CONTENT_TITLE_MAX_LENGTH),
         body: body.trim(),
         priority,
-        authorityLevel,
-        authorityOther:
-          authorityLevel === "other" ? authorityOther.trim() || null : null,
         startDate,
         endDate,
         letterFileUrl: letterUpload.url,
@@ -533,36 +515,7 @@ export function DirectiveSmartWizard({
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label>منبع بالادستی</Label>
-              <Select
-                value={authorityLevel}
-                onValueChange={(value) =>
-                  setAuthorityLevel(value as DirectiveAuthorityLevel)
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {DIRECTIVE_AUTHORITY_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
           </div>
-          {authorityLevel === "other" ? (
-            <div className="space-y-2">
-              <Label>توضیح منبع (سایر)</Label>
-              <Input
-                value={authorityOther}
-                onChange={(event) => setAuthorityOther(event.target.value)}
-              />
-            </div>
-          ) : null}
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label>تاریخ شروع</Label>
