@@ -201,6 +201,15 @@ export function canAccessSectionTutorials(
   return hasPanelPermission(session, permissions, "sectionTutorials");
 }
 
+/** National calendar — admin/client, or granted `nationalCalendar` on any/active campaign. */
+export function canAccessNationalCalendar(
+  session: AuthSession,
+  permissions?: ContributorPermissions | null
+): boolean {
+  if (isFullAdmin(session) || isClientUser(session)) return true;
+  return hasPanelPermission(session, permissions, "nationalCalendar");
+}
+
 /** True when any campaign membership grants the panel permission. */
 export async function hasAnyCampaignPermission(
   session: AuthSession,

@@ -21,6 +21,8 @@ export interface ContributorPermissions {
   siteUpdates: boolean;
   /** Panel management: section tutorials admin page. */
   sectionTutorials: boolean;
+  /** Panel management: national calendar page. */
+  nationalCalendar: boolean;
   /** Scoped management: create/edit users under own device subtree. */
   manageSubtreeUsers: boolean;
   /** Scoped management: issue directives to subtree audience. */
@@ -54,6 +56,8 @@ export const defaultContributorPermissions = (): ContributorPermissions => ({
   campaignSettings: false,
   siteUpdates: false,
   sectionTutorials: false,
+  // Keep open by default — previously always visible; admin can revoke per user.
+  nationalCalendar: true,
   manageSubtreeUsers: false,
   manageSubtreeDirectives: false,
   scoreSubtreeContent: false,
@@ -87,6 +91,7 @@ export const panelManagementKeys = [
   "campaignSettings",
   "siteUpdates",
   "sectionTutorials",
+  "nationalCalendar",
 ] as const satisfies readonly ContributorPermissionKey[];
 
 export type PanelManagementKey = (typeof panelManagementKeys)[number];
@@ -96,6 +101,7 @@ export const panelManagementPermissionLabels: Record<PanelManagementKey, string>
   campaignSettings: "تنظیمات راستا",
   siteUpdates: "آپدیت‌های سایت",
   sectionTutorials: "آموزش بخش‌ها",
+  nationalCalendar: "تقویم ملی",
 };
 
 export const subtreeManagementKeys = [
@@ -132,6 +138,7 @@ export function normalizeContributorPermissions(
     campaignSettings: record.campaignSettings ?? defaults.campaignSettings,
     siteUpdates: record.siteUpdates ?? defaults.siteUpdates,
     sectionTutorials: record.sectionTutorials ?? defaults.sectionTutorials,
+    nationalCalendar: record.nationalCalendar ?? defaults.nationalCalendar,
     manageSubtreeUsers: record.manageSubtreeUsers ?? defaults.manageSubtreeUsers,
     manageSubtreeDirectives:
       record.manageSubtreeDirectives ?? defaults.manageSubtreeDirectives,
@@ -170,6 +177,7 @@ export const deniedContributorPermissions = (): ContributorPermissions => ({
   campaignSettings: false,
   siteUpdates: false,
   sectionTutorials: false,
+  nationalCalendar: false,
   manageSubtreeUsers: false,
   manageSubtreeDirectives: false,
   scoreSubtreeContent: false,

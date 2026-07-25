@@ -79,7 +79,7 @@ const allNavItems: {
   { href: "/admin/profile", label: "پروفایل من", icon: UserCircle },
   { href: "/admin/settings", label: "تنظیمات راستا", icon: Settings, permissionKey: "campaignSettings", adminOrClientOnly: true },
   { href: "/admin/capacity-map", label: "نقشه ملی ظرفیت", icon: Map, adminOrClientOnly: true },
-  { href: "/admin/calendar", label: "تقویم ملی", icon: CalendarDays, alwaysVisible: true },
+  { href: "/admin/calendar", label: "تقویم ملی", icon: CalendarDays, permissionKey: "nationalCalendar", adminOrClientOnly: true },
   { href: "/admin/tutorials", label: "آموزش بخش‌ها", icon: GraduationCap, permissionKey: "sectionTutorials", adminOnly: true },
   { href: "/admin/onboarding-steps", label: "مراحل راه‌اندازی", icon: ListChecks, adminOnly: true },
   { href: "/admin/ministries", label: "دستگاه‌ها", icon: Building2, devicesNav: true },

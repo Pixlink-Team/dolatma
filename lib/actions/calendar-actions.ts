@@ -1,5 +1,9 @@
 "use server";
 
+import {
+  hasAnyCampaignPermission,
+  isClientUser,
+} from "@/lib/auth/access";
 import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
 import { pgListCalendarDirectives } from "@/lib/db/repository-directives";
 import { detectCalendarConflict } from "@/lib/directive-funnel";
@@ -11,17 +15,20 @@ export async function getNationalCalendarAction(campaignId?: string | null) {
   if (!session) {
     return { success: false as const, error: "Unauthorized", directives: [], conflicts: [] };
   }
-  if (!isFullAdmin(session) && session.role !== "client") {
-    if (!session.userId || !isPostgresConfigured()) {
-      return {
-        success: false as const,
-        error: "Unauthorized",
-        directives: [],
-        conflicts: [],
-      };
-    }
-    // All panel users can view calendar; membership optional for global view.
+
+  const allowed =
+    isFullAdmin(session) ||
+    isClientUser(session) ||
+    (await hasAnyCampaignPermission(session, "nationalCalendar"));
+  if (!allowed) {
+    return {
+      success: false as const,
+      error: "Unauthorized",
+      directives: [],
+      conflicts: [],
+    };
   }
+
   if (!isPostgresConfigured()) {
     return {
       success: false as const,

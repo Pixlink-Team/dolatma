@@ -1,12 +1,22 @@
 import { redirect } from "next/navigation";
 import { NationalCalendarAdmin } from "@/components/admin/national-calendar-admin";
-import { getAuthSession } from "@/lib/auth/get-session";
+import {
+  hasAnyCampaignPermission,
+  isClientUser,
+} from "@/lib/auth/access";
+import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
 import { getNationalCalendarAction } from "@/lib/actions/calendar-actions";
 import { isPostgresConfigured } from "@/lib/utils";
 
 export default async function NationalCalendarPage() {
   const session = await getAuthSession();
   if (!session) redirect("/admin/login");
+
+  const allowed =
+    isFullAdmin(session) ||
+    isClientUser(session) ||
+    (await hasAnyCampaignPermission(session, "nationalCalendar"));
+  if (!allowed) redirect("/admin");
 
   if (!isPostgresConfigured()) {
     return (
