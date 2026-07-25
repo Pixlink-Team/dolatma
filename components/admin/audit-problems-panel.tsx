@@ -146,7 +146,7 @@ export function AuditProblemsPanel({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 text-right" dir="rtl">
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <StatChip
           label="کل تیکت‌ها"
@@ -191,11 +191,12 @@ export function AuditProblemsPanel({
             <Select
               value={statusFilter}
               onValueChange={(value) => setStatusFilter(value as StatusFilter)}
+              dir="rtl"
             >
-              <SelectTrigger className="w-[200px]">
+              <SelectTrigger className="w-[200px]" dir="rtl">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent dir="rtl">
                 <SelectItem value="all">همه</SelectItem>
                 <SelectItem value="open">بازها</SelectItem>
                 <SelectItem value="answered">پاسخ‌داده‌شده‌ها</SelectItem>

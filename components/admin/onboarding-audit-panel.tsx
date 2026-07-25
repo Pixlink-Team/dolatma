@@ -34,7 +34,7 @@ export function OnboardingAuditPanel({ rows, campaignTitle }: OnboardingAuditPan
   const incompleteCount = rows.length - completeCount;
 
   return (
-    <Card>
+    <Card className="text-right" dir="rtl">
       <CardHeader className="pb-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>

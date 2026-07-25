@@ -219,7 +219,7 @@ export function AuditCalendarPanel({
   );
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 text-right" dir="rtl">
       <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,380px)_1fr] gap-4">
         <Card>
           <CardHeader className="pb-3 space-y-3">
@@ -246,7 +246,7 @@ export function AuditCalendarPanel({
               <div className="text-sm font-medium">
                 {getPersianMonthName(viewMonth)} {formatPersianNumber(viewYear)}
                 {isMonthPending && (
-                  <Loader2 className="inline-block mr-2 h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                  <Loader2 className="inline-block ms-2 h-3.5 w-3.5 animate-spin text-muted-foreground" />
                 )}
               </div>
               <Button

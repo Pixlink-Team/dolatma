@@ -39,12 +39,13 @@ export function canAccessDevicesTree(session: AuthSession): boolean {
   return canManageSubtreeDevices(session);
 }
 
-/** Resolve the device node this user is attached to (home of their subtree). */
-export async function getSessionHomeDeviceId(
-  session: AuthSession
+/** Resolve the device node a user is attached to (home of their subtree). */
+export async function getUserHomeDeviceId(
+  userId: string | null | undefined
 ): Promise<string | null> {
-  if (!session.userId || !isPostgresConfigured()) return null;
-  const user = await pgGetUserById(session.userId);
+  const id = userId?.trim() || "";
+  if (!id || !isPostgresConfigured()) return null;
+  const user = await pgGetUserById(id);
   if (!user) return null;
 
   // Canonical attachment: org node wins over ministry root.
@@ -73,6 +74,13 @@ export async function getSessionHomeDeviceId(
   }
 
   return null;
+}
+
+/** Resolve the device node this session user is attached to. */
+export async function getSessionHomeDeviceId(
+  session: AuthSession
+): Promise<string | null> {
+  return getUserHomeDeviceId(session.userId);
 }
 
 export async function listAccessibleDevices(

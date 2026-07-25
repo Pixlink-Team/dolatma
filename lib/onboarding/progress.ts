@@ -1,3 +1,4 @@
+import { getUserHomeDeviceId } from "@/lib/auth/device-access";
 import type { CampaignFeatures } from "@/lib/types";
 import type { ContributorPermissions } from "@/lib/contributor-permissions";
 import { hasContributorPermission } from "@/lib/contributor-permissions";
@@ -225,6 +226,25 @@ export async function evaluateDeviceOnboarding(input: {
     hasSubordinateUsers:
       subordinateIds === null ? undefined : subordinateIds.length > 0,
     campaignId: input.campaignId,
+  });
+}
+
+/** Admin/audit view: onboarding for a specific user's home device. */
+export async function evaluateUserOnboarding(input: {
+  userId: string;
+  campaignId: string;
+  features: CampaignFeatures;
+}): Promise<OnboardingProgress | null> {
+  const homeDeviceId = await getUserHomeDeviceId(input.userId);
+  if (!homeDeviceId) return null;
+
+  return evaluateDeviceOnboarding({
+    deviceId: homeDeviceId,
+    campaignId: input.campaignId,
+    features: input.features,
+    ignorePermissions: true,
+    ownerUserIds: [input.userId],
+    issuerUserId: input.userId,
   });
 }
 

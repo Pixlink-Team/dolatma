@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "30795b5d9eaf58a2e6a5265ca4f1368db96f10bf",
+      "committedAt": "2026-07-25T20:28:14+03:30",
+      "title": "آموزش فیلدبه‌فیلد هنگام ساخت کاربر جدید",
+      "subject": "Add field-by-field tips on new user form"
+    },
+    {
       "hash": "e5e0889b99f4708ba51cc39a01dffa9660dd1abd",
       "committedAt": "2026-07-25T20:26:57+03:30",
       "title": "خالی بودن فیلد عنوان هنگام افزودن پوستر و ویدیو",

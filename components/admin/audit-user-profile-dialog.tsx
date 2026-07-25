@@ -37,10 +37,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { PersianDateInput } from "@/components/ui/persian-date-input";
+import { OnboardingProgressCard } from "@/components/admin/onboarding-progress-card";
 import {
   getUserAuditProfileAction,
   type UserAuditProfileResult,
 } from "@/lib/actions/audit-user-actions";
+import { getUserOnboardingProgressAction } from "@/lib/actions/onboarding-actions";
 import {
   AUDIT_CATEGORY_LABELS,
   getAuditActionLabel,
@@ -48,6 +50,7 @@ import {
   getAuditRoleLabel,
 } from "@/lib/audit/labels";
 import type { AuditCategory, AuditEvent } from "@/lib/audit/types";
+import type { OnboardingProgress } from "@/lib/onboarding/types";
 import { useChartTheme } from "@/lib/hooks/use-chart-theme";
 import {
   getTehranCalendarDateIso,
@@ -184,6 +187,11 @@ export function AuditUserProfileDialog({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [profile, setProfile] = useState<UserAuditProfileResult | null>(null);
+  const [onboarding, setOnboarding] = useState<{
+    progress: OnboardingProgress | null;
+    campaignTitle: string | null;
+  } | null>(null);
+  const [onboardingLoading, setOnboardingLoading] = useState(false);
 
   const { displayName, showEmail, email } = resolveUserDisplay(user?.name, user?.email);
 
@@ -191,6 +199,37 @@ export function AuditUserProfileDialog({
     if (!open) return;
     setSelectedDate(initialDate || getTehranCalendarDateIso());
   }, [open, initialDate, user?.userId, user?.email]);
+
+  useEffect(() => {
+    if (!open) {
+      setOnboarding(null);
+      return;
+    }
+    const userId = user?.userId?.trim() || null;
+    if (!userId) {
+      setOnboarding(null);
+      return;
+    }
+
+    let cancelled = false;
+    setOnboardingLoading(true);
+    void getUserOnboardingProgressAction(userId).then((result) => {
+      if (cancelled) return;
+      if (result.success) {
+        setOnboarding({
+          progress: result.progress,
+          campaignTitle: result.campaignTitle,
+        });
+      } else {
+        setOnboarding(null);
+      }
+      setOnboardingLoading(false);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, user?.userId]);
 
   useEffect(() => {
     if (!open) return;
@@ -254,7 +293,10 @@ export function AuditUserProfileDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="!flex max-h-[92vh] w-[min(96vw,1100px)] max-w-5xl flex-col gap-0 overflow-hidden p-0">
+      <DialogContent
+        className="!flex max-h-[92vh] w-[min(96vw,1100px)] max-w-5xl flex-col gap-0 overflow-hidden p-0 text-right"
+        dir="rtl"
+      >
         <DialogHeader className="px-6 pt-6 pb-3 border-b shrink-0 space-y-3">
           <DialogTitle className="flex flex-wrap items-center gap-2">
             {user?.isOnline !== undefined && (
@@ -334,6 +376,23 @@ export function AuditUserProfileDialog({
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-4 min-h-[280px] max-h-[calc(92vh-180px)]">
+          {onboardingLoading ? (
+            <div className="flex items-center justify-center gap-2 rounded-xl border border-dashed py-8 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              در حال بارگذاری پیشرفت راه‌اندازی…
+            </div>
+          ) : onboarding?.progress && onboarding.progress.totalCount > 0 ? (
+            <OnboardingProgressCard
+              progress={onboarding.progress}
+              title="پیشرفت راه‌اندازی دستگاه"
+              description={
+                onboarding.campaignTitle
+                  ? `وضعیت تکمیل مراحل راه‌اندازی دستگاه «${onboarding.progress.deviceName}» — راستا: ${onboarding.campaignTitle}`
+                  : `وضعیت تکمیل مراحل راه‌اندازی دستگاه «${onboarding.progress.deviceName}»`
+              }
+            />
+          ) : null}
+
           {loading ? (
             <div className="flex items-center justify-center gap-2 py-20 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />

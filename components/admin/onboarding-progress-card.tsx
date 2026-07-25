@@ -7,6 +7,9 @@ import { cn, formatPersianNumber } from "@/lib/utils";
 
 interface OnboardingProgressCardProps {
   progress: OnboardingProgress;
+  /** Override default end-user copy (e.g. admin audit view). */
+  title?: string;
+  description?: string;
 }
 
 function CircularProgress({
@@ -79,7 +82,11 @@ function CircularProgress({
   );
 }
 
-export function OnboardingProgressCard({ progress }: OnboardingProgressCardProps) {
+export function OnboardingProgressCard({
+  progress,
+  title = "راه‌اندازی سامانه",
+  description = "مأموریت‌های زیر را انجام دهید تا آماده‌سازی کامل شود.",
+}: OnboardingProgressCardProps) {
   const { steps, completedCount, totalCount, percent } = progress;
   const currentIndex = steps.findIndex((step) => !step.done);
   const remaining = steps.filter((step) => !step.done).length;
@@ -89,10 +96,8 @@ export function OnboardingProgressCard({ progress }: OnboardingProgressCardProps
       <CardHeader className="pb-2">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <CardTitle className="text-lg">راه‌اندازی سامانه</CardTitle>
-            <p className="mt-1 text-sm text-muted-foreground">
-              مأموریت‌های زیر را انجام دهید تا آماده‌سازی کامل شود.
-            </p>
+            <CardTitle className="text-lg">{title}</CardTitle>
+            <p className="mt-1 text-sm text-muted-foreground">{description}</p>
           </div>
           <Badge
             variant={percent === 100 ? "default" : "secondary"}

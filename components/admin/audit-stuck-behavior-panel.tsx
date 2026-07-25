@@ -38,7 +38,7 @@ export function AuditStuckBehaviorPanel({
   recentErrors: RecentUserError[];
 }) {
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 text-right" dir="rtl">
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-base flex items-center gap-2">

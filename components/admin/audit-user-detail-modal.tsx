@@ -110,7 +110,10 @@ export function AuditUserDetailModal({ target, onOpenChange }: AuditUserDetailMo
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="!flex max-h-[92vh] max-w-3xl flex-col gap-0 overflow-hidden p-0">
+      <DialogContent
+        className="!flex max-h-[92vh] max-w-3xl flex-col gap-0 overflow-hidden p-0 text-right"
+        dir="rtl"
+      >
         <DialogHeader className="shrink-0 border-b px-6 py-4 pe-12">
           <DialogTitle className="flex flex-wrap items-center gap-2">
             <span>{titleName}</span>
