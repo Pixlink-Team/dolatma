@@ -30,7 +30,9 @@ import {
 import { getDeviceCeilingAction } from "@/lib/actions/device-access-actions";
 import { saveDeviceAction } from "@/lib/actions/device-actions";
 import { saveOrganizationAction } from "@/lib/actions/ministry-actions";
+import { FieldTutorialTip } from "@/components/admin/field-tutorial-tip";
 import { useSectionCreateGate } from "@/lib/hooks/use-section-create-gate";
+import { useUserCreateFieldTutorials } from "@/lib/hooks/use-user-create-field-tutorials";
 import {
   allContributorPermissionKeys,
   defaultContributorPermissions,
@@ -175,6 +177,9 @@ export function UsersAdmin({
   /** Optional fields (phone, access, etc.) stay collapsed so create stays simple. */
   const [optionalFieldsOpen, setOptionalFieldsOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const fieldTutorials = useUserCreateFieldTutorials(
+    open && !editingId && canManageUsers
+  );
   const [rows, setRows] = useState(initialUsers);
   const [ministriesList, setMinistriesList] = useState(ministries);
   const [creatingOrganization, setCreatingOrganization] = useState(false);
@@ -903,8 +908,8 @@ export function UsersAdmin({
     setEditingId(null);
     setOptionalFieldsOpen(false);
     resetOrganizationCreate();
-    const defaultAssignOwn = canAssignToOwnUnit;
-    setAssignToOwnUnit(defaultAssignOwn);
+    // Start with own-unit unchecked so the subsidiary picker (and its tip) is visible.
+    setAssignToOwnUnit(false);
     const defaultOrgRole: OrgRole = "pr";
     if (permissionCapActive && primaryCampaignId) {
       const grantor = getGrantorPermissions(primaryCampaignId);
@@ -923,8 +928,7 @@ export function UsersAdmin({
       city: "",
       phone: "",
       ministryId: isSubUsersMode ? parentMinistryId : null,
-      organizationId:
-        defaultAssignOwn && isScopedToOwnOrganization ? parentOrganizationId : null,
+      organizationId: null,
       parentUserId: parentUserId ?? null,
       campaignIds: soleCampaignIds,
     });
@@ -1375,11 +1379,30 @@ export function UsersAdmin({
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <Label>نام سازمان</Label>
-                    <Input {...form.register("name")} placeholder="نام سازمان" />
+                    <Input
+                      {...form.register("name")}
+                      onFocus={() => fieldTutorials.onFieldFocus("name")}
+                      placeholder="نام سازمان"
+                    />
+                    <FieldTutorialTip
+                      fieldKey="name"
+                      visible={fieldTutorials.isTipVisible("name")}
+                      onDismiss={fieldTutorials.dismiss}
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label>نام کاربری</Label>
-                    <Input {...form.register("email")} dir="ltr" placeholder="BAZARBAYJAN" />
+                    <Input
+                      {...form.register("email")}
+                      onFocus={() => fieldTutorials.onFieldFocus("email")}
+                      dir="ltr"
+                      placeholder="BAZARBAYJAN"
+                    />
+                    <FieldTutorialTip
+                      fieldKey="email"
+                      visible={fieldTutorials.isTipVisible("email")}
+                      onDismiss={fieldTutorials.dismiss}
+                    />
                   </div>
 
                   {!isSubUsersMode && (
@@ -1388,6 +1411,9 @@ export function UsersAdmin({
                         <Label>وزارتخانه</Label>
                         <Select
                           value={selectedMinistryId || NO_MINISTRY}
+                          onOpenChange={(nextOpen) => {
+                            if (nextOpen) fieldTutorials.onFieldFocus("ministry");
+                          }}
                           onValueChange={(value) => {
                             form.setValue("ministryId", value === NO_MINISTRY ? null : value);
                             form.setValue("organizationId", null);
@@ -1409,6 +1435,11 @@ export function UsersAdmin({
                             ))}
                           </SelectContent>
                         </Select>
+                        <FieldTutorialTip
+                          fieldKey="ministry"
+                          visible={fieldTutorials.isTipVisible("ministry")}
+                          onDismiss={fieldTutorials.dismiss}
+                        />
                       </div>
 
                       <div className="space-y-2">
@@ -1419,6 +1450,9 @@ export function UsersAdmin({
                               ? CREATE_ORGANIZATION
                               : selectedOrganizationId || NO_ORGANIZATION
                           }
+                          onOpenChange={(nextOpen) => {
+                            if (nextOpen) fieldTutorials.onFieldFocus("organization");
+                          }}
                           onValueChange={handleOrganizationSelect}
                           disabled={!selectedMinistryId}
                         >
@@ -1437,6 +1471,11 @@ export function UsersAdmin({
                             <SelectItem value={CREATE_ORGANIZATION}>ایجاد زیرمجموعه جدید…</SelectItem>
                           </SelectContent>
                         </Select>
+                        <FieldTutorialTip
+                          fieldKey="organization"
+                          visible={fieldTutorials.isTipVisible("organization")}
+                          onDismiss={fieldTutorials.dismiss}
+                        />
                         {creatingOrganization && (
                           <div className="space-y-2">
                             {createUnderParentName ? (
@@ -1475,30 +1514,39 @@ export function UsersAdmin({
                   {isSubUsersMode && Boolean(parentMinistryId) && (
                     <div className="space-y-2">
                       {canAssignToOwnUnit && (
-                        <label className="flex items-center gap-2 text-sm">
-                          <input
-                            type="checkbox"
-                            checked={assignToOwnUnit}
-                            onChange={(event) => {
-                              const checked = event.target.checked;
-                              setAssignToOwnUnit(checked);
-                              resetOrganizationCreate();
-                              form.setValue(
-                                "organizationId",
-                                checked && isScopedToOwnOrganization
-                                  ? parentOrganizationId
-                                  : null
-                              );
-                            }}
+                        <>
+                          <label className="flex items-center gap-2 text-sm">
+                            <input
+                              type="checkbox"
+                              checked={assignToOwnUnit}
+                              onFocus={() => fieldTutorials.onFieldFocus("ownUnit")}
+                              onChange={(event) => {
+                                fieldTutorials.onFieldFocus("ownUnit");
+                                const checked = event.target.checked;
+                                setAssignToOwnUnit(checked);
+                                resetOrganizationCreate();
+                                form.setValue(
+                                  "organizationId",
+                                  checked && isScopedToOwnOrganization
+                                    ? parentOrganizationId
+                                    : null
+                                );
+                              }}
+                            />
+                            {isScopedToOwnOrganization ? "برای خود سازمان" : "برای خود وزارتخانه"}
+                            {isScopedToOwnOrganization && ownOrganizationName ? (
+                              <span className="text-muted-foreground">({ownOrganizationName})</span>
+                            ) : null}
+                            {isScopedToOwnMinistry && ownMinistryName ? (
+                              <span className="text-muted-foreground">({ownMinistryName})</span>
+                            ) : null}
+                          </label>
+                          <FieldTutorialTip
+                            fieldKey="ownUnit"
+                            visible={fieldTutorials.isTipVisible("ownUnit")}
+                            onDismiss={fieldTutorials.dismiss}
                           />
-                          {isScopedToOwnOrganization ? "برای خود سازمان" : "برای خود وزارتخانه"}
-                          {isScopedToOwnOrganization && ownOrganizationName ? (
-                            <span className="text-muted-foreground">({ownOrganizationName})</span>
-                          ) : null}
-                          {isScopedToOwnMinistry && ownMinistryName ? (
-                            <span className="text-muted-foreground">({ownMinistryName})</span>
-                          ) : null}
-                        </label>
+                        </>
                       )}
                       {!(assignToOwnUnit && canAssignToOwnUnit) && (
                         <>
@@ -1509,6 +1557,9 @@ export function UsersAdmin({
                                 ? CREATE_ORGANIZATION
                                 : selectedOrganizationId || NO_ORGANIZATION
                             }
+                            onOpenChange={(nextOpen) => {
+                              if (nextOpen) fieldTutorials.onFieldFocus("organization");
+                            }}
                             onValueChange={handleOrganizationSelect}
                           >
                             <SelectTrigger>
@@ -1530,6 +1581,11 @@ export function UsersAdmin({
                               <SelectItem value={CREATE_ORGANIZATION}>ایجاد زیرمجموعه جدید…</SelectItem>
                             </SelectContent>
                           </Select>
+                          <FieldTutorialTip
+                            fieldKey="organization"
+                            visible={fieldTutorials.isTipVisible("organization")}
+                            onDismiss={fieldTutorials.dismiss}
+                          />
                           {creatingOrganization && (
                             <div className="space-y-2">
                               {createUnderParentName ? (
@@ -1577,7 +1633,16 @@ export function UsersAdmin({
 
                   <div className="space-y-2">
                     <Label>{editingId ? "رمز عبور جدید (اختیاری)" : "رمز عبور"}</Label>
-                    <Input type="password" {...form.register("password")} />
+                    <Input
+                      type="password"
+                      {...form.register("password")}
+                      onFocus={() => fieldTutorials.onFieldFocus("password")}
+                    />
+                    <FieldTutorialTip
+                      fieldKey="password"
+                      visible={fieldTutorials.isTipVisible("password")}
+                      onDismiss={fieldTutorials.dismiss}
+                    />
                   </div>
 
                   {(isFullMode
@@ -1587,6 +1652,9 @@ export function UsersAdmin({
                       <Label>سمت</Label>
                       <Select
                         value={selectedOrgRole ?? "pr"}
+                        onOpenChange={(nextOpen) => {
+                          if (nextOpen) fieldTutorials.onFieldFocus("orgRole");
+                        }}
                         onValueChange={(value) => {
                           const orgRole = value as OrgRole;
                           form.setValue("role", "org_user");
@@ -1605,6 +1673,11 @@ export function UsersAdmin({
                           ))}
                         </SelectContent>
                       </Select>
+                      <FieldTutorialTip
+                        fieldKey="orgRole"
+                        visible={fieldTutorials.isTipVisible("orgRole")}
+                        onDismiss={fieldTutorials.dismiss}
+                      />
                     </div>
                   )}
                 </div>
