@@ -48,6 +48,12 @@ import type {
 import { resolveSaveOwnerUserId } from "@/lib/admin-content-owner";
 import { auditContentChange, auditContentDelete, logAuditFromCurrentSession } from "@/lib/audit/log-event";
 import { getContentTitleValidationError } from "@/lib/content-constraints";
+import {
+  hasContributorPermission,
+  type ContributorPermissionKey,
+} from "@/lib/contributor-permissions";
+import { pgGetUserPermissionsForCampaign } from "@/lib/db/repository-extended";
+import { isPostgresConfigured } from "@/lib/utils";
 import { stripFileAccessTokensDeep } from "@/lib/uploads";
 
 function validateTitlePayload(data: { title?: unknown }) {
@@ -69,6 +75,22 @@ function isAuthError(
   value: AuthSession | { success: false; error: string }
 ): value is { success: false; error: string } {
   return "success" in value && value.success === false;
+}
+
+async function assertSectionPermission(
+  session: AuthSession,
+  campaignId: string | undefined,
+  permission: ContributorPermissionKey
+): Promise<{ success: false; error: string } | null> {
+  if (isFullAdmin(session)) return null;
+  if (!campaignId || !session.userId || !isPostgresConfigured()) {
+    return { success: false, error: "دسترسی ندارید" };
+  }
+  const permissions = await pgGetUserPermissionsForCampaign(session.userId, campaignId);
+  if (!hasContributorPermission(permissions, permission)) {
+    return { success: false, error: "دسترسی به این بخش را ندارید" };
+  }
+  return null;
 }
 
 async function revalidateAll(slug?: string) {
@@ -172,6 +194,8 @@ export async function updateSettingsAction(data: Partial<CampaignSettings>) {
 export async function saveBillboardAction(data: Partial<Billboard> & { id?: string }) {
   const auth = await requireSession();
   if (isAuthError(auth)) return auth;
+  const sectionDenied = await assertSectionPermission(auth, data.campaignId, "billboards");
+  if (sectionDenied) return sectionDenied;
   const validationError = validateTitlePayload(data);
   if (validationError) return validationError;
   if (data.id) {
@@ -241,6 +265,8 @@ export async function deleteCategoryAction(id: string, type: "poster" | "video")
 export async function savePosterAction(data: Partial<Poster> & { id?: string }) {
   const auth = await requireSession();
   if (isAuthError(auth)) return auth;
+  const sectionDenied = await assertSectionPermission(auth, data.campaignId, "posters");
+  if (sectionDenied) return sectionDenied;
   const validationError = validateTitlePayload(data);
   if (validationError) return validationError;
   if (data.id) {
@@ -311,6 +337,8 @@ export async function deletePosterVersionAction(id: string) {
 export async function saveVideoAction(data: Partial<Video> & { id?: string }) {
   const auth = await requireSession();
   if (isAuthError(auth)) return auth;
+  const sectionDenied = await assertSectionPermission(auth, data.campaignId, "videos");
+  if (sectionDenied) return sectionDenied;
   const validationError = validateTitlePayload(data);
   if (validationError) return validationError;
   if (data.id) {
@@ -451,6 +479,8 @@ export async function deleteSubmissionAction(id: string) {
 export async function saveCampaignFileAction(data: Partial<CampaignFile> & { id?: string }) {
   const auth = await requireSession();
   if (isAuthError(auth)) return auth;
+  const sectionDenied = await assertSectionPermission(auth, data.campaignId, "files");
+  if (sectionDenied) return sectionDenied;
   const validationError = validateTitlePayload(data);
   if (validationError) return validationError;
   if (data.id) {
@@ -489,6 +519,8 @@ export async function deleteCampaignFileAction(id: string) {
 export async function saveRawMediaUploadAction(data: Partial<RawMediaUpload> & { id?: string }) {
   const auth = await requireSession();
   if (isAuthError(auth)) return auth;
+  const sectionDenied = await assertSectionPermission(auth, data.campaignId, "rawMedia");
+  if (sectionDenied) return sectionDenied;
   const validationError = validateTitlePayload(data);
   if (validationError) return validationError;
   if (data.id) {

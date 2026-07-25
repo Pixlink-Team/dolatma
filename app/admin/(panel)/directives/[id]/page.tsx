@@ -11,6 +11,7 @@ import {
   isScopedDirectiveIssuer,
 } from "@/lib/auth/access";
 import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
+import { requireContributorAccess } from "@/lib/auth/require-contributor-access";
 import { pgListDirectiveBlockers } from "@/lib/db/repository-blockers";
 import {
   pgGetDirectiveWorkspaceBundle,
@@ -23,7 +24,6 @@ import {
   pgListDirectiveRecipients,
   pgListDirectivesForUserInbox,
 } from "@/lib/db/repository-directives";
-import { pgGetUserPermissionsForCampaign } from "@/lib/db/repository-extended";
 import { pgListMinistries } from "@/lib/db/repository-ministries";
 import { isPostgresConfigured } from "@/lib/utils";
 import { withFileAccessTokensDeep } from "@/lib/uploads";
@@ -43,14 +43,9 @@ export default async function DirectiveWorkspacePage({ params, searchParams }: P
 
   const session = await getAuthSession();
   if (!session || !canViewDirectives(session)) redirect("/admin/login");
+  await requireContributorAccess(campaignId, "directives");
 
   const fullAdmin = isFullAdmin(session);
-
-  if (!fullAdmin) {
-    if (!session.userId || !isPostgresConfigured()) redirect("/admin");
-    const membership = await pgGetUserPermissionsForCampaign(session.userId, campaignId);
-    if (!membership) redirect("/admin");
-  }
 
   if (!isPostgresConfigured()) {
     redirect(`/admin/directives?campaign=${campaignId}`);

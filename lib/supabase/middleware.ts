@@ -7,6 +7,20 @@ import {
 import { getSafeRedirectPath } from "@/lib/auth/safe-redirect";
 import { isPostgresConfigured, isSupabaseConfigured } from "@/lib/utils";
 
+/** Forward campaign query so nested layouts can enforce section permissions. */
+function nextWithCampaignHeader(request: NextRequest) {
+  const requestHeaders = new Headers(request.headers);
+  const campaign = request.nextUrl.searchParams.get("campaign");
+  if (campaign) {
+    requestHeaders.set("x-admin-campaign", campaign);
+  } else {
+    requestHeaders.delete("x-admin-campaign");
+  }
+  return NextResponse.next({
+    request: { headers: requestHeaders },
+  });
+}
+
 function redirectAuthenticatedAwayFromLogin(request: NextRequest) {
   const next = getSafeRedirectPath(request.nextUrl.searchParams.get("next"));
   const url = new URL(next, request.nextUrl.origin);
@@ -30,7 +44,7 @@ function handleEnvAdminAuth(request: NextRequest) {
         return redirectAuthenticatedAwayFromLogin(request);
       }
 
-      return NextResponse.next({ request });
+      return nextWithCampaignHeader(request);
     }
   );
 }
@@ -40,7 +54,7 @@ export async function updateSession(request: NextRequest) {
     return handleEnvAdminAuth(request);
   }
 
-  let supabaseResponse = NextResponse.next({ request });
+  let supabaseResponse = nextWithCampaignHeader(request);
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -52,7 +66,7 @@ export async function updateSession(request: NextRequest) {
         },
         setAll(cookiesToSet: { name: string; value: string; options?: Record<string, unknown> }[]) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
-          supabaseResponse = NextResponse.next({ request });
+          supabaseResponse = nextWithCampaignHeader(request);
           cookiesToSet.forEach(({ name, value, options }) =>
             supabaseResponse.cookies.set(name, value, options)
           );

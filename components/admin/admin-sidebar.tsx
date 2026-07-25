@@ -94,7 +94,7 @@ const allNavItems: {
   { href: "/admin/press-publications", label: "مجله و روزنامه", icon: FileText, permissionKey: "activities" },
   { href: "/admin/activities", label: "اقدامات", icon: Sparkles, permissionKey: "activities" },
   { href: "/admin/elanha", label: "اعلان‌ها", icon: Bell, adminOrClientOnly: true },
-  { href: "/admin/directives", label: "دستورکارها", icon: ClipboardCheck, alwaysVisible: true },
+  { href: "/admin/directives", label: "دستورکارها", icon: ClipboardCheck, permissionKey: "directives" },
   { href: "/admin/broadcast", label: "پخش صدا و سیما", icon: Radio, permissionKey: "broadcast" },
   { href: "/admin/meetings", label: "جلسات و مصوبات", icon: ClipboardList, permissionKey: "meetings" },
   { href: "/admin/submissions", label: "مشارکت‌ها", icon: FileText, permissionKey: "submissions" },
@@ -130,7 +130,7 @@ export function AdminSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [isFullAdminUser, setIsFullAdminUser] = useState(true);
+  const [isFullAdminUser, setIsFullAdminUser] = useState(false);
   const [isClientRole, setIsClientRole] = useState(false);
   const [isMinistryParent, setIsMinistryParent] = useState(false);
   const [isSubUser, setIsSubUser] = useState(false);
@@ -140,14 +140,24 @@ export function AdminSidebar() {
   const { campaignId, campaigns, currentCampaign, setCampaignId } = useAdminCampaign();
 
   useEffect(() => {
-    getSessionContextAction(campaignId).then((session) => {
-      if (!session) return;
-      setIsFullAdminUser(session.type === "env_admin" || session.role === "admin");
-      setIsClientRole(session.role === "client");
-      setIsMinistryParent(session.role === "ministry_parent");
-      setIsSubUser(session.role === "sub_user");
-      setPermissions(session.permissions ?? null);
-    });
+    let cancelled = false;
+    const loadSession = () => {
+      getSessionContextAction(campaignId).then((session) => {
+        if (cancelled || !session) return;
+        setIsFullAdminUser(session.type === "env_admin" || session.role === "admin");
+        setIsClientRole(session.role === "client");
+        setIsMinistryParent(session.role === "ministry_parent");
+        setIsSubUser(session.role === "sub_user");
+        setPermissions(session.permissions ?? null);
+      });
+    };
+    loadSession();
+    const onFocus = () => loadSession();
+    window.addEventListener("focus", onFocus);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("focus", onFocus);
+    };
   }, [campaignId]);
 
   useEffect(() => {
@@ -178,11 +188,13 @@ export function AdminSidebar() {
 
   const showMediaCommand =
     isFullAdminUser || hasContributorPermission(permissions, "mediaCommand");
+  // Client role no longer bypasses the monitoring flag — admin can revoke it.
   const showMonitoring =
-    isFullAdminUser || isClientRole || hasContributorPermission(permissions, "monitoring");
+    isFullAdminUser || hasContributorPermission(permissions, "monitoring");
 
-  /** Pin directives as a red alert CTA at the top for every panel user. */
-  const showDirectivesAlert = true;
+  /** Pin directives as a red alert CTA when the user has directives access. */
+  const showDirectivesAlert =
+    isFullAdminUser || hasContributorPermission(permissions, "directives");
   const directivesNavItem = navItems.find((item) => item.href === DIRECTIVES_HREF);
   const contentNavItems = navItems.filter((item) => {
     if (managementNavHrefs.has(item.href)) return false;

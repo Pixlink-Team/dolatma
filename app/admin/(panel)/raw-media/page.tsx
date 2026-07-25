@@ -4,6 +4,7 @@ import { resolveAdminCampaignId } from "@/lib/admin-campaign";
 import { getAdminBulkEditProps } from "@/lib/admin-bulk-edit-props";
 import { canScoreContent } from "@/lib/auth/access";
 import { getAuthSession } from "@/lib/auth/get-session";
+import { requireContributorAccess } from "@/lib/auth/require-contributor-access";
 import type { RawMediaUpload } from "@/lib/types";
 import { redirect } from "next/navigation";
 
@@ -16,6 +17,7 @@ export default async function RawMediaPage({ searchParams }: RawMediaPageProps) 
   const { campaignId } = await resolveAdminCampaignId(params.campaign);
 
   if (!campaignId) redirect("/admin");
+  await requireContributorAccess(campaignId, "rawMedia");
 
   const session = await getAuthSession();
   const canScore = Boolean(session && canScoreContent(session));

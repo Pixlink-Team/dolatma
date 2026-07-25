@@ -15,7 +15,6 @@ import { canManageDirectives } from "@/lib/auth/access";
 import { getAuthSession, getOwnerFilter, isFullAdmin } from "@/lib/auth/get-session";
 import { getAllUsers } from "@/lib/data-access/admin";
 import {
-  defaultContributorPermissions,
   hasContributorPermission,
   type ContributorPermissionKey,
   type ContributorPermissions,
@@ -87,9 +86,11 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
   const features = data.settings.features;
   let contributorPermissions: ContributorPermissions | null = null;
   if (!canManageAll && session?.userId) {
-    contributorPermissions =
-      (await pgGetUserPermissionsForCampaign(session.userId, campaignId)) ??
-      defaultContributorPermissions();
+    // No membership row ⇒ deny all section cards (do not fall back to all-true defaults).
+    contributorPermissions = await pgGetUserPermissionsForCampaign(
+      session.userId,
+      campaignId
+    );
   }
 
   const billboards = data.settings

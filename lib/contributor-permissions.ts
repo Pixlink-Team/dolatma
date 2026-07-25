@@ -92,6 +92,27 @@ export function hasContributorPermission(
   permissions: ContributorPermissions | null | undefined,
   key: ContributorPermissionKey
 ): boolean {
-  if (!permissions) return true;
-  return permissions[key];
+  // Deny by default when permissions are missing (no campaign membership / not loaded yet).
+  if (!permissions) return false;
+  return Boolean(permissions[key]);
 }
+
+/** All section flags off — used when a user has no campaign access row. */
+export const deniedContributorPermissions = (): ContributorPermissions => ({
+  billboards: false,
+  posters: false,
+  videos: false,
+  files: false,
+  rawMedia: false,
+  analytics: false,
+  socialPosts: false,
+  sitePublications: false,
+  broadcast: false,
+  meetings: false,
+  activities: false,
+  submissions: false,
+  directives: false,
+  forms: false,
+  mediaCommand: false,
+  monitoring: false,
+});

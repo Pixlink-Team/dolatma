@@ -8,7 +8,6 @@ import {
   assertTutorialForPossibleCreate,
 } from "@/lib/auth/require-tutorial-completion";
 import {
-  defaultContributorPermissions,
   hasContributorPermission,
   type ContributorPermissions,
 } from "@/lib/contributor-permissions";
@@ -916,10 +915,11 @@ export async function getSessionContextAction(campaignId?: string) {
 
   if (session.type === "db_user" && session.userId) {
     const user = await pgExt.pgGetUserById(session.userId);
+    // Missing campaign membership must deny sections — do not fall back to all-true defaults.
     const permissions =
       session.role === "admin" || !campaignId
         ? null
-        : (user?.campaignPermissions[campaignId] ?? defaultContributorPermissions());
+        : (user?.campaignPermissions[campaignId] ?? null);
 
     return {
       ...session,

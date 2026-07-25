@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { resolveAdminCampaignId } from "@/lib/admin-campaign";
+import { requireContributorAccess } from "@/lib/auth/require-contributor-access";
 import { CampaignMonitoringAdmin } from "@/components/admin/monitoring/campaign-monitoring-admin";
 
 interface PageProps {
@@ -14,5 +15,6 @@ export default async function CampaignMonitoringPage({ params, searchParams }: P
   const resolved = await resolveAdminCampaignId(query.campaign ?? id);
   const campaignId = id || resolved.campaignId;
   if (!campaignId) redirect("/admin");
+  await requireContributorAccess(campaignId, "monitoring");
   return <CampaignMonitoringAdmin campaignId={campaignId} />;
 }

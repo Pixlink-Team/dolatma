@@ -1,6 +1,18 @@
 {
   "entries": [
     {
+      "hash": "9fdd66efb153064d452849c3c4aea72f7aa48d0e",
+      "committedAt": "2026-07-25T11:04:58+03:30",
+      "title": "بسته شدن پیش‌فرض کارت‌های درخت دستگاه‌ها",
+      "subject": "Collapse device tree cards by default"
+    },
+    {
+      "hash": "a86e95a360fc7c0a0a443ac8b19cd5fa9efd712e",
+      "committedAt": "2026-07-25T11:03:17+03:30",
+      "title": "خروج خودکار از پنل وقتی نشست منقضی می‌شود",
+      "subject": "Silent logout on expired session instead of Unauthorized toast"
+    },
+    {
       "hash": "94eecde7e82c87722d07c9e45663a7a9dba4e46d",
       "committedAt": "2026-07-25T11:00:04+03:30",
       "title": "محدود کردن بخش فرم‌ها فقط برای مدیر و کارفرما",
