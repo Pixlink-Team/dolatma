@@ -206,7 +206,7 @@ CREATE TABLE IF NOT EXISTS users (
   email TEXT NOT NULL UNIQUE,
   password_hash TEXT NOT NULL,
   name TEXT NOT NULL,
-  role TEXT NOT NULL DEFAULT 'contributor' CHECK (role IN ('admin', 'contributor')),
+  role TEXT NOT NULL DEFAULT 'contributor',
   province TEXT,
   city TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -399,8 +399,14 @@ CREATE TABLE IF NOT EXISTS billboard_display_periods (
 
 CREATE INDEX IF NOT EXISTS idx_billboard_periods_billboard ON billboard_display_periods(billboard_id, sort_order);
 
+-- Keep the full role set here. A narrower check (without org_user) breaks
+-- container restarts after org-role migration has already written org_user rows.
 ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
-ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('admin', 'contributor', 'client'));
+ALTER TABLE users ADD CONSTRAINT users_role_check
+  CHECK (role IN (
+    'admin', 'client', 'org_user',
+    'contributor', 'ministry_parent', 'sub_user'
+  ));
 
 CREATE TABLE IF NOT EXISTS user_notification_reads (
   reader_key TEXT NOT NULL,
@@ -1083,7 +1089,8 @@ SELECT
   m.created_at,
   now()
 FROM ministries m
-ON CONFLICT (id) DO NOTHING;
+WHERE NOT EXISTS (SELECT 1 FROM devices d WHERE d.id = m.id)
+ON CONFLICT DO NOTHING;
 
 -- Migrate organizations → devices (preserve UUID, parent = ministry)
 INSERT INTO devices (
@@ -1102,7 +1109,8 @@ SELECT
   o.created_at,
   now()
 FROM ministry_organizations o
-ON CONFLICT (id) DO NOTHING;
+WHERE NOT EXISTS (SELECT 1 FROM devices d WHERE d.id = o.id)
+ON CONFLICT DO NOTHING;
 
 ALTER TABLE users
   ADD COLUMN IF NOT EXISTS device_id UUID REFERENCES devices(id) ON DELETE SET NULL;

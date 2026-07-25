@@ -1,6 +1,18 @@
 {
   "entries": [
     {
+      "hash": "74fe699191ee81351d90eacff1e2b4121edcb17d",
+      "committedAt": "2026-07-25T12:12:23+03:30",
+      "title": "پایدارسازی بارگذاری شناسنامه دستگاه‌ها",
+      "subject": "Harden device passport load and schema init"
+    },
+    {
+      "hash": "0dc3961e39c762d72533e783d78830980202844d",
+      "committedAt": "2026-07-25T12:11:00+03:30",
+      "title": "امکان فعال‌سازی دسترسی مدیریتی برای کاربران دستگاه از پنل ادمین",
+      "subject": "Add managed panel access for org users"
+    },
+    {
       "hash": "966ae38f841ba551e0ff511d2ac9ef2f06ab2c0b",
       "committedAt": "2026-07-25T12:08:52+03:30",
       "title": "تکمیل شناسنامه فقط توسط خود کاربر و مشاهده برای بالادستی",
