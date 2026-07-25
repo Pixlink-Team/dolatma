@@ -1,6 +1,18 @@
 {
   "entries": [
     {
+      "hash": "4b8d0da3ce13240fe5ee98a21111828df2d79ddc",
+      "committedAt": "2026-07-25T17:21:09+03:30",
+      "title": "مخفی شدن مرحله صدور دستورکار برای کاربرانی که دسترسی ندارند",
+      "subject": "Hide directives onboarding step without issue permission"
+    },
+    {
+      "hash": "556bd16bd359f960cc27b99f511beb45b2d0be44",
+      "committedAt": "2026-07-25T17:20:58+03:30",
+      "title": "راست‌چین شدن فیلد نوع در ثبت دارایی",
+      "subject": "Make asset type select properly RTL"
+    },
+    {
       "hash": "9f4a5d950a9f0f4ed31975405f7f72458a368d7f",
       "committedAt": "2026-07-25T17:20:02+03:30",
       "title": "امکان تنظیم دسترسی روی دستگاه و اعمال روی همه زیرمجموعه‌ها و کاربران",
