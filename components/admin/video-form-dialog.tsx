@@ -75,7 +75,7 @@ export function VideoFormDialog({
       id: videoId,
       campaignId,
       categoryId: pickDefaultVideoCategoryId(categories),
-      title: initialValues?.title?.trim() || "ویدیو جدید",
+      title: initialValues?.title?.trim() || "",
       description: initialValues?.description?.trim() || "",
       published: true,
       sortOrder: 1,

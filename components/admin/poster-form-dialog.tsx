@@ -73,7 +73,7 @@ export function PosterFormDialog({
       id: posterId,
       campaignId,
       categoryId: categories[0]?.id ?? "",
-      title: initialValues?.title?.trim() || "پوستر جدید",
+      title: initialValues?.title?.trim() || "",
       description: initialValues?.description?.trim() || "",
       published: true,
       sortOrder: 1,

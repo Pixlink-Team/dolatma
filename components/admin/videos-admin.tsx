@@ -200,7 +200,7 @@ export function VideosAdmin({
         id: videoId,
         campaignId,
         categoryId,
-        title: `ویدیو ${videos.length + 1}`,
+        title: "",
         description: "",
         published: true,
         sortOrder: videos.length + 1,

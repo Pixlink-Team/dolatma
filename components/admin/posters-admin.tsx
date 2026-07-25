@@ -169,7 +169,7 @@ export function PostersAdmin({
         id: posterId,
         campaignId,
         categoryId,
-        title: `پوستر ${posters.length + 1}`,
+        title: "",
         description: "",
         published: true,
         sortOrder: posters.length + 1,

@@ -149,7 +149,7 @@ export function AdminPosterEditor({
     startTransition(async () => {
       const savedPoster: Poster = {
         ...poster,
-        title: values.title.trim() || poster.title || "پوستر جدید",
+        title: values.title.trim(),
         description: values.description,
         categoryId: editCategoryId,
         published: true,
@@ -201,7 +201,8 @@ export function AdminPosterEditor({
   };
 
   const highlightTitle =
-    highlightFields.includes("title") && isDefaultPosterTitle(values.title);
+    highlightFields.includes("title") &&
+    (isDefaultPosterTitle(values.title) || !values.title.trim());
   const highlightDescription =
     highlightFields.includes("description") && !values.description.trim();
   const highlightMedia =

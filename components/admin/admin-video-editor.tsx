@@ -223,7 +223,8 @@ export function AdminVideoEditor({
   };
 
   const highlightTitle =
-    highlightFields.includes("title") && isDefaultVideoTitle(editTitle);
+    highlightFields.includes("title") &&
+    (isDefaultVideoTitle(editTitle) || !editTitle.trim());
   const highlightDescription =
     highlightFields.includes("description") && !editDescription.trim();
   const highlightMedia = highlightFields.includes("media") && !videoUrl.trim();
