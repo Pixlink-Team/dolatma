@@ -214,6 +214,7 @@ function UserRow({
       {(onEdit || onDelete) && (
         <AdminItemActions
           compact
+          deleteLabel="کاربر"
           onEdit={onEdit ? () => onEdit(user) : undefined}
           onDelete={onDelete ? () => onDelete(user) : undefined}
         />
