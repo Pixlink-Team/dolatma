@@ -1053,7 +1053,6 @@ export function UsersAdmin({
                 <div className="space-y-2">
                   <Label>نام کاربری</Label>
                   <Input {...form.register("email")} dir="ltr" placeholder="BAZARBAYJAN" />
-                  <p className="text-xs text-muted-foreground">فقط نام کاربری — بدون @example.com</p>
                 </div>
                 <div className="space-y-2">
                   <Label>شماره موبایل (برای پیامک)</Label>
