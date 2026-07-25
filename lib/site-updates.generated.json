@@ -1,6 +1,18 @@
 {
   "entries": [
     {
+      "hash": "9f4a5d950a9f0f4ed31975405f7f72458a368d7f",
+      "committedAt": "2026-07-25T17:20:02+03:30",
+      "title": "امکان تنظیم دسترسی روی دستگاه و اعمال روی همه زیرمجموعه‌ها و کاربران",
+      "subject": "Add device-level access ceilings that cascade to subtree users"
+    },
+    {
+      "hash": "7fa1414e19a536ac7ff19e0b637235375e74babe",
+      "committedAt": "2026-07-25T17:18:05+03:30",
+      "title": "افزودن همه بخش‌های محتوا به فرم‌ساز پنل",
+      "subject": "Expand content form builder to all content sections"
+    },
+    {
       "hash": "320557e2c3dc2a703c33eb2566be4df7b69e4f3d",
       "committedAt": "2026-07-25T17:09:55+03:30",
       "title": "رفع نمایش دیالوگ تأیید حذف کاربر پشت پنجره مودال",

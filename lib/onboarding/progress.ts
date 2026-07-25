@@ -1,5 +1,6 @@
 import type { CampaignFeatures } from "@/lib/types";
 import type { ContributorPermissions } from "@/lib/contributor-permissions";
+import { hasContributorPermission } from "@/lib/contributor-permissions";
 import { resolveRequiredContentCategories } from "@/lib/onboarding/content-categories";
 import type {
   OnboardingProgress,
@@ -13,6 +14,27 @@ import {
   type DeviceOnboardingFacts,
 } from "@/lib/db/repository-onboarding";
 import { adminHref } from "@/lib/utils";
+
+/** Steps that require a specific permission to appear for the current user. */
+function isStepVisibleForPermissions(
+  step: OnboardingStep,
+  options: {
+    permissions?: ContributorPermissions | null;
+    ignorePermissions?: boolean;
+  }
+): boolean {
+  if (options.ignorePermissions) return true;
+  if (!options.permissions) return true;
+
+  if (step.evaluator === "directives") {
+    return hasContributorPermission(
+      options.permissions,
+      "manageSubtreeDirectives"
+    );
+  }
+
+  return true;
+}
 
 function buildStepHref(input: {
   step: OnboardingStep;
@@ -142,7 +164,10 @@ function toProgress(
     campaignId: string;
   }
 ): OnboardingProgress {
-  const evaluated = steps.map((step) => evaluateStep(step, facts, options));
+  const visibleSteps = steps.filter((step) =>
+    isStepVisibleForPermissions(step, options)
+  );
+  const evaluated = visibleSteps.map((step) => evaluateStep(step, facts, options));
   const completedCount = evaluated.filter((step) => step.done).length;
   const totalCount = evaluated.length;
   const percent =
