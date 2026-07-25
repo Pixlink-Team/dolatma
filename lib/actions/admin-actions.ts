@@ -1,7 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
+import { isFullAdmin } from "@/lib/auth/get-session";
+import {
+  FORBIDDEN,
+  requireAuthSessionOrRedirect,
+} from "@/lib/auth/require-auth-action";
 import { assertCanMutateOwnedContent } from "@/lib/auth/assert-content-ownership";
 import { assertTutorialForPossibleCreate } from "@/lib/auth/require-tutorial-completion";
 import {
@@ -46,26 +50,18 @@ import { auditContentChange, auditContentDelete, logAuditFromCurrentSession } fr
 import { getContentTitleValidationError } from "@/lib/content-constraints";
 import { stripFileAccessTokensDeep } from "@/lib/uploads";
 
-const UNAUTHORIZED = { success: false as const, error: "Unauthorized" };
-
 function validateTitlePayload(data: { title?: unknown }) {
   const error = getContentTitleValidationError(data.title);
   return error ? { success: false as const, error } : null;
 }
 
-async function requireSession(): Promise<
-  AuthSession | { success: false; error: string }
-> {
-  const session = await getAuthSession();
-  if (!session) return UNAUTHORIZED;
-  return session;
+async function requireSession(): Promise<AuthSession> {
+  return requireAuthSessionOrRedirect();
 }
 
-async function requireFullAdmin(): Promise<
-  AuthSession | { success: false; error: string }
-> {
-  const session = await getAuthSession();
-  if (!session || !isFullAdmin(session)) return UNAUTHORIZED;
+async function requireFullAdmin(): Promise<AuthSession | typeof FORBIDDEN> {
+  const session = await requireAuthSessionOrRedirect();
+  if (!isFullAdmin(session)) return FORBIDDEN;
   return session;
 }
 

@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { getAllCampaigns } from "@/lib/data-access/admin";
 import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
 import { pgGetUserById } from "@/lib/db/repository-extended";
@@ -12,6 +13,11 @@ export default async function AdminPanelLayout({
   children: React.ReactNode;
 }) {
   const session = await getAuthSession();
+  // Signed cookie can still pass middleware after session revocation — kick out silently.
+  if (!session) {
+    redirect("/api/auth/clear-session");
+  }
+
   const allCampaigns = await getAllCampaigns();
 
   let campaigns = allCampaigns;

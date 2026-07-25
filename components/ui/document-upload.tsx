@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { forceClientReauth, redirectIfSessionExpired } from "@/lib/auth/client-reauth";
 import { cn, formatPersianNumber } from "@/lib/utils";
 import { FileText, Loader2, Upload } from "lucide-react";
 import { useRef, useState } from "react";
@@ -75,6 +76,11 @@ export function DocumentUpload({
 
       if (!response.ok) {
         const body = (await response.json().catch(() => null)) as { error?: string } | null;
+        if (response.status === 401) {
+          forceClientReauth();
+          return;
+        }
+        if (redirectIfSessionExpired(body?.error)) return;
         throw new Error(body?.error ?? "آپلود ناموفق بود");
       }
 

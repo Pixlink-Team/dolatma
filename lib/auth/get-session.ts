@@ -1,6 +1,8 @@
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { cache } from "react";
 import { getAdminSessionCookieName } from "@/lib/auth/admin-session";
+import { tryClearAdminSessionCookies } from "@/lib/auth/clear-session-cookies";
 import type { OwnerScope } from "@/lib/auth/owner-scope";
 import { parseSessionTokenSync } from "@/lib/auth/session-node";
 import { isSessionVersionCurrent } from "@/lib/auth/session-versions";
@@ -16,15 +18,20 @@ export const getAuthSession = cache(async (): Promise<AuthSession | null> => {
   if (!session) return null;
 
   const current = await isSessionVersionCurrent(session.userId, session.sessionVersion);
-  if (!current) return null;
+  if (!current) {
+    // Stale signed cookie (e.g. logged out elsewhere). Drop it when allowed.
+    await tryClearAdminSessionCookies();
+    return null;
+  }
 
   return session;
 });
 
+/** Prefer this in server actions: silent logout + redirect instead of throwing Unauthorized. */
 export async function requireAuthSession(): Promise<AuthSession> {
   const session = await getAuthSession();
   if (!session) {
-    throw new Error("Unauthorized");
+    redirect("/api/auth/clear-session");
   }
   return session;
 }

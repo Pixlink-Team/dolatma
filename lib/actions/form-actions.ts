@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { getAuthSession } from "@/lib/auth/get-session";
 import { canManageForms } from "@/lib/auth/access";
 import {
@@ -27,7 +28,7 @@ import type {
 } from "@/lib/types";
 import { isPostgresConfigured } from "@/lib/utils";
 
-const UNAUTHORIZED = { success: false as const, error: "Unauthorized" };
+const FORBIDDEN = { success: false as const, error: "دسترسی مجاز نیست" };
 
 function requirePostgres() {
   if (!isPostgresConfigured()) {
@@ -43,8 +44,11 @@ async function revalidateForms() {
 
 async function assertCanManageForms() {
   const session = await getAuthSession();
-  if (!session || !canManageForms(session)) {
-    return { error: UNAUTHORIZED, session: null as null };
+  if (!session) {
+    redirect("/api/auth/clear-session");
+  }
+  if (!canManageForms(session)) {
+    return { error: FORBIDDEN, session: null as null };
   }
 
   return { error: null, session };
@@ -52,7 +56,7 @@ async function assertCanManageForms() {
 
 export async function listCampaignFormsAction(campaignId: string) {
   const access = await assertCanManageForms();
-  if (access.error || !access.session) return access.error ?? UNAUTHORIZED;
+  if (access.error || !access.session) return access.error ?? FORBIDDEN;
 
   const dbError = requirePostgres();
   if (dbError) return dbError;
@@ -75,7 +79,8 @@ export async function saveCampaignFormAction(input: {
   sortOrder?: number;
 }) {
   const session = await getAuthSession();
-  if (!session || !canManageForms(session)) return UNAUTHORIZED;
+  if (!session) redirect("/api/auth/clear-session");
+  if (!canManageForms(session)) return FORBIDDEN;
 
   const dbError = requirePostgres();
   if (dbError) return dbError;
@@ -117,7 +122,8 @@ export async function saveCampaignFormAction(input: {
 
 export async function deleteCampaignFormAction(formId: string, campaignId: string) {
   const session = await getAuthSession();
-  if (!session || !canManageForms(session)) return UNAUTHORIZED;
+  if (!session) redirect("/api/auth/clear-session");
+  if (!canManageForms(session)) return FORBIDDEN;
 
   const dbError = requirePostgres();
   if (dbError) return dbError;
@@ -139,7 +145,7 @@ export async function listFormResponsesAction(input: {
   formId?: string;
 }) {
   const access = await assertCanManageForms();
-  if (access.error || !access.session) return access.error ?? UNAUTHORIZED;
+  if (access.error || !access.session) return access.error ?? FORBIDDEN;
 
   const dbError = requirePostgres();
   if (dbError) return dbError;
@@ -160,7 +166,7 @@ export async function submitFormResponseAction(input: {
   answers: Record<string, unknown>;
 }) {
   const access = await assertCanManageForms();
-  if (access.error || !access.session) return access.error ?? UNAUTHORIZED;
+  if (access.error || !access.session) return access.error ?? FORBIDDEN;
 
   const dbError = requirePostgres();
   if (dbError) return dbError;
@@ -198,7 +204,7 @@ export async function updateFormResponseAction(input: {
   answers: Record<string, unknown>;
 }) {
   const access = await assertCanManageForms();
-  if (access.error || !access.session) return access.error ?? UNAUTHORIZED;
+  if (access.error || !access.session) return access.error ?? FORBIDDEN;
 
   const dbError = requirePostgres();
   if (dbError) return dbError;
@@ -210,7 +216,7 @@ export async function updateFormResponseAction(input: {
 
   const canManage = canManageForms(access.session);
   if (!canManage && existing.ownerUserId !== access.session.userId) {
-    return UNAUTHORIZED;
+    return FORBIDDEN;
   }
 
   const form = await pgGetCampaignForm(existing.formId);
@@ -239,7 +245,7 @@ export async function deleteFormResponseAction(
   campaignId: string
 ) {
   const access = await assertCanManageForms();
-  if (access.error || !access.session) return access.error ?? UNAUTHORIZED;
+  if (access.error || !access.session) return access.error ?? FORBIDDEN;
 
   const dbError = requirePostgres();
   if (dbError) return dbError;
@@ -251,7 +257,7 @@ export async function deleteFormResponseAction(
 
   const canManage = canManageForms(access.session);
   if (!canManage && existing.ownerUserId !== access.session.userId) {
-    return UNAUTHORIZED;
+    return FORBIDDEN;
   }
 
   const result = await pgDeleteFormResponse(responseId);

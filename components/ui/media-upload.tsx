@@ -18,6 +18,7 @@ import {
   captureAndUploadVideoCoverFromUrl,
   videoNeedsAutoCover,
 } from "@/lib/client/video-cover";
+import { forceClientReauth, redirectIfSessionExpired } from "@/lib/auth/client-reauth";
 import { Loader2, Trash2, Upload } from "lucide-react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -172,6 +173,11 @@ export function MediaUpload({
 
       if (!response.ok) {
         const body = (await response.json().catch(() => null)) as { error?: string } | null;
+        if (response.status === 401) {
+          forceClientReauth();
+          return;
+        }
+        if (redirectIfSessionExpired(body?.error)) return;
         throw new Error(body?.error ?? "آپلود ناموفق بود");
       }
 

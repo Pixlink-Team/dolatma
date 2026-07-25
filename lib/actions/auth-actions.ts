@@ -16,6 +16,7 @@ import {
 import { verifyPassword } from "@/lib/auth/password";
 import { pgGetUserAuthByLogin } from "@/lib/db/repository-extended";
 import { getAuthSession } from "@/lib/auth/get-session";
+import { clearAdminSessionCookies } from "@/lib/auth/clear-session-cookies";
 import { bumpSessionVersion, getSessionVersion } from "@/lib/auth/session-versions";
 import { logAuditEvent, logAuditForSession } from "@/lib/audit/log-event";
 import { consumeRateLimit, getRateLimitBlock, resetRateLimit } from "@/lib/security/rate-limit";
@@ -237,9 +238,5 @@ export async function logoutAdminAction() {
     await bumpSessionVersion(session.userId);
   }
 
-  const cookieStore = await cookies();
-  const cookieOptions = getAdminSessionCookieOptions(0);
-
-  cookieStore.set(getAdminSessionCookieName(), "", cookieOptions);
-  cookieStore.set(getLegacyMockCookieName(), "", cookieOptions);
+  await clearAdminSessionCookies();
 }
