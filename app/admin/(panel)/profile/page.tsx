@@ -4,7 +4,6 @@ import { Building2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ProfileSettingsForm } from "@/components/admin/profile-settings-form";
-import { UserPassportCapacities } from "@/components/admin/user-passport-capacities";
 import { getLoginUsernameFromEmail } from "@/lib/auth/user-login";
 import {
   canAccessDevicesPage,
@@ -13,7 +12,6 @@ import {
 import { getAuthSession } from "@/lib/auth/get-session";
 import { pgGetDeviceById } from "@/lib/db/repository-devices";
 import { pgGetUserById } from "@/lib/db/repository-extended";
-import { pgListUserCapacities } from "@/lib/db/repository-user-capacities";
 import { isPostgresConfigured } from "@/lib/utils";
 
 export default async function ProfilePage() {
@@ -31,7 +29,6 @@ export default async function ProfilePage() {
 
   const user = await pgGetUserById(session.userId);
   if (!user) redirect("/admin/login");
-  const capacities = await pgListUserCapacities(session.userId);
 
   let homeDevice: { id: string; name: string } | null = null;
   if (canAccessDevicesPage(session)) {
@@ -49,7 +46,7 @@ export default async function ProfilePage() {
       <div>
         <h1 className="text-2xl font-bold">پروفایل من</h1>
         <p className="text-sm text-muted-foreground">
-          نام، مسئول اکانت، تماس جایگزین و شناسنامه ظرفیت شما در سامانه استفاده می‌شود.
+          نام، مسئول اکانت و تماس جایگزین شما در سامانه استفاده می‌شود.
         </p>
       </div>
 
@@ -60,7 +57,7 @@ export default async function ProfilePage() {
           </CardHeader>
           <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-muted-foreground">
-              اطلاعات سازمانی، مسئولان، کارکنان و ظرفیت‌های «{homeDevice.name}» را خودتان تکمیل کنید.
+              اطلاعات سازمانی، مسئولان، کارکنان، دارایی‌ها و ظرفیت‌های «{homeDevice.name}» را در شناسنامه دستگاه تکمیل کنید.
             </p>
             <Button asChild className="shrink-0">
               <Link href={`/admin/devices/${homeDevice.id}`}>
@@ -87,15 +84,6 @@ export default async function ProfilePage() {
             initialAlternateContactPhone={user.alternateContactPhone}
             email={getLoginUsernameFromEmail(user.email)}
           />
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">شناسنامه ظرفیت</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <UserPassportCapacities initialCapacities={capacities} />
         </CardContent>
       </Card>
     </div>
