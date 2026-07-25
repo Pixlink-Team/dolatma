@@ -68,9 +68,9 @@ const allNavItems: {
   icon: typeof LayoutDashboard;
   adminOnly?: boolean;
   adminOrClientOnly?: boolean;
-  /** Visible to admin, client, and org users (structure view; manage is separate). */
+  /** Visible to admin, client, and org users with manageSubtreeUsers. */
   usersNav?: boolean;
-  /** Visible to admin and device-scoped org users (structure view; manage is separate). */
+  /** Visible to admin and device-scoped org users with manageSubtreeDevices. */
   devicesNav?: boolean;
   /** Always visible for every panel user (not gated by section permissions). */
   alwaysVisible?: boolean;
@@ -155,10 +155,21 @@ export function AdminSidebar() {
                         if (cancelled || !session) return;
                         setIsFullAdminUser(session.type === "env_admin" || session.role === "admin");
                         setIsClientRole(session.role === "client");
-                        // Structure menus stay visible for org users even if manage flags are off.
-                        setCanViewUsersNav(isOrgUserRole(session.role));
-                        setCanViewDevicesNav(isDeviceScopedPanelRole(session.role));
-                        setPermissions(session.permissions ?? null);
+                        const perms = session.permissions ?? null;
+                        // Prefer active-campaign flags; fall back to session OR-flag when unset.
+                        setCanViewUsersNav(
+                          isOrgUserRole(session.role) &&
+                            (perms
+                              ? hasContributorPermission(perms, "manageSubtreeUsers")
+                              : session.manageSubtreeUsers === true)
+                        );
+                        setCanViewDevicesNav(
+                          isDeviceScopedPanelRole(session.role) &&
+                            (perms
+                              ? hasContributorPermission(perms, "manageSubtreeDevices")
+                              : session.manageSubtreeDevices === true)
+                        );
+                        setPermissions(perms);
                       })
                       .catch((error) => {
                         console.error("[admin-sidebar] failed to load session context", error);

@@ -20,8 +20,8 @@ export default async function UsersPage() {
 
   const canManageSubtree = canManageSubtreeUsers(session);
 
-  // Org users keep structure visibility even when manageSubtreeUsers is revoked.
-  if (!isAdmin && !isClient && !isOrgUser) redirect("/admin");
+  // Org users need manageSubtreeUsers; without it the users menu and page stay closed.
+  if (!isAdmin && !isClient && !(isOrgUser && canManageSubtree)) redirect("/admin");
 
   if (isPostgresConfigured()) {
     await pgEnsureDefaultMinistries();
@@ -46,7 +46,7 @@ export default async function UsersPage() {
         initialUsers={subUsers}
         campaigns={campaigns}
         ministries={scopedMinistries}
-        mode={canManageSubtree ? "sub_users" : "view_subtree"}
+        mode="sub_users"
         parentUserId={session.userId}
         parentMinistryId={parentUser?.ministryId ?? null}
         parentOrganizationId={parentUser?.organizationId ?? null}
