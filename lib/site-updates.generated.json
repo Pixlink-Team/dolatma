@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "879ce3fa5f43830a9102bb7f96f3142efaeab42d",
+      "committedAt": "2026-07-25T18:28:40+03:30",
+      "title": "افزودن تیک اتصال کاربر به خود سازمان و محدود کردن لیست به زیرمجموعه‌ها",
+      "subject": "Add own-organization checkbox when creating scoped users"
+    },
+    {
       "hash": "dde966a9e8abfc9e9421e2fc15f4b9fa7c738616",
       "committedAt": "2026-07-25T18:24:12+03:30",
       "title": "حذف فیلد منبع بالادستی از دستورکارها",

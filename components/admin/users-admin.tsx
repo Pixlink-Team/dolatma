@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Filter, KeyRound, Plus, RotateCcw } from "lucide-react";
+import { ChevronDown, Filter, KeyRound, Plus, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,7 +48,7 @@ import {
 } from "@/lib/directive-authority";
 import { Badge } from "@/components/ui/badge";
 import type { AdminRole, AdminUser, CampaignSettings, Ministry, MinistryOrganization } from "@/lib/types";
-import { formatPersianNumber } from "@/lib/utils";
+import { cn, formatPersianNumber } from "@/lib/utils";
 
 const NO_MINISTRY = "__none__";
 const NO_ORGANIZATION = "__none__";
@@ -154,6 +154,8 @@ export function UsersAdmin({
   const isScopedToOwnOrganization = isSubUsersMode && Boolean(parentOrganizationId);
   const permissionCapActive = isSubUsersMode && Boolean(grantorCampaignPermissions);
   const [open, setOpen] = useState(false);
+  /** Optional fields (phone, access, etc.) stay collapsed so create stays simple. */
+  const [optionalFieldsOpen, setOptionalFieldsOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [rows, setRows] = useState(initialUsers);
   const [ministriesList, setMinistriesList] = useState(ministries);
@@ -867,6 +869,7 @@ export function UsersAdmin({
   const openCreate = () => {
     if (!canManageUsers) return;
     setEditingId(null);
+    setOptionalFieldsOpen(false);
     resetOrganizationCreate();
     const defaultAssignOwn = isScopedToOwnOrganization;
     setAssignToOwnOrganization(defaultAssignOwn);
@@ -897,6 +900,7 @@ export function UsersAdmin({
 
   const openEdit = (user: AdminUser) => {
     setEditingId(user.id);
+    setOptionalFieldsOpen(false);
     resetOrganizationCreate();
     const permissions = user.campaignPermissions ?? {};
     const normalizedProvince =
@@ -1332,475 +1336,552 @@ export function UsersAdmin({
           <form onSubmit={onSubmit} className="space-y-4">
             {canManageUsers ? (
               <>
-                <div className="space-y-2">
-                  <Label>نام</Label>
-                  <Input {...form.register("name")} />
-                </div>
-                <div className="space-y-2">
-                  <Label>نام کاربری</Label>
-                  <Input {...form.register("email")} dir="ltr" placeholder="BAZARBAYJAN" />
-                </div>
-                <div className="space-y-2">
-                  <Label>شماره موبایل (برای پیامک)</Label>
-                  <Input
-                    {...form.register("phone")}
-                    dir="ltr"
-                    placeholder="0912xxxxxxx"
-                    inputMode="tel"
-                  />
-                </div>
-              </>
-            ) : (
-              <div className="rounded-lg border bg-muted/30 p-3 text-sm space-y-1">
-                <p>
-                  <span className="text-muted-foreground">نام: </span>
-                  {form.getValues("name") || "—"}
-                </p>
-                <p>
-                  <span className="text-muted-foreground">نام کاربری: </span>
-                  <span dir="ltr">{form.getValues("email") || "—"}</span>
-                </p>
-              </div>
-            )}
+                {/* —— Essential fields only —— */}
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>نام سازمان</Label>
+                    <Input {...form.register("name")} placeholder="نام سازمان یا شخص" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>نام کاربری</Label>
+                    <Input {...form.register("email")} dir="ltr" placeholder="BAZARBAYJAN" />
+                  </div>
 
-            {!isSubUsersMode && (
-              <>
-                <div className="space-y-2">
-                  <Label>وزارتخانه</Label>
-                  <Select
-                    value={selectedMinistryId || NO_MINISTRY}
-                    onValueChange={(value) => {
-                      form.setValue("ministryId", value === NO_MINISTRY ? null : value);
-                      form.setValue("organizationId", null);
-                      resetOrganizationCreate();
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="انتخاب وزارتخانه" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={NO_MINISTRY}>بدون وزارتخانه</SelectItem>
-                      {ministriesList
-                        .filter((ministry) => Boolean(ministry.id))
-                        .map((ministry) => (
-                        <SelectItem key={ministry.id} value={ministry.id}>
-                          {ministry.name}
-                          {ministry.fullName ? ` — ${ministry.fullName}` : ""}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>زیرمجموعه (اختیاری)</Label>
-                  <Select
-                    value={
-                      creatingOrganization
-                        ? CREATE_ORGANIZATION
-                        : selectedOrganizationId || NO_ORGANIZATION
-                    }
-                    onValueChange={handleOrganizationSelect}
-                    disabled={!selectedMinistryId}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="خود وزارتخانه یا یک زیرمجموعه" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={NO_ORGANIZATION}>خود وزارتخانه</SelectItem>
-                      {organizationSelectOptions
-                        .filter((org) => Boolean(org.id))
-                        .map((org) => (
-                        <SelectItem key={org.id} value={org.id}>
-                          {org.label}
-                        </SelectItem>
-                      ))}
-                      <SelectItem value={CREATE_ORGANIZATION}>ایجاد زیرمجموعه جدید…</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {creatingOrganization && (
-                    <div className="space-y-2">
-                      {createUnderParentName ? (
-                        <p className="text-xs text-muted-foreground">
-                          زیرمجموعه جدید زیر «{createUnderParentName}» در درخت دستگاه ایجاد می‌شود.
-                        </p>
-                      ) : null}
-                      <div className="flex gap-2">
-                      <Input
-                        value={newOrganizationName}
-                        onChange={(event) => setNewOrganizationName(event.target.value)}
-                        placeholder="نام زیرمجموعه جدید"
-                        disabled={isPending}
-                        onKeyDown={(event) => {
-                          if (event.key === "Enter") {
-                            event.preventDefault();
-                            createOrganizationInline();
-                          }
-                        }}
-                      />
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        disabled={isPending || !newOrganizationName.trim()}
-                        onClick={createOrganizationInline}
-                      >
-                        ایجاد
-                      </Button>
+                  {!isSubUsersMode && (
+                    <>
+                      <div className="space-y-2">
+                        <Label>وزارتخانه</Label>
+                        <Select
+                          value={selectedMinistryId || NO_MINISTRY}
+                          onValueChange={(value) => {
+                            form.setValue("ministryId", value === NO_MINISTRY ? null : value);
+                            form.setValue("organizationId", null);
+                            resetOrganizationCreate();
+                          }}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="انتخاب وزارتخانه" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value={NO_MINISTRY}>بدون وزارتخانه</SelectItem>
+                            {ministriesList
+                              .filter((ministry) => Boolean(ministry.id))
+                              .map((ministry) => (
+                              <SelectItem key={ministry.id} value={ministry.id}>
+                                {ministry.name}
+                                {ministry.fullName ? ` — ${ministry.fullName}` : ""}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
+
+                      <div className="space-y-2">
+                        <Label>زیرمجموعه</Label>
+                        <Select
+                          value={
+                            creatingOrganization
+                              ? CREATE_ORGANIZATION
+                              : selectedOrganizationId || NO_ORGANIZATION
+                          }
+                          onValueChange={handleOrganizationSelect}
+                          disabled={!selectedMinistryId}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="خود وزارتخانه یا یک زیرمجموعه" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value={NO_ORGANIZATION}>خود وزارتخانه</SelectItem>
+                            {organizationSelectOptions
+                              .filter((org) => Boolean(org.id))
+                              .map((org) => (
+                              <SelectItem key={org.id} value={org.id}>
+                                {org.label}
+                              </SelectItem>
+                            ))}
+                            <SelectItem value={CREATE_ORGANIZATION}>ایجاد زیرمجموعه جدید…</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {creatingOrganization && (
+                          <div className="space-y-2">
+                            {createUnderParentName ? (
+                              <p className="text-xs text-muted-foreground">
+                                زیرمجموعه جدید زیر «{createUnderParentName}» در درخت دستگاه ایجاد می‌شود.
+                              </p>
+                            ) : null}
+                            <div className="flex gap-2">
+                            <Input
+                              value={newOrganizationName}
+                              onChange={(event) => setNewOrganizationName(event.target.value)}
+                              placeholder="نام زیرمجموعه جدید"
+                              disabled={isPending}
+                              onKeyDown={(event) => {
+                                if (event.key === "Enter") {
+                                  event.preventDefault();
+                                  createOrganizationInline();
+                                }
+                              }}
+                            />
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              disabled={isPending || !newOrganizationName.trim()}
+                              onClick={createOrganizationInline}
+                            >
+                              ایجاد
+                            </Button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
+
+                  {isSubUsersMode && Boolean(parentMinistryId) && (
+                    <div className="space-y-2">
+                      {isScopedToOwnOrganization && (
+                        <label className="flex items-center gap-2 text-sm">
+                          <input
+                            type="checkbox"
+                            checked={assignToOwnOrganization}
+                            onChange={(event) => {
+                              const checked = event.target.checked;
+                              setAssignToOwnOrganization(checked);
+                              resetOrganizationCreate();
+                              form.setValue(
+                                "organizationId",
+                                checked ? parentOrganizationId : null
+                              );
+                            }}
+                          />
+                          برای خود سازمان
+                          {ownOrganizationName ? (
+                            <span className="text-muted-foreground">({ownOrganizationName})</span>
+                          ) : null}
+                        </label>
+                      )}
+                      <Label>زیرمجموعه</Label>
+                      <Select
+                        value={
+                          assignToOwnOrganization && isScopedToOwnOrganization
+                            ? NO_ORGANIZATION
+                            : creatingOrganization
+                              ? CREATE_ORGANIZATION
+                              : selectedOrganizationId || NO_ORGANIZATION
+                        }
+                        onValueChange={handleOrganizationSelect}
+                        disabled={assignToOwnOrganization && isScopedToOwnOrganization}
+                      >
+                        <SelectTrigger>
+                          <SelectValue
+                            placeholder={
+                              isScopedToOwnOrganization
+                                ? assignToOwnOrganization
+                                  ? "غیرفعال — کاربر به خود سازمان وصل می‌شود"
+                                  : "یکی از زیرمجموعه‌ها را انتخاب کنید"
+                                : "خود وزارتخانه یا یک زیرمجموعه"
+                            }
+                          />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {!isScopedToOwnOrganization && (
+                            <SelectItem value={NO_ORGANIZATION}>خود وزارتخانه</SelectItem>
+                          )}
+                          {isScopedToOwnOrganization && assignToOwnOrganization && (
+                            <SelectItem value={NO_ORGANIZATION}>
+                              خود سازمان
+                              {ownOrganizationName ? ` — ${ownOrganizationName}` : ""}
+                            </SelectItem>
+                          )}
+                          {isScopedToOwnOrganization &&
+                            !assignToOwnOrganization &&
+                            !selectedOrganizationId &&
+                            !creatingOrganization && (
+                              <SelectItem value={NO_ORGANIZATION} disabled>
+                                انتخاب زیرمجموعه…
+                              </SelectItem>
+                            )}
+                          {organizationSelectOptions
+                            .filter((org) => Boolean(org.id))
+                            .map((org) => (
+                            <SelectItem key={org.id} value={org.id}>
+                              {org.label}
+                            </SelectItem>
+                          ))}
+                          {!assignToOwnOrganization && (
+                            <SelectItem value={CREATE_ORGANIZATION}>ایجاد زیرمجموعه جدید…</SelectItem>
+                          )}
+                        </SelectContent>
+                      </Select>
+                      {creatingOrganization && !assignToOwnOrganization && (
+                        <div className="space-y-2">
+                          {createUnderParentName ? (
+                            <p className="text-xs text-muted-foreground">
+                              زیرمجموعه جدید زیر «{createUnderParentName}» در درخت دستگاه ایجاد می‌شود.
+                            </p>
+                          ) : null}
+                          <div className="flex gap-2">
+                          <Input
+                            value={newOrganizationName}
+                            onChange={(event) => setNewOrganizationName(event.target.value)}
+                            placeholder="نام زیرمجموعه جدید"
+                            disabled={isPending}
+                            onKeyDown={(event) => {
+                              if (event.key === "Enter") {
+                                event.preventDefault();
+                                createOrganizationInline();
+                              }
+                            }}
+                          />
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            disabled={isPending || !newOrganizationName.trim()}
+                            onClick={createOrganizationInline}
+                          >
+                            ایجاد
+                          </Button>
+                          </div>
+                        </div>
+                      )}
+                      {isScopedToOwnOrganization && (
+                        <p className="text-xs text-muted-foreground">
+                          {assignToOwnOrganization
+                            ? "کاربر به خود سازمان شما وصل می‌شود و انتخاب زیرمجموعه غیرفعال است."
+                            : "فقط زیرمجموعه‌های زیر سازمان شما در لیست هستند (نه خود سازمان). برای ساخت زیر یک گره، ابتدا آن را انتخاب کنید."}
+                        </p>
+                      )}
                     </div>
                   )}
-                  <p className="text-xs text-muted-foreground">
-                    اگر زیرمجموعه انتخاب نشود، کاربر به خود وزارتخانه وصل می‌شود. برای ساخت زیر
-                    یک گره موجود، ابتدا آن را انتخاب کنید سپس «ایجاد زیرمجموعه جدید» را بزنید.
-                  </p>
-                </div>
-              </>
-            )}
 
-            {isSubUsersMode && Boolean(parentMinistryId) && (
-              <div className="space-y-2">
-                {isScopedToOwnOrganization && (
-                  <label className="flex items-center gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={assignToOwnOrganization}
-                      onChange={(event) => {
-                        const checked = event.target.checked;
-                        setAssignToOwnOrganization(checked);
-                        resetOrganizationCreate();
-                        form.setValue(
-                          "organizationId",
-                          checked ? parentOrganizationId : null
-                        );
-                      }}
-                    />
-                    برای خود سازمان
-                    {ownOrganizationName ? (
-                      <span className="text-muted-foreground">({ownOrganizationName})</span>
-                    ) : null}
-                  </label>
-                )}
-                <Label>
-                  {isScopedToOwnOrganization ? "زیرمجموعه" : "زیرمجموعه (اختیاری)"}
-                </Label>
-                <Select
-                  value={
-                    assignToOwnOrganization && isScopedToOwnOrganization
-                      ? NO_ORGANIZATION
-                      : creatingOrganization
-                        ? CREATE_ORGANIZATION
-                        : selectedOrganizationId || NO_ORGANIZATION
-                  }
-                  onValueChange={handleOrganizationSelect}
-                  disabled={assignToOwnOrganization && isScopedToOwnOrganization}
-                >
-                  <SelectTrigger>
-                    <SelectValue
-                      placeholder={
-                        isScopedToOwnOrganization
-                          ? assignToOwnOrganization
-                            ? "غیرفعال — کاربر به خود سازمان وصل می‌شود"
-                            : "یکی از زیرمجموعه‌ها را انتخاب کنید"
-                          : "خود وزارتخانه یا یک زیرمجموعه"
-                      }
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {!isScopedToOwnOrganization && (
-                      <SelectItem value={NO_ORGANIZATION}>خود وزارتخانه</SelectItem>
-                    )}
-                    {isScopedToOwnOrganization && assignToOwnOrganization && (
-                      <SelectItem value={NO_ORGANIZATION}>
-                        خود سازمان
-                        {ownOrganizationName ? ` — ${ownOrganizationName}` : ""}
-                      </SelectItem>
-                    )}
-                    {isScopedToOwnOrganization &&
-                      !assignToOwnOrganization &&
-                      !selectedOrganizationId &&
-                      !creatingOrganization && (
-                        <SelectItem value={NO_ORGANIZATION} disabled>
-                          انتخاب زیرمجموعه…
-                        </SelectItem>
-                      )}
-                    {organizationSelectOptions
-                      .filter((org) => Boolean(org.id))
-                      .map((org) => (
-                      <SelectItem key={org.id} value={org.id}>
-                        {org.label}
-                      </SelectItem>
-                    ))}
-                    {!assignToOwnOrganization && (
-                      <SelectItem value={CREATE_ORGANIZATION}>ایجاد زیرمجموعه جدید…</SelectItem>
-                    )}
-                  </SelectContent>
-                </Select>
-                {creatingOrganization && !assignToOwnOrganization && (
                   <div className="space-y-2">
-                    {createUnderParentName ? (
-                      <p className="text-xs text-muted-foreground">
-                        زیرمجموعه جدید زیر «{createUnderParentName}» در درخت دستگاه ایجاد می‌شود.
-                      </p>
-                    ) : null}
-                    <div className="flex gap-2">
-                    <Input
-                      value={newOrganizationName}
-                      onChange={(event) => setNewOrganizationName(event.target.value)}
-                      placeholder="نام زیرمجموعه جدید"
-                      disabled={isPending}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter") {
-                          event.preventDefault();
-                          createOrganizationInline();
-                        }
-                      }}
-                    />
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      disabled={isPending || !newOrganizationName.trim()}
-                      onClick={createOrganizationInline}
-                    >
-                      ایجاد
-                    </Button>
-                    </div>
+                    <Label>{editingId ? "رمز عبور جدید (اختیاری)" : "رمز عبور"}</Label>
+                    <Input type="password" {...form.register("password")} />
                   </div>
-                )}
-                {isScopedToOwnOrganization && (
-                  <p className="text-xs text-muted-foreground">
-                    {assignToOwnOrganization
-                      ? "کاربر به خود سازمان شما وصل می‌شود و انتخاب زیرمجموعه غیرفعال است."
-                      : "فقط زیرمجموعه‌های زیر سازمان شما در لیست هستند (نه خود سازمان). برای ساخت زیر یک گره، ابتدا آن را انتخاب کنید."}
-                  </p>
-                )}
-              </div>
-            )}
 
-            {canManageUsers && (
-              <ProvinceCityFields
-                province={selectedProvince ?? ""}
-                city={selectedCity ?? ""}
-                onProvinceChange={(value) => form.setValue("province", value)}
-                onCityChange={(value) => form.setValue("city", value)}
-              />
-            )}
-
-            {canManageUsers && (
-              <>
-                {editingId && isFullMode && (
-                  <div className="space-y-2">
-                    <Label>مسئول اکانت</Label>
-                    <Input
-                      value={rows.find((row) => row.id === editingId)?.accountManagerName ?? ""}
-                      disabled
-                      placeholder="توسط خود کاربر در پروفایل تنظیم می‌شود"
-                    />
-                  </div>
-                )}
-                <div className="space-y-2">
-                  <Label>{editingId ? "رمز عبور جدید (اختیاری)" : "رمز عبور"}</Label>
-                  <Input type="password" {...form.register("password")} />
-                </div>
-
-                {isFullMode && (
-                  <>
+                  {(isFullMode
+                    ? selectedRole === "org_user" || isSubUsersMode
+                    : isSubUsersMode) && (
                     <div className="space-y-2">
-                      <Label>نقش سیستمی</Label>
+                      <Label>سمت</Label>
                       <Select
-                        value={selectedRole}
+                        value={selectedOrgRole ?? "pr"}
                         onValueChange={(value) => {
-                          const nextRole = value as "admin" | "client" | "org_user";
-                          form.setValue("role", nextRole);
-                          if (nextRole === "org_user") {
-                            const orgRole = (form.getValues("orgRole") ?? "pr") as OrgRole;
-                            form.setValue("orgRole", orgRole);
-                            applyOrgRolePreset(orgRole);
-                          } else if (nextRole === "client") {
-                            form.setValue("orgRole", null);
-                            form.setValue("parentUserId", null);
-                            bindSoleCampaignAccess(defaultContributorPermissions());
-                          } else {
-                            form.setValue("orgRole", null);
-                            form.setValue("parentUserId", null);
-                            form.setValue("campaignIds", []);
-                            setCampaignPermissions({});
-                          }
+                          const orgRole = value as OrgRole;
+                          form.setValue("role", "org_user");
+                          form.setValue("orgRole", orgRole);
+                          applyOrgRolePreset(orgRole);
                         }}
                       >
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="org_user">کاربر دستگاه</SelectItem>
-                          <SelectItem value="client">کارفرما</SelectItem>
-                          <SelectItem value="admin">مدیر سیستم</SelectItem>
+                          {ORG_ROLES.map((key) => (
+                            <SelectItem key={key} value={key}>
+                              {ORG_ROLE_LABELS[key]}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                </div>
+
+                {/* —— Optional fields (collapsed by default) —— */}
+                <div className="overflow-hidden rounded-xl border bg-muted/20">
+                  <button
+                    type="button"
+                    onClick={() => setOptionalFieldsOpen((prev) => !prev)}
+                    className="flex w-full items-center justify-between gap-3 px-4 py-3 text-right transition-colors hover:bg-muted/40"
+                    aria-expanded={optionalFieldsOpen}
+                  >
+                    <div className="min-w-0 space-y-0.5">
+                      <p className="text-sm font-medium">تنظیمات اختیاری</p>
+                      <p className="text-xs text-muted-foreground">
+                        موبایل، استان، دسترسی‌ها و سایر جزئیات
+                      </p>
+                    </div>
+                    <ChevronDown
+                      className={cn(
+                        "h-4 w-4 shrink-0 text-muted-foreground transition-transform",
+                        optionalFieldsOpen && "rotate-180"
+                      )}
+                    />
+                  </button>
+
+                  {optionalFieldsOpen ? (
+                    <div className="space-y-4 border-t px-4 py-4">
+                      <div className="space-y-2">
+                        <Label>شماره موبایل (برای پیامک)</Label>
+                        <Input
+                          {...form.register("phone")}
+                          dir="ltr"
+                          placeholder="0912xxxxxxx"
+                          inputMode="tel"
+                        />
+                      </div>
+
+                      <ProvinceCityFields
+                        province={selectedProvince ?? ""}
+                        city={selectedCity ?? ""}
+                        onProvinceChange={(value) => form.setValue("province", value)}
+                        onCityChange={(value) => form.setValue("city", value)}
+                      />
+
+                      {editingId && isFullMode && (
+                        <div className="space-y-2">
+                          <Label>مسئول اکانت</Label>
+                          <Input
+                            value={rows.find((row) => row.id === editingId)?.accountManagerName ?? ""}
+                            disabled
+                            placeholder="توسط خود کاربر در پروفایل تنظیم می‌شود"
+                          />
+                        </div>
+                      )}
+
+                      {isFullMode && (
+                        <>
+                          <div className="space-y-2">
+                            <Label>نقش سیستمی</Label>
+                            <Select
+                              value={selectedRole}
+                              onValueChange={(value) => {
+                                const nextRole = value as "admin" | "client" | "org_user";
+                                form.setValue("role", nextRole);
+                                if (nextRole === "org_user") {
+                                  const orgRole = (form.getValues("orgRole") ?? "pr") as OrgRole;
+                                  form.setValue("orgRole", orgRole);
+                                  applyOrgRolePreset(orgRole);
+                                } else if (nextRole === "client") {
+                                  form.setValue("orgRole", null);
+                                  form.setValue("parentUserId", null);
+                                  bindSoleCampaignAccess(defaultContributorPermissions());
+                                } else {
+                                  form.setValue("orgRole", null);
+                                  form.setValue("parentUserId", null);
+                                  form.setValue("campaignIds", []);
+                                  setCampaignPermissions({});
+                                }
+                              }}
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="org_user">کاربر دستگاه</SelectItem>
+                                <SelectItem value="client">کارفرما</SelectItem>
+                                <SelectItem value="admin">مدیر سیستم</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          {selectedRole === "org_user" && (
+                            <div className="space-y-2">
+                              <Label>کاربر والد برای دسترسی مدیریتی</Label>
+                              <Select
+                                value={selectedParentUserId ?? NO_PARENT}
+                                onValueChange={(value) =>
+                                  form.setValue("parentUserId", value === NO_PARENT ? null : value)
+                                }
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="بدون والد / ریشه دستگاه" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value={NO_PARENT}>بدون والد</SelectItem>
+                                  {parentOptions.map((parent) => (
+                                    <SelectItem key={parent.id} value={parent.id}>
+                                      {parent.name}
+                                      {parent.orgRole
+                                        ? ` — ${ORG_ROLE_LABELS[parent.orgRole]}`
+                                        : ""}
+                                      {parent.ministryName ? ` — ${parent.ministryName}` : ""}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          )}
+                        </>
+                      )}
+
+                      {rolesWithCampaignAccess.includes(selectedRole) && primaryCampaignId ? (
+                        <div className="space-y-3">
+                          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                            <Label>دسترسی به بخش‌های پنل</Label>
+                            <div className="flex flex-wrap gap-2">
+                              {(selectedRole === "org_user" || isSubUsersMode) && (
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    const orgRole = (form.getValues("orgRole") ?? "pr") as OrgRole;
+                                    applyOrgRolePreset(orgRole);
+                                    toast.success("پیش‌فرض سمت اعمال شد");
+                                  }}
+                                >
+                                  پیش‌فرض سمت
+                                </Button>
+                              )}
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  enableAllGrantablePermissions(primaryCampaignId);
+                                  toast.success("همه دسترسی‌های مجاز فعال شد");
+                                }}
+                              >
+                                فعال‌سازی همه
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  disableAllPermissions(primaryCampaignId);
+                                  toast.success("همه دسترسی‌ها خاموش شد");
+                                }}
+                              >
+                                خاموش کردن همه
+                              </Button>
+                            </div>
+                          </div>
+                          {permissionCapActive ? (
+                            <p className="text-xs text-muted-foreground">
+                              فقط دسترسی‌هایی را می‌توانید بدهید که خودتان دارید؛ این محدودیت تا پایین درخت ادامه دارد.
+                            </p>
+                          ) : null}
+                          {primaryCampaignId && getDeviceCeiling(primaryCampaignId) ? (
+                            <p className="text-xs text-muted-foreground">
+                              سقف دسترسی دستگاه برای این کاربر فعال است؛ نمی‌توانید بیشتر از دسترسی دستگاه بدهید.
+                            </p>
+                          ) : null}
+                          <ContributorPermissionsEditor
+                            permissions={normalizeContributorPermissions(
+                              campaignPermissions[primaryCampaignId] ??
+                                defaultContributorPermissions()
+                            )}
+                            onChange={(next) =>
+                              setCampaignPermissions((prev) => ({
+                                ...prev,
+                                [primaryCampaignId]: clampToGrantor(primaryCampaignId, next),
+                              }))
+                            }
+                            ceiling={getPermissionCap(primaryCampaignId)}
+                            showPanelManagement={selectedRole === "org_user"}
+                            showSubtreeManagement={selectedRole === "org_user"}
+                          />
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="rounded-lg border bg-muted/30 p-3 text-sm space-y-1">
+                  <p>
+                    <span className="text-muted-foreground">نام سازمان: </span>
+                    {form.getValues("name") || "—"}
+                  </p>
+                  <p>
+                    <span className="text-muted-foreground">نام کاربری: </span>
+                    <span dir="ltr">{form.getValues("email") || "—"}</span>
+                  </p>
+                </div>
+
+                {!isSubUsersMode && (
+                  <>
+                    <div className="space-y-2">
+                      <Label>وزارتخانه</Label>
+                      <Select
+                        value={selectedMinistryId || NO_MINISTRY}
+                        onValueChange={(value) => {
+                          form.setValue("ministryId", value === NO_MINISTRY ? null : value);
+                          form.setValue("organizationId", null);
+                          resetOrganizationCreate();
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="انتخاب وزارتخانه" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={NO_MINISTRY}>بدون وزارتخانه</SelectItem>
+                          {ministriesList
+                            .filter((ministry) => Boolean(ministry.id))
+                            .map((ministry) => (
+                            <SelectItem key={ministry.id} value={ministry.id}>
+                              {ministry.name}
+                              {ministry.fullName ? ` — ${ministry.fullName}` : ""}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
 
-                    {(selectedRole === "org_user" || isSubUsersMode) && (
-                      <div className="space-y-2">
-                        <Label>سمت سازمانی</Label>
-                        <Select
-                          value={selectedOrgRole ?? "pr"}
-                          onValueChange={(value) => {
-                            const orgRole = value as OrgRole;
-                            form.setValue("orgRole", orgRole);
-                            applyOrgRolePreset(orgRole);
-                          }}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {ORG_ROLES.map((key) => (
-                              <SelectItem key={key} value={key}>
-                                {ORG_ROLE_LABELS[key]}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="w-full"
-                          onClick={() => {
-                            const orgRole = (form.getValues("orgRole") ?? "pr") as OrgRole;
-                            applyOrgRolePreset(orgRole);
-                            toast.success("پیش‌فرض سمت اعمال شد");
-                          }}
-                        >
-                          بازنشانی به پیش‌فرض نقش
-                        </Button>
-                      </div>
-                    )}
-
-                    {selectedRole === "org_user" && (
-                      <div className="space-y-2">
-                        <Label>کاربر والد برای دسترسی مدیریتی (اختیاری)</Label>
-                        <Select
-                          value={selectedParentUserId ?? NO_PARENT}
-                          onValueChange={(value) =>
-                            form.setValue("parentUserId", value === NO_PARENT ? null : value)
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="بدون والد / ریشه دستگاه" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value={NO_PARENT}>بدون والد</SelectItem>
-                            {parentOptions.map((parent) => (
-                              <SelectItem key={parent.id} value={parent.id}>
-                                {parent.name}
-                                {parent.orgRole
-                                  ? ` — ${ORG_ROLE_LABELS[parent.orgRole]}`
-                                  : ""}
-                                {parent.ministryName ? ` — ${parent.ministryName}` : ""}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
+                    <div className="space-y-2">
+                      <Label>زیرمجموعه</Label>
+                      <Select
+                        value={
+                          creatingOrganization
+                            ? CREATE_ORGANIZATION
+                            : selectedOrganizationId || NO_ORGANIZATION
+                        }
+                        onValueChange={handleOrganizationSelect}
+                        disabled={!selectedMinistryId}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="خود وزارتخانه یا یک زیرمجموعه" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={NO_ORGANIZATION}>خود وزارتخانه</SelectItem>
+                          {organizationSelectOptions
+                            .filter((org) => Boolean(org.id))
+                            .map((org) => (
+                            <SelectItem key={org.id} value={org.id}>
+                              {org.label}
+                            </SelectItem>
+                          ))}
+                          <SelectItem value={CREATE_ORGANIZATION}>ایجاد زیرمجموعه جدید…</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {creatingOrganization && (
+                        <div className="space-y-2">
+                          {createUnderParentName ? (
+                            <p className="text-xs text-muted-foreground">
+                              زیرمجموعه جدید زیر «{createUnderParentName}» در درخت دستگاه ایجاد می‌شود.
+                            </p>
+                          ) : null}
+                          <div className="flex gap-2">
+                          <Input
+                            value={newOrganizationName}
+                            onChange={(event) => setNewOrganizationName(event.target.value)}
+                            placeholder="نام زیرمجموعه جدید"
+                            disabled={isPending}
+                            onKeyDown={(event) => {
+                              if (event.key === "Enter") {
+                                event.preventDefault();
+                                createOrganizationInline();
+                              }
+                            }}
+                          />
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            disabled={isPending || !newOrganizationName.trim()}
+                            onClick={createOrganizationInline}
+                          >
+                            ایجاد
+                          </Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </>
                 )}
-
-                {isSubUsersMode && (
-                  <div className="space-y-2">
-                    <Label>سمت سازمانی</Label>
-                    <Select
-                      value={selectedOrgRole ?? "pr"}
-                      onValueChange={(value) => {
-                        const orgRole = value as OrgRole;
-                        form.setValue("role", "org_user");
-                        form.setValue("orgRole", orgRole);
-                        applyOrgRolePreset(orgRole);
-                      }}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {ORG_ROLES.map((key) => (
-                          <SelectItem key={key} value={key}>
-                            {ORG_ROLE_LABELS[key]}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="w-full"
-                      onClick={() => {
-                        const orgRole = (form.getValues("orgRole") ?? "pr") as OrgRole;
-                        applyOrgRolePreset(orgRole);
-                        toast.success("پیش‌فرض سمت اعمال شد");
-                      }}
-                    >
-                      بازنشانی به پیش‌فرض نقش
-                    </Button>
-                  </div>
-                )}
-
-                {rolesWithCampaignAccess.includes(selectedRole) && primaryCampaignId ? (
-                  <div className="space-y-3">
-                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                      <Label>دسترسی به بخش‌های پنل</Label>
-                      <div className="flex flex-wrap gap-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            enableAllGrantablePermissions(primaryCampaignId);
-                            toast.success("همه دسترسی‌های مجاز فعال شد");
-                          }}
-                        >
-                          فعال‌سازی همه
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            disableAllPermissions(primaryCampaignId);
-                            toast.success("همه دسترسی‌ها خاموش شد");
-                          }}
-                        >
-                          خاموش کردن همه
-                        </Button>
-                      </div>
-                    </div>
-                    {permissionCapActive ? (
-                      <p className="text-xs text-muted-foreground">
-                        فقط دسترسی‌هایی را می‌توانید بدهید که خودتان دارید؛ این محدودیت تا پایین درخت ادامه دارد.
-                      </p>
-                    ) : null}
-                    {primaryCampaignId && getDeviceCeiling(primaryCampaignId) ? (
-                      <p className="text-xs text-muted-foreground">
-                        سقف دسترسی دستگاه برای این کاربر فعال است؛ نمی‌توانید بیشتر از دسترسی دستگاه بدهید.
-                      </p>
-                    ) : null}
-                    <ContributorPermissionsEditor
-                      permissions={normalizeContributorPermissions(
-                        campaignPermissions[primaryCampaignId] ??
-                          defaultContributorPermissions()
-                      )}
-                      onChange={(next) =>
-                        setCampaignPermissions((prev) => ({
-                          ...prev,
-                          [primaryCampaignId]: clampToGrantor(primaryCampaignId, next),
-                        }))
-                      }
-                      ceiling={getPermissionCap(primaryCampaignId)}
-                      showPanelManagement={selectedRole === "org_user"}
-                      showSubtreeManagement={selectedRole === "org_user"}
-                    />
-                  </div>
-                ) : null}
               </>
             )}
 
