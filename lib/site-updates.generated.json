@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "434b10eb568fc3f929b527b44e899a5c0df0638d",
+      "committedAt": "2026-07-25T11:31:42+03:30",
+      "title": "حفظ موقعیت اسکرول منوی پنل هنگام جابه‌جایی بین صفحات",
+      "subject": "Preserve admin sidebar scroll position on navigation"
+    },
+    {
       "hash": "e9beb1e90e5f4e79b8581a330e3a694a495a123a",
       "committedAt": "2026-07-25T11:29:23+03:30",
       "title": "امکان تکمیل شناسنامه دستگاه توسط خود کاربر",
