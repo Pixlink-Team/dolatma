@@ -1,7 +1,9 @@
 import { getSql } from "@/lib/db/client";
 import { ensureDeviceSchema } from "@/lib/db/repository-devices";
 import {
+  allContributorPermissionKeys,
   defaultContributorPermissions,
+  deniedContributorPermissions,
   intersectContributorPermissions,
   normalizeContributorPermissions,
   type ContributorPermissions,
@@ -159,9 +161,62 @@ async function listUserIdsInDeviceSubtree(rootId: string): Promise<string[]> {
 }
 
 /**
+ * Push effective home-device ceiling to every user in the subtree.
+ * Creates missing user_campaign_access rows so newly granted device access
+ * becomes active without editing users one by one.
+ */
+export async function pgPushCampaignAccessToSubtreeUsers(
+  rootDeviceId: string,
+  campaignId: string
+): Promise<number> {
+  await ensureDeviceAccessSchema();
+  const sql = getSql();
+  const now = new Date().toISOString();
+  const userIds = await listUserIdsInDeviceSubtree(rootDeviceId);
+  let updatedUsers = 0;
+
+  for (const userId of userIds) {
+    const userRows = await sql`
+      SELECT organization_id, ministry_id, device_id
+      FROM users
+      WHERE id = ${userId}
+      LIMIT 1
+    `;
+    if (!userRows[0]) continue;
+
+    const homeDeviceId = resolveHomeDeviceId({
+      organizationId: userRows[0].organization_id
+        ? String(userRows[0].organization_id)
+        : null,
+      ministryId: userRows[0].ministry_id ? String(userRows[0].ministry_id) : null,
+      deviceId: userRows[0].device_id ? String(userRows[0].device_id) : null,
+    });
+    const ceiling = homeDeviceId
+      ? await pgGetEffectiveDeviceCeiling(homeDeviceId, campaignId)
+      : null;
+    const permissions = ceiling ?? defaultContributorPermissions();
+
+    await sql`
+      INSERT INTO user_campaign_access (user_id, campaign_id, permissions, created_at)
+      VALUES (
+        ${userId},
+        ${campaignId},
+        ${sql.json(JSON.parse(JSON.stringify(permissions)))},
+        ${now}
+      )
+      ON CONFLICT (user_id, campaign_id) DO UPDATE SET
+        permissions = EXCLUDED.permissions
+    `;
+    updatedUsers += 1;
+  }
+
+  return updatedUsers;
+}
+
+/**
  * Save device permissions and optionally cascade:
- * - clamp descendant device rows that already have access
- * - clamp all users whose home is in the subtree
+ * - raise newly enabled flags on descendant device rows, then clamp to ceiling
+ * - push effective home ceilings to all users in the subtree (upsert)
  */
 export async function pgSaveDeviceCampaignAccess(input: {
   deviceId: string;
@@ -182,6 +237,11 @@ export async function pgSaveDeviceCampaignAccess(input: {
     const sql = getSql();
     const applyToSubtree = input.applyToSubtree !== false;
     const now = new Date().toISOString();
+
+    const previousOwn = await pgGetDevicePermissionsForCampaign(
+      input.deviceId,
+      input.campaignId
+    );
 
     const parentCeiling = await pgGetParentDeviceCeiling(
       input.deviceId,
@@ -221,13 +281,18 @@ export async function pgSaveDeviceCampaignAccess(input: {
         `;
         for (const row of childRows) {
           const deviceId = String(row.device_id);
-          const clamped = intersectContributorPermissions(
-            normalizeContributorPermissions(row.permissions),
-            permissions
-          );
+          const child = normalizeContributorPermissions(row.permissions);
+          const next = deniedContributorPermissions();
+          for (const key of allContributorPermissionKeys) {
+            const newlyEnabled =
+              Boolean(permissions[key]) && !Boolean(previousOwn?.[key]);
+            next[key] =
+              Boolean(permissions[key]) &&
+              (Boolean(child[key]) || newlyEnabled);
+          }
           await sql`
             UPDATE device_campaign_access
-            SET permissions = ${sql.json(JSON.parse(JSON.stringify(clamped)))},
+            SET permissions = ${sql.json(JSON.parse(JSON.stringify(next)))},
                 updated_at = ${now}
             WHERE device_id = ${deviceId} AND campaign_id = ${input.campaignId}
           `;
@@ -235,25 +300,10 @@ export async function pgSaveDeviceCampaignAccess(input: {
         }
       }
 
-      const userIds = await listUserIdsInDeviceSubtree(input.deviceId);
-      for (const userId of userIds) {
-        const accessRows = await sql`
-          SELECT permissions FROM user_campaign_access
-          WHERE user_id = ${userId} AND campaign_id = ${input.campaignId}
-          LIMIT 1
-        `;
-        if (!accessRows[0]) continue;
-        const clamped = intersectContributorPermissions(
-          normalizeContributorPermissions(accessRows[0].permissions),
-          permissions
-        );
-        await sql`
-          UPDATE user_campaign_access
-          SET permissions = ${sql.json(JSON.parse(JSON.stringify(clamped)))}
-          WHERE user_id = ${userId} AND campaign_id = ${input.campaignId}
-        `;
-        clampedUsers += 1;
-      }
+      clampedUsers = await pgPushCampaignAccessToSubtreeUsers(
+        input.deviceId,
+        input.campaignId
+      );
     }
 
     return {

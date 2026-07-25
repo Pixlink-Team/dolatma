@@ -22,6 +22,7 @@ import {
   pgGetDeviceSubtreeAccess,
   pgGetEffectiveDeviceCeiling,
   pgGetParentDeviceCeiling,
+  pgPushCampaignAccessToSubtreeUsers,
   pgSaveDeviceCampaignAccess,
   type DeviceSubtreeAccessNode,
 } from "@/lib/db/repository-device-access";
@@ -174,7 +175,6 @@ export async function saveDeviceSubtreeAccessAction(data: {
     }
   }
 
-  let clampedUsers = 0;
   let savedDevices = 0;
 
   for (const node of data.nodes) {
@@ -198,19 +198,22 @@ export async function saveDeviceSubtreeAccessAction(data: {
       permissions = intersectContributorPermissions(permissions, homeCeiling);
     }
 
-    // Parents are saved first by the client; applyToSubtree clamps users under each node.
+    // Write each device ceiling first; users are pushed once after the full tree is saved.
     const result = await pgSaveDeviceCampaignAccess({
       deviceId: node.deviceId,
       campaignId: data.campaignId,
       permissions,
-      applyToSubtree: true,
+      applyToSubtree: false,
     });
     if (!result.success) return result;
-    clampedUsers += result.clampedUsers;
     savedDevices += 1;
   }
 
   const rootId = data.nodes[0]?.deviceId;
+  const clampedUsers = rootId
+    ? await pgPushCampaignAccessToSubtreeUsers(rootId, data.campaignId)
+    : 0;
+
   if (rootId) await revalidateAccessPaths(rootId);
 
   return {

@@ -338,7 +338,7 @@ export function DevicesAdmin({
         return;
       }
       toast.success(
-        `دسترسی ${result.savedDevices} دستگاه ذخیره شد و روی ${result.clampedUsers} کاربر اعمال شد`
+        `دسترسی ${result.savedDevices} دستگاه ذخیره شد و برای ${result.clampedUsers} کاربر زیرمجموعه فعال شد`
       );
       setAccessOpen(false);
     });
@@ -360,12 +360,58 @@ export function DevicesAdmin({
     });
   };
 
+  /** Descendant device ids under a node inside the access dialog tree. */
+  const listAccessDescendantIds = (
+    nodes: AccessEditNode[],
+    rootId: string
+  ): Set<string> => {
+    const children = new Map<string, string[]>();
+    for (const node of nodes) {
+      if (!node.parentId) continue;
+      if (!nodes.some((item) => item.deviceId === node.parentId)) continue;
+      const list = children.get(node.parentId) ?? [];
+      list.push(node.deviceId);
+      children.set(node.parentId, list);
+    }
+    const out = new Set<string>();
+    const stack = [...(children.get(rootId) ?? [])];
+    while (stack.length > 0) {
+      const id = stack.pop()!;
+      if (out.has(id)) continue;
+      out.add(id);
+      for (const childId of children.get(id) ?? []) stack.push(childId);
+    }
+    return out;
+  };
+
+  /**
+   * Update one node and sync changed flags to all descendants so enabling
+   * access on a ministry also activates the same flags under organizations.
+   */
   const updateAccessNode = (deviceId: string, permissions: ContributorPermissions) => {
-    setAccessNodes((prev) =>
-      prev.map((node) =>
-        node.deviceId === deviceId ? { ...node, permissions } : node
-      )
-    );
+    setAccessNodes((prev) => {
+      const previous = prev.find((node) => node.deviceId === deviceId);
+      const descendants = listAccessDescendantIds(prev, deviceId);
+      const changedKeys = allContributorPermissionKeys.filter(
+        (key) =>
+          !previous ||
+          Boolean(previous.permissions[key]) !== Boolean(permissions[key])
+      );
+
+      return prev.map((node) => {
+        if (node.deviceId === deviceId) {
+          return { ...node, permissions };
+        }
+        if (!descendants.has(node.deviceId) || changedKeys.length === 0) {
+          return node;
+        }
+        const next = { ...node.permissions };
+        for (const key of changedKeys) {
+          next[key] = Boolean(permissions[key]);
+        }
+        return { ...node, permissions: next };
+      });
+    });
   };
 
   const enableAllAccessFor = (deviceId: string) => {
@@ -819,9 +865,9 @@ export function DevicesAdmin({
           ) : accessRootNode ? (
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground">
-                سقف دسترسی را برای این دستگاه و همه زیرمجموعه‌ها تا پایین درخت تنظیم
-                کنید. هر سطح می‌تواند محدودتر از والد باشد؛ ذخیره روی کاربران همان
-                شاخه اعمال می‌شود.
+                سقف دسترسی را برای این دستگاه و همه زیرمجموعه‌ها تنظیم کنید. با فعال
+                کردن دسترسی روی یک سطح، همان تغییر روی زیرشاخه‌ها هم اعمال می‌شود و پس
+                از ذخیره برای همه کاربران آن شاخه فعال می‌گردد.
               </p>
               {accessNodes.length > 1 ? (
                 <p className="text-xs text-muted-foreground">
