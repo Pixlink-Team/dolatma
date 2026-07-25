@@ -27,6 +27,7 @@ type StepVisibilityOptions = {
 /**
  * Steps that require a specific permission / context to appear for the current user.
  * Directives: need manageSubtreeDirectives AND at least one subordinate to assign to.
+ * Subsidiaries: need manageSubtreeUsers (mission is completed by adding a subordinate user).
  */
 function isStepVisibleForPermissions(
   step: OnboardingStep,
@@ -45,6 +46,10 @@ function isStepVisibleForPermissions(
     return true;
   }
 
+  if (step.evaluator === "subsidiaries") {
+    return hasContributorPermission(options.permissions, "manageSubtreeUsers");
+  }
+
   return true;
 }
 
@@ -60,7 +65,7 @@ function buildStepHref(input: {
   if (input.step.evaluator === "passport") {
     path = `/admin/devices/${input.deviceId}`;
   } else if (input.step.evaluator === "subsidiaries") {
-    path = raw || "/admin/ministries";
+    path = raw || "/admin/users";
   } else if (input.step.evaluator === "content") {
     path = input.firstMissingContentHref || raw || "/admin";
   } else if (input.step.evaluator === "directives") {
@@ -84,6 +89,8 @@ function evaluateStep(
     permissions?: ContributorPermissions | null;
     ignorePermissions?: boolean;
     campaignId: string;
+    /** When set (org-user dashboard), prefer this over device-level subordinate count. */
+    subordinateUsersCount?: number;
   }
 ): OnboardingStepProgress {
   const requiredCategories = resolveRequiredContentCategories({
@@ -110,10 +117,15 @@ function evaluateStep(
       break;
     }
     case "subsidiaries": {
-      done = facts.childrenCount >= 1;
+      // Child device nodes alone are not enough — user must add at least one subordinate user.
+      const count =
+        typeof options.subordinateUsersCount === "number"
+          ? options.subordinateUsersCount
+          : facts.subordinateUsersCount;
+      done = count >= 1;
       detail = done
-        ? `${facts.childrenCount} زیرمجموعه ثبت شده`
-        : "هنوز زیرمجموعه‌ای ثبت نشده";
+        ? `${count} کاربر زیرمجموعه ثبت شده`
+        : "هنوز کاربری برای زیرمجموعه اضافه نشده";
       break;
     }
     case "content": {
@@ -174,6 +186,7 @@ function toProgress(
     permissions?: ContributorPermissions | null;
     ignorePermissions?: boolean;
     hasSubordinateUsers?: boolean;
+    subordinateUsersCount?: number;
     campaignId: string;
   }
 ): OnboardingProgress {
@@ -213,18 +226,27 @@ export async function evaluateDeviceOnboarding(input: {
       campaignId: input.campaignId,
       ownerUserIds: input.ownerUserIds,
     }),
-    input.issuerUserId && !input.ignorePermissions
+    // Always scope subsidiaries to the issuer when known (dashboard + per-user audit).
+    input.issuerUserId
       ? pgListSubUserIds(input.issuerUserId)
       : Promise.resolve(null as string[] | null),
   ]);
 
   if (!facts) return null;
+
+  // Prefer issuer-scoped count; fall back to device-level for all-devices audit.
+  const subordinateUsersCount =
+    subordinateIds !== null
+      ? subordinateIds.length
+      : facts.subordinateUsersCount;
+
   return toProgress(facts, steps, {
     features: input.features,
     permissions: input.permissions,
     ignorePermissions: input.ignorePermissions,
     hasSubordinateUsers:
       subordinateIds === null ? undefined : subordinateIds.length > 0,
+    subordinateUsersCount,
     campaignId: input.campaignId,
   });
 }

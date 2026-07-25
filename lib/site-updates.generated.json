@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "0dbd973cfe773c86853b39d1e1a48c76ab5a6f38",
+      "committedAt": "2026-07-25T20:59:30+03:30",
+      "title": "بازگردانی چک‌لیست مراحل راه‌اندازی در داشبورد کاربران",
+      "subject": "Restore onboarding checklist on org user dashboards"
+    },
+    {
       "hash": "c4af614398c522383e02e5108d50f28fda139c85",
       "committedAt": "2026-07-25T20:54:28+03:30",
       "title": "رفع قرار گرفتن آموزش زیر لیست بازشده زیرمجموعه",

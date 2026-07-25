@@ -59,6 +59,23 @@ async function seedDefaultOnboardingSteps(): Promise<void> {
       ON CONFLICT (step_key) DO NOTHING
     `;
   }
+
+  // Keep default subsidiaries copy in sync: completion requires adding a user, not just a device node.
+  const subsidiaries = DEFAULT_ONBOARDING_STEPS.find((step) => step.stepKey === "subsidiaries");
+  if (subsidiaries) {
+    await sql`
+      UPDATE onboarding_steps
+      SET
+        description = ${subsidiaries.description},
+        href = ${subsidiaries.href},
+        updated_at = now()
+      WHERE step_key = 'subsidiaries'
+        AND (
+          description IS DISTINCT FROM ${subsidiaries.description}
+          OR href IS DISTINCT FROM ${subsidiaries.href}
+        )
+    `;
+  }
 }
 
 function mapStep(row: Record<string, unknown>): OnboardingStep | null {
@@ -234,6 +251,8 @@ export interface DeviceOnboardingFacts {
   hasStaff: boolean;
   hasCapacity: boolean;
   childrenCount: number;
+  /** Org users whose parent is a user of this device (actual subsidiary users added). */
+  subordinateUsersCount: number;
   contentCounts: Record<string, number>;
   directivesIssued: number;
 }
@@ -357,6 +376,17 @@ export async function pgGetDeviceOnboardingFacts(input: {
       d.phones,
       d.website,
       (SELECT COUNT(*)::int FROM devices c WHERE c.parent_id = d.id) AS children_count,
+      (
+        SELECT COUNT(*)::int
+        FROM users child
+        WHERE child.role = 'org_user'
+          AND child.parent_user_id IN (
+            SELECT u.id FROM users u
+            WHERE u.device_id = d.id
+               OR u.organization_id = d.id
+               OR (u.ministry_id = d.id AND u.organization_id IS NULL)
+          )
+      ) AS subordinate_users_count,
       EXISTS(
         SELECT 1 FROM users u
         WHERE u.org_role = 'primary'
@@ -432,6 +462,7 @@ export async function pgGetDeviceOnboardingFacts(input: {
     hasStaff: Boolean(device.has_staff),
     hasCapacity: Boolean(device.has_capacity),
     childrenCount: Number(device.children_count ?? 0),
+    subordinateUsersCount: Number(device.subordinate_users_count ?? 0),
     contentCounts,
     directivesIssued,
   };
