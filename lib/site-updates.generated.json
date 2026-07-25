@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "d8663d5d5c5c1abb7c37c11d2f27e2d3b46a5459",
+      "committedAt": "2026-07-25T12:29:55+03:30",
+      "title": "انتخاب شهر از لیست در تکمیل شناسنامه دستگاه",
+      "subject": "Use searchable city select in device passport"
+    },
+    {
       "hash": "6c07ed79387dd12950659ee6d89db460bb09f8ea",
       "committedAt": "2026-07-25T12:22:56+03:30",
       "title": "رفع ری‌استارت شدن مکرر سایت بعد از آپدیت نقش‌ها",

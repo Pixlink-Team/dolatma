@@ -1177,6 +1177,31 @@ WHERE category = 'bus_shelter';
 UPDATE billboards SET category = 'scaffolding', updated_at = now()
 WHERE category = 'darbast';
 
+-- Replace legacy org branding on the fixed راستا with a neutral software label.
+UPDATE campaign_settings
+SET title = 'این نرم‌افزار', updated_at = now()
+WHERE title IN (
+  'دبیرخانه شورای اطلاع رسانی دولت',
+  'دبیرخانه شورای اطلاع‌رسانی دولت',
+  'دبیرخانه شوراهای اطلاع رسانی دولت',
+  'دبیرخانه شوراهای اطلاع‌رسانی دولت'
+);
+UPDATE campaign_settings
+SET admin_owner_label = 'این نرم‌افزار', updated_at = now()
+WHERE admin_owner_label IN (
+  'دبیرخانه شورای اطلاع رسانی دولت',
+  'دبیرخانه شورای اطلاع‌رسانی دولت',
+  'دبیرخانه شوراهای اطلاع رسانی دولت',
+  'دبیرخانه شوراهای اطلاع‌رسانی دولت'
+);
+UPDATE campaign_settings
+SET description = '', updated_at = now()
+WHERE trim(both from description) IN (
+  'گزارش اقدامات دولت.',
+  'گزارش اقدامات دولت',
+  'گزارش اقدامات دولت٫'
+);
+
 -- ---------------------------------------------------------------------------
 -- Directive operations workspace (اتاق عملیات هر دستورکار)
 -- ---------------------------------------------------------------------------
