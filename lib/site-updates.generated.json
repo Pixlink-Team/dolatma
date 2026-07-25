@@ -1,6 +1,18 @@
 {
   "entries": [
     {
+      "hash": "966ae38f841ba551e0ff511d2ac9ef2f06ab2c0b",
+      "committedAt": "2026-07-25T12:08:52+03:30",
+      "title": "تکمیل شناسنامه فقط توسط خود کاربر و مشاهده برای بالادستی",
+      "subject": "Restrict device passport edit to home device owner"
+    },
+    {
+      "hash": "72a6050dcffd10c2141fd87a052ab8fe5019eb2b",
+      "committedAt": "2026-07-25T11:58:41+03:30",
+      "title": "حذف کامل تیرگی از عکس پس‌زمینه ورود",
+      "subject": "Keep login backgrounds fully bright with no dark layer"
+    },
+    {
       "hash": "c009ffd927716fc4b8bfba1a80cb2e37034b4f98",
       "committedAt": "2026-07-25T11:54:11+03:30",
       "title": "افزودن سمت‌های سازمانی مدیر، ناظر، معاون و روابط عمومی برای کاربران دستگاه",
