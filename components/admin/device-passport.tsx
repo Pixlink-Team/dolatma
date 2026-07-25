@@ -69,6 +69,11 @@ import type {
   DeviceStatus,
   DeviceType,
 } from "@/lib/types";
+import {
+  composeLandline,
+  extractLocalLandline,
+  getIranAreaCode,
+} from "@/lib/iran-phone-area-codes";
 import { adminHref } from "@/lib/utils";
 import { useAdminCampaign } from "@/components/admin/admin-campaign-provider";
 import { PersianDateInput } from "@/components/ui/persian-date-input";
@@ -190,6 +195,7 @@ export function DevicePassportView({
 
   const canEditProfile = canManageStaff || canManageAdminSections;
   const device = passport.device;
+  const initialAreaCode = getIranAreaCode(device.province, device.city);
 
   const profileForm = useForm({
     resolver: zodResolver(profileSchema),
@@ -203,11 +209,15 @@ export function DevicePassportView({
       activityScope: device.activityScope,
       mission: device.mission ?? "",
       address: device.address ?? "",
-      phones: device.phones.join("، "),
+      phones: extractLocalLandline(device.phones[0] ?? "", initialAreaCode),
       website: device.website ?? "",
       status: device.status,
     },
   });
+
+  const watchedProvince = profileForm.watch("province");
+  const watchedCity = profileForm.watch("city");
+  const phoneAreaCode = getIranAreaCode(watchedProvince, watchedCity);
 
   const officialForm = useForm({
     resolver: zodResolver(officialSchema),
@@ -311,10 +321,13 @@ export function DevicePassportView({
         activityScope: data.activityScope as DeviceActivityScope,
         mission: data.mission || null,
         address: data.address || null,
-        phones: (data.phones || "")
-          .split(/[،,]/)
-          .map((item) => item.trim())
-          .filter(Boolean),
+        phones: (() => {
+          const full = composeLandline(
+            getIranAreaCode(data.province, data.city),
+            data.phones || ""
+          );
+          return full ? [full] : [];
+        })(),
         website: data.website || null,
         socialLinks: device.socialLinks,
         status: data.status as DeviceStatus,
@@ -1047,14 +1060,51 @@ export function DevicePassportView({
               </Select>
             </Field>
             <ProvinceCityFields
-              province={profileForm.watch("province") ?? ""}
-              city={profileForm.watch("city") ?? ""}
-              onProvinceChange={(value) => profileForm.setValue("province", value)}
-              onCityChange={(value) => profileForm.setValue("city", value)}
+              province={watchedProvince ?? ""}
+              city={watchedCity ?? ""}
+              onProvinceChange={(value) => {
+                profileForm.setValue("province", value);
+                const nextCode = getIranAreaCode(value, "");
+                const currentLocal = profileForm.getValues("phones") ?? "";
+                profileForm.setValue(
+                  "phones",
+                  extractLocalLandline(currentLocal, nextCode)
+                );
+              }}
+              onCityChange={(value) => {
+                profileForm.setValue("city", value);
+                const nextCode = getIranAreaCode(
+                  profileForm.getValues("province"),
+                  value
+                );
+                const currentLocal = profileForm.getValues("phones") ?? "";
+                profileForm.setValue(
+                  "phones",
+                  extractLocalLandline(currentLocal, nextCode)
+                );
+              }}
             />
             <Field label="آدرس"><Input {...profileForm.register("address")} /></Field>
-            <Field label="شماره‌های تماس (با ویرگول)">
-              <Input {...profileForm.register("phones")} />
+            <Field label="شماره تماس با کد شهر">
+              <div className="flex items-center gap-2" dir="ltr">
+                <span
+                  className="inline-flex h-9 shrink-0 items-center rounded-md border bg-muted px-3 font-mono text-sm tabular-nums text-muted-foreground"
+                  title={
+                    phoneAreaCode
+                      ? "کد شهر بر اساس استان انتخاب‌شده"
+                      : "برای تعیین کد شهر، استان را انتخاب کنید"
+                  }
+                >
+                  {phoneAreaCode ?? "—"}
+                </span>
+                <Input
+                  inputMode="tel"
+                  className="text-left"
+                  placeholder={phoneAreaCode ? "شماره محلی" : "ابتدا استان را انتخاب کنید"}
+                  disabled={!phoneAreaCode}
+                  {...profileForm.register("phones")}
+                />
+              </div>
             </Field>
             <Field label="وب‌سایت"><Input {...profileForm.register("website")} /></Field>
             <Field label="مأموریت"><Textarea rows={3} {...profileForm.register("mission")} /></Field>
