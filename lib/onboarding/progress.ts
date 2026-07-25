@@ -13,24 +13,35 @@ import {
   pgListOnboardingSteps,
   type DeviceOnboardingFacts,
 } from "@/lib/db/repository-onboarding";
+import { pgListSubUserIds } from "@/lib/db/repository-ministries";
 import { adminHref } from "@/lib/utils";
 
-/** Steps that require a specific permission to appear for the current user. */
+type StepVisibilityOptions = {
+  permissions?: ContributorPermissions | null;
+  ignorePermissions?: boolean;
+  /** Direct subordinate org users under the current issuer (parent_user_id). */
+  hasSubordinateUsers?: boolean;
+};
+
+/**
+ * Steps that require a specific permission / context to appear for the current user.
+ * Directives: need manageSubtreeDirectives AND at least one subordinate to assign to.
+ */
 function isStepVisibleForPermissions(
   step: OnboardingStep,
-  options: {
-    permissions?: ContributorPermissions | null;
-    ignorePermissions?: boolean;
-  }
+  options: StepVisibilityOptions
 ): boolean {
   if (options.ignorePermissions) return true;
-  if (!options.permissions) return true;
 
   if (step.evaluator === "directives") {
-    return hasContributorPermission(
+    const canManage = hasContributorPermission(
       options.permissions,
       "manageSubtreeDirectives"
     );
+    if (!canManage) return false;
+    // No one to issue to — hide the step even when the permission is granted.
+    if (options.hasSubordinateUsers === false) return false;
+    return true;
   }
 
   return true;
@@ -161,6 +172,7 @@ function toProgress(
     features: CampaignFeatures;
     permissions?: ContributorPermissions | null;
     ignorePermissions?: boolean;
+    hasSubordinateUsers?: boolean;
     campaignId: string;
   }
 ): OnboardingProgress {
@@ -190,14 +202,19 @@ export async function evaluateDeviceOnboarding(input: {
   permissions?: ContributorPermissions | null;
   ignorePermissions?: boolean;
   ownerUserIds?: string[];
+  /** Current user — used to hide directives when they have no subordinates. */
+  issuerUserId?: string | null;
 }): Promise<OnboardingProgress | null> {
-  const [steps, facts] = await Promise.all([
+  const [steps, facts, subordinateIds] = await Promise.all([
     pgListOnboardingSteps({ activeOnly: true }),
     pgGetDeviceOnboardingFacts({
       deviceId: input.deviceId,
       campaignId: input.campaignId,
       ownerUserIds: input.ownerUserIds,
     }),
+    input.issuerUserId && !input.ignorePermissions
+      ? pgListSubUserIds(input.issuerUserId)
+      : Promise.resolve(null as string[] | null),
   ]);
 
   if (!facts) return null;
@@ -205,6 +222,8 @@ export async function evaluateDeviceOnboarding(input: {
     features: input.features,
     permissions: input.permissions,
     ignorePermissions: input.ignorePermissions,
+    hasSubordinateUsers:
+      subordinateIds === null ? undefined : subordinateIds.length > 0,
     campaignId: input.campaignId,
   });
 }

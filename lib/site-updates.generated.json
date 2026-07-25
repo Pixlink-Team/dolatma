@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "ba5aad387513c97057cb764b123da2eff6a992f2",
+      "committedAt": "2026-07-25T18:46:55+03:30",
+      "title": "رفع خطای باز شدن بخش کاربران برای مدیران زیرمجموعه",
+      "subject": "Fix users page crash on cyclic org trees"
+    },
+    {
       "hash": "4ab3558fd44cc7dc691fb8aebacc07b229beadd3",
       "committedAt": "2026-07-25T18:44:49+03:30",
       "title": "افزودن تیک اتصال کاربر به خود وزارتخانه به‌جای انتخاب از لیست",

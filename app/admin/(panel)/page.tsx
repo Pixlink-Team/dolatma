@@ -191,6 +191,7 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
         features,
         permissions: contributorPermissions,
         ownerUserIds: ownerIds,
+        issuerUserId: session.userId,
       });
     }
   }
