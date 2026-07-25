@@ -166,9 +166,9 @@ function readinessBadgeClass(status: DevicePassport["readiness"]["status"]) {
 
 interface DevicePassportViewProps {
   initialPassport: DevicePassport;
-  /** Manage کارکنان registry (admin + scoped subtree owners). */
+  /** Own-device user may manage staff registry. */
   canManageStaff?: boolean;
-  /** Officials, capacities, and other passport tools for device owners. */
+  /** Own-device user may manage officials, capacities, and profile. */
   canManageAdminSections?: boolean;
 }
 
@@ -458,7 +458,11 @@ export function DevicePassportView({
                 <Pencil className="ml-1 h-4 w-4" />
                 ویرایش اطلاعات
               </Button>
-            ) : null}
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                فقط مشاهده — تکمیل شناسنامه با مسئول همین دستگاه است.
+              </p>
+            )}
           </div>
         </div>
       </section>

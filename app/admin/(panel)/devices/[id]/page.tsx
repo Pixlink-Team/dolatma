@@ -1,6 +1,10 @@
 import { notFound, redirect } from "next/navigation";
 import { DevicePassportView } from "@/components/admin/device-passport";
-import { canAccessDevicesPage, canMutateDevice } from "@/lib/auth/device-access";
+import {
+  canAccessDevicesPage,
+  canEditDevicePassport,
+  canViewDevice,
+} from "@/lib/auth/device-access";
 import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
 import { pgGetDevicePassport } from "@/lib/db/repository-devices";
 import { isPostgresConfigured } from "@/lib/utils";
@@ -16,7 +20,7 @@ export default async function DevicePassportPage({ params }: PageProps) {
 
   const { id } = await params;
   if (!isFullAdmin(session)) {
-    const allowed = await canMutateDevice(session, id);
+    const allowed = await canViewDevice(session, id);
     if (!allowed) redirect("/admin/ministries");
   }
 
@@ -31,12 +35,15 @@ export default async function DevicePassportPage({ params }: PageProps) {
   }
   if (!passport) notFound();
 
-  // Anyone who reaches this page already passed full-admin or subtree ownership checks.
+  const canEdit = isFullAdmin(session)
+    ? true
+    : await canEditDevicePassport(session, id);
+
   return (
     <DevicePassportView
       initialPassport={passport}
-      canManageStaff
-      canManageAdminSections
+      canManageStaff={canEdit}
+      canManageAdminSections={canEdit}
     />
   );
 }

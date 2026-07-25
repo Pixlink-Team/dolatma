@@ -4,7 +4,9 @@ import { revalidatePath } from "next/cache";
 import {
   canAccessDevicesPage,
   canCreateDeviceUnder,
+  canEditDevicePassport,
   canMutateDevice,
+  canViewDevice,
   getSessionHomeDeviceId,
   isDeviceTreeScopedRole,
   listAccessibleDevices,
@@ -44,8 +46,8 @@ async function revalidateDevicePages(deviceId?: string) {
   if (deviceId) revalidatePath(`/admin/devices/${deviceId}`);
 }
 
-/** Full admin or scoped owner of this device's subtree may mutate passport data. */
-async function requireDeviceMutationAccess(deviceId: string) {
+/** Only the device's own user (or full admin) may edit passport content. */
+async function requireDevicePassportEditAccess(deviceId: string) {
   const session = await getAuthSession();
   if (!session || !canAccessDevicesPage(session)) {
     return { ok: false as const, error: "Unauthorized" };
@@ -54,9 +56,12 @@ async function requireDeviceMutationAccess(deviceId: string) {
     return { ok: false as const, error: "Database required" };
   }
   if (!isFullAdmin(session)) {
-    const allowed = await canMutateDevice(session, deviceId);
+    const allowed = await canEditDevicePassport(session, deviceId);
     if (!allowed) {
-      return { ok: false as const, error: "دسترسی به این دستگاه ندارید" };
+      return {
+        ok: false as const,
+        error: "فقط مسئول همین دستگاه می‌تواند شناسنامه را تکمیل کند",
+      };
     }
   }
   return { ok: true as const, session };
@@ -90,7 +95,7 @@ export async function getDevicePassportAction(deviceId: string) {
     return { success: false as const, error: "Database required", passport: null };
   }
   if (!isFullAdmin(session)) {
-    const allowed = await canMutateDevice(session, deviceId);
+    const allowed = await canViewDevice(session, deviceId);
     if (!allowed) {
       return { success: false as const, error: "دسترسی به این دستگاه ندارید", passport: null };
     }
@@ -145,8 +150,9 @@ export async function saveDeviceAction(data: {
   }
 
   if (isUpdate && data.id) {
-    const allowed = await canMutateDevice(session, data.id);
-    if (!allowed) {
+    const canEditPassport = await canEditDevicePassport(session, data.id);
+    const allowedTree = await canMutateDevice(session, data.id);
+    if (!canEditPassport && !allowedTree) {
       return { success: false as const, error: "دسترسی به این دستگاه ندارید" };
     }
 
@@ -168,17 +174,46 @@ export async function saveDeviceAction(data: {
       }
     } else {
       const parentAllowed = await canMutateDevice(session, nextParentId);
-      if (!parentAllowed) {
+      // Home-device owner editing own passport may keep current parent without tree-manage flag.
+      if (!parentAllowed && !(canEditPassport && nextParentId === existing.parentId)) {
         return { success: false as const, error: "والد خارج از محدوده دسترسی شماست" };
       }
     }
 
-    const result = await pgSaveDevice({
-      ...data,
-      parentId: nextParentId,
-      // Scoped users cannot promote a node into a root ministry type without parent.
-      type: nextParentId ? (data.type === "ministry" ? "organization" : data.type) : existing.type,
-    });
+    // Upstream managers may only change tree metadata, not passport content.
+    const result = await pgSaveDevice(
+      canEditPassport
+        ? {
+            ...data,
+            parentId: nextParentId,
+            type: nextParentId
+              ? data.type === "ministry"
+                ? "organization"
+                : data.type
+              : existing.type,
+          }
+        : {
+            id: data.id,
+            name: data.name,
+            shortName: data.shortName,
+            type: nextParentId
+              ? data.type === "ministry"
+                ? "organization"
+                : data.type
+              : existing.type,
+            parentId: nextParentId,
+            status: data.status ?? existing.status,
+            logoUrl: existing.logoUrl,
+            province: existing.province,
+            city: existing.city,
+            activityScope: existing.activityScope,
+            mission: existing.mission,
+            address: existing.address,
+            phones: existing.phones,
+            website: existing.website,
+            socialLinks: existing.socialLinks,
+          }
+    );
     if (result.success) await revalidateDevicePages(result.id);
     return result;
   }
@@ -237,7 +272,7 @@ export async function saveDeviceOfficialAction(data: {
   userId?: string | null;
   startedAt?: string | null;
 }) {
-  const access = await requireDeviceMutationAccess(data.deviceId);
+  const access = await requireDevicePassportEditAccess(data.deviceId);
   if (!access.ok) return { success: false as const, error: access.error };
 
   const result = await pgSaveDeviceOfficial(data);
@@ -246,7 +281,7 @@ export async function saveDeviceOfficialAction(data: {
 }
 
 export async function endDeviceOfficialAction(id: string, deviceId: string) {
-  const access = await requireDeviceMutationAccess(deviceId);
+  const access = await requireDevicePassportEditAccess(deviceId);
   if (!access.ok) return { success: false as const, error: access.error };
 
   const result = await pgEndDeviceOfficial(id);
@@ -266,7 +301,7 @@ export async function saveDeviceStaffAction(data: {
   education: DeviceStaffEducation;
   isActive?: boolean;
 }) {
-  const access = await requireDeviceMutationAccess(data.deviceId);
+  const access = await requireDevicePassportEditAccess(data.deviceId);
   if (!access.ok) return { success: false as const, error: access.error };
 
   const result = await pgSaveDeviceStaff(data);
@@ -275,7 +310,7 @@ export async function saveDeviceStaffAction(data: {
 }
 
 export async function deleteDeviceStaffAction(id: string, deviceId: string) {
-  const access = await requireDeviceMutationAccess(deviceId);
+  const access = await requireDevicePassportEditAccess(deviceId);
   if (!access.ok) return { success: false as const, error: access.error };
 
   const result = await pgDeleteDeviceStaff(id);
@@ -297,7 +332,7 @@ export async function saveDeviceCapacityAction(data: {
   address?: string | null;
   details?: Record<string, unknown> | null;
 }) {
-  const access = await requireDeviceMutationAccess(data.deviceId);
+  const access = await requireDevicePassportEditAccess(data.deviceId);
   if (!access.ok) return { success: false as const, error: access.error };
 
   const result = await pgSaveDeviceCapacity(data);
@@ -306,7 +341,7 @@ export async function saveDeviceCapacityAction(data: {
 }
 
 export async function deleteDeviceCapacityAction(id: string, deviceId: string) {
-  const access = await requireDeviceMutationAccess(deviceId);
+  const access = await requireDevicePassportEditAccess(deviceId);
   if (!access.ok) return { success: false as const, error: access.error };
 
   const result = await pgDeleteDeviceCapacity(id);

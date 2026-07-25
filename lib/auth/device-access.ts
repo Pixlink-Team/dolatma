@@ -61,7 +61,37 @@ function canMutateDevicesFromPermissions(
   return canManageSubtreeUsers(session);
 }
 
-/** Whether the session may mutate this device (edit/delete) or use it as a parent. */
+/**
+ * View passport / device details for any node in the caller's subtree
+ * (including supervisors without manageSubtreeDevices).
+ */
+export async function canViewDevice(
+  session: AuthSession,
+  deviceId: string
+): Promise<boolean> {
+  if (isFullAdmin(session)) return true;
+  if (!isDeviceTreeScopedRole(session)) return false;
+  const homeId = await getSessionHomeDeviceId(session);
+  if (!homeId) return false;
+  return pgIsDeviceInSubtree(deviceId, homeId);
+}
+
+/**
+ * Only the user attached to this device (home) may complete its passport.
+ * Upstream managers can view via canViewDevice but not edit.
+ */
+export async function canEditDevicePassport(
+  session: AuthSession,
+  deviceId: string
+): Promise<boolean> {
+  if (isFullAdmin(session)) return true;
+  if (!isDeviceTreeScopedRole(session)) return false;
+  const homeId = await getSessionHomeDeviceId(session);
+  if (!homeId) return false;
+  return homeId === deviceId;
+}
+
+/** Whether the session may mutate this device (tree edit/delete) or use it as a parent. */
 export async function canMutateDevice(
   session: AuthSession,
   deviceId: string,

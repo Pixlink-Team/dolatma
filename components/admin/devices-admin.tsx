@@ -321,7 +321,7 @@ export function DevicesAdmin({
             <Button variant="outline" size="sm" asChild>
               <Link href={adminHref(`/admin/devices/${device.id}`, campaignId)}>
                 <IdCard className="ml-1 h-4 w-4" />
-                شناسنامه
+                {isHome ? "تکمیل شناسنامه" : "مشاهده شناسنامه"}
               </Link>
             </Button>
           ) : null}
@@ -369,8 +369,8 @@ export function DevicesAdmin({
           <h1 className="text-2xl font-bold">دستگاه‌ها</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {canCreateRoot
-              ? "فهرست وزارتخانه‌ها و زیرمجموعه‌ها — برای جزئیات وارد شناسنامه ۳۶۰ درجه شوید."
-              : "درخت دستگاه خودتان — می‌توانید زیرمجموعه‌های پایین‌تر اضافه یا ویرایش کنید."}
+              ? "فهرست وزارتخانه‌ها و زیرمجموعه‌ها — هر دستگاه شناسنامه خودش را تکمیل می‌کند؛ بالادستی فقط مشاهده می‌کند."
+              : "درخت دستگاه خودتان — شناسنامه دستگاه خودتان را تکمیل کنید و شناسنامه زیرمجموعه‌ها را فقط ببینید."}
           </p>
         </div>
         {canCreateRoot ? (
