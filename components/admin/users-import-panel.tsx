@@ -11,6 +11,8 @@ import { Switch } from "@/components/ui/switch";
 import {
   contributorPermissionLabels,
   defaultContributorPermissions,
+  panelManagementKeys,
+  panelManagementPermissionLabels,
   type ContributorPermissionKey,
   type ContributorPermissions,
 } from "@/lib/contributor-permissions";
@@ -129,6 +131,27 @@ export function UsersImportPanel({ campaigns, onImported }: UsersImportPanelProp
                 className="flex items-center justify-between gap-3 text-sm rounded-md border px-3 py-2"
               >
                 <span>{contributorPermissionLabels[key]}</span>
+                <Switch
+                  checked={permissions[key]}
+                  onCheckedChange={(value) => togglePermission(key, value)}
+                />
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label>بخش‌های تنظیمات و مدیریت</Label>
+          <p className="text-xs text-muted-foreground">
+            به‌طور پیش‌فرض خاموش است؛ فقط در صورت نیاز فعال کنید.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {panelManagementKeys.map((key) => (
+              <label
+                key={key}
+                className="flex items-center justify-between gap-3 text-sm rounded-md border px-3 py-2"
+              >
+                <span>{panelManagementPermissionLabels[key]}</span>
                 <Switch
                   checked={permissions[key]}
                   onCheckedChange={(value) => togglePermission(key, value)}

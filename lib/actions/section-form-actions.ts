@@ -1,8 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getAuthSession } from "@/lib/auth/get-session";
-import { canManageForms } from "@/lib/auth/access";
+import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
+import { canManageForms, hasAnyCampaignPermission, isClientUser } from "@/lib/auth/access";
 import {
   isContentFormSectionKey,
   normalizeContentFormFields,
@@ -32,9 +32,19 @@ async function revalidateSectionForms() {
   revalidatePath("/admin");
 }
 
-export async function listSectionContentFormsAction() {
+async function assertCanManageSectionForms() {
   const session = await getAuthSession();
-  if (!session || !canManageForms(session)) return UNAUTHORIZED;
+  if (!session) return null;
+  if (isFullAdmin(session) || isClientUser(session)) return session;
+  if (await hasAnyCampaignPermission(session, "forms")) return session;
+  // Keep sync helper path for callers that already loaded permissions elsewhere.
+  if (canManageForms(session)) return session;
+  return null;
+}
+
+export async function listSectionContentFormsAction() {
+  const session = await assertCanManageSectionForms();
+  if (!session) return UNAUTHORIZED;
 
   const dbError = requirePostgres();
   if (dbError) return dbError;
@@ -62,8 +72,8 @@ export async function saveSectionContentFormAction(input: {
   title: string;
   fields: ContentFormField[];
 }) {
-  const session = await getAuthSession();
-  if (!session || !canManageForms(session)) return UNAUTHORIZED;
+  const session = await assertCanManageSectionForms();
+  if (!session) return UNAUTHORIZED;
   if (!isContentFormSectionKey(input.sectionKey)) {
     return { success: false as const, error: "بخش نامعتبر است" };
   }

@@ -31,6 +31,8 @@ import {
   contributorPermissionLabels,
   defaultContributorPermissions,
   normalizeContributorPermissions,
+  panelManagementKeys,
+  panelManagementPermissionLabels,
   subtreeManagementKeys,
   type ContributorPermissionKey,
   type ContributorPermissions,
@@ -1363,6 +1365,31 @@ export function UsersAdmin({
                             </div>
                           </div>
                           {selectedRole === "org_user" && (
+                            <>
+                            <div className="space-y-2">
+                              <p className="text-xs font-medium text-muted-foreground">
+                                بخش‌های تنظیمات و مدیریت
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                به‌طور پیش‌فرض خاموش است؛ فقط در صورت نیاز فعال کنید.
+                              </p>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                {panelManagementKeys.map((key) => (
+                                  <label
+                                    key={key}
+                                    className="flex items-center justify-between gap-3 text-sm rounded-md border px-3 py-2"
+                                  >
+                                    <span>{panelManagementPermissionLabels[key]}</span>
+                                    <Switch
+                                      checked={permissions[key]}
+                                      onCheckedChange={(value) =>
+                                        togglePermission(campaignId, key, value)
+                                      }
+                                    />
+                                  </label>
+                                ))}
+                              </div>
+                            </div>
                             <div className="space-y-2">
                               <p className="text-xs font-medium text-muted-foreground">
                                 قابلیت‌های مدیریتی زیرشاخه
@@ -1384,6 +1411,7 @@ export function UsersAdmin({
                                 ))}
                               </div>
                             </div>
+                            </>
                           )}
                         </div>
                       );
@@ -1452,6 +1480,46 @@ export function UsersAdmin({
                     className="flex items-center justify-between gap-3 text-sm rounded-md border px-3 py-2"
                   >
                     <span>{contributorPermissionLabels[key]}</span>
+                    <Switch
+                      checked={bulkPermissions[key]}
+                      onCheckedChange={(value) =>
+                        setBulkPermissions((prev) => ({ ...prev, [key]: value }))
+                      }
+                    />
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>بخش‌های تنظیمات و مدیریت</Label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {panelManagementKeys.map((key) => (
+                  <label
+                    key={key}
+                    className="flex items-center justify-between gap-3 text-sm rounded-md border px-3 py-2"
+                  >
+                    <span>{panelManagementPermissionLabels[key]}</span>
+                    <Switch
+                      checked={bulkPermissions[key]}
+                      onCheckedChange={(value) =>
+                        setBulkPermissions((prev) => ({ ...prev, [key]: value }))
+                      }
+                    />
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>قابلیت‌های مدیریتی زیرشاخه</Label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {subtreeManagementKeys.map((key) => (
+                  <label
+                    key={key}
+                    className="flex items-center justify-between gap-3 text-sm rounded-md border px-3 py-2"
+                  >
+                    <span>{subtreeManagementPermissionLabels[key]}</span>
                     <Switch
                       checked={bulkPermissions[key]}
                       onCheckedChange={(value) =>

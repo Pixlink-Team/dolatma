@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
+import { hasAnyCampaignPermission } from "@/lib/auth/access";
 import {
   pgCompleteTutorial,
   pgGetSectionTutorial,
@@ -63,7 +64,13 @@ export async function getTutorialStatusAction(sectionKey: string) {
 
 export async function getSectionTutorialsEnabledAction() {
   const session = await getAuthSession();
-  if (!session || !isFullAdmin(session)) {
+  if (!session) {
+    return { success: false as const, error: "Unauthorized" };
+  }
+  if (
+    !isFullAdmin(session) &&
+    !(await hasAnyCampaignPermission(session, "sectionTutorials"))
+  ) {
     return { success: false as const, error: "Unauthorized" };
   }
 
@@ -123,7 +130,13 @@ export async function completeTutorialAction(sectionKey: string) {
 
 export async function listTutorialsForAdminAction() {
   const session = await getAuthSession();
-  if (!session || !isFullAdmin(session)) {
+  if (!session) {
+    return { success: false as const, error: "Unauthorized" };
+  }
+  if (
+    !isFullAdmin(session) &&
+    !(await hasAnyCampaignPermission(session, "sectionTutorials"))
+  ) {
     return { success: false as const, error: "Unauthorized" };
   }
 

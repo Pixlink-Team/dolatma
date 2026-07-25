@@ -2,9 +2,15 @@ import type { AuthSession } from "@/lib/types";
 import { isFullAdmin } from "@/lib/auth/get-session";
 import {
   hasContributorPermission,
+  type ContributorPermissionKey,
   type ContributorPermissions,
 } from "@/lib/contributor-permissions";
+import {
+  pgGetUserById,
+  pgGetUserPermissionsForCampaign,
+} from "@/lib/db/repository-extended";
 import { canOrgRoleManageSubtreeUsers, isOrgUserRole } from "@/lib/user-roles";
+import { isPostgresConfigured } from "@/lib/utils";
 
 export function isClientUser(session: AuthSession): boolean {
   return session.role === "client";
@@ -79,9 +85,27 @@ export function canManageDirectiveRecord(
   return Boolean(session.userId && directive.createdByUserId === session.userId);
 }
 
-/** Only admin and client (کارفرما) can create/edit form definitions. */
-export function canManageForms(session: AuthSession): boolean {
-  return isFullAdmin(session) || isClientUser(session);
+/**
+ * Admin / client always; org users need the `forms` campaign permission.
+ * Pass campaign permissions when available; otherwise only role bypass applies.
+ */
+export function canManageForms(
+  session: AuthSession,
+  permissions?: ContributorPermissions | null
+): boolean {
+  if (isFullAdmin(session) || isClientUser(session)) return true;
+  return hasContributorPermission(permissions, "forms");
+}
+
+/** Resolve forms access for a specific campaign (loads membership when needed). */
+export async function canManageFormsForCampaign(
+  session: AuthSession,
+  campaignId: string
+): Promise<boolean> {
+  if (isFullAdmin(session) || isClientUser(session)) return true;
+  if (!session.userId || !isPostgresConfigured()) return false;
+  const permissions = await pgGetUserPermissionsForCampaign(session.userId, campaignId);
+  return hasContributorPermission(permissions, "forms");
 }
 
 /**
@@ -118,5 +142,68 @@ export function canManageSubtreeUsers(
     "manageSubtreeUsers",
     session.manageSubtreeUsers,
     canOrgRoleManageSubtreeUsers(session.orgRole)
+  );
+}
+
+function hasPanelPermission(
+  session: AuthSession,
+  permissions: ContributorPermissions | null | undefined,
+  key: ContributorPermissionKey
+): boolean {
+  if (isFullAdmin(session)) return true;
+  return hasContributorPermission(permissions, key);
+}
+
+/** Campaign (راستا) settings page — admin/client, or granted `campaignSettings`. */
+export function canAccessCampaignSettings(
+  session: AuthSession,
+  permissions?: ContributorPermissions | null
+): boolean {
+  if (isFullAdmin(session) || isClientUser(session)) return true;
+  return hasPanelPermission(session, permissions, "campaignSettings");
+}
+
+export async function canAccessCampaignSettingsForCampaign(
+  session: AuthSession,
+  campaignId: string
+): Promise<boolean> {
+  if (isFullAdmin(session) || isClientUser(session)) return true;
+  if (!session.userId || !isPostgresConfigured()) return false;
+  const permissions = await pgGetUserPermissionsForCampaign(session.userId, campaignId);
+  return hasContributorPermission(permissions, "campaignSettings");
+}
+
+/** Site updates page — admin/client, or granted `siteUpdates` on any/active campaign. */
+export function canAccessSiteUpdates(
+  session: AuthSession,
+  permissions?: ContributorPermissions | null
+): boolean {
+  if (isFullAdmin(session) || isClientUser(session)) return true;
+  return hasPanelPermission(session, permissions, "siteUpdates");
+}
+
+/**
+ * Section tutorials management page.
+ * Editing content stays admin-only in actions; this only gates page access.
+ */
+export function canAccessSectionTutorials(
+  session: AuthSession,
+  permissions?: ContributorPermissions | null
+): boolean {
+  if (isFullAdmin(session)) return true;
+  return hasPanelPermission(session, permissions, "sectionTutorials");
+}
+
+/** True when any campaign membership grants the panel permission. */
+export async function hasAnyCampaignPermission(
+  session: AuthSession,
+  key: ContributorPermissionKey
+): Promise<boolean> {
+  if (isFullAdmin(session)) return true;
+  if (!session.userId || !isPostgresConfigured()) return false;
+  const user = await pgGetUserById(session.userId);
+  if (!user) return false;
+  return Object.values(user.campaignPermissions ?? {}).some((perms) =>
+    hasContributorPermission(perms, key)
   );
 }

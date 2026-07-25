@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getAuthSession } from "@/lib/auth/get-session";
-import { canManageForms } from "@/lib/auth/access";
+import { canManageFormsForCampaign } from "@/lib/auth/access";
 import {
   normalizeFormFields,
   validateFormAnswers,
@@ -42,26 +42,26 @@ async function revalidateForms() {
   revalidatePath("/admin");
 }
 
-async function assertCanManageForms() {
+async function assertCanManageForms(campaignId: string) {
   const session = await getAuthSession();
   if (!session) {
     redirect("/api/auth/clear-session");
   }
-  if (!canManageForms(session)) {
-    return { error: FORBIDDEN, session: null as null };
+  if (!(await canManageFormsForCampaign(session, campaignId))) {
+    return { error: FORBIDDEN, session: null as null, canManage: false };
   }
 
-  return { error: null, session };
+  return { error: null, session, canManage: true };
 }
 
 export async function listCampaignFormsAction(campaignId: string) {
-  const access = await assertCanManageForms();
+  const access = await assertCanManageForms(campaignId);
   if (access.error || !access.session) return access.error ?? FORBIDDEN;
 
   const dbError = requirePostgres();
   if (dbError) return dbError;
 
-  const canManage = canManageForms(access.session);
+  const canManage = access.canManage;
   const forms = await pgListCampaignForms(campaignId, {
     publishedOnly: !canManage,
   });
@@ -80,7 +80,7 @@ export async function saveCampaignFormAction(input: {
 }) {
   const session = await getAuthSession();
   if (!session) redirect("/api/auth/clear-session");
-  if (!canManageForms(session)) return FORBIDDEN;
+  if (!(await canManageFormsForCampaign(session, input.campaignId))) return FORBIDDEN;
 
   const dbError = requirePostgres();
   if (dbError) return dbError;
@@ -123,7 +123,7 @@ export async function saveCampaignFormAction(input: {
 export async function deleteCampaignFormAction(formId: string, campaignId: string) {
   const session = await getAuthSession();
   if (!session) redirect("/api/auth/clear-session");
-  if (!canManageForms(session)) return FORBIDDEN;
+  if (!(await canManageFormsForCampaign(session, campaignId))) return FORBIDDEN;
 
   const dbError = requirePostgres();
   if (dbError) return dbError;
@@ -144,13 +144,13 @@ export async function listFormResponsesAction(input: {
   campaignId: string;
   formId?: string;
 }) {
-  const access = await assertCanManageForms();
+  const access = await assertCanManageForms(input.campaignId);
   if (access.error || !access.session) return access.error ?? FORBIDDEN;
 
   const dbError = requirePostgres();
   if (dbError) return dbError;
 
-  const canManage = canManageForms(access.session);
+  const canManage = access.canManage;
   const responses = await pgListFormResponses({
     campaignId: input.campaignId,
     formId: input.formId,
@@ -165,7 +165,7 @@ export async function submitFormResponseAction(input: {
   campaignId: string;
   answers: Record<string, unknown>;
 }) {
-  const access = await assertCanManageForms();
+  const access = await assertCanManageForms(input.campaignId);
   if (access.error || !access.session) return access.error ?? FORBIDDEN;
 
   const dbError = requirePostgres();
@@ -176,7 +176,7 @@ export async function submitFormResponseAction(input: {
     return { success: false as const, error: "فرم یافت نشد" };
   }
 
-  if (form.status !== "published" && !canManageForms(access.session)) {
+  if (form.status !== "published" && !access.canManage) {
     return { success: false as const, error: "این فرم برای پر کردن باز نیست" };
   }
 
@@ -203,7 +203,7 @@ export async function updateFormResponseAction(input: {
   campaignId: string;
   answers: Record<string, unknown>;
 }) {
-  const access = await assertCanManageForms();
+  const access = await assertCanManageForms(input.campaignId);
   if (access.error || !access.session) return access.error ?? FORBIDDEN;
 
   const dbError = requirePostgres();
@@ -214,7 +214,7 @@ export async function updateFormResponseAction(input: {
     return { success: false as const, error: "پاسخ یافت نشد" };
   }
 
-  const canManage = canManageForms(access.session);
+  const canManage = access.canManage;
   if (!canManage && existing.ownerUserId !== access.session.userId) {
     return FORBIDDEN;
   }
@@ -244,7 +244,7 @@ export async function deleteFormResponseAction(
   responseId: string,
   campaignId: string
 ) {
-  const access = await assertCanManageForms();
+  const access = await assertCanManageForms(campaignId);
   if (access.error || !access.session) return access.error ?? FORBIDDEN;
 
   const dbError = requirePostgres();
@@ -255,7 +255,7 @@ export async function deleteFormResponseAction(
     return { success: false as const, error: "پاسخ یافت نشد" };
   }
 
-  const canManage = canManageForms(access.session);
+  const canManage = access.canManage;
   if (!canManage && existing.ownerUserId !== access.session.userId) {
     return FORBIDDEN;
   }

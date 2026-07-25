@@ -59,49 +59,97 @@ export async function ensureUserAuthoritySchema(): Promise<void> {
   `;
 }
 
-/** Ensure org_role column + migrate legacy panel roles to org_user. */
-export async function ensureOrgUserSchema(): Promise<void> {
-  const sql = getSql();
-  await ensureUserAuthoritySchema();
-  await sql`
-    ALTER TABLE users
-      ADD COLUMN IF NOT EXISTS org_role TEXT
-  `;
-  await sql`ALTER TABLE users DROP CONSTRAINT IF EXISTS users_org_role_check`;
-  await sql`
-    ALTER TABLE users ADD CONSTRAINT users_org_role_check
-      CHECK (org_role IS NULL OR org_role IN ('primary', 'supervisor', 'deputy', 'pr'))
-  `;
-  await sql`ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check`;
-  await sql`
-    ALTER TABLE users ADD CONSTRAINT users_role_check
-      CHECK (role IN (
-        'admin', 'client', 'org_user',
-        'contributor', 'ministry_parent', 'sub_user'
-      ))
-  `;
+function isPgAlreadyExistsError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const code = "code" in error ? String(error.code) : "";
+  // 42710 = duplicate_object
+  if (code === "42710") return true;
+  const message = error instanceof Error ? error.message : String(error);
+  return /already exists/i.test(message);
+}
 
-  await sql`
-    UPDATE users
-    SET org_role = COALESCE(org_role, 'primary'), role = 'org_user'
-    WHERE role = 'ministry_parent'
-  `;
-  await sql`
-    UPDATE users
-    SET org_role = COALESCE(org_role, 'pr'), role = 'org_user'
-    WHERE role = 'sub_user'
-  `;
-  await sql`
-    UPDATE users
-    SET org_role = COALESCE(org_role, 'pr'), role = 'org_user'
-    WHERE role = 'contributor'
-  `;
-  await sql`
-    UPDATE users
-    SET org_role = NULL
-    WHERE role IN ('admin', 'client')
-  `;
-  await sql`CREATE INDEX IF NOT EXISTS idx_users_org_role ON users(org_role)`;
+/**
+ * Ensure org_role column + migrate legacy panel roles to org_user.
+ * Runs once per process; never DROP/ADD constraints on every request
+ * (that races under concurrent traffic and crashes page loads).
+ */
+let orgUserSchemaReady: Promise<void> | null = null;
+
+export async function ensureOrgUserSchema(): Promise<void> {
+  if (!orgUserSchemaReady) {
+    orgUserSchemaReady = (async () => {
+      const sql = getSql();
+      await ensureUserAuthoritySchema();
+      await sql`
+        ALTER TABLE users
+          ADD COLUMN IF NOT EXISTS org_role TEXT
+      `;
+
+      // Migrate data before (re)applying check constraints.
+      await sql`
+        UPDATE users
+        SET org_role = COALESCE(org_role, 'primary'), role = 'org_user'
+        WHERE role = 'ministry_parent'
+      `;
+      await sql`
+        UPDATE users
+        SET org_role = COALESCE(org_role, 'pr'), role = 'org_user'
+        WHERE role = 'sub_user'
+      `;
+      await sql`
+        UPDATE users
+        SET org_role = COALESCE(org_role, 'pr'), role = 'org_user'
+        WHERE role = 'contributor'
+      `;
+      await sql`
+        UPDATE users
+        SET org_role = NULL
+        WHERE role IN ('admin', 'client')
+      `;
+      await sql`
+        UPDATE users
+        SET org_role = NULL
+        WHERE org_role IS NOT NULL
+          AND org_role NOT IN ('primary', 'supervisor', 'deputy', 'pr')
+      `;
+
+      const orgRoleConstraint = await sql`
+        SELECT 1 FROM pg_catalog.pg_constraint
+        WHERE conname = 'users_org_role_check'
+        LIMIT 1
+      `;
+      if (orgRoleConstraint.length === 0) {
+        try {
+          await sql`
+            ALTER TABLE users ADD CONSTRAINT users_org_role_check
+              CHECK (org_role IS NULL OR org_role IN ('primary', 'supervisor', 'deputy', 'pr'))
+          `;
+        } catch (error) {
+          if (!isPgAlreadyExistsError(error)) throw error;
+        }
+      }
+
+      // Widen role check once; tolerate concurrent instances.
+      await sql`ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check`;
+      try {
+        await sql`
+          ALTER TABLE users ADD CONSTRAINT users_role_check
+            CHECK (role IN (
+              'admin', 'client', 'org_user',
+              'contributor', 'ministry_parent', 'sub_user'
+            ))
+        `;
+      } catch (error) {
+        if (!isPgAlreadyExistsError(error)) throw error;
+      }
+
+      await sql`CREATE INDEX IF NOT EXISTS idx_users_org_role ON users(org_role)`;
+    })().catch((error) => {
+      orgUserSchemaReady = null;
+      throw error;
+    });
+  }
+  await orgUserSchemaReady;
 }
 
 function resolvePlanFields(data: Partial<Ownable>) {

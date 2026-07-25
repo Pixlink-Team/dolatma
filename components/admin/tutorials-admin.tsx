@@ -35,7 +35,7 @@ function emptyStep(): TutorialStep {
   return { title: "", body: "", imageUrl: null };
 }
 
-export function TutorialsAdmin() {
+export function TutorialsAdmin({ canEdit = true }: { canEdit?: boolean }) {
   const [tutorials, setTutorials] = useState<SectionTutorial[]>([]);
   const [sectionKey, setSectionKey] = useState<TutorialSectionKey>("posters");
   const [title, setTitle] = useState(tutorialSectionLabels.posters);
@@ -137,10 +137,12 @@ export function TutorialsAdmin() {
         <div>
           <h1 className="text-2xl font-bold">آموزش بخش‌ها</h1>
           <p className="text-sm text-muted-foreground">
-            محتوای مودال آموزشی هر بخش را مدیریت کنید. تا وقتی آموزش نوشته نشود، contributor
-            نمی‌تواند در آن بخش محتوا اضافه کند.
+            {canEdit
+              ? "محتوای مودال آموزشی هر بخش را مدیریت کنید. تا وقتی آموزش نوشته نشود، contributor نمی‌تواند در آن بخش محتوا اضافه کند."
+              : "مشاهده محتوای آموزشی بخش‌های پنل."}
           </p>
         </div>
+        {canEdit ? (
         <div className="flex items-center gap-3 rounded-xl border bg-card px-4 py-3">
           <div className="min-w-0 text-right">
             <p className="text-sm font-medium">اجبار آموزش برای contributor</p>
@@ -157,9 +159,10 @@ export function TutorialsAdmin() {
             aria-label="فعال‌سازی آموزش بخش‌ها"
           />
         </div>
+        ) : null}
       </div>
 
-      {!tutorialsEnabled && (
+      {!canEdit ? null : !tutorialsEnabled && (
         <div className="rounded-xl border border-warning/40 bg-warning/10 px-4 py-3 text-sm text-warning">
           آموزش‌ها موقتاً غیرفعال هستند. مودال آموزشی نشان داده نمی‌شود و گیت سرور هم رد
           می‌شود.
@@ -202,7 +205,9 @@ export function TutorialsAdmin() {
                   ? `نسخه ${formatPersianNumber(version)}`
                   : "هنوز آموزشی ثبت نشده"}
             </p>
-            <p>با هر ذخیره، نسخه افزایش می‌یابد و contributorها باید دوباره ببینند.</p>
+            {canEdit ? (
+              <p>با هر ذخیره، نسخه افزایش می‌یابد و contributorها باید دوباره ببینند.</p>
+            ) : null}
           </div>
         </div>
 
@@ -214,6 +219,8 @@ export function TutorialsAdmin() {
               value={title}
               onChange={(event) => setTitle(event.target.value)}
               placeholder="مثلاً آموزش افزودن پوستر"
+              disabled={!canEdit}
+              readOnly={!canEdit}
             />
           </div>
 
@@ -224,6 +231,7 @@ export function TutorialsAdmin() {
                   <h3 className="text-sm font-semibold">
                     مرحله {formatPersianNumber(index + 1)}
                   </h3>
+                  {canEdit ? (
                   <Button
                     type="button"
                     variant="ghost"
@@ -234,6 +242,7 @@ export function TutorialsAdmin() {
                     <Trash2 className="h-4 w-4" />
                     حذف
                   </Button>
+                  ) : null}
                 </div>
                 <div className="space-y-2">
                   <Label>عنوان مرحله</Label>
@@ -241,6 +250,8 @@ export function TutorialsAdmin() {
                     value={step.title}
                     onChange={(event) => updateStep(index, { title: event.target.value })}
                     placeholder="مثلاً عنوان را وارد کنید"
+                    disabled={!canEdit}
+                    readOnly={!canEdit}
                   />
                 </div>
                 <div className="space-y-2">
@@ -250,21 +261,37 @@ export function TutorialsAdmin() {
                     onChange={(event) => updateStep(index, { body: event.target.value })}
                     rows={4}
                     placeholder="توضیح دهید کاربر چه چیزی را باید پر کند…"
+                    disabled={!canEdit}
+                    readOnly={!canEdit}
                   />
                 </div>
                 <div className="space-y-2">
                   <Label>تصویر نمونه (اختیاری)</Label>
+                  {canEdit ? (
                   <MediaUpload
                     value={step.imageUrl ?? ""}
                     onChange={(url) => updateStep(index, { imageUrl: url || null })}
                     accept="image/*"
                     kind="image"
                   />
+                  ) : step.imageUrl ? (
+                    <a
+                      href={step.imageUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-sm text-primary underline"
+                    >
+                      مشاهده تصویر نمونه
+                    </a>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">بدون تصویر</p>
+                  )}
                 </div>
               </div>
             ))}
           </div>
 
+          {canEdit ? (
           <div className="flex flex-wrap gap-2">
             <Button
               type="button"
@@ -279,6 +306,7 @@ export function TutorialsAdmin() {
               ذخیره آموزش
             </Button>
           </div>
+          ) : null}
         </div>
       </div>
     </div>

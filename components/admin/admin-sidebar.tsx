@@ -76,10 +76,10 @@ const allNavItems: {
 }[] = [
   { href: "/admin", label: "داشبورد", icon: LayoutDashboard },
   { href: "/admin/profile", label: "پروفایل من", icon: UserCircle },
-  { href: "/admin/settings", label: "تنظیمات راستا", icon: Settings, adminOrClientOnly: true },
+  { href: "/admin/settings", label: "تنظیمات راستا", icon: Settings, permissionKey: "campaignSettings", adminOrClientOnly: true },
   { href: "/admin/capacity-map", label: "نقشه ملی ظرفیت", icon: Map, adminOrClientOnly: true },
   { href: "/admin/calendar", label: "تقویم ملی", icon: CalendarDays, alwaysVisible: true },
-  { href: "/admin/tutorials", label: "آموزش بخش‌ها", icon: GraduationCap, adminOnly: true },
+  { href: "/admin/tutorials", label: "آموزش بخش‌ها", icon: GraduationCap, permissionKey: "sectionTutorials", adminOnly: true },
   { href: "/admin/ministries", label: "دستگاه‌ها", icon: Building2, devicesNav: true },
   { href: "/admin/group-edit", label: "ویرایش گروهی", icon: Layers, adminOnly: true },
   { href: "/admin/billboards", label: "تبلیغات محیطی", icon: LayoutGrid, permissionKey: "billboards" },
@@ -98,10 +98,10 @@ const allNavItems: {
   { href: "/admin/broadcast", label: "پخش صدا و سیما", icon: Radio, permissionKey: "broadcast" },
   { href: "/admin/meetings", label: "جلسات و مصوبات", icon: ClipboardList, permissionKey: "meetings" },
   { href: "/admin/submissions", label: "مشارکت‌ها", icon: FileText, permissionKey: "submissions" },
-  { href: "/admin/forms", label: "فرم‌ها", icon: FormInput, adminOrClientOnly: true },
+  { href: "/admin/forms", label: "فرم‌ها", icon: FormInput, permissionKey: "forms", adminOrClientOnly: true },
   { href: "/admin/users", label: "کاربران", icon: Users, usersNav: true },
   { href: "/admin/best-practices", label: "بهترین اقدامات", icon: Award, alwaysVisible: true },
-  { href: "/admin/updates", label: "آپدیت‌های سایت", icon: Rocket, adminOrClientOnly: true },
+  { href: "/admin/updates", label: "آپدیت‌های سایت", icon: Rocket, permissionKey: "siteUpdates", adminOrClientOnly: true },
   { href: "/admin/audit", label: "رصد کاربران", icon: ScrollText, adminOnly: true },
 ];
 
@@ -207,11 +207,20 @@ export function AdminSidebar() {
     if (item.devicesNav) {
       return isFullAdminUser || isMinistryParent || isSubUser;
     }
+    // Panel management items: admin/client always, or org_user with explicit grant.
     if (item.adminOrClientOnly) {
-      return isFullAdminUser || isClientRole;
+      if (isFullAdminUser || isClientRole) return true;
+      if (item.permissionKey) {
+        return hasContributorPermission(permissions, item.permissionKey);
+      }
+      return false;
     }
     if (isFullAdminUser) return true;
-    if (item.adminOnly) return false;
+    // Admin-only items may still be granted via permission (e.g. section tutorials).
+    if (item.adminOnly) {
+      if (!item.permissionKey) return false;
+      return hasContributorPermission(permissions, item.permissionKey);
+    }
     if (!item.permissionKey) return true;
     return hasContributorPermission(permissions, item.permissionKey);
   });

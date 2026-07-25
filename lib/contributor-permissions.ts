@@ -15,6 +15,12 @@ export interface ContributorPermissions {
   forms: boolean;
   mediaCommand: boolean;
   monitoring: boolean;
+  /** Panel management: campaign (راستا) settings page. */
+  campaignSettings: boolean;
+  /** Panel management: site updates changelog. */
+  siteUpdates: boolean;
+  /** Panel management: section tutorials admin page. */
+  sectionTutorials: boolean;
   /** Scoped management: create/edit users under own device subtree. */
   manageSubtreeUsers: boolean;
   /** Scoped management: issue directives to subtree audience. */
@@ -41,10 +47,13 @@ export const defaultContributorPermissions = (): ContributorPermissions => ({
   activities: true,
   submissions: true,
   directives: true,
-  // Forms are admin/client-only; never granted to regular users.
+  // Panel management sections stay off unless admin grants them.
   forms: false,
   mediaCommand: true,
   monitoring: true,
+  campaignSettings: false,
+  siteUpdates: false,
+  sectionTutorials: false,
   manageSubtreeUsers: false,
   manageSubtreeDirectives: false,
   scoreSubtreeContent: false,
@@ -70,6 +79,23 @@ export const contributorPermissionLabels: Partial<
   directives: "دستورکارها",
   mediaCommand: "میز فرمان رسانه‌ای",
   monitoring: "رصد و واکنش سریع",
+};
+
+/** Panel management toggles (hidden from org users unless admin enables). */
+export const panelManagementKeys = [
+  "forms",
+  "campaignSettings",
+  "siteUpdates",
+  "sectionTutorials",
+] as const satisfies readonly ContributorPermissionKey[];
+
+export type PanelManagementKey = (typeof panelManagementKeys)[number];
+
+export const panelManagementPermissionLabels: Record<PanelManagementKey, string> = {
+  forms: "فرم‌ها",
+  campaignSettings: "تنظیمات راستا",
+  siteUpdates: "آپدیت‌های سایت",
+  sectionTutorials: "آموزش بخش‌ها",
 };
 
 export const subtreeManagementKeys = [
@@ -100,10 +126,12 @@ export function normalizeContributorPermissions(
     activities: record.activities ?? defaults.activities,
     submissions: record.submissions ?? defaults.submissions,
     directives: record.directives ?? defaults.directives,
-    // Always deny — forms UI is admin/client-only.
-    forms: false,
+    forms: record.forms ?? defaults.forms,
     mediaCommand: record.mediaCommand ?? defaults.mediaCommand,
     monitoring: record.monitoring ?? defaults.monitoring,
+    campaignSettings: record.campaignSettings ?? defaults.campaignSettings,
+    siteUpdates: record.siteUpdates ?? defaults.siteUpdates,
+    sectionTutorials: record.sectionTutorials ?? defaults.sectionTutorials,
     manageSubtreeUsers: record.manageSubtreeUsers ?? defaults.manageSubtreeUsers,
     manageSubtreeDirectives:
       record.manageSubtreeDirectives ?? defaults.manageSubtreeDirectives,
@@ -139,6 +167,9 @@ export const deniedContributorPermissions = (): ContributorPermissions => ({
   forms: false,
   mediaCommand: false,
   monitoring: false,
+  campaignSettings: false,
+  siteUpdates: false,
+  sectionTutorials: false,
   manageSubtreeUsers: false,
   manageSubtreeDirectives: false,
   scoreSubtreeContent: false,

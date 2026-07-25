@@ -22,9 +22,13 @@ export default async function AdminPanelLayout({
 
   let campaigns = allCampaigns;
   if (session && !isFullAdmin(session) && session.userId && isPostgresConfigured()) {
-    const user = await pgGetUserById(session.userId);
-    const allowed = new Set(user?.campaignIds ?? []);
-    campaigns = allCampaigns.filter((campaign) => allowed.has(campaign.id));
+    try {
+      const user = await pgGetUserById(session.userId);
+      const allowed = new Set(user?.campaignIds ?? []);
+      campaigns = allCampaigns.filter((campaign) => allowed.has(campaign.id));
+    } catch (error) {
+      console.error("[admin-layout] failed to load user campaign access", error);
+    }
   }
 
   return <AdminPanelShell campaigns={campaigns}>{children}</AdminPanelShell>;

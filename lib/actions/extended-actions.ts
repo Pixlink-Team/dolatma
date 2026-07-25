@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getAuthSession, getOwnerFilter, isFullAdmin } from "@/lib/auth/get-session";
 import { assertCanMutateOwnedContent } from "@/lib/auth/assert-content-ownership";
-import { canManageSubtreeUsers, canScoreContent, isClientUser } from "@/lib/auth/access";
+import { canAccessCampaignSettingsForCampaign, canManageSubtreeUsers, isClientUser } from "@/lib/auth/access";
 import {
   assertTutorialForPossibleCreate,
 } from "@/lib/auth/require-tutorial-completion";
@@ -504,7 +504,7 @@ export async function saveCampaignPagePasswordAction(
   options: { password?: string; removePassword?: boolean }
 ) {
   const session = await getAuthSession();
-  if (!session || !canScoreContent(session)) {
+  if (!session || !(await canAccessCampaignSettingsForCampaign(session, campaignId))) {
     return { success: false, error: "Unauthorized" };
   }
 
