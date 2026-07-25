@@ -159,6 +159,8 @@ export function UsersAdmin({
   const [ministriesList, setMinistriesList] = useState(ministries);
   const [creatingOrganization, setCreatingOrganization] = useState(false);
   const [newOrganizationName, setNewOrganizationName] = useState("");
+  /** When true, new/edited user is bound to the manager's own org (not a child). */
+  const [assignToOwnOrganization, setAssignToOwnOrganization] = useState(false);
   /** Device-tree parent for the inline "create organization" flow. */
   const [createUnderParentId, setCreateUnderParentId] = useState<string | null>(null);
   const [filterMinistryId, setFilterMinistryId] = useState(FILTER_ALL);
@@ -481,11 +483,32 @@ export function UsersAdmin({
     rows,
   ]);
 
+  const ownOrganizationName = useMemo(() => {
+    if (!parentOrganizationId) return null;
+    return (
+      organizationOptions.find((org) => org.id === parentOrganizationId)?.name?.trim() ||
+      "سازمان شما"
+    );
+  }, [organizationOptions, parentOrganizationId]);
+
   const organizationSelectOptions = useMemo(() => {
     const ministryId = selectedMinistryId || (isSubUsersMode ? parentMinistryId : null);
     if (!ministryId) return [] as { id: string; name: string; label: string }[];
+    // Scoped managers: list only descendants — never include their own organization.
+    if (isScopedToOwnOrganization && parentOrganizationId) {
+      return flattenOrganizationsForSelect(organizationOptions, parentOrganizationId).filter(
+        (org) => org.id !== parentOrganizationId
+      );
+    }
     return flattenOrganizationsForSelect(organizationOptions, ministryId);
-  }, [organizationOptions, selectedMinistryId, isSubUsersMode, parentMinistryId]);
+  }, [
+    organizationOptions,
+    selectedMinistryId,
+    isSubUsersMode,
+    isScopedToOwnOrganization,
+    parentMinistryId,
+    parentOrganizationId,
+  ]);
 
   const activeMinistryIdForOrg =
     selectedMinistryId || (isSubUsersMode ? parentMinistryId : null) || null;
@@ -723,7 +746,9 @@ export function UsersAdmin({
     const ministryId =
       (isSubUsersMode ? parentMinistryId : null) || data.ministryId || null;
     const organizationId = isScopedToOwnOrganization
-      ? data.organizationId || parentOrganizationId || null
+      ? assignToOwnOrganization
+        ? parentOrganizationId || null
+        : data.organizationId ?? null
       : data.organizationId ?? null;
     const nextParentUserId = isSubUsersMode
       ? parentUserId ?? null
@@ -735,8 +760,16 @@ export function UsersAdmin({
       toast.error("برای کاربر دستگاه انتخاب وزارتخانه الزامی است");
       return;
     }
-    if (isScopedToOwnOrganization && !organizationId) {
-      toast.error("انتخاب زیرمجموعه الزامی است");
+    if (isScopedToOwnOrganization && assignToOwnOrganization && !organizationId) {
+      toast.error("اتصال به خود سازمان ممکن نیست");
+      return;
+    }
+    if (
+      isScopedToOwnOrganization &&
+      !assignToOwnOrganization &&
+      (!organizationId || organizationId === parentOrganizationId)
+    ) {
+      toast.error("یکی از زیرمجموعه‌ها را انتخاب کنید");
       return;
     }
 
@@ -835,6 +868,8 @@ export function UsersAdmin({
     if (!canManageUsers) return;
     setEditingId(null);
     resetOrganizationCreate();
+    const defaultAssignOwn = isScopedToOwnOrganization;
+    setAssignToOwnOrganization(defaultAssignOwn);
     const defaultOrgRole: OrgRole = "pr";
     if (permissionCapActive && primaryCampaignId) {
       const grantor = getGrantorPermissions(primaryCampaignId);
@@ -853,7 +888,7 @@ export function UsersAdmin({
       city: "",
       phone: "",
       ministryId: isSubUsersMode ? parentMinistryId : null,
-      organizationId: isScopedToOwnOrganization ? parentOrganizationId : null,
+      organizationId: defaultAssignOwn ? parentOrganizationId : null,
       parentUserId: parentUserId ?? null,
       campaignIds: soleCampaignIds,
     });
@@ -895,6 +930,11 @@ export function UsersAdmin({
     } else {
       setCampaignPermissions({});
     }
+    const isOwnOrgUser =
+      isScopedToOwnOrganization &&
+      Boolean(parentOrganizationId) &&
+      user.organizationId === parentOrganizationId;
+    setAssignToOwnOrganization(isOwnOrgUser);
     form.reset({
       email: getLoginUsernameFromEmail(user.email ?? ""),
       name: user.name ?? "",
@@ -1419,23 +1459,48 @@ export function UsersAdmin({
 
             {isSubUsersMode && Boolean(parentMinistryId) && (
               <div className="space-y-2">
-                <Label>{isScopedToOwnOrganization ? "زیرمجموعه" : "زیرمجموعه (اختیاری)"}</Label>
+                {isScopedToOwnOrganization && (
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={assignToOwnOrganization}
+                      onChange={(event) => {
+                        const checked = event.target.checked;
+                        setAssignToOwnOrganization(checked);
+                        resetOrganizationCreate();
+                        form.setValue(
+                          "organizationId",
+                          checked ? parentOrganizationId : null
+                        );
+                      }}
+                    />
+                    برای خود سازمان
+                    {ownOrganizationName ? (
+                      <span className="text-muted-foreground">({ownOrganizationName})</span>
+                    ) : null}
+                  </label>
+                )}
+                <Label>
+                  {isScopedToOwnOrganization ? "زیرمجموعه" : "زیرمجموعه (اختیاری)"}
+                </Label>
                 <Select
                   value={
-                    creatingOrganization
-                      ? CREATE_ORGANIZATION
-                      : selectedOrganizationId ||
-                        (isScopedToOwnOrganization
-                          ? parentOrganizationId || NO_ORGANIZATION
-                          : NO_ORGANIZATION)
+                    assignToOwnOrganization && isScopedToOwnOrganization
+                      ? NO_ORGANIZATION
+                      : creatingOrganization
+                        ? CREATE_ORGANIZATION
+                        : selectedOrganizationId || NO_ORGANIZATION
                   }
                   onValueChange={handleOrganizationSelect}
+                  disabled={assignToOwnOrganization && isScopedToOwnOrganization}
                 >
                   <SelectTrigger>
                     <SelectValue
                       placeholder={
                         isScopedToOwnOrganization
-                          ? "زیرمجموعه خودتان یا زیرمجموعه تعریف‌شده"
+                          ? assignToOwnOrganization
+                            ? "غیرفعال — کاربر به خود سازمان وصل می‌شود"
+                            : "یکی از زیرمجموعه‌ها را انتخاب کنید"
                           : "خود وزارتخانه یا یک زیرمجموعه"
                       }
                     />
@@ -1444,6 +1509,20 @@ export function UsersAdmin({
                     {!isScopedToOwnOrganization && (
                       <SelectItem value={NO_ORGANIZATION}>خود وزارتخانه</SelectItem>
                     )}
+                    {isScopedToOwnOrganization && assignToOwnOrganization && (
+                      <SelectItem value={NO_ORGANIZATION}>
+                        خود سازمان
+                        {ownOrganizationName ? ` — ${ownOrganizationName}` : ""}
+                      </SelectItem>
+                    )}
+                    {isScopedToOwnOrganization &&
+                      !assignToOwnOrganization &&
+                      !selectedOrganizationId &&
+                      !creatingOrganization && (
+                        <SelectItem value={NO_ORGANIZATION} disabled>
+                          انتخاب زیرمجموعه…
+                        </SelectItem>
+                      )}
                     {organizationSelectOptions
                       .filter((org) => Boolean(org.id))
                       .map((org) => (
@@ -1451,10 +1530,12 @@ export function UsersAdmin({
                         {org.label}
                       </SelectItem>
                     ))}
-                    <SelectItem value={CREATE_ORGANIZATION}>ایجاد زیرمجموعه جدید…</SelectItem>
+                    {!assignToOwnOrganization && (
+                      <SelectItem value={CREATE_ORGANIZATION}>ایجاد زیرمجموعه جدید…</SelectItem>
+                    )}
                   </SelectContent>
                 </Select>
-                {creatingOrganization && (
+                {creatingOrganization && !assignToOwnOrganization && (
                   <div className="space-y-2">
                     {createUnderParentName ? (
                       <p className="text-xs text-muted-foreground">
@@ -1487,8 +1568,9 @@ export function UsersAdmin({
                 )}
                 {isScopedToOwnOrganization && (
                   <p className="text-xs text-muted-foreground">
-                    فقط زیرمجموعه خودتان و زیرمجموعه‌هایی که زیر آن تعریف کرده‌اید قابل انتخاب است.
-                    برای ساخت زیر یک گره، ابتدا آن را انتخاب کنید.
+                    {assignToOwnOrganization
+                      ? "کاربر به خود سازمان شما وصل می‌شود و انتخاب زیرمجموعه غیرفعال است."
+                      : "فقط زیرمجموعه‌های زیر سازمان شما در لیست هستند (نه خود سازمان). برای ساخت زیر یک گره، ابتدا آن را انتخاب کنید."}
                   </p>
                 )}
               </div>
