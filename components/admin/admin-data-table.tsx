@@ -25,6 +25,8 @@ interface AdminDataTableProps<T> {
     key: string;
     label: string;
     render?: (item: T) => React.ReactNode;
+    /** When false, cell content is not truncated (useful for tree controls). Default true. */
+    truncate?: boolean;
   }[];
   searchKeys?: (keyof T)[];
   onView?: (item: T) => void;
@@ -276,7 +278,11 @@ export function AdminDataTable<T extends { id: string }>({
                           key={col.key}
                           className="max-w-[220px] px-3 py-3 text-right align-middle"
                         >
-                          <div className="min-w-0 truncate">
+                          <div
+                            className={
+                              col.truncate === false ? "min-w-0" : "min-w-0 truncate"
+                            }
+                          >
                             {col.render
                               ? col.render(item)
                               : String((item as Record<string, unknown>)[col.key] ?? "—")}
