@@ -150,30 +150,32 @@ export function AdminSidebar() {
   useEffect(() => {
     let cancelled = false;
     const loadSession = () => {
-                    getSessionContextAction(campaignId)
-                      .then((session) => {
-                        if (cancelled || !session) return;
-                        setIsFullAdminUser(session.type === "env_admin" || session.role === "admin");
-                        setIsClientRole(session.role === "client");
-                        const perms = session.permissions ?? null;
-                        // Prefer active-campaign flags; fall back to session OR-flag when unset.
-                        setCanViewUsersNav(
-                          isOrgUserRole(session.role) &&
-                            (perms
-                              ? hasContributorPermission(perms, "manageSubtreeUsers")
-                              : session.manageSubtreeUsers === true)
-                        );
-                        setCanViewDevicesNav(
-                          isDeviceScopedPanelRole(session.role) &&
-                            (perms
-                              ? hasContributorPermission(perms, "manageSubtreeDevices")
-                              : session.manageSubtreeDevices === true)
-                        );
-                        setPermissions(perms);
-                      })
-                      .catch((error) => {
-                        console.error("[admin-sidebar] failed to load session context", error);
-                      });
+      getSessionContextAction(campaignId)
+        .then((session) => {
+          if (cancelled || !session) return;
+          const fullAdmin = session.type === "env_admin" || session.role === "admin";
+          const clientRole = session.role === "client";
+          setIsFullAdminUser(fullAdmin);
+          setIsClientRole(clientRole);
+          const perms = session.permissions ?? null;
+          // Prefer active-campaign flags; fall back to session OR-flag when unset.
+          setCanViewUsersNav(
+            isOrgUserRole(session.role) &&
+              (perms
+                ? hasContributorPermission(perms, "manageSubtreeUsers")
+                : session.manageSubtreeUsers === true)
+          );
+          setCanViewDevicesNav(
+            isDeviceScopedPanelRole(session.role) &&
+              (perms
+                ? hasContributorPermission(perms, "manageSubtreeDevices")
+                : session.manageSubtreeDevices === true)
+          );
+          setPermissions(perms);
+        })
+        .catch((error) => {
+          console.error("[admin-sidebar] failed to load session context", error);
+        });
     };
     loadSession();
     const onFocus = () => loadSession();
@@ -224,7 +226,8 @@ export function AdminSidebar() {
       }
       return false;
     }
-    if (isFullAdminUser) return true;
+    // Admin and client see all content sections.
+    if (isFullAdminUser || isClientRole) return true;
     // Admin-only items may still be granted via permission (e.g. section tutorials).
     if (item.adminOnly) {
       if (!item.permissionKey) return false;
@@ -235,14 +238,19 @@ export function AdminSidebar() {
   });
 
   const showMediaCommand =
-    isFullAdminUser || hasContributorPermission(permissions, "mediaCommand");
-  // Client role no longer bypasses the monitoring flag — admin can revoke it.
+    isFullAdminUser ||
+    isClientRole ||
+    hasContributorPermission(permissions, "mediaCommand");
   const showMonitoring =
-    isFullAdminUser || hasContributorPermission(permissions, "monitoring");
+    isFullAdminUser ||
+    isClientRole ||
+    hasContributorPermission(permissions, "monitoring");
 
   /** Pin directives as a red alert CTA when the user has directives access. */
   const showDirectivesAlert =
-    isFullAdminUser || hasContributorPermission(permissions, "directives");
+    isFullAdminUser ||
+    isClientRole ||
+    hasContributorPermission(permissions, "directives");
   const directivesNavItem = navItems.find((item) => item.href === DIRECTIVES_HREF);
   const contentNavItems = navItems.filter((item) => {
     if (managementNavHrefs.has(item.href)) return false;

@@ -13,7 +13,8 @@ export async function requireContributorAccess(
 ) {
   const session = await getAuthSession();
   if (!session) redirect("/admin/login");
-  if (isFullAdmin(session)) return;
+  // Admin and client (کارفرما) see all campaign content sections.
+  if (isFullAdmin(session) || session.role === "client") return;
 
   if (!isPostgresConfigured() || !session.userId) {
     console.warn(

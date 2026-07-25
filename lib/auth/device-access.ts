@@ -1,4 +1,4 @@
-import { canManageSubtreeUsers, isClientUser } from "@/lib/auth/access";
+import { canManageSubtreeUsers, canManageSubtreeDevices, isClientUser } from "@/lib/auth/access";
 import { isFullAdmin } from "@/lib/auth/get-session";
 import {
   hasContributorPermission,
@@ -21,9 +21,22 @@ export function isDeviceTreeScopedRole(session: AuthSession): boolean {
   return isDeviceScopedPanelRole(session.role);
 }
 
-/** Who can open the devices tree page. */
+/**
+ * View passport / home device (profile link). Org users can open their subtree
+ * devices even without manageSubtreeDevices.
+ */
 export function canAccessDevicesPage(session: AuthSession): boolean {
   return isFullAdmin(session) || isDeviceTreeScopedRole(session);
+}
+
+/**
+ * Devices tree nav + /admin/ministries management page.
+ * Requires manageSubtreeDevices for org users (matches sidebar).
+ */
+export function canAccessDevicesTree(session: AuthSession): boolean {
+  if (isFullAdmin(session)) return true;
+  if (!isDeviceTreeScopedRole(session)) return false;
+  return canManageSubtreeDevices(session);
 }
 
 /** Resolve the device node this user is attached to (home of their subtree). */

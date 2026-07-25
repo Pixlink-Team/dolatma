@@ -1,6 +1,18 @@
 {
   "entries": [
     {
+      "hash": "0a1ab93c784e1d6d873fa99c5fdbf7da8e486047",
+      "committedAt": "2026-07-25T18:10:21+03:30",
+      "title": "نمایش واضح‌تر خط زمانی حضور در گزارش رصد کاربر",
+      "subject": "Fix audit presence timeline visibility in user profile"
+    },
+    {
+      "hash": "9ea5041230fa0178ff4b54b8237e26fe52496b84",
+      "committedAt": "2026-07-25T18:05:45+03:30",
+      "title": "افزودن آموزش اجباری قبل از ساخت زیرمجموعه",
+      "subject": "Gate subsidiary creation behind section tutorial"
+    },
+    {
       "hash": "b56dce62ad28074c34db325b033b3310ce965b14",
       "committedAt": "2026-07-25T17:57:51+03:30",
       "title": "فعال شدن خودکار دسترسی وزارت برای کاربران زیرمجموعه",

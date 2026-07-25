@@ -209,6 +209,7 @@ export async function saveDeviceSubtreeAccessAction(data: {
     savedDevices += 1;
   }
 
+  // UI sends nodes in parent→child depth order; first entry is the dialog root.
   const rootId = data.nodes[0]?.deviceId;
   const clampedUsers = rootId
     ? await pgPushCampaignAccessToSubtreeUsers(rootId, data.campaignId)

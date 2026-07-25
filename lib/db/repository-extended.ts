@@ -740,6 +740,7 @@ export async function pgSaveUser(data: {
   }
   const {
     clampPermissionsToDeviceCeiling,
+    pgEnsureDeviceCeilingAllows,
     resolveHomeDeviceId,
   } = await import("@/lib/db/repository-device-access");
   const homeDeviceId = resolveHomeDeviceId({
@@ -748,12 +749,18 @@ export async function pgSaveUser(data: {
     deviceId,
   });
   for (const campaignId of validCampaignIds) {
+    const requested = normalizeContributorPermissions(
+      data.campaignPermissions?.[campaignId] ?? defaultContributorPermissions()
+    );
+    // Raise the home-device ceiling first so explicitly granted flags are not
+    // silently stripped by clamp (and remain visible in the user sidebar).
+    if (homeDeviceId) {
+      await pgEnsureDeviceCeilingAllows(homeDeviceId, campaignId, requested);
+    }
     const permissions = await clampPermissionsToDeviceCeiling(
       homeDeviceId,
       campaignId,
-      normalizeContributorPermissions(
-        data.campaignPermissions?.[campaignId] ?? defaultContributorPermissions()
-      )
+      requested
     );
     await sql`
       INSERT INTO user_campaign_access (user_id, campaign_id, permissions, created_at)
@@ -806,6 +813,7 @@ export async function pgBulkUpdateUsersAccess(input: {
   try {
     const {
       clampPermissionsToDeviceCeiling,
+      pgEnsureDeviceCeilingAllows,
       resolveHomeDeviceId,
     } = await import("@/lib/db/repository-device-access");
 
@@ -824,6 +832,9 @@ export async function pgBulkUpdateUsersAccess(input: {
 
       await sql`DELETE FROM user_campaign_access WHERE user_id = ${userId}`;
       for (const campaignId of validCampaignIds) {
+        if (homeDeviceId) {
+          await pgEnsureDeviceCeilingAllows(homeDeviceId, campaignId, permissions);
+        }
         const clamped = await clampPermissionsToDeviceCeiling(
           homeDeviceId,
           campaignId,

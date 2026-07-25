@@ -9,12 +9,12 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { ProvinceCityFields } from "@/components/admin/province-city-fields";
 import { AdminDataTable } from "@/components/admin/admin-data-table";
+import { ContributorPermissionsEditor } from "@/components/admin/contributor-permissions-editor";
 import { UsersMinistryTree } from "@/components/admin/users-ministry-tree";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UsersImportPanel } from "@/components/admin/users-import-panel";
@@ -32,18 +32,14 @@ import { saveDeviceAction } from "@/lib/actions/device-actions";
 import { saveOrganizationAction } from "@/lib/actions/ministry-actions";
 import { useSectionCreateGate } from "@/lib/hooks/use-section-create-gate";
 import {
-  contributorPermissionLabels,
+  allContributorPermissionKeys,
   defaultContributorPermissions,
   deniedContributorPermissions,
   intersectContributorPermissions,
   normalizeContributorPermissions,
-  panelManagementKeys,
-  panelManagementPermissionLabels,
-  subtreeManagementKeys,
-  type ContributorPermissionKey,
   type ContributorPermissions,
 } from "@/lib/contributor-permissions";
-import { getOrgRolePermissionPreset, subtreeManagementPermissionLabels } from "@/lib/org-role-presets";
+import { getOrgRolePermissionPreset } from "@/lib/org-role-presets";
 import { ORG_ROLE_LABELS, ORG_ROLES, type OrgRole } from "@/lib/org-roles";
 import { getUserRoleDisplayLabel, isOrgUserRole } from "@/lib/user-roles";
 import {
@@ -74,8 +70,6 @@ const schema = z.object({
   parentUserId: z.string().nullable().optional(),
   campaignIds: z.array(z.string()),
 });
-
-const permissionKeys = Object.keys(contributorPermissionLabels) as ContributorPermissionKey[];
 
 const rolesWithCampaignAccess: AdminRole[] = ["org_user", "client"];
 
@@ -421,11 +415,7 @@ export function UsersAdmin({
       return;
     }
     const allOn = deniedContributorPermissions();
-    for (const key of [
-      ...permissionKeys,
-      ...panelManagementKeys,
-      ...subtreeManagementKeys,
-    ] as ContributorPermissionKey[]) {
+    for (const key of allContributorPermissionKeys) {
       allOn[key] = true;
     }
     setCampaignPermissions((prev) => ({
@@ -439,24 +429,6 @@ export function UsersAdmin({
       ...prev,
       [campaignId]: deniedContributorPermissions(),
     }));
-  };
-
-  const visiblePermissionKeys = (campaignId: string): ContributorPermissionKey[] => {
-    const cap = getPermissionCap(campaignId);
-    if (!cap) return permissionKeys;
-    return permissionKeys.filter((key) => cap[key]);
-  };
-
-  const visiblePanelKeys = (campaignId: string): ContributorPermissionKey[] => {
-    const cap = getPermissionCap(campaignId);
-    if (!cap) return [...panelManagementKeys];
-    return panelManagementKeys.filter((key) => cap[key]);
-  };
-
-  const visibleSubtreeKeys = (campaignId: string): ContributorPermissionKey[] => {
-    const cap = getPermissionCap(campaignId);
-    if (!cap) return [...subtreeManagementKeys];
-    return subtreeManagementKeys.filter((key) => cap[key]);
   };
 
   const organizationOptions = useMemo(() => {
@@ -631,26 +603,6 @@ export function UsersAdmin({
           : "زیرمجموعه ایجاد شد"
       );
     });
-  };
-
-  const togglePermission = (campaignId: string, key: ContributorPermissionKey, value: boolean) => {
-    const cap = getPermissionCap(campaignId);
-    if (cap && value && !cap[key]) {
-      const grantor = getGrantorPermissions(campaignId);
-      toast.error(
-        grantor && !grantor[key]
-          ? "نمی‌توانید دسترسی‌ای را بدهید که خودتان ندارید"
-          : "این دسترسی در سقف دستگاه فعال نیست"
-      );
-      return;
-    }
-    setCampaignPermissions((prev) => ({
-      ...prev,
-      [campaignId]: {
-        ...(prev[campaignId] ?? defaultContributorPermissions()),
-        [key]: value,
-      },
-    }));
   };
 
   const openBulkAccess = (users: AdminUser[], clearSelection: () => void) => {
@@ -1750,105 +1702,21 @@ export function UsersAdmin({
                         سقف دسترسی دستگاه برای این کاربر فعال است؛ نمی‌توانید بیشتر از دسترسی دستگاه بدهید.
                       </p>
                     ) : null}
-                    {(() => {
-                      const campaignId = primaryCampaignId;
-                      const permissions = normalizeContributorPermissions(
-                        campaignPermissions[campaignId] ?? defaultContributorPermissions()
-                      );
-                      const contentKeys = visiblePermissionKeys(campaignId);
-                      const panelKeys = visiblePanelKeys(campaignId);
-                      const subtreeKeys = visibleSubtreeKeys(campaignId);
-                      if (
-                        permissionCapActive &&
-                        contentKeys.length === 0 &&
-                        panelKeys.length === 0 &&
-                        subtreeKeys.length === 0
-                      ) {
-                        return (
-                          <p className="text-sm text-destructive">
-                            شما هیچ دسترسی پنلی ندارید؛ ابتدا از مدیر بالادست دسترسی بگیرید.
-                          </p>
-                        );
+                    <ContributorPermissionsEditor
+                      permissions={normalizeContributorPermissions(
+                        campaignPermissions[primaryCampaignId] ??
+                          defaultContributorPermissions()
+                      )}
+                      onChange={(next) =>
+                        setCampaignPermissions((prev) => ({
+                          ...prev,
+                          [primaryCampaignId]: clampToGrantor(primaryCampaignId, next),
+                        }))
                       }
-                      return (
-                        <div className="rounded-lg border p-3 space-y-3">
-                          {contentKeys.length > 0 ? (
-                            <div className="space-y-2">
-                              <p className="text-xs font-medium text-muted-foreground">بخش‌های محتوا</p>
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                {contentKeys.map((key) => (
-                                  <label
-                                    key={key}
-                                    className="flex items-center justify-between gap-3 text-sm rounded-md border px-3 py-2"
-                                  >
-                                    <span>{contributorPermissionLabels[key]}</span>
-                                    <Switch
-                                      checked={permissions[key]}
-                                      onCheckedChange={(value) =>
-                                        togglePermission(campaignId, key, value)
-                                      }
-                                    />
-                                  </label>
-                                ))}
-                              </div>
-                            </div>
-                          ) : null}
-                          {selectedRole === "org_user" && (
-                            <>
-                            {panelKeys.length > 0 ? (
-                            <div className="space-y-2">
-                              <p className="text-xs font-medium text-muted-foreground">
-                                بخش‌های تنظیمات و مدیریت
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                به‌طور پیش‌فرض خاموش است؛ فقط در صورت نیاز فعال کنید.
-                              </p>
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                {panelKeys.map((key) => (
-                                  <label
-                                    key={key}
-                                    className="flex items-center justify-between gap-3 text-sm rounded-md border px-3 py-2"
-                                  >
-                                    <span>{panelManagementPermissionLabels[key as keyof typeof panelManagementPermissionLabels]}</span>
-                                    <Switch
-                                      checked={permissions[key]}
-                                      onCheckedChange={(value) =>
-                                        togglePermission(campaignId, key, value)
-                                      }
-                                    />
-                                  </label>
-                                ))}
-                              </div>
-                            </div>
-                            ) : null}
-                            {subtreeKeys.length > 0 ? (
-                            <div className="space-y-2">
-                              <p className="text-xs font-medium text-muted-foreground">
-                                قابلیت‌های مدیریتی زیرشاخه
-                              </p>
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                {subtreeKeys.map((key) => (
-                                  <label
-                                    key={key}
-                                    className="flex items-center justify-between gap-3 text-sm rounded-md border px-3 py-2"
-                                  >
-                                    <span>{subtreeManagementPermissionLabels[key as keyof typeof subtreeManagementPermissionLabels]}</span>
-                                    <Switch
-                                      checked={permissions[key]}
-                                      onCheckedChange={(value) =>
-                                        togglePermission(campaignId, key, value)
-                                      }
-                                    />
-                                  </label>
-                                ))}
-                              </div>
-                            </div>
-                            ) : null}
-                            </>
-                          )}
-                        </div>
-                      );
-                    })()}
+                      ceiling={getPermissionCap(primaryCampaignId)}
+                      showPanelManagement={selectedRole === "org_user"}
+                      showSubtreeManagement={selectedRole === "org_user"}
+                    />
                   </div>
                 ) : null}
               </>
@@ -1890,17 +1758,11 @@ export function UsersAdmin({
                     variant="outline"
                     size="sm"
                     onClick={() => {
-                      setBulkPermissions((prev) => {
-                        const next = { ...prev };
-                        for (const key of [
-                          ...permissionKeys,
-                          ...panelManagementKeys,
-                          ...subtreeManagementKeys,
-                        ]) {
-                          next[key] = true;
-                        }
-                        return next;
-                      });
+                      const allOn = deniedContributorPermissions();
+                      for (const key of allContributorPermissionKeys) {
+                        allOn[key] = true;
+                      }
+                      setBulkPermissions(allOn);
                       toast.success("همه دسترسی‌ها فعال شد");
                     }}
                   >
@@ -1919,62 +1781,12 @@ export function UsersAdmin({
                   </Button>
                 </div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {permissionKeys.map((key) => (
-                  <label
-                    key={key}
-                    className="flex items-center justify-between gap-3 text-sm rounded-md border px-3 py-2"
-                  >
-                    <span>{contributorPermissionLabels[key]}</span>
-                    <Switch
-                      checked={bulkPermissions[key]}
-                      onCheckedChange={(value) =>
-                        setBulkPermissions((prev) => ({ ...prev, [key]: value }))
-                      }
-                    />
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>بخش‌های تنظیمات و مدیریت</Label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {panelManagementKeys.map((key) => (
-                  <label
-                    key={key}
-                    className="flex items-center justify-between gap-3 text-sm rounded-md border px-3 py-2"
-                  >
-                    <span>{panelManagementPermissionLabels[key]}</span>
-                    <Switch
-                      checked={bulkPermissions[key]}
-                      onCheckedChange={(value) =>
-                        setBulkPermissions((prev) => ({ ...prev, [key]: value }))
-                      }
-                    />
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>قابلیت‌های مدیریتی زیرشاخه</Label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {subtreeManagementKeys.map((key) => (
-                  <label
-                    key={key}
-                    className="flex items-center justify-between gap-3 text-sm rounded-md border px-3 py-2"
-                  >
-                    <span>{subtreeManagementPermissionLabels[key]}</span>
-                    <Switch
-                      checked={bulkPermissions[key]}
-                      onCheckedChange={(value) =>
-                        setBulkPermissions((prev) => ({ ...prev, [key]: value }))
-                      }
-                    />
-                  </label>
-                ))}
-              </div>
+              <ContributorPermissionsEditor
+                permissions={bulkPermissions}
+                onChange={setBulkPermissions}
+                showPanelManagement
+                showSubtreeManagement
+              />
             </div>
 
             <Button

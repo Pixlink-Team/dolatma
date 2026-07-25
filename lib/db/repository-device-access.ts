@@ -161,9 +161,60 @@ async function listUserIdsInDeviceSubtree(rootId: string): Promise<string[]> {
 }
 
 /**
+ * Raise a device's stored ceiling so it allows at least the given true flags.
+ * No-op when there is no ceiling chain (unrestricted) or parent already blocks the flag.
+ * Used when an admin grants user permissions that must remain visible under the ceiling.
+ */
+export async function pgEnsureDeviceCeilingAllows(
+  deviceId: string,
+  campaignId: string,
+  permissions: ContributorPermissions
+): Promise<void> {
+  await ensureDeviceAccessSchema();
+  const effective = await pgGetEffectiveDeviceCeiling(deviceId, campaignId);
+  // No ceiling anywhere in the chain → grants are unrestricted; nothing to raise.
+  if (!effective) return;
+
+  const parentCeiling = await pgGetParentDeviceCeiling(deviceId, campaignId);
+  const own = await pgGetDevicePermissionsForCampaign(deviceId, campaignId);
+
+  let next = own
+    ? normalizeContributorPermissions(own)
+    : normalizeContributorPermissions(effective);
+
+  let raised = false;
+  for (const key of allContributorPermissionKeys) {
+    if (!permissions[key] || next[key]) continue;
+    next[key] = true;
+    raised = true;
+  }
+  if (!raised) return;
+
+  if (parentCeiling) {
+    next = intersectContributorPermissions(next, parentCeiling);
+  }
+
+  const sql = getSql();
+  const now = new Date().toISOString();
+  await sql`
+    INSERT INTO device_campaign_access (device_id, campaign_id, permissions, created_at, updated_at)
+    VALUES (
+      ${deviceId},
+      ${campaignId},
+      ${sql.json(JSON.parse(JSON.stringify(next)))},
+      ${now},
+      ${now}
+    )
+    ON CONFLICT (device_id, campaign_id) DO UPDATE SET
+      permissions = EXCLUDED.permissions,
+      updated_at = EXCLUDED.updated_at
+  `;
+}
+
+/**
  * Push effective home-device ceiling to every user in the subtree.
- * Creates missing user_campaign_access rows so newly granted device access
- * becomes active without editing users one by one.
+ * - When a ceiling exists: sync user grants to that ceiling (raise + clamp).
+ * - When no ceiling: leave existing user rows untouched (never wipe with defaults).
  */
 export async function pgPushCampaignAccessToSubtreeUsers(
   rootDeviceId: string,
@@ -194,14 +245,16 @@ export async function pgPushCampaignAccessToSubtreeUsers(
     const ceiling = homeDeviceId
       ? await pgGetEffectiveDeviceCeiling(homeDeviceId, campaignId)
       : null;
-    const permissions = ceiling ?? defaultContributorPermissions();
+
+    // No device ceiling → do not overwrite user grants with defaults.
+    if (!ceiling) continue;
 
     await sql`
       INSERT INTO user_campaign_access (user_id, campaign_id, permissions, created_at)
       VALUES (
         ${userId},
         ${campaignId},
-        ${sql.json(JSON.parse(JSON.stringify(permissions)))},
+        ${sql.json(JSON.parse(JSON.stringify(ceiling)))},
         ${now}
       )
       ON CONFLICT (user_id, campaign_id) DO UPDATE SET
