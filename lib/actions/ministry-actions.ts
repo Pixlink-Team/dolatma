@@ -31,6 +31,8 @@ async function canSaveOrganization(
   if (!canManageSubtreeUsers(session) || isUpdate || !session.userId) return false;
   if (!isPostgresConfigured()) return false;
   const user = await pgGetUserById(session.userId);
+  // Subunit managers must create children under their own device, not peer ministry orgs.
+  if (user?.organizationId) return false;
   return Boolean(user?.ministryId && user.ministryId === ministryId);
 }
 

@@ -4,6 +4,9 @@ import { revalidatePath } from "next/cache";
 import { getAuthSession, getOwnerFilter, isFullAdmin } from "@/lib/auth/get-session";
 import { assertCanMutateOwnedContent } from "@/lib/auth/assert-content-ownership";
 import { canAccessCampaignSettingsForCampaign, canManageSubtreeUsers, isClientUser } from "@/lib/auth/access";
+import { getSessionHomeDeviceId } from "@/lib/auth/device-access";
+import { pgIsDeviceInSubtree } from "@/lib/db/repository-devices";
+import { pgGetOrganizationById } from "@/lib/db/repository-ministries";
 import {
   assertTutorialForPossibleCreate,
 } from "@/lib/auth/require-tutorial-completion";
@@ -683,6 +686,45 @@ export async function saveUserAction(data: {
     organizationId = data.organizationId ?? actor.organizationId ?? null;
     campaignIds = campaignIds?.length ? campaignIds : actor.campaignIds;
     campaignPermissions = campaignPermissions ?? actor.campaignPermissions;
+
+    // Subunit managers may only assign their home org or device-tree descendants.
+    if (actor.organizationId) {
+      organizationId = organizationId || actor.organizationId;
+      const homeId = await getSessionHomeDeviceId(session);
+      if (!homeId) {
+        if (organizationId !== actor.organizationId) {
+          return {
+            success: false,
+            error: "فقط زیرمجموعه خودتان را می‌توانید انتخاب کنید",
+          };
+        }
+      } else {
+        const inSubtree = await pgIsDeviceInSubtree(organizationId, homeId);
+        if (!inSubtree) {
+          return {
+            success: false,
+            error: "فقط زیرمجموعه خودتان یا زیرمجموعه‌های زیر آن را می‌توانید انتخاب کنید",
+          };
+        }
+      }
+    } else if (organizationId && actor.ministryId) {
+      const org = await pgGetOrganizationById(organizationId);
+      if (org && org.ministryId !== actor.ministryId) {
+        return {
+          success: false,
+          error: "زیرمجموعه باید متعلق به وزارتخانه خودتان باشد",
+        };
+      }
+      if (!org) {
+        const inMinistryTree = await pgIsDeviceInSubtree(organizationId, actor.ministryId);
+        if (!inMinistryTree) {
+          return {
+            success: false,
+            error: "زیرمجموعه باید متعلق به وزارتخانه خودتان باشد",
+          };
+        }
+      }
+    }
 
     if (data.id) {
       const existing = await pgExt.pgGetUserById(data.id);

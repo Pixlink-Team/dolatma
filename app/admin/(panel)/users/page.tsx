@@ -1,7 +1,9 @@
 import { redirect } from "next/navigation";
 import { getAllCampaigns, getAllUsers } from "@/lib/data-access/admin";
 import { canManageSubtreeUsers, isClientUser } from "@/lib/auth/access";
+import { listAccessibleDevices } from "@/lib/auth/device-access";
 import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
+import { scopeMinistriesForOrgUser } from "@/lib/auth/scope-ministries-for-org-user";
 import { UsersAdmin } from "@/components/admin/users-admin";
 import { pgGetSubUsersForParent, pgGetUserById } from "@/lib/db/repository-extended";
 import { pgEnsureDefaultMinistries, pgListMinistries } from "@/lib/db/repository-ministries";
@@ -31,18 +33,23 @@ export default async function UsersPage() {
   ]);
 
   if (isOrgUser && !isAdmin && session.userId) {
-    const [subUsers, parentUser] = await Promise.all([
+    const [subUsers, parentUser, accessibleDevices] = await Promise.all([
       pgGetSubUsersForParent(session.userId),
       pgGetUserById(session.userId),
+      listAccessibleDevices(session),
     ]);
+    const scopedMinistries = parentUser
+      ? scopeMinistriesForOrgUser(ministries, parentUser, accessibleDevices)
+      : [];
     return (
       <UsersAdmin
         initialUsers={subUsers}
         campaigns={campaigns}
-        ministries={ministries}
+        ministries={scopedMinistries}
         mode={canManageSubtree ? "sub_users" : "view_subtree"}
         parentUserId={session.userId}
         parentMinistryId={parentUser?.ministryId ?? null}
+        parentOrganizationId={parentUser?.organizationId ?? null}
       />
     );
   }

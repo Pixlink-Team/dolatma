@@ -4,7 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { ChevronDown, ChevronLeft, Filter, KeyRound, Plus, RotateCcw } from "lucide-react";
+import { Filter, KeyRound, Plus, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,6 +27,7 @@ import {
   saveUserAction,
   saveUserMinistryAction,
 } from "@/lib/actions/extended-actions";
+import { saveDeviceAction } from "@/lib/actions/device-actions";
 import { saveOrganizationAction } from "@/lib/actions/ministry-actions";
 import {
   contributorPermissionLabels,
@@ -94,6 +95,8 @@ interface UsersAdminProps {
   mode?: "full" | "ministry" | "sub_users" | "view_subtree";
   parentUserId?: string;
   parentMinistryId?: string | null;
+  /** When set, subunit managers are locked to their own org subtree (not peer ministry orgs). */
+  parentOrganizationId?: string | null;
 }
 
 export function UsersAdmin({
@@ -103,12 +106,14 @@ export function UsersAdmin({
   mode = "full",
   parentUserId,
   parentMinistryId = null,
+  parentOrganizationId = null,
 }: UsersAdminProps) {
   const isFullMode = mode === "full";
   const isSubUsersMode = mode === "sub_users";
   const isViewSubtreeMode = mode === "view_subtree";
   const isMinistryOnlyMode = mode === "ministry";
   const canManageUsers = isFullMode || isSubUsersMode;
+  const isScopedToOwnOrganization = isSubUsersMode && Boolean(parentOrganizationId);
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [rows, setRows] = useState(initialUsers);
@@ -132,8 +137,6 @@ export function UsersAdmin({
     [campaigns]
   );
   const primaryCampaignId = soleCampaignIds[0] ?? null;
-  /** Parents in this set are collapsed; everyone else with children stays expanded. */
-  const [collapsedParentIds, setCollapsedParentIds] = useState<Set<string>>(() => new Set());
 
   const filterMinistryOptions = useMemo(() => {
     const map = new Map<string, string>();
@@ -206,73 +209,16 @@ export function UsersAdmin({
     filterProvince !== FILTER_ALL ||
     filterCity !== FILTER_ALL;
 
-  const filteredIds = useMemo(
-    () => new Set(filteredRows.map((user) => user.id)),
-    [filteredRows]
-  );
-
-  const childrenByParent = useMemo(() => {
-    const map = new Map<string, AdminUser[]>();
-    for (const user of filteredRows) {
-      if (!user.parentUserId || !filteredIds.has(user.parentUserId)) continue;
-      const list = map.get(user.parentUserId) ?? [];
-      list.push(user);
-      map.set(user.parentUserId, list);
-    }
-    for (const list of map.values()) {
-      list.sort(compareUsersByName);
-    }
-    return map;
-  }, [filteredRows, filteredIds]);
-
-  const { treeRows, depthById, childCountById } = useMemo(() => {
-    const nestedChildIds = new Set<string>();
-    for (const [, children] of childrenByParent) {
-      for (const child of children) nestedChildIds.add(child.id);
-    }
-
-    const roleRank = (user: AdminUser) => {
-      if (isSubtreeParentUser(user)) return 0;
-      if (user.parentUserId) return 2;
-      return 1;
-    };
-
-    const roots = filteredRows
-      .filter((user) => !nestedChildIds.has(user.id))
-      .sort((a, b) => {
-        const byRole = roleRank(a) - roleRank(b);
-        if (byRole !== 0) return byRole;
-        return compareUsersByName(a, b);
-      });
-
-    const ordered: AdminUser[] = [];
-    const depths = new Map<string, number>();
-    const counts = new Map<string, number>();
-
-    for (const root of roots) {
-      const children = childrenByParent.get(root.id) ?? [];
-      counts.set(root.id, children.length);
-      depths.set(root.id, 0);
-      ordered.push(root);
-      if (children.length === 0 || collapsedParentIds.has(root.id)) continue;
-      for (const child of children) {
-        depths.set(child.id, 1);
-        counts.set(child.id, 0);
-        ordered.push(child);
-      }
-    }
-
-    return { treeRows: ordered, depthById: depths, childCountById: counts };
-  }, [filteredRows, childrenByParent, collapsedParentIds]);
-
-  const toggleParentExpanded = (parentId: string) => {
-    setCollapsedParentIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(parentId)) next.delete(parentId);
-      else next.add(parentId);
-      return next;
+  /** Flat list: users belong to ministry/org, never nested under a manager. */
+  const listRows = useMemo(() => {
+    return [...filteredRows].sort((a, b) => {
+      const ministryCmp = (a.ministryName ?? "").localeCompare(b.ministryName ?? "", "fa");
+      if (ministryCmp !== 0) return ministryCmp;
+      const orgCmp = (a.organizationName ?? "").localeCompare(b.organizationName ?? "", "fa");
+      if (orgCmp !== 0) return orgCmp;
+      return compareUsersByName(a, b);
     });
-  };
+  }, [filteredRows]);
 
   const resetUsersFilters = () => {
     setFilterMinistryId(FILTER_ALL);
@@ -338,9 +284,22 @@ export function UsersAdmin({
   const organizationOptions = useMemo(() => {
     const ministryId = selectedMinistryId || (isSubUsersMode ? parentMinistryId : null);
     if (!ministryId) return [] as NonNullable<Ministry["organizations"]>;
+    // Page already scopes ministries for subunit managers; keep a defensive home-org fallback.
     const options = [
       ...(ministriesList.find((ministry) => ministry.id === ministryId)?.organizations ?? []),
     ];
+    if (isScopedToOwnOrganization && parentOrganizationId) {
+      if (!options.some((org) => org.id === parentOrganizationId)) {
+        options.unshift({
+          id: parentOrganizationId,
+          ministryId,
+          name: "زیرمجموعه شما",
+          fullName: null,
+          isActive: true,
+          createdAt: new Date(0).toISOString(),
+        });
+      }
+    }
     if (
       selectedOrganizationId &&
       !options.some((org) => org.id === selectedOrganizationId)
@@ -362,7 +321,9 @@ export function UsersAdmin({
     ministriesList,
     selectedMinistryId,
     isSubUsersMode,
+    isScopedToOwnOrganization,
     parentMinistryId,
+    parentOrganizationId,
     selectedOrganizationId,
     editingId,
     rows,
@@ -409,11 +370,20 @@ export function UsersAdmin({
     }
 
     startTransition(async () => {
-      const result = await saveOrganizationAction({
-        ministryId,
-        name,
-        isActive: true,
-      });
+      // Subunit managers create children under their own home — never peer orgs under the ministry.
+      const result = isScopedToOwnOrganization && parentOrganizationId
+        ? await saveDeviceAction({
+            name,
+            shortName: name,
+            type: "organization",
+            parentId: parentOrganizationId,
+            status: "active",
+          })
+        : await saveOrganizationAction({
+            ministryId,
+            name,
+            isActive: true,
+          });
       if (!result.success) {
         toast.error(result.error);
         return;
@@ -571,7 +541,9 @@ export function UsersAdmin({
       role === "org_user" ? (data.orgRole ?? "pr") : null;
     const ministryId =
       (isSubUsersMode ? parentMinistryId : null) || data.ministryId || null;
-    const organizationId = data.organizationId ?? null;
+    const organizationId = isScopedToOwnOrganization
+      ? data.organizationId || parentOrganizationId || null
+      : data.organizationId ?? null;
     const nextParentUserId = isSubUsersMode
       ? parentUserId ?? null
       : role === "org_user"
@@ -580,6 +552,10 @@ export function UsersAdmin({
 
     if (isFullMode && role === "org_user" && !ministryId) {
       toast.error("برای کاربر دستگاه انتخاب وزارتخانه الزامی است");
+      return;
+    }
+    if (isScopedToOwnOrganization && !organizationId) {
+      toast.error("انتخاب زیرمجموعه الزامی است");
       return;
     }
 
@@ -676,8 +652,8 @@ export function UsersAdmin({
       province: "",
       city: "",
       phone: "",
-      ministryId: null,
-      organizationId: null,
+      ministryId: isSubUsersMode ? parentMinistryId : null,
+      organizationId: isScopedToOwnOrganization ? parentOrganizationId : null,
       parentUserId: parentUserId ?? null,
       campaignIds: soleCampaignIds,
     });
@@ -741,12 +717,12 @@ export function UsersAdmin({
         </h1>
         <p className="text-sm text-muted-foreground">
           {isFullMode
-            ? "سمت‌های سازمانی (مدیر، ناظر، معاون، روابط عمومی) و دسترسی‌های زیرشاخه"
+            ? "کاربران به وزارتخانه یا زیرمجموعه وصل می‌شوند؛ زیرمجموعه مال دستگاه است نه مسئول"
             : isSubUsersMode
               ? "ایجاد و مدیریت کاربران زیرمجموعه با سمت سازمانی"
               : isViewSubtreeMode
-                ? "مشاهده ساختار کاربران زیرمجموعه (بدون دسترسی مدیریت)"
-                : "تعیین وزارتخانه کاربران و مشاهده توزیع درختی"}
+                ? "مشاهده کاربران زیرمجموعه (بدون دسترسی مدیریت)"
+                : "تعیین وزارتخانه کاربران و مشاهده توزیع بر اساس دستگاه"}
         </p>
       </div>
 
@@ -974,7 +950,7 @@ export function UsersAdmin({
           )}
 
           <AdminDataTable
-            data={treeRows}
+            data={listRows}
             selectable={isFullMode}
             searchKeys={[
               "name",
@@ -992,59 +968,9 @@ export function UsersAdmin({
                 key: "name",
                 label: "نام",
                 truncate: false,
-                render: (item) => {
-                  const depth = depthById.get(item.id) ?? 0;
-                  const childCount = childCountById.get(item.id) ?? 0;
-                  const expanded = !collapsedParentIds.has(item.id);
-                  const orphanSubUser =
-                    depth === 0 && Boolean(item.parentUserId) && Boolean(item.parentUserName);
-                  const nestedSubUser = depth > 0 && Boolean(item.parentUserName);
-
-                  return (
-                    <div
-                      className="flex items-start gap-1"
-                      style={{ paddingRight: depth * 20 }}
-                    >
-                      {childCount > 0 ? (
-                        <button
-                          type="button"
-                          className="mt-0.5 shrink-0 rounded p-0.5 hover:bg-muted"
-                          onClick={() => toggleParentExpanded(item.id)}
-                          aria-label={expanded ? "بستن زیرمجموعه‌ها" : "باز کردن زیرمجموعه‌ها"}
-                        >
-                          {expanded ? (
-                            <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                          ) : (
-                            <ChevronLeft className="h-4 w-4 text-muted-foreground" />
-                          )}
-                        </button>
-                      ) : (
-                        <span className="mt-0.5 inline-block h-4 w-4 shrink-0" />
-                      )}
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          <span
-                            className={
-                              childCount > 0 ? "font-semibold leading-5" : "leading-5"
-                            }
-                          >
-                            {item.name}
-                          </span>
-                          {childCount > 0 ? (
-                            <Badge variant="secondary" className="text-[10px] font-normal">
-                              {formatPersianNumber(childCount)} زیرمجموعه
-                            </Badge>
-                          ) : null}
-                        </div>
-                        {orphanSubUser || nestedSubUser ? (
-                          <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
-                            زیردستِ {item.parentUserName}
-                          </p>
-                        ) : null}
-                      </div>
-                    </div>
-                  );
-                },
+                render: (item) => (
+                  <span className="leading-5">{item.name}</span>
+                ),
               },
               {
                 key: "email",
@@ -1059,7 +985,7 @@ export function UsersAdmin({
               {
                 key: "organizationName",
                 label: "زیرمجموعه",
-                render: (item) => item.organizationName || "—",
+                render: (item) => item.organizationName || "خود وزارتخانه",
               },
               { key: "province", label: "استان", render: (item) => item.province || "—" },
               { key: "city", label: "شهر", render: (item) => item.city || "—" },
@@ -1284,20 +1210,31 @@ export function UsersAdmin({
 
             {isSubUsersMode && Boolean(parentMinistryId) && (
               <div className="space-y-2">
-                <Label>زیرمجموعه (اختیاری)</Label>
+                <Label>{isScopedToOwnOrganization ? "زیرمجموعه" : "زیرمجموعه (اختیاری)"}</Label>
                 <Select
                   value={
                     creatingOrganization
                       ? CREATE_ORGANIZATION
-                      : selectedOrganizationId || NO_ORGANIZATION
+                      : selectedOrganizationId ||
+                        (isScopedToOwnOrganization
+                          ? parentOrganizationId || NO_ORGANIZATION
+                          : NO_ORGANIZATION)
                   }
                   onValueChange={handleOrganizationSelect}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="خود وزارتخانه یا یک زیرمجموعه" />
+                    <SelectValue
+                      placeholder={
+                        isScopedToOwnOrganization
+                          ? "زیرمجموعه خودتان یا زیرمجموعه تعریف‌شده"
+                          : "خود وزارتخانه یا یک زیرمجموعه"
+                      }
+                    />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={NO_ORGANIZATION}>خود وزارتخانه</SelectItem>
+                    {!isScopedToOwnOrganization && (
+                      <SelectItem value={NO_ORGANIZATION}>خود وزارتخانه</SelectItem>
+                    )}
                     {organizationOptions
                       .filter((org) => Boolean(org.id))
                       .map((org) => (
@@ -1331,6 +1268,11 @@ export function UsersAdmin({
                       ایجاد
                     </Button>
                   </div>
+                )}
+                {isScopedToOwnOrganization && (
+                  <p className="text-xs text-muted-foreground">
+                    فقط زیرمجموعه خودتان و زیرمجموعه‌هایی که زیر آن تعریف کرده‌اید قابل انتخاب است.
+                  </p>
                 )}
               </div>
             )}
@@ -1437,7 +1379,7 @@ export function UsersAdmin({
 
                     {selectedRole === "org_user" && (
                       <div className="space-y-2">
-                        <Label>کاربر والد (اختیاری)</Label>
+                        <Label>کاربر والد برای دسترسی مدیریتی (اختیاری)</Label>
                         <Select
                           value={selectedParentUserId ?? NO_PARENT}
                           onValueChange={(value) =>
