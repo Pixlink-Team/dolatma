@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "dde966a9e8abfc9e9421e2fc15f4b9fa7c738616",
+      "committedAt": "2026-07-25T18:24:12+03:30",
+      "title": "حذف فیلد منبع بالادستی از دستورکارها",
+      "subject": "Remove upstream source field from directives"
+    },
+    {
       "hash": "ffae16e4abdc1d131dc8685110a9bb64d3fb6151",
       "committedAt": "2026-07-25T18:13:46+03:30",
       "title": "رفع نمایش دسترسی کاربران و دستگاه‌ها در پنل",
