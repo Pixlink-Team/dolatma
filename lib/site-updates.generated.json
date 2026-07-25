@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "f95d16392406c60248c9015f1dfe78017d30ac7f",
+      "committedAt": "2026-07-25T13:20:19+03:30",
+      "title": "حذف راهنمای نام کاربری از فرم ساخت کاربر",
+      "subject": "Remove username helper hint from user create form"
+    },
+    {
       "hash": "2795ca416a884f8c56bb38a2636d0563e581d1b1",
       "committedAt": "2026-07-25T12:42:57+03:30",
       "title": "رفع دسترسی مدیریت دستگاه و صدور دستورکار بعد از لغو مجوز",

@@ -154,6 +154,8 @@ export interface AuditDashboardData {
   problemStats: import("./problem-types").ProblemReportStats;
   stuckSignals: import("./problem-types").StuckBehaviorSignal[];
   recentUserErrors: import("./problem-types").RecentUserError[];
+  onboardingProgress?: import("@/lib/onboarding/types").OnboardingProgress[];
+  onboardingCampaignTitle?: string | null;
 }
 
 /** Per-day summary counts for the audit calendar. */

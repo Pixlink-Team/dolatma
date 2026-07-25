@@ -28,6 +28,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { OnboardingAuditPanel } from "@/components/admin/onboarding-audit-panel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { AuditCalendarPanel } from "@/components/admin/audit-calendar-panel";
@@ -776,6 +777,7 @@ export function AuditAdmin({ data, databaseReady }: AuditAdminProps) {
             )}
           </TabsTrigger>
           <TabsTrigger value="users">کاربران</TabsTrigger>
+          <TabsTrigger value="onboarding">پیشرفت راه‌اندازی</TabsTrigger>
           <TabsTrigger value="content">محتوای هر کاربر</TabsTrigger>
           <TabsTrigger value="logins">ورودها</TabsTrigger>
           <TabsTrigger value="events">رویدادها</TabsTrigger>
@@ -986,6 +988,13 @@ export function AuditAdmin({ data, databaseReady }: AuditAdminProps) {
               />
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="onboarding">
+          <OnboardingAuditPanel
+            rows={data.onboardingProgress ?? []}
+            campaignTitle={data.onboardingCampaignTitle}
+          />
         </TabsContent>
 
         <TabsContent value="content">

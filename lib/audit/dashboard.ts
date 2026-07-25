@@ -20,6 +20,8 @@ import {
   pgGetStuckBehaviorSignals,
   pgListRecentUserErrors,
 } from "@/lib/db/stuck-signals-repository";
+import { pgGetAllCampaigns } from "@/lib/db/repository";
+import { evaluateAllDevicesOnboarding } from "@/lib/onboarding/progress";
 import type { AuditDashboardData } from "@/lib/audit/types";
 import type {
   ProblemReport,
@@ -27,6 +29,7 @@ import type {
   RecentUserError,
   StuckBehaviorSignal,
 } from "@/lib/audit/problem-types";
+import type { OnboardingProgress } from "@/lib/onboarding/types";
 
 const EMPTY_PROBLEM_STATS: ProblemReportStats = {
   total: 0,
@@ -87,6 +90,32 @@ export async function getAuditDashboardData(): Promise<AuditDashboardData> {
     safe<RecentUserError[]>(() => pgListRecentUserErrors(40), []),
   ]);
 
+  const onboardingBundle = await safe(async () => {
+    const campaigns = await pgGetAllCampaigns();
+    const campaign =
+      campaigns.find((item) => item.published && item.status === "live") ??
+      campaigns.find((item) => item.published) ??
+      campaigns[0] ??
+      null;
+    if (!campaign) {
+      return {
+        onboardingProgress: [] as OnboardingProgress[],
+        onboardingCampaignTitle: null as string | null,
+      };
+    }
+    const onboardingProgress = await evaluateAllDevicesOnboarding({
+      campaignId: campaign.id,
+      features: campaign.features,
+    });
+    return {
+      onboardingProgress,
+      onboardingCampaignTitle: campaign.title,
+    };
+  }, {
+    onboardingProgress: [] as OnboardingProgress[],
+    onboardingCampaignTitle: null as string | null,
+  });
+
   return {
     summary: {
       ...summary,
@@ -110,5 +139,7 @@ export async function getAuditDashboardData(): Promise<AuditDashboardData> {
     problemStats,
     stuckSignals,
     recentUserErrors,
+    onboardingProgress: onboardingBundle.onboardingProgress,
+    onboardingCampaignTitle: onboardingBundle.onboardingCampaignTitle,
   };
 }

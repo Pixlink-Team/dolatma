@@ -2104,3 +2104,21 @@ CREATE INDEX IF NOT EXISTS idx_monitoring_keywords_org
 CREATE INDEX IF NOT EXISTS idx_monitoring_notifications_case
   ON monitoring_notifications(rapid_response_case_id, created_at DESC);
 
+-- Onboarding checklist steps (admin-managed; progress is computed from live data)
+CREATE TABLE IF NOT EXISTS onboarding_steps (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  step_key TEXT NOT NULL UNIQUE,
+  title TEXT NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
+  href TEXT NOT NULL DEFAULT '',
+  evaluator TEXT NOT NULL DEFAULT 'none'
+    CHECK (evaluator IN ('passport', 'subsidiaries', 'content', 'directives', 'none')),
+  sort_order INT NOT NULL DEFAULT 0,
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_onboarding_steps_active_order
+  ON onboarding_steps(is_active, sort_order ASC);
+
