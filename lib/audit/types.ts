@@ -52,6 +52,8 @@ export interface AuditEventFilters {
   to?: string;
   limit?: number;
   offset?: number;
+  /** When true, omit presence.heartbeat rows from the result. */
+  excludeHeartbeat?: boolean;
 }
 
 export interface AuditDailyPoint {
@@ -87,6 +89,23 @@ export interface OnlineUser {
   actorEmail: string | null;
   actorRole: string | null;
   lastSeenAt: string;
+  path: string | null;
+}
+
+/** All registered users with today-login + live presence flags for the audit roster. */
+export interface AuditUserPresence {
+  userId: string;
+  name: string;
+  email: string;
+  role: string;
+  loggedInToday: boolean;
+  loginCountToday: number;
+  lastLoginAt: string | null;
+  isOnline: boolean;
+  /** Most recent meaningful activity (excludes heartbeat / login_failed). */
+  lastSeenAt: string | null;
+  lastAction: string | null;
+  lastLabel: string | null;
   path: string | null;
 }
 
@@ -144,6 +163,7 @@ export interface AuditDashboardData {
   loginsTodayList: AuditEvent[];
   failedLoginsTodayList: AuditEvent[];
   onlineUsers: OnlineUser[];
+  allUsersPresence: AuditUserPresence[];
   topActions: AuditActionSummary[];
   topPaths: AuditPathSummary[];
   topClicks: AuditClickSummary[];

@@ -121,7 +121,7 @@ function UserCell({ name, email }: { name?: string | null; email?: string | null
 export function AuditCalendarPanel({
   onSelectUser,
 }: {
-  onSelectUser?: (user: AuditUserLookup) => void;
+  onSelectUser?: (user: AuditUserLookup, dateIso?: string) => void;
 } = {}) {
   const todayIso = getTehranCalendarDateIso();
   const todayJalali = isoToJalaali(todayIso);
@@ -443,7 +443,14 @@ export function AuditCalendarPanel({
                       {formatPersianNumber(dayDetail.actors.length)}
                     </Badge>
                   </h3>
-                  <DayActorsTable actors={dayDetail.actors} onSelectUser={onSelectUser} />
+                  <DayActorsTable
+                    actors={dayDetail.actors}
+                    onSelectUser={
+                      onSelectUser
+                        ? (user) => onSelectUser(user, selectedDate)
+                        : undefined
+                    }
+                  />
                 </section>
 
                 <section className="space-y-2">
@@ -453,7 +460,14 @@ export function AuditCalendarPanel({
                       {formatPersianNumber(dayDetail.events.length)}
                     </Badge>
                   </h3>
-                  <DayEventsTable events={dayDetail.events} onSelectUser={onSelectUser} />
+                  <DayEventsTable
+                    events={dayDetail.events}
+                    onSelectUser={
+                      onSelectUser
+                        ? (user) => onSelectUser(user, selectedDate)
+                        : undefined
+                    }
+                  />
                 </section>
               </>
             )}
