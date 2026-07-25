@@ -1,6 +1,18 @@
 {
   "entries": [
     {
+      "hash": "babb705537600eb3bf64cba9a8b40bc53168da08",
+      "committedAt": "2026-07-25T14:04:05+03:30",
+      "title": "قطع دسترسی دستگاه‌ها منوی دستگاه‌ها را هم مخفی می‌کند",
+      "subject": "Hide devices menu when manageSubtreeDevices is revoked"
+    },
+    {
+      "hash": "443dd8938b7fef28b82329f20a274e39e045edb8",
+      "committedAt": "2026-07-25T13:23:54+03:30",
+      "title": "افزودن چک‌لیست راه‌اندازی در داشبورد و رصد کاربران",
+      "subject": "Add device onboarding progress checklist"
+    },
+    {
       "hash": "f95d16392406c60248c9015f1dfe78017d30ac7f",
       "committedAt": "2026-07-25T13:20:19+03:30",
       "title": "حذف راهنمای نام کاربری از فرم ساخت کاربر",
