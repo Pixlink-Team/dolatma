@@ -103,7 +103,7 @@ const allNavItems: {
   { href: "/admin/submissions", label: "مشارکت‌ها", icon: FileText, permissionKey: "submissions" },
   { href: "/admin/forms", label: "فرم‌ها", icon: FormInput, permissionKey: "forms", adminOrClientOnly: true },
   { href: "/admin/users", label: "کاربران", icon: Users, usersNav: true },
-  { href: "/admin/best-practices", label: "بهترین اقدامات", icon: Award, alwaysVisible: true },
+  { href: "/admin/best-practices", label: "بهترین اقدامات", icon: Award, permissionKey: "bestPractices" },
   { href: "/admin/updates", label: "آپدیت‌های سایت", icon: Rocket, permissionKey: "siteUpdates", adminOrClientOnly: true },
   { href: "/admin/audit", label: "رصد کاربران", icon: ScrollText, adminOnly: true },
 ];

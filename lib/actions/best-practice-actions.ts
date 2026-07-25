@@ -4,26 +4,40 @@ import { revalidatePath } from "next/cache";
 import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
 import { canManageDirectives } from "@/lib/auth/access";
 import {
+  hasContributorPermission,
+  type ContributorPermissions,
+} from "@/lib/contributor-permissions";
+import {
   pgListBestPractices,
   pgListHighScoreSuggestions,
   pgSetBestPracticeStatus,
   pgSuggestBestPractice,
 } from "@/lib/db/repository-best-practices";
 import { BEST_PRACTICE_SCORE_SUGGEST_THRESHOLD } from "@/lib/command-feature-labels";
-import type { ScoreableContentType } from "@/lib/types";
+import type { AuthSession, ScoreableContentType } from "@/lib/types";
 import { isPostgresConfigured } from "@/lib/utils";
 import * as pgExt from "@/lib/db/repository-extended";
 
 async function assertCampaignMember(campaignId: string) {
   const session = await getAuthSession();
   if (!session) return { session: null, permissions: null, error: "Unauthorized" as const };
-  if (isFullAdmin(session)) return { session, permissions: null, error: null };
+  if (isFullAdmin(session) || session.role === "client") {
+    return { session, permissions: null, error: null };
+  }
   if (!session.userId || !isPostgresConfigured()) {
     return { session: null, permissions: null, error: "Unauthorized" as const };
   }
   const permissions = await pgExt.pgGetUserPermissionsForCampaign(session.userId, campaignId);
   if (!permissions) return { session: null, permissions: null, error: "دسترسی ندارید" as const };
   return { session, permissions, error: null };
+}
+
+function canAccessBestPractices(
+  session: AuthSession,
+  permissions: ContributorPermissions | null
+): boolean {
+  if (isFullAdmin(session) || session.role === "client") return true;
+  return hasContributorPermission(permissions, "bestPractices");
 }
 
 export async function listBestPracticesAction(
@@ -33,6 +47,9 @@ export async function listBestPracticesAction(
   const access = await assertCampaignMember(campaignId);
   if (access.error || !access.session) {
     return { success: false as const, items: [], error: access.error };
+  }
+  if (!canAccessBestPractices(access.session, access.permissions)) {
+    return { success: false as const, items: [], error: "دسترسی ندارید" };
   }
   if (!isPostgresConfigured()) {
     return { success: false as const, items: [], error: "Database required" };

@@ -23,6 +23,8 @@ export interface ContributorPermissions {
   sectionTutorials: boolean;
   /** Panel management: national calendar page. */
   nationalCalendar: boolean;
+  /** Best practices library page. */
+  bestPractices: boolean;
   /** Scoped management: create/edit users under own device subtree. */
   manageSubtreeUsers: boolean;
   /** Scoped management: issue directives to subtree audience. */
@@ -58,6 +60,7 @@ export const defaultContributorPermissions = (): ContributorPermissions => ({
   sectionTutorials: false,
   // Keep open by default — previously always visible; admin can revoke per user.
   nationalCalendar: true,
+  bestPractices: true,
   manageSubtreeUsers: false,
   manageSubtreeDirectives: false,
   scoreSubtreeContent: false,
@@ -83,6 +86,7 @@ export const contributorPermissionLabels: Partial<
   directives: "دستورکارها",
   mediaCommand: "میز فرمان رسانه‌ای",
   monitoring: "رصد و واکنش سریع",
+  bestPractices: "بهترین اقدامات",
 };
 
 /** Panel management toggles (hidden from org users unless admin enables). */
@@ -139,6 +143,7 @@ export function normalizeContributorPermissions(
     siteUpdates: record.siteUpdates ?? defaults.siteUpdates,
     sectionTutorials: record.sectionTutorials ?? defaults.sectionTutorials,
     nationalCalendar: record.nationalCalendar ?? defaults.nationalCalendar,
+    bestPractices: record.bestPractices ?? defaults.bestPractices,
     manageSubtreeUsers: record.manageSubtreeUsers ?? defaults.manageSubtreeUsers,
     manageSubtreeDirectives:
       record.manageSubtreeDirectives ?? defaults.manageSubtreeDirectives,
@@ -178,6 +183,7 @@ export const deniedContributorPermissions = (): ContributorPermissions => ({
   siteUpdates: false,
   sectionTutorials: false,
   nationalCalendar: false,
+  bestPractices: false,
   manageSubtreeUsers: false,
   manageSubtreeDirectives: false,
   scoreSubtreeContent: false,

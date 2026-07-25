@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { BestPracticesAdmin } from "@/components/admin/best-practices-admin";
 import { resolveAdminCampaignId } from "@/lib/admin-campaign";
 import { canManageDirectives } from "@/lib/auth/access";
+import { requireContributorAccess } from "@/lib/auth/require-contributor-access";
 import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
 import {
   pgListBestPractices,
@@ -19,6 +20,8 @@ export default async function BestPracticesPage({ searchParams }: PageProps) {
   const query = await searchParams;
   const { campaignId } = await resolveAdminCampaignId(query.campaign);
   if (!campaignId) redirect("/admin/campaigns");
+
+  await requireContributorAccess(campaignId, "bestPractices");
 
   const session = await getAuthSession();
   if (!session) redirect("/admin/login");
