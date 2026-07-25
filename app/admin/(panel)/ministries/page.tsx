@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { DevicesAdmin } from "@/components/admin/devices-admin";
 import {
-  canAccessDevicesPage,
   getSessionHomeDeviceId,
   isDeviceTreeScopedRole,
   listAccessibleDevices,
@@ -14,10 +13,11 @@ import { isPostgresConfigured } from "@/lib/utils";
 export default async function MinistriesPage() {
   const session = await getAuthSession();
   if (!session) redirect("/admin/login");
-  if (!canAccessDevicesPage(session)) redirect("/admin");
 
   const fullAdmin = isFullAdmin(session);
   const canManageDevices = canManageSubtreeDevices(session);
+  // Mirror users page: revoke manageSubtreeDevices → no tree menu or page.
+  if (!fullAdmin && !canManageDevices) redirect("/admin");
   let devices: Awaited<ReturnType<typeof listAccessibleDevices>> = [];
   let homeDeviceId: string | null = null;
 

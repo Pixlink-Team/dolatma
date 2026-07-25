@@ -67,9 +67,9 @@ const allNavItems: {
   icon: typeof LayoutDashboard;
   adminOnly?: boolean;
   adminOrClientOnly?: boolean;
-  /** Visible to admin, client, and ministry parent (sub-user management). */
+  /** Visible to admin, client, and org users with manageSubtreeUsers. */
   usersNav?: boolean;
-  /** Visible to admin and ministry/sub-user roles for their own org tree. */
+  /** Visible to admin and org users with manageSubtreeDevices. */
   devicesNav?: boolean;
   /** Always visible for every panel user (not gated by section permissions). */
   alwaysVisible?: boolean;
@@ -139,7 +139,7 @@ export function AdminSidebar() {
   const [isFullAdminUser, setIsFullAdminUser] = useState(false);
   const [isClientRole, setIsClientRole] = useState(false);
   const [isMinistryParent, setIsMinistryParent] = useState(false);
-  const [isSubUser, setIsSubUser] = useState(false);
+  const [canManageDevicesNav, setCanManageDevicesNav] = useState(false);
   const [permissions, setPermissions] = useState<ContributorPermissions | null>(null);
   const [mediaCommandOpen, setMediaCommandOpen] = useState(false);
   const [monitoringOpen, setMonitoringOpen] = useState(false);
@@ -156,13 +156,11 @@ export function AdminSidebar() {
         const canManageUsers =
           Boolean(session.permissions?.manageSubtreeUsers) ||
           (!session.permissions && Boolean(session.manageSubtreeUsers));
+        const canManageDevices =
+          Boolean(session.permissions?.manageSubtreeDevices) ||
+          (!session.permissions && Boolean(session.manageSubtreeDevices));
         setIsMinistryParent(canManageUsers && session.role !== "admin" && session.role !== "client");
-        setIsSubUser(
-          session.role === "org_user" ||
-            session.role === "sub_user" ||
-            session.role === "contributor" ||
-            session.role === "ministry_parent"
-        );
+        setCanManageDevicesNav(canManageDevices);
         setPermissions(session.permissions ?? null);
       });
     };
@@ -205,7 +203,7 @@ export function AdminSidebar() {
       return isFullAdminUser || isClientRole || isMinistryParent;
     }
     if (item.devicesNav) {
-      return isFullAdminUser || isMinistryParent || isSubUser;
+      return isFullAdminUser || canManageDevicesNav;
     }
     // Panel management items: admin/client always, or org_user with explicit grant.
     if (item.adminOrClientOnly) {

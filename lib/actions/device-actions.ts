@@ -12,6 +12,7 @@ import {
   isDeviceTreeScopedRole,
   listAccessibleDevices,
 } from "@/lib/auth/device-access";
+import { canManageSubtreeDevices } from "@/lib/auth/access";
 import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
 import {
   pgDeleteDevice,
@@ -73,7 +74,7 @@ export async function listDevicesAction(options?: {
   rootsOnly?: boolean;
 }) {
   const session = await getAuthSession();
-  if (!session || !canAccessDevicesPage(session)) {
+  if (!session || !canManageSubtreeDevices(session)) {
     return { success: false as const, error: "Unauthorized", devices: [] };
   }
   if (!isPostgresConfigured()) return { success: true as const, devices: [] };

@@ -63,7 +63,7 @@ function canMutateDevicesFromPermissions(
 
 /**
  * View passport / device details for any node in the caller's subtree
- * (including supervisors without manageSubtreeDevices).
+ * (including org users without manageSubtreeDevices — e.g. via profile).
  */
 export async function canViewDevice(
   session: AuthSession,
