@@ -84,14 +84,8 @@ export function DevicesAdmin({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingParentId, setEditingParentId] = useState<string | null>(null);
   const [parentIdForChild, setParentIdForChild] = useState<string | null>(null);
-  const [expandedIds, setExpandedIds] = useState<Set<string>>(() => {
-    const initial = new Set<string>();
-    if (homeDeviceId) initial.add(homeDeviceId);
-    for (const device of initialDevices) {
-      if (!device.parentId) initial.add(device.id);
-    }
-    return initial;
-  });
+  // Cards start collapsed; expand on demand via the chevron.
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(() => new Set());
   const [rows] = useState(initialDevices);
   const [isPending, startTransition] = useTransition();
 
