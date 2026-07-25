@@ -122,11 +122,6 @@ export function UsersAdmin({
   /** Parents in this set are collapsed; everyone else with children stays expanded. */
   const [collapsedParentIds, setCollapsedParentIds] = useState<Set<string>>(() => new Set());
 
-  const parentOptions = useMemo(
-    () => rows.filter((user) => isSubtreeParentUser(user)),
-    [rows]
-  );
-
   const filterMinistryOptions = useMemo(() => {
     const map = new Map<string, string>();
     for (const user of rows) {
@@ -300,6 +295,18 @@ export function UsersAdmin({
   const selectedOrganizationId = form.watch("organizationId");
   const selectedParentUserId = form.watch("parentUserId");
 
+  const parentOptions = useMemo(() => {
+    const options = rows.filter((user) => isSubtreeParentUser(user));
+    if (
+      selectedParentUserId &&
+      !options.some((user) => user.id === selectedParentUserId)
+    ) {
+      const currentParent = rows.find((user) => user.id === selectedParentUserId);
+      if (currentParent) options.push(currentParent);
+    }
+    return options;
+  }, [rows, selectedParentUserId]);
+
   const applyOrgRolePreset = (orgRole: OrgRole) => {
     const preset = getOrgRolePermissionPreset(orgRole);
     const campaignIds = form.getValues("campaignIds") ?? [];
@@ -315,8 +322,35 @@ export function UsersAdmin({
   const organizationOptions = useMemo(() => {
     const ministryId = selectedMinistryId || (isSubUsersMode ? parentMinistryId : null);
     if (!ministryId) return [] as NonNullable<Ministry["organizations"]>;
-    return ministries.find((ministry) => ministry.id === ministryId)?.organizations ?? [];
-  }, [ministries, selectedMinistryId, isSubUsersMode, parentMinistryId]);
+    const options = [
+      ...(ministries.find((ministry) => ministry.id === ministryId)?.organizations ?? []),
+    ];
+    if (
+      selectedOrganizationId &&
+      !options.some((org) => org.id === selectedOrganizationId)
+    ) {
+      const editingUser = editingId ? rows.find((row) => row.id === editingId) : null;
+      if (editingUser?.organizationId === selectedOrganizationId) {
+        options.push({
+          id: selectedOrganizationId,
+          ministryId,
+          name: editingUser.organizationName?.trim() || "زیرمجموعه (نامعتبر)",
+          fullName: null,
+          isActive: true,
+          createdAt: editingUser.createdAt,
+        });
+      }
+    }
+    return options;
+  }, [
+    ministries,
+    selectedMinistryId,
+    isSubUsersMode,
+    parentMinistryId,
+    selectedOrganizationId,
+    editingId,
+    rows,
+  ]);
 
   const toggleCampaign = (campaignId: string) => {
     const current = form.getValues("campaignIds");

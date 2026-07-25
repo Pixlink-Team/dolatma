@@ -28,7 +28,11 @@ import type {
   SocialPlatformStat,
 } from "@/lib/types";
 import { verifyPassword } from "@/lib/auth/password";
-import { buildLoginEmailCandidates, normalizeStoredUserEmail } from "@/lib/auth/user-login";
+import {
+  buildLoginEmailCandidates,
+  normalizeStoredUserEmail,
+  resolveStoredUserEmail,
+} from "@/lib/auth/user-login";
 import {
   defaultContributorPermissions,
   normalizeContributorPermissions,
@@ -44,7 +48,7 @@ import type { ParsedUserImportRow } from "@/lib/services/users-excel-parser";
 import { normalizePlanLabels } from "@/lib/content-topics";
 import { generateId } from "@/lib/utils";
 import { hashPassword } from "@/lib/auth/password";
-import { normalizeAdminRole } from "@/lib/user-roles";
+import { isOrgUserRole, normalizeAdminRole } from "@/lib/user-roles";
 
 /** Ensure authority columns exist on older databases without a full migrate. */
 export async function ensureUserAuthoritySchema(): Promise<void> {
@@ -193,6 +197,117 @@ async function loadUserCampaignAccess(userId: string): Promise<CampaignAccessRow
 
 function mapAccessToUser(row: Record<string, unknown>, access: CampaignAccessRow[]): AdminUser {
   return mapUserFromDb(row, access);
+}
+
+/**
+ * Resolve users.device_id safely against the devices FK.
+ * Ensures legacy ministry/org rows are mirrored into devices when possible.
+ */
+async function resolveUserDeviceId(
+  sql: ReturnType<typeof getSql>,
+  input: {
+    organizationId: string | null;
+    ministryId: string | null;
+    existingDeviceId: string | null;
+  }
+): Promise<string | null> {
+  const candidate = input.organizationId ?? input.ministryId;
+
+  try {
+    const { ensureDeviceSchema, pgSaveDevice } = await import("@/lib/db/repository-devices");
+    await ensureDeviceSchema();
+
+    // Keep a more-specific existing device when admin is not assigning an organization.
+    if (!input.organizationId && input.existingDeviceId) {
+      const current = await sql`
+        SELECT id FROM devices WHERE id = ${input.existingDeviceId} LIMIT 1
+      `;
+      if (current[0]) return input.existingDeviceId;
+    }
+
+    if (!candidate) return null;
+
+    const existing = await sql`SELECT id FROM devices WHERE id = ${candidate} LIMIT 1`;
+    if (existing[0]) return candidate;
+
+    // Lazily mirror ministry / organization into devices (same UUID).
+    if (input.organizationId) {
+      const orgRows = await sql`
+        SELECT id, ministry_id, name, full_name, is_active
+        FROM ministry_organizations WHERE id = ${input.organizationId} LIMIT 1
+      `;
+      const org = orgRows[0];
+      if (org?.ministry_id) {
+        const ministryId = String(org.ministry_id);
+        const ministryDevice = await sql`SELECT id FROM devices WHERE id = ${ministryId} LIMIT 1`;
+        if (!ministryDevice[0]) {
+          const ministryRows = await sql`
+            SELECT id, name, full_name, description, is_active
+            FROM ministries WHERE id = ${ministryId} LIMIT 1
+          `;
+          const ministry = ministryRows[0];
+          if (ministry) {
+            await pgSaveDevice({
+              id: ministryId,
+              name: String(ministry.full_name || ministry.name),
+              shortName: String(ministry.name),
+              type: "ministry",
+              parentId: null,
+              mission: ministry.description ? String(ministry.description) : null,
+              status: ministry.is_active === false ? "inactive" : "active",
+              activityScope: "national",
+            });
+          }
+        }
+        await pgSaveDevice({
+          id: input.organizationId,
+          name: String(org.full_name || org.name),
+          shortName: String(org.name),
+          type: "organization",
+          parentId: ministryId,
+          status: org.is_active === false ? "inactive" : "active",
+          activityScope: "national",
+        });
+        return input.organizationId;
+      }
+    }
+
+    if (input.ministryId) {
+      const ministryRows = await sql`
+        SELECT id, name, full_name, description, is_active
+        FROM ministries WHERE id = ${input.ministryId} LIMIT 1
+      `;
+      const ministry = ministryRows[0];
+      if (ministry) {
+        await pgSaveDevice({
+          id: input.ministryId,
+          name: String(ministry.full_name || ministry.name),
+          shortName: String(ministry.name),
+          type: "ministry",
+          parentId: null,
+          mission: ministry.description ? String(ministry.description) : null,
+          status: ministry.is_active === false ? "inactive" : "active",
+          activityScope: "national",
+        });
+        return input.ministryId;
+      }
+    }
+  } catch {
+    // Devices may be unavailable on older DBs; fall through to existing link.
+  }
+
+  if (input.existingDeviceId) {
+    try {
+      const rows = await sql`
+        SELECT id FROM devices WHERE id = ${input.existingDeviceId} LIMIT 1
+      `;
+      if (rows[0]) return input.existingDeviceId;
+    } catch {
+      return null;
+    }
+  }
+
+  return null;
 }
 
 export async function pgGetUserByEmail(email: string) {
@@ -358,7 +473,6 @@ export async function pgSaveUser(data: {
   const sql = getSql();
   await ensureOrgUserSchema();
   const id = data.id ?? generateId();
-  const email = normalizeStoredUserEmail(data.email);
   const now = new Date().toISOString();
   const province = data.province?.trim() || null;
   const city = data.city?.trim() || null;
@@ -381,8 +495,19 @@ export async function pgSaveUser(data: {
       : null;
   let ministryId = data.ministryId?.trim() || null;
   let organizationId = data.organizationId?.trim() || null;
-  const parentUserId = data.parentUserId?.trim() || null;
-  let deviceId: string | null = organizationId ?? ministryId ?? null;
+  let parentUserId = data.parentUserId?.trim() || null;
+
+  let existingEmail: string | null = null;
+  let existingDeviceId: string | null = null;
+  if (data.id) {
+    const existingRows = await sql`
+      SELECT email, device_id, parent_user_id
+      FROM users WHERE id = ${id} LIMIT 1
+    `;
+    existingEmail = existingRows[0]?.email ? String(existingRows[0].email) : null;
+    existingDeviceId = existingRows[0]?.device_id ? String(existingRows[0].device_id) : null;
+  }
+  const email = resolveStoredUserEmail(data.email, existingEmail);
 
   const role = normalizeAdminRole(data.role);
   const orgRole: OrgRole | null =
@@ -396,28 +521,52 @@ export async function pgSaveUser(data: {
     const orgRows = await sql`
       SELECT ministry_id FROM ministry_organizations WHERE id = ${organizationId} LIMIT 1
     `;
-    let orgMinistryId = orgRows[0]?.ministry_id ? String(orgRows[0].ministry_id) : null;
-    if (!orgMinistryId) {
+    const orgMinistryId = orgRows[0]?.ministry_id ? String(orgRows[0].ministry_id) : null;
+    if (orgMinistryId) {
+      if (ministryId && ministryId !== orgMinistryId) {
+        return {
+          success: false as const,
+          error: "زیرمجموعه باید متعلق به وزارتخانه انتخاب‌شده باشد",
+        };
+      }
+      ministryId = orgMinistryId;
+    } else {
+      // Not in ministry_organizations — may be a devices-tree id (FK forbids storing it as organization_id).
       const deviceRows = await sql`
         SELECT parent_id FROM devices WHERE id = ${organizationId} LIMIT 1
       `;
-      orgMinistryId = deviceRows[0]?.parent_id ? String(deviceRows[0].parent_id) : null;
+      if (deviceRows[0]) {
+        const parentId = deviceRows[0].parent_id ? String(deviceRows[0].parent_id) : null;
+        // Keep linking via device_id; clear organization_id to satisfy FK.
+        existingDeviceId = organizationId;
+        if (!parentId) {
+          ministryId = ministryId ?? organizationId;
+        } else if (!ministryId) {
+          ministryId = parentId;
+        }
+      }
+      organizationId = null;
     }
-    if (!orgMinistryId) {
-      return { success: false as const, error: "زیرمجموعه انتخاب‌شده معتبر نیست" };
-    }
-    if (ministryId && ministryId !== orgMinistryId) {
-      return {
-        success: false as const,
-        error: "زیرمجموعه باید متعلق به وزارتخانه انتخاب‌شده باشد",
-      };
-    }
-    ministryId = orgMinistryId;
-    deviceId = organizationId;
   } else {
     organizationId = null;
-    deviceId = ministryId;
   }
+
+  if (parentUserId) {
+    const parentRows = await sql`
+      SELECT id, role FROM users WHERE id = ${parentUserId} LIMIT 1
+    `;
+    const parentRole = parentRows[0]?.role ? String(parentRows[0].role) : null;
+    if (!parentRole || !isOrgUserRole(normalizeAdminRole(parentRole))) {
+      // Stale parent must not block permission edits.
+      parentUserId = null;
+    }
+  }
+
+  const deviceId = await resolveUserDeviceId(sql, {
+    organizationId,
+    ministryId,
+    existingDeviceId,
+  });
 
   // Authority is always derived from ministry/org placement — never taken from client input.
   const authorityLevel = inferDefaultAuthorityLevel({
@@ -518,7 +667,18 @@ export async function pgSaveUser(data: {
   }
 
   await sql`DELETE FROM user_campaign_access WHERE user_id = ${id}`;
-  for (const campaignId of data.campaignIds ?? []) {
+  const requestedCampaignIds = [
+    ...new Set((data.campaignIds ?? []).map((campaignId) => campaignId.trim()).filter(Boolean)),
+  ];
+  let validCampaignIds = requestedCampaignIds;
+  if (requestedCampaignIds.length > 0) {
+    const campaignRows = await sql`
+      SELECT id FROM campaign_settings WHERE id IN ${sql(requestedCampaignIds)}
+    `;
+    const existing = new Set(campaignRows.map((row) => String(row.id)));
+    validCampaignIds = requestedCampaignIds.filter((campaignId) => existing.has(campaignId));
+  }
+  for (const campaignId of validCampaignIds) {
     const permissions = normalizeContributorPermissions(
       data.campaignPermissions?.[campaignId] ?? defaultContributorPermissions()
     );
@@ -561,10 +721,19 @@ export async function pgBulkUpdateUsersAccess(input: {
   const sql = getSql();
   const now = new Date().toISOString();
 
+  let validCampaignIds = campaignIds;
+  if (campaignIds.length > 0) {
+    const campaignRows = await sql`
+      SELECT id FROM campaign_settings WHERE id IN ${sql(campaignIds)}
+    `;
+    const existing = new Set(campaignRows.map((row) => String(row.id)));
+    validCampaignIds = campaignIds.filter((id) => existing.has(id));
+  }
+
   try {
     for (const userId of userIds) {
       await sql`DELETE FROM user_campaign_access WHERE user_id = ${userId}`;
-      for (const campaignId of campaignIds) {
+      for (const campaignId of validCampaignIds) {
         await sql`
           INSERT INTO user_campaign_access (user_id, campaign_id, permissions, created_at)
           VALUES (

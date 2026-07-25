@@ -705,11 +705,13 @@ export async function saveUserAction(data: {
     } else {
       const parent = await pgExt.pgGetUserById(parentUserId);
       if (!parent || !isOrgUserRole(parent.role)) {
-        return { success: false, error: "کاربر والد معتبر نیست" };
-      }
-      ministryId = parent.ministryId ?? ministryId;
-      if (!organizationId) {
-        organizationId = parent.organizationId ?? null;
+        // Stale parent must not block admin permission edits.
+        parentUserId = null;
+      } else {
+        ministryId = parent.ministryId ?? ministryId;
+        if (!organizationId) {
+          organizationId = parent.organizationId ?? null;
+        }
       }
     }
   } else {

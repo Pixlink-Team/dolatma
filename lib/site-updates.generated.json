@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "981ba11c906fc5b3b27d51514b330abe120f3c72",
+      "committedAt": "2026-07-25T14:46:20+03:30",
+      "title": "امکان ویرایش استان و شهر برای مدیر وزارتخانه",
+      "subject": "Fix ministry manager province and city edit access"
+    },
+    {
       "hash": "cc28ca2b15dbce4efb26e7eb679802c329d3189c",
       "committedAt": "2026-07-25T14:42:15+03:30",
       "title": "پیگیری تولید محتوا برای هر دستورکار و ساخت موضوع محتوا از دستورکار",
