@@ -152,6 +152,10 @@ export function UsersAdmin({
   const isMinistryOnlyMode = mode === "ministry";
   const canManageUsers = isFullMode || isSubUsersMode;
   const isScopedToOwnOrganization = isSubUsersMode && Boolean(parentOrganizationId);
+  /** Ministry manager (no org): assign to ministry itself via checkbox, not a Select option. */
+  const isScopedToOwnMinistry =
+    isSubUsersMode && Boolean(parentMinistryId) && !parentOrganizationId;
+  const canAssignToOwnUnit = isScopedToOwnOrganization || isScopedToOwnMinistry;
   const permissionCapActive = isSubUsersMode && Boolean(grantorCampaignPermissions);
   const [open, setOpen] = useState(false);
   /** Optional fields (phone, access, etc.) stay collapsed so create stays simple. */
@@ -161,8 +165,8 @@ export function UsersAdmin({
   const [ministriesList, setMinistriesList] = useState(ministries);
   const [creatingOrganization, setCreatingOrganization] = useState(false);
   const [newOrganizationName, setNewOrganizationName] = useState("");
-  /** When true, new/edited user is bound to the manager's own org (not a child). */
-  const [assignToOwnOrganization, setAssignToOwnOrganization] = useState(false);
+  /** When true, user is bound to the manager's own ministry/org (not a child). */
+  const [assignToOwnUnit, setAssignToOwnUnit] = useState(false);
   /** Device-tree parent for the inline "create organization" flow. */
   const [createUnderParentId, setCreateUnderParentId] = useState<string | null>(null);
   const [filterMinistryId, setFilterMinistryId] = useState(FILTER_ALL);
@@ -493,6 +497,14 @@ export function UsersAdmin({
     );
   }, [organizationOptions, parentOrganizationId]);
 
+  const ownMinistryName = useMemo(() => {
+    if (!parentMinistryId) return null;
+    return (
+      ministriesList.find((ministry) => ministry.id === parentMinistryId)?.name?.trim() ||
+      "وزارتخانه شما"
+    );
+  }, [ministriesList, parentMinistryId]);
+
   const organizationSelectOptions = useMemo(() => {
     const ministryId = selectedMinistryId || (isSubUsersMode ? parentMinistryId : null);
     if (!ministryId) return [] as { id: string; name: string; label: string }[];
@@ -748,10 +760,12 @@ export function UsersAdmin({
     const ministryId =
       (isSubUsersMode ? parentMinistryId : null) || data.ministryId || null;
     const organizationId = isScopedToOwnOrganization
-      ? assignToOwnOrganization
+      ? assignToOwnUnit
         ? parentOrganizationId || null
         : data.organizationId ?? null
-      : data.organizationId ?? null;
+      : isScopedToOwnMinistry && assignToOwnUnit
+        ? null
+        : data.organizationId ?? null;
     const nextParentUserId = isSubUsersMode
       ? parentUserId ?? null
       : role === "org_user"
@@ -762,15 +776,19 @@ export function UsersAdmin({
       toast.error("برای کاربر دستگاه انتخاب وزارتخانه الزامی است");
       return;
     }
-    if (isScopedToOwnOrganization && assignToOwnOrganization && !organizationId) {
+    if (isScopedToOwnOrganization && assignToOwnUnit && !organizationId) {
       toast.error("اتصال به خود سازمان ممکن نیست");
       return;
     }
     if (
       isScopedToOwnOrganization &&
-      !assignToOwnOrganization &&
+      !assignToOwnUnit &&
       (!organizationId || organizationId === parentOrganizationId)
     ) {
+      toast.error("یکی از زیرمجموعه‌ها را انتخاب کنید");
+      return;
+    }
+    if (isScopedToOwnMinistry && !assignToOwnUnit && !organizationId) {
       toast.error("یکی از زیرمجموعه‌ها را انتخاب کنید");
       return;
     }
@@ -871,8 +889,8 @@ export function UsersAdmin({
     setEditingId(null);
     setOptionalFieldsOpen(false);
     resetOrganizationCreate();
-    const defaultAssignOwn = isScopedToOwnOrganization;
-    setAssignToOwnOrganization(defaultAssignOwn);
+    const defaultAssignOwn = canAssignToOwnUnit;
+    setAssignToOwnUnit(defaultAssignOwn);
     const defaultOrgRole: OrgRole = "pr";
     if (permissionCapActive && primaryCampaignId) {
       const grantor = getGrantorPermissions(primaryCampaignId);
@@ -891,7 +909,8 @@ export function UsersAdmin({
       city: "",
       phone: "",
       ministryId: isSubUsersMode ? parentMinistryId : null,
-      organizationId: defaultAssignOwn ? parentOrganizationId : null,
+      organizationId:
+        defaultAssignOwn && isScopedToOwnOrganization ? parentOrganizationId : null,
       parentUserId: parentUserId ?? null,
       campaignIds: soleCampaignIds,
     });
@@ -938,7 +957,9 @@ export function UsersAdmin({
       isScopedToOwnOrganization &&
       Boolean(parentOrganizationId) &&
       user.organizationId === parentOrganizationId;
-    setAssignToOwnOrganization(isOwnOrgUser);
+    const isOwnMinistryUser =
+      isScopedToOwnMinistry && !user.organizationId;
+    setAssignToOwnUnit(isOwnOrgUser || isOwnMinistryUser);
     form.reset({
       email: getLoginUsernameFromEmail(user.email ?? ""),
       name: user.name ?? "",
@@ -1340,7 +1361,7 @@ export function UsersAdmin({
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <Label>نام سازمان</Label>
-                    <Input {...form.register("name")} placeholder="نام سازمان یا شخص" />
+                    <Input {...form.register("name")} placeholder="نام سازمان" />
                   </div>
                   <div className="space-y-2">
                     <Label>نام کاربری</Label>
@@ -1439,116 +1460,102 @@ export function UsersAdmin({
 
                   {isSubUsersMode && Boolean(parentMinistryId) && (
                     <div className="space-y-2">
-                      {isScopedToOwnOrganization && (
+                      {canAssignToOwnUnit && (
                         <label className="flex items-center gap-2 text-sm">
                           <input
                             type="checkbox"
-                            checked={assignToOwnOrganization}
+                            checked={assignToOwnUnit}
                             onChange={(event) => {
                               const checked = event.target.checked;
-                              setAssignToOwnOrganization(checked);
+                              setAssignToOwnUnit(checked);
                               resetOrganizationCreate();
                               form.setValue(
                                 "organizationId",
-                                checked ? parentOrganizationId : null
+                                checked && isScopedToOwnOrganization
+                                  ? parentOrganizationId
+                                  : null
                               );
                             }}
                           />
-                          برای خود سازمان
-                          {ownOrganizationName ? (
+                          {isScopedToOwnOrganization ? "برای خود سازمان" : "برای خود وزارتخانه"}
+                          {isScopedToOwnOrganization && ownOrganizationName ? (
                             <span className="text-muted-foreground">({ownOrganizationName})</span>
+                          ) : null}
+                          {isScopedToOwnMinistry && ownMinistryName ? (
+                            <span className="text-muted-foreground">({ownMinistryName})</span>
                           ) : null}
                         </label>
                       )}
-                      <Label>زیرمجموعه</Label>
-                      <Select
-                        value={
-                          assignToOwnOrganization && isScopedToOwnOrganization
-                            ? NO_ORGANIZATION
-                            : creatingOrganization
-                              ? CREATE_ORGANIZATION
-                              : selectedOrganizationId || NO_ORGANIZATION
-                        }
-                        onValueChange={handleOrganizationSelect}
-                        disabled={assignToOwnOrganization && isScopedToOwnOrganization}
-                      >
-                        <SelectTrigger>
-                          <SelectValue
-                            placeholder={
-                              isScopedToOwnOrganization
-                                ? assignToOwnOrganization
-                                  ? "غیرفعال — کاربر به خود سازمان وصل می‌شود"
-                                  : "یکی از زیرمجموعه‌ها را انتخاب کنید"
-                                : "خود وزارتخانه یا یک زیرمجموعه"
+                      {!(assignToOwnUnit && canAssignToOwnUnit) && (
+                        <>
+                          <Label>زیرمجموعه</Label>
+                          <Select
+                            value={
+                              creatingOrganization
+                                ? CREATE_ORGANIZATION
+                                : selectedOrganizationId || NO_ORGANIZATION
                             }
-                          />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {!isScopedToOwnOrganization && (
-                            <SelectItem value={NO_ORGANIZATION}>خود وزارتخانه</SelectItem>
-                          )}
-                          {isScopedToOwnOrganization && assignToOwnOrganization && (
-                            <SelectItem value={NO_ORGANIZATION}>
-                              خود سازمان
-                              {ownOrganizationName ? ` — ${ownOrganizationName}` : ""}
-                            </SelectItem>
-                          )}
-                          {isScopedToOwnOrganization &&
-                            !assignToOwnOrganization &&
-                            !selectedOrganizationId &&
-                            !creatingOrganization && (
-                              <SelectItem value={NO_ORGANIZATION} disabled>
-                                انتخاب زیرمجموعه…
-                              </SelectItem>
-                            )}
-                          {organizationSelectOptions
-                            .filter((org) => Boolean(org.id))
-                            .map((org) => (
-                            <SelectItem key={org.id} value={org.id}>
-                              {org.label}
-                            </SelectItem>
-                          ))}
-                          {!assignToOwnOrganization && (
-                            <SelectItem value={CREATE_ORGANIZATION}>ایجاد زیرمجموعه جدید…</SelectItem>
-                          )}
-                        </SelectContent>
-                      </Select>
-                      {creatingOrganization && !assignToOwnOrganization && (
-                        <div className="space-y-2">
-                          {createUnderParentName ? (
-                            <p className="text-xs text-muted-foreground">
-                              زیرمجموعه جدید زیر «{createUnderParentName}» در درخت دستگاه ایجاد می‌شود.
-                            </p>
-                          ) : null}
-                          <div className="flex gap-2">
-                          <Input
-                            value={newOrganizationName}
-                            onChange={(event) => setNewOrganizationName(event.target.value)}
-                            placeholder="نام زیرمجموعه جدید"
-                            disabled={isPending}
-                            onKeyDown={(event) => {
-                              if (event.key === "Enter") {
-                                event.preventDefault();
-                                createOrganizationInline();
-                              }
-                            }}
-                          />
-                          <Button
-                            type="button"
-                            variant="secondary"
-                            disabled={isPending || !newOrganizationName.trim()}
-                            onClick={createOrganizationInline}
+                            onValueChange={handleOrganizationSelect}
                           >
-                            ایجاد
-                          </Button>
-                          </div>
-                        </div>
+                            <SelectTrigger>
+                              <SelectValue placeholder="یکی از زیرمجموعه‌ها را انتخاب کنید" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {!selectedOrganizationId && !creatingOrganization && (
+                                <SelectItem value={NO_ORGANIZATION} disabled>
+                                  انتخاب زیرمجموعه…
+                                </SelectItem>
+                              )}
+                              {organizationSelectOptions
+                                .filter((org) => Boolean(org.id))
+                                .map((org) => (
+                                <SelectItem key={org.id} value={org.id}>
+                                  {org.label}
+                                </SelectItem>
+                              ))}
+                              <SelectItem value={CREATE_ORGANIZATION}>ایجاد زیرمجموعه جدید…</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          {creatingOrganization && (
+                            <div className="space-y-2">
+                              {createUnderParentName ? (
+                                <p className="text-xs text-muted-foreground">
+                                  زیرمجموعه جدید زیر «{createUnderParentName}» در درخت دستگاه ایجاد می‌شود.
+                                </p>
+                              ) : null}
+                              <div className="flex gap-2">
+                              <Input
+                                value={newOrganizationName}
+                                onChange={(event) => setNewOrganizationName(event.target.value)}
+                                placeholder="نام زیرمجموعه جدید"
+                                disabled={isPending}
+                                onKeyDown={(event) => {
+                                  if (event.key === "Enter") {
+                                    event.preventDefault();
+                                    createOrganizationInline();
+                                  }
+                                }}
+                              />
+                              <Button
+                                type="button"
+                                variant="secondary"
+                                disabled={isPending || !newOrganizationName.trim()}
+                                onClick={createOrganizationInline}
+                              >
+                                ایجاد
+                              </Button>
+                              </div>
+                            </div>
+                          )}
+                        </>
                       )}
-                      {isScopedToOwnOrganization && (
+                      {canAssignToOwnUnit && (
                         <p className="text-xs text-muted-foreground">
-                          {assignToOwnOrganization
-                            ? "کاربر به خود سازمان شما وصل می‌شود و انتخاب زیرمجموعه غیرفعال است."
-                            : "فقط زیرمجموعه‌های زیر سازمان شما در لیست هستند (نه خود سازمان). برای ساخت زیر یک گره، ابتدا آن را انتخاب کنید."}
+                          {assignToOwnUnit
+                            ? isScopedToOwnOrganization
+                              ? "کاربر به خود سازمان شما وصل می‌شود."
+                              : "کاربر به خود وزارتخانه شما وصل می‌شود."
+                            : "فقط زیرمجموعه‌ها در لیست هستند. برای ساخت زیر یک گره، ابتدا آن را انتخاب کنید."}
                         </p>
                       )}
                     </div>

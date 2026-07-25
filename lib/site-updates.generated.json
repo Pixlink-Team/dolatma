@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "548770a333145d38b0625dfab7fa270efe267829",
+      "committedAt": "2026-07-25T18:38:13+03:30",
+      "title": "افزودن تنظیم دسترسی برای بخش بهترین اقدامات",
+      "subject": "Add best practices access permission"
+    },
+    {
       "hash": "ccb81dbf19995decd725255aa8960b31985fe9eb",
       "committedAt": "2026-07-25T18:31:17+03:30",
       "title": "ساده‌سازی افزودن کاربر با تفکیک فیلدهای ضروری و اختیاری",
