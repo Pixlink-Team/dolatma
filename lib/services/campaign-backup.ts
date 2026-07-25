@@ -326,6 +326,18 @@ export async function resolveStoredBackupPath(
   return { absolutePath, campaignSlug: campaign.slug };
 }
 
+/** Delete a stored backup ZIP from the server disk. */
+export async function deleteStoredCampaignBackup(
+  campaignId: string,
+  filename: string
+): Promise<{ deleted: true; filename: string } | null> {
+  const resolved = await resolveStoredBackupPath(campaignId, filename);
+  if (!resolved) return null;
+
+  await unlink(resolved.absolutePath);
+  return { deleted: true, filename: basename(filename) };
+}
+
 export async function runDailyCampaignBackups(): Promise<{
   created: StoredCampaignBackup[];
   failed: Array<{ campaignId: string; slug: string; error: string }>;

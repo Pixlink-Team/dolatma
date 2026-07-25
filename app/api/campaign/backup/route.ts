@@ -4,6 +4,7 @@ import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
 import * as pg from "@/lib/db/repository";
 import {
   createCampaignBackupZip,
+  deleteStoredCampaignBackup,
   listStoredCampaignBackups,
   resolveStoredBackupPath,
   saveCampaignBackupZip,
@@ -109,6 +110,58 @@ export async function POST(request: Request) {
       {
         success: false,
         error: error instanceof Error ? error.message : "خطا در ساخت پشتیبان",
+      },
+      { status: 500 }
+    );
+  }
+}
+
+/** Delete a stored backup ZIP from the server disk. */
+export async function DELETE(request: Request) {
+  if (!(await requireFullAdmin())) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  let campaignId: string | null = null;
+  let filename: string | null = null;
+
+  const contentType = request.headers.get("content-type") ?? "";
+  if (contentType.includes("application/json")) {
+    const body = (await request.json().catch(() => null)) as {
+      campaignId?: string;
+      filename?: string;
+    } | null;
+    campaignId = body?.campaignId?.trim() || null;
+    filename = body?.filename?.trim() || null;
+  } else {
+    const { searchParams } = new URL(request.url);
+    campaignId = searchParams.get("campaignId");
+    filename = searchParams.get("filename");
+  }
+
+  if (!campaignId || !filename) {
+    return NextResponse.json(
+      { error: "campaignId and filename are required" },
+      { status: 400 }
+    );
+  }
+
+  const campaign = await pg.pgGetCampaignById(campaignId);
+  if (!campaign) {
+    return NextResponse.json({ error: "Campaign not found" }, { status: 404 });
+  }
+
+  try {
+    const result = await deleteStoredCampaignBackup(campaignId, filename);
+    if (!result) {
+      return NextResponse.json({ error: "فایل پشتیبان یافت نشد" }, { status: 404 });
+    }
+    return NextResponse.json({ success: true, ...result });
+  } catch (error) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: error instanceof Error ? error.message : "خطا در حذف پشتیبان",
       },
       { status: 500 }
     );

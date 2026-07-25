@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "376e55bed23e4d2e3426baeaec9e23f0a9ddb438",
+      "committedAt": "2026-07-25T20:03:51+03:30",
+      "title": "رفع خطای بخش کاربران برای مدیران سطح سوم زیرمجموعه",
+      "subject": "Harden users tree flatten for nested org managers"
+    },
+    {
       "hash": "4172943aaab8b1f6a099d74f598701c05b261b28",
       "committedAt": "2026-07-25T19:59:14+03:30",
       "title": "مخفی‌سازی مرحله دستورکار در راه‌اندازی برای کاربران بدون دسترسی یا بدون زیرمجموعه",

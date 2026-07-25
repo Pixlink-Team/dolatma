@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
-import { Camera, Download, FileArchive, Loader2, Upload } from "lucide-react";
+import { Camera, Download, FileArchive, Loader2, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -41,7 +41,8 @@ export function CampaignTools({ isFullAdmin }: CampaignToolsProps) {
   const [isPending, startTransition] = useTransition();
   const [isCreating, setIsCreating] = useState(false);
   const [isLoadingList, setIsLoadingList] = useState(false);
-  const [latestBackup, setLatestBackup] = useState<StoredBackup | null>(null);
+  const [backups, setBackups] = useState<StoredBackup[]>([]);
+  const [deletingFilename, setDeletingFilename] = useState<string | null>(null);
   const importRef = useRef<HTMLInputElement>(null);
 
   const refreshBackups = useCallback(async () => {
@@ -53,14 +54,14 @@ export function CampaignTools({ isFullAdmin }: CampaignToolsProps) {
       );
       const result = (await response.json()) as {
         success?: boolean;
-        latest?: StoredBackup | null;
+        backups?: StoredBackup[];
         error?: string;
       };
       if (!response.ok) {
         toast.error(result.error ?? "خطا در خواندن فهرست پشتیبان‌ها");
         return;
       }
-      setLatestBackup(result.latest ?? null);
+      setBackups(result.backups ?? []);
     } catch {
       toast.error("خطا در خواندن فهرست پشتیبان‌ها");
     } finally {
@@ -101,12 +102,48 @@ export function CampaignTools({ isFullAdmin }: CampaignToolsProps) {
           toast.error(result.error ?? "ساخت پشتیبان ناموفق بود");
           return;
         }
-        setLatestBackup(result.backup);
         toast.success("پشتیبان ساخته و روی سایت ذخیره شد");
+        await refreshBackups();
       } catch {
         toast.error("ساخت پشتیبان ناموفق بود");
       } finally {
         setIsCreating(false);
+      }
+    });
+  };
+
+  const handleDeleteBackup = (backup: StoredBackup) => {
+    if (!campaignId) return;
+    if (
+      !window.confirm(
+        `پشتیبان «${formatBackupDate(backup.createdAt)}» از سرور حذف شود؟ این کار قابل بازگشت نیست.`
+      )
+    ) {
+      return;
+    }
+
+    setDeletingFilename(backup.filename);
+    startTransition(async () => {
+      try {
+        const response = await fetch("/api/campaign/backup", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ campaignId, filename: backup.filename }),
+        });
+        const result = (await response.json()) as {
+          success?: boolean;
+          error?: string;
+        };
+        if (!response.ok || !result.success) {
+          toast.error(result.error ?? "حذف پشتیبان ناموفق بود");
+          return;
+        }
+        toast.success("پشتیبان از سرور حذف شد");
+        await refreshBackups();
+      } catch {
+        toast.error("حذف پشتیبان ناموفق بود");
+      } finally {
+        setDeletingFilename(null);
       }
     });
   };
@@ -137,6 +174,8 @@ export function CampaignTools({ isFullAdmin }: CampaignToolsProps) {
   if (!isFullAdmin || !currentCampaign) return null;
 
   const busy = isPending || isCreating;
+  const latestBackup = backups[0] ?? null;
+  const totalBytes = backups.reduce((sum, item) => sum + item.sizeBytes, 0);
 
   return (
     <Card>
@@ -150,19 +189,70 @@ export function CampaignTools({ isFullAdmin }: CampaignToolsProps) {
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
               در حال بررسی پشتیبان‌های ذخیره‌شده…
             </span>
-          ) : latestBackup ? (
+          ) : backups.length > 0 ? (
             <span>
-              آخرین پشتیبان ذخیره‌شده:{" "}
-              <span className="font-medium text-foreground">
-                {formatBackupDate(latestBackup.createdAt)}
-              </span>
-              {" · "}
-              {formatBytes(latestBackup.sizeBytes)}
+              {backups.length} پشتیبان روی سرور · جمع حجم:{" "}
+              <span className="font-medium text-foreground">{formatBytes(totalBytes)}</span>
             </span>
           ) : (
-            <span>هنوز پشتیبان ذخیره‌شده‌ای وجود ندارد. می‌توانید دستی بسازید یا cron روزانه را فعال کنید.</span>
+            <span>
+              هنوز پشتیبان ذخیره‌شده‌ای وجود ندارد. می‌توانید دستی بسازید یا cron روزانه را فعال
+              کنید.
+            </span>
           )}
         </div>
+
+        {backups.length > 0 && (
+          <div className="max-h-64 space-y-2 overflow-y-auto rounded-md border p-2">
+            {backups.map((backup) => {
+              const isDeleting = deletingFilename === backup.filename;
+              return (
+                <div
+                  key={backup.filename}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-muted/30 px-3 py-2 text-sm"
+                >
+                  <div className="min-w-0 space-y-0.5">
+                    <div className="font-medium text-foreground">
+                      {formatBackupDate(backup.createdAt)}
+                      {latestBackup?.filename === backup.filename ? (
+                        <span className="mr-2 text-xs font-normal text-muted-foreground">
+                          (آخرین)
+                        </span>
+                      ) : null}
+                    </div>
+                    <div className="truncate text-xs text-muted-foreground" dir="ltr">
+                      {backup.filename} · {formatBytes(backup.sizeBytes)}
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 gap-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={busy || isDeleting}
+                      onClick={() => downloadStored(backup.filename)}
+                    >
+                      <Download className="h-3.5 w-3.5" />
+                      دانلود
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      disabled={busy || isDeleting}
+                      onClick={() => handleDeleteBackup(backup)}
+                    >
+                      {isDeleting ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-3.5 w-3.5" />
+                      )}
+                      حذف
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
 
         <div className="flex flex-wrap gap-2">
           <Button
@@ -181,28 +271,13 @@ export function CampaignTools({ isFullAdmin }: CampaignToolsProps) {
             دانلود PDF گزارش کامل
           </Button>
 
-          <Button
-            variant="default"
-            size="sm"
-            disabled={busy}
-            onClick={handleCreateBackup}
-          >
+          <Button variant="default" size="sm" disabled={busy} onClick={handleCreateBackup}>
             {isCreating ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <FileArchive className="h-4 w-4" />
             )}
             {isCreating ? "در حال ساخت…" : "ساخت پشتیبان (ذخیره روی سایت)"}
-          </Button>
-
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={busy || !latestBackup}
-            onClick={() => downloadStored(latestBackup?.filename)}
-          >
-            <Download className="h-4 w-4" />
-            دانلود آخرین پشتیبان
           </Button>
 
           <Button
