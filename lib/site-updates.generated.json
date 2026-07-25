@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "51d1f1d6e2c4e35f8adcc4491ae0c6dba439e169",
+      "committedAt": "2026-07-25T20:34:05+03:30",
+      "title": "نمایش مودال راهنمای خطا برای کاربر و مشاهده همان خطاها در رصد",
+      "subject": "Add explained error modals and surface them in audit"
+    },
+    {
       "hash": "6d7191e5e1025bc7313955a0608d89908750261d",
       "committedAt": "2026-07-25T20:30:23+03:30",
       "title": "نمایش پیشرفت راه‌اندازی دستگاه در پرونده هر کاربر در رصد کاربران",

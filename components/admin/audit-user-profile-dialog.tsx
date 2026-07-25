@@ -37,7 +37,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { PersianDateInput } from "@/components/ui/persian-date-input";
-import { OnboardingProgressCard } from "@/components/admin/onboarding-progress-card";
+import { OnboardingProgressSummary } from "@/components/admin/onboarding-progress-card";
 import {
   getUserAuditProfileAction,
   type UserAuditProfileResult,
@@ -382,13 +382,12 @@ export function AuditUserProfileDialog({
               در حال بارگذاری پیشرفت راه‌اندازی…
             </div>
           ) : onboarding?.progress && onboarding.progress.totalCount > 0 ? (
-            <OnboardingProgressCard
+            <OnboardingProgressSummary
               progress={onboarding.progress}
-              title="پیشرفت راه‌اندازی دستگاه"
               description={
                 onboarding.campaignTitle
-                  ? `وضعیت تکمیل مراحل راه‌اندازی دستگاه «${onboarding.progress.deviceName}» — راستا: ${onboarding.campaignTitle}`
-                  : `وضعیت تکمیل مراحل راه‌اندازی دستگاه «${onboarding.progress.deviceName}»`
+                  ? `دستگاه «${onboarding.progress.deviceName}» — راستا: ${onboarding.campaignTitle} — ${formatPersianNumber(onboarding.progress.completedCount)} از ${formatPersianNumber(onboarding.progress.totalCount)} مرحله`
+                  : undefined
               }
             />
           ) : null}

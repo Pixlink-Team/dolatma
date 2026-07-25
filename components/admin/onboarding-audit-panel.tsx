@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Check, Minus } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,11 +17,6 @@ interface OnboardingAuditPanelProps {
 
 export function OnboardingAuditPanel({ rows, campaignTitle }: OnboardingAuditPanelProps) {
   const [filter, setFilter] = useState<ProgressFilter>("all");
-
-  const stepKeys = useMemo(() => {
-    const first = rows[0];
-    return first?.steps.map((step) => ({ key: step.stepKey, title: step.title })) ?? [];
-  }, [rows]);
 
   const filtered = useMemo(() => {
     if (filter === "complete") return rows.filter((row) => row.percent === 100);
@@ -40,20 +34,16 @@ export function OnboardingAuditPanel({ rows, campaignTitle }: OnboardingAuditPan
           <div>
             <CardTitle className="text-base">پیشرفت راه‌اندازی دستگاه‌ها</CardTitle>
             <p className="mt-1 text-sm text-muted-foreground">
-              وضعیت تکمیل مراحل راه‌اندازی برای هر دستگاه
+              میزان تکمیل راه‌اندازی برای هر دستگاه
               {campaignTitle ? ` — راستا: ${campaignTitle}` : ""}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Badge variant="secondary">
-              کل: {formatPersianNumber(rows.length)}
-            </Badge>
+            <Badge variant="secondary">کل: {formatPersianNumber(rows.length)}</Badge>
             <Badge className="bg-emerald-600 hover:bg-emerald-600">
               کامل: {formatPersianNumber(completeCount)}
             </Badge>
-            <Badge variant="outline">
-              ناقص: {formatPersianNumber(incompleteCount)}
-            </Badge>
+            <Badge variant="outline">ناقص: {formatPersianNumber(incompleteCount)}</Badge>
           </div>
         </div>
         <div className="mt-3 flex flex-wrap gap-2">
@@ -77,29 +67,24 @@ export function OnboardingAuditPanel({ rows, campaignTitle }: OnboardingAuditPan
       </CardHeader>
       <CardContent>
         <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-sm" style={{ minWidth: "860px", direction: "rtl" }}>
+          <table className="w-full border-collapse text-sm" style={{ direction: "rtl" }}>
             <thead>
               <tr className="bg-muted/50 text-muted-foreground">
-                <th className="border-b px-3 py-3 text-right font-medium whitespace-nowrap">دستگاه</th>
-                <th className="border-b px-3 py-3 text-right font-medium whitespace-nowrap">پیشرفت</th>
-                {stepKeys.map((step) => (
-                  <th
-                    key={step.key}
-                    className="border-b px-3 py-3 text-center font-medium whitespace-nowrap"
-                  >
-                    {step.title}
-                  </th>
-                ))}
-                <th className="border-b px-3 py-3 text-right font-medium whitespace-nowrap">شناسنامه</th>
+                <th className="border-b px-3 py-3 text-right font-medium whitespace-nowrap">
+                  دستگاه
+                </th>
+                <th className="border-b px-3 py-3 text-right font-medium whitespace-nowrap">
+                  پیشرفت
+                </th>
+                <th className="border-b px-3 py-3 text-right font-medium whitespace-nowrap">
+                  شناسنامه
+                </th>
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 ? (
                 <tr>
-                  <td
-                    colSpan={3 + stepKeys.length}
-                    className="px-3 py-8 text-center text-muted-foreground"
-                  >
+                  <td colSpan={3} className="px-3 py-8 text-center text-muted-foreground">
                     موردی برای نمایش نیست.
                   </td>
                 </tr>
@@ -108,14 +93,15 @@ export function OnboardingAuditPanel({ rows, campaignTitle }: OnboardingAuditPan
                   <tr key={row.deviceId} className="hover:bg-muted/30">
                     <td className="border-b px-3 py-3 font-medium">{row.deviceName}</td>
                     <td className="border-b px-3 py-3">
-                      <div className="flex min-w-[120px] flex-col gap-1">
+                      <div className="flex min-w-[140px] max-w-[220px] flex-col gap-1">
                         <span
                           className={cn(
                             "text-xs font-medium",
                             row.percent === 100 ? "text-emerald-700" : "text-muted-foreground"
                           )}
                         >
-                          {formatPersianNumber(row.completedCount)}/{formatPersianNumber(row.totalCount)} (
+                          {formatPersianNumber(row.completedCount)}/
+                          {formatPersianNumber(row.totalCount)} (
                           {formatPersianNumber(row.percent)}٪)
                         </span>
                         <div className="h-1.5 overflow-hidden rounded-full bg-muted">
@@ -126,19 +112,6 @@ export function OnboardingAuditPanel({ rows, campaignTitle }: OnboardingAuditPan
                         </div>
                       </div>
                     </td>
-                    {row.steps.map((step) => (
-                      <td key={step.stepKey} className="border-b px-3 py-3 text-center" title={step.detail}>
-                        {step.done ? (
-                          <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-white">
-                            <Check className="h-3.5 w-3.5" strokeWidth={3} />
-                          </span>
-                        ) : (
-                          <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-muted text-muted-foreground">
-                            <Minus className="h-3.5 w-3.5" />
-                          </span>
-                        )}
-                      </td>
-                    ))}
                     <td className="border-b px-3 py-3">
                       <Link
                         href={`/admin/devices/${row.deviceId}`}
