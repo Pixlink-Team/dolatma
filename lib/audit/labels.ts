@@ -31,7 +31,7 @@ const ACTION_LABELS: Record<string, string> = {
 };
 
 const ENTITY_LABELS: Record<string, string> = {
-  campaign: "اقدام",
+  campaign: "راستا",
   billboard: "بیلبورد",
   poster: "پوستر",
   poster_version: "نسخه پوستر",

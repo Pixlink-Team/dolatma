@@ -124,7 +124,7 @@ export function BulkContentImport({
       return;
     }
     if (!campaignId) {
-      toast.error("اقدام فعال مشخص نیست");
+      toast.error("راستا فعال مشخص نیست");
       return;
     }
 

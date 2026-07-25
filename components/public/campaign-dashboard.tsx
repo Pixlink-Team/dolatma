@@ -97,7 +97,7 @@ function CampaignDashboardBody({
               data-export-hide
             >
               <ArrowRight className="h-3 w-3 transition-transform duration-[var(--duration-apple)] ease-[var(--ease-apple)] group-hover:translate-x-0.5" />
-              همه اقدامات
+              همه راستاها
             </Link>
             <h1 className="text-lg font-bold">{settings.title}</h1>
             {settings.tagline?.trim() ? (
@@ -284,7 +284,7 @@ function CampaignDashboardBody({
       </main>
 
       <footer className="border-t py-6 text-center text-sm text-muted-foreground">
-        <p>گزارش زنده اقدام — {settings.title}</p>
+        <p>گزارش زنده راستا — {settings.title}</p>
       </footer>
 
       {!exportMode && <ScrollToTopButton />}

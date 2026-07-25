@@ -150,7 +150,7 @@ export async function saveCampaignAction(data: Partial<CampaignSettings> & { id?
   if (isAuthError(auth)) return auth;
   // Single fixed campaign only — creating additional campaigns is disabled.
   if (!data.id) {
-    return { success: false as const, error: "ساخت اقدام جدید غیرفعال است" };
+    return { success: false as const, error: "ساخت راستا جدید غیرفعال است" };
   }
   const cleaned = stripFileAccessTokensDeep(data);
   const validationError = validateTitlePayload(cleaned);
@@ -170,7 +170,7 @@ export async function deleteCampaignAction(id: string) {
   const auth = await requireFullAdmin();
   if (isAuthError(auth)) return auth;
   void id;
-  return { success: false as const, error: "حذف اقدام غیرفعال است" };
+  return { success: false as const, error: "حذف راستا غیرفعال است" };
 }
 
 export async function updateSettingsAction(data: Partial<CampaignSettings>) {
@@ -185,7 +185,7 @@ export async function updateSettingsAction(data: Partial<CampaignSettings>) {
     action: "admin.settings_update",
     entityType: "campaign",
     entityId: cleaned.id,
-    label: cleaned.title ?? "به‌روزرسانی تنظیمات اقدام",
+    label: cleaned.title ?? "به‌روزرسانی تنظیمات راستا",
   });
   await revalidateAll(cleaned.slug);
   return result;

@@ -100,7 +100,7 @@ const featureLabels: { key: keyof CampaignFeatures; label: string }[] = [
   { key: "activities", label: "اقدامات" },
   { key: "pressPublications", label: "مجله و روزنامه" },
   { key: "submissions", label: "مشارکت کاربران" },
-  { key: "files", label: "فایل‌های اقدام" },
+  { key: "files", label: "فایل‌های راستا" },
   { key: "rawMedia", label: "راش تصویر" },
   { key: "forms", label: "فرم‌ها" },
 ];
@@ -323,18 +323,18 @@ export function SettingsAdmin({
       }
       setPagePassword("");
       setPagePasswordConfigured(!removePassword);
-      toast.success(removePassword ? "رمز صفحه اقدام حذف شد" : "رمز صفحه اقدام ذخیره شد");
+      toast.success(removePassword ? "رمز صفحه راستا حذف شد" : "رمز صفحه راستا ذخیره شد");
     });
   };
 
   return (
     <div className="space-y-6 max-w-2xl">
       <div>
-        <h1 className="text-2xl font-bold">تنظیمات اقدام</h1>
+        <h1 className="text-2xl font-bold">تنظیمات راستا</h1>
         <p className="text-sm text-muted-foreground">
           {canEditFullSettings
             ? "اطلاعات، پیامک و شبکه‌های اجتماعی"
-            : "رمز دسترسی به صفحه نمایش اقدام"}
+            : "رمز دسترسی به صفحه نمایش راستا"}
         </p>
       </div>
 
@@ -342,18 +342,18 @@ export function SettingsAdmin({
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">رمز صفحه نمایش اقدام</CardTitle>
+          <CardTitle className="text-base">رمز صفحه نمایش راستا</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-sm text-muted-foreground">
-            با تنظیم رمز، بازدیدکنندگان عمومی فقط بعد از وارد کردن رمز می‌توانند صفحه اقدام را ببینند.
+            با تنظیم رمز، بازدیدکنندگان عمومی فقط بعد از وارد کردن رمز می‌توانند صفحه راستا را ببینند.
             ادمین و کارفرما وقتی وارد پنل هستند بدون رمز صفحه را می‌بینند.
           </p>
           <Input
             type="password"
             value={pagePassword}
             onChange={(event) => setPagePassword(event.target.value)}
-            placeholder={pagePasswordConfigured ? "رمز جدید (برای تغییر)" : "رمز صفحه اقدام"}
+            placeholder={pagePasswordConfigured ? "رمز جدید (برای تغییر)" : "رمز صفحه راستا"}
             dir="ltr"
             className="text-left"
             autoComplete="new-password"
@@ -391,11 +391,11 @@ export function SettingsAdmin({
 
       {canEditFullSettings && (
       <Card>
-        <CardHeader><CardTitle className="text-base">اطلاعات اقدام</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-base">اطلاعات راستا</CardTitle></CardHeader>
         <CardContent>
           <form onSubmit={onSubmit} className="space-y-4">
             <div>
-              <Label>عنوان سایت / اقدام</Label>
+              <Label>عنوان سایت / راستا</Label>
               <Input {...form.register("title")} maxLength={CONTENT_TITLE_MAX_LENGTH} />
               <p className="mt-1 text-xs text-muted-foreground">
                 در تب مرورگر، عنوان صفحه و پیش‌نمایش اشتراک لینک استفاده می‌شود.
@@ -406,7 +406,7 @@ export function SettingsAdmin({
               <Label>تگ‌لاین</Label>
               <Input
                 {...form.register("tagline")}
-                placeholder="مثلاً گزارش زنده پیشرفت اقدام تبلیغاتی"
+                placeholder="مثلاً گزارش زنده پیشرفت راستا"
               />
               <p className="mt-1 text-xs text-muted-foreground">
                 متن کوتاه زیر عنوان؛ برای توضیح اشتراک در تلگرام، واتساپ و شبکه‌های اجتماعی اولویت دارد.
@@ -423,13 +423,13 @@ export function SettingsAdmin({
               <Label>برچسب محتوای مدیریت</Label>
               <Input {...form.register("adminOwnerLabel")} placeholder={DEFAULT_ADMIN_OWNER_LABEL} />
               <p className="mt-1 text-xs text-muted-foreground">
-                نام گروه محتوایی که توسط ادمین (بدون کاربر) ثبت شده — در صفحه عمومی اقدام نمایش داده می‌شود.
+                نام گروه محتوایی که توسط ادمین (بدون کاربر) ثبت شده — در صفحه عمومی راستا نمایش داده می‌شود.
               </p>
             </div>
 
             <div className="space-y-3 rounded-lg border p-4">
               <div>
-                <Label>موضوع‌های اقدام</Label>
+                <Label>موضوع‌های راستا</Label>
                 <p className="mt-1 text-xs text-muted-foreground">
                   موضوع و زیرموضوع تعریف کنید (مثلاً مهتاب ← هفته اول) تا هنگام آپلود محتوا و فیلتر صفحه اصلی استفاده شوند.
                 </p>
@@ -557,7 +557,7 @@ export function SettingsAdmin({
                 onChange={(url) => form.setValue("coverImageUrl", url)}
               />
               <p className="text-xs text-muted-foreground">
-                تصویر پیش‌نمایش هنگام اشتراک لینک اقدام در تلگرام، واتساپ و شبکه‌های اجتماعی.
+                تصویر پیش‌نمایش هنگام اشتراک لینک راستا در تلگرام، واتساپ و شبکه‌های اجتماعی.
               </p>
             </div>
             <div className="space-y-2">

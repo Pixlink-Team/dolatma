@@ -1310,7 +1310,7 @@ export function DirectivesAdmin({
 
             <DocumentUpload
               variant="letter"
-              label="نامه رسمی این اقدام"
+              label="نامه رسمی این راستا"
               value={letterUpload.url}
               fileName={letterUpload.fileName}
               fileSize={letterUpload.fileSize}
@@ -1529,7 +1529,7 @@ export function DirectivesAdmin({
                     </>
                   ) : (
                     <>
-                      <SelectItem value="all">همه کاربران این اقدام</SelectItem>
+                      <SelectItem value="all">همه کاربران این راستا</SelectItem>
                       <SelectItem value="ministry_city">وزارتخانه و استان</SelectItem>
                       <SelectItem value="region">منطقه جغرافیایی</SelectItem>
                       <SelectItem value="users">افراد انتخابی</SelectItem>
@@ -1674,7 +1674,7 @@ export function DirectivesAdmin({
                     <p className="text-sm text-muted-foreground">
                       {audienceScope === "subordinates"
                         ? "هنوز کاربر زیرمجموعه‌ای ندارید"
-                        : "کاربری در این اقدام نیست"}
+                        : "کاربری در این راستا نیست"}
                     </p>
                   ) : (
                     campaignUsers.map((user) => (

@@ -61,7 +61,7 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
         <h1 className="text-2xl font-bold">داشبورد</h1>
         <Card>
           <CardContent className="p-6 text-sm text-muted-foreground">
-            اقدامی برای حساب شما تعریف نشده است. با مدیر تماس بگیرید.
+            راستایی برای حساب شما تعریف نشده است. با مدیر تماس بگیرید.
           </CardContent>
         </Card>
       </div>
@@ -75,7 +75,7 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
         <h1 className="text-2xl font-bold">داشبورد</h1>
         <Card>
           <CardContent className="p-6 text-sm text-muted-foreground">
-            اقدام انتخاب‌شده در دسترس نیست. با مدیر تماس بگیرید.
+            راستا انتخاب‌شده در دسترس نیست. با مدیر تماس بگیرید.
           </CardContent>
         </Card>
       </div>
@@ -212,8 +212,8 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
         <Card>
           <CardContent className="p-6 text-sm text-muted-foreground">
             {canManageAll
-              ? "هیچ بخشی برای این اقدام فعال نیست. از تنظیمات اقدام بخش‌های مورد نظر را فعال کنید."
-              : "هیچ بخشی برای شما در این اقدام فعال نیست. با مدیر تماس بگیرید."}
+              ? "هیچ بخشی برای این راستا فعال نیست. از تنظیمات راستا بخش‌های مورد نظر را فعال کنید."
+              : "هیچ بخشی برای شما در این راستا فعال نیست. با مدیر تماس بگیرید."}
           </CardContent>
         </Card>
       )}

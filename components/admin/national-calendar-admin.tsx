@@ -108,7 +108,7 @@ export function NationalCalendarAdmin({
                   <td className="p-3">
                     <div className="flex flex-wrap gap-1">
                       <Badge variant={event.kind === "campaign" ? "default" : "secondary"}>
-                        {event.kind === "campaign" ? "اقدام" : "دستورکار"}
+                        {event.kind === "campaign" ? "راستا" : "دستورکار"}
                       </Badge>
                       {event.crisisMode ? (
                         <Badge variant="destructive">بحران</Badge>

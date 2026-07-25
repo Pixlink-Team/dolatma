@@ -134,8 +134,8 @@ export function CampaignFilesSection({ files, groups }: CampaignFilesSectionProp
   return (
     <CollapsibleSection
       id="files"
-      title="فایل‌های اقدام"
-      description="دانلود PDF، Word، Excel و سایر فایل‌های مرتبط با اقدام"
+      title="فایل‌های راستا"
+      description="دانلود PDF، Word، Excel و سایر فایل‌های مرتبط با راستا"
     >
       <SectionTopCompaniesBox groups={filteredGroups} />
       {filteredFiles.length === 0 ? (

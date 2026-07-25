@@ -4,7 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Filter, KeyRound, Plus, RotateCcw } from "lucide-react";
+import { ChevronDown, ChevronLeft, Filter, KeyRound, Plus, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -121,6 +121,8 @@ export function UsersAdmin({
   const [bulkPermissions, setBulkPermissions] = useState<ContributorPermissions>(
     defaultContributorPermissions()
   );
+  /** Parents in this set are collapsed; everyone else with children stays expanded. */
+  const [collapsedParentIds, setCollapsedParentIds] = useState<Set<string>>(() => new Set());
 
   const parentOptions = useMemo(
     () => rows.filter((user) => user.role === "ministry_parent"),
@@ -197,6 +199,74 @@ export function UsersAdmin({
     filterOrganizationId !== FILTER_ALL ||
     filterProvince !== FILTER_ALL ||
     filterCity !== FILTER_ALL;
+
+  const filteredIds = useMemo(
+    () => new Set(filteredRows.map((user) => user.id)),
+    [filteredRows]
+  );
+
+  const childrenByParent = useMemo(() => {
+    const map = new Map<string, AdminUser[]>();
+    for (const user of filteredRows) {
+      if (!user.parentUserId || !filteredIds.has(user.parentUserId)) continue;
+      const list = map.get(user.parentUserId) ?? [];
+      list.push(user);
+      map.set(user.parentUserId, list);
+    }
+    for (const list of map.values()) {
+      list.sort((a, b) => a.name.localeCompare(b.name, "fa"));
+    }
+    return map;
+  }, [filteredRows, filteredIds]);
+
+  const { treeRows, depthById, childCountById } = useMemo(() => {
+    const nestedChildIds = new Set<string>();
+    for (const [, children] of childrenByParent) {
+      for (const child of children) nestedChildIds.add(child.id);
+    }
+
+    const roleRank = (role: AdminRole) => {
+      if (role === "ministry_parent") return 0;
+      if (role === "sub_user") return 2;
+      return 1;
+    };
+
+    const roots = filteredRows
+      .filter((user) => !nestedChildIds.has(user.id))
+      .sort((a, b) => {
+        const byRole = roleRank(a.role) - roleRank(b.role);
+        if (byRole !== 0) return byRole;
+        return a.name.localeCompare(b.name, "fa");
+      });
+
+    const ordered: AdminUser[] = [];
+    const depths = new Map<string, number>();
+    const counts = new Map<string, number>();
+
+    for (const root of roots) {
+      const children = childrenByParent.get(root.id) ?? [];
+      counts.set(root.id, children.length);
+      depths.set(root.id, 0);
+      ordered.push(root);
+      if (children.length === 0 || collapsedParentIds.has(root.id)) continue;
+      for (const child of children) {
+        depths.set(child.id, 1);
+        counts.set(child.id, 0);
+        ordered.push(child);
+      }
+    }
+
+    return { treeRows: ordered, depthById: depths, childCountById: counts };
+  }, [filteredRows, childrenByParent, collapsedParentIds]);
+
+  const toggleParentExpanded = (parentId: string) => {
+    setCollapsedParentIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(parentId)) next.delete(parentId);
+      else next.add(parentId);
+      return next;
+    });
+  };
 
   const resetUsersFilters = () => {
     setFilterMinistryId(FILTER_ALL);
@@ -539,7 +609,7 @@ export function UsersAdmin({
         </h1>
         <p className="text-sm text-muted-foreground">
           {isFullMode
-            ? "تعریف وزارتخانه، یوزر مادر، کاربر زیرمجموعه، دسترسی اقدام و بخش‌های پنل"
+            ? "تعریف وزارتخانه، یوزر مادر، کاربر زیرمجموعه، دسترسی راستا و بخش‌های پنل — نمایش درختی یوزر مادر و زیرمجموعه‌ها"
             : isSubUsersMode
               ? "ایجاد و مدیریت کاربران زیرمجموعه با استان، شهر و شماره موبایل"
               : "تعیین وزارتخانه کاربران"}
@@ -643,7 +713,7 @@ export function UsersAdmin({
           </div>
 
           <AdminDataTable
-            data={filteredRows}
+            data={treeRows}
             selectable={isFullMode}
             searchKeys={[
               "name",
@@ -654,9 +724,67 @@ export function UsersAdmin({
               "accountManagerName",
               "ministryName",
               "organizationName",
+              "parentUserName",
             ]}
             columns={[
-              { key: "name", label: "نام" },
+              {
+                key: "name",
+                label: "نام",
+                truncate: false,
+                render: (item) => {
+                  const depth = depthById.get(item.id) ?? 0;
+                  const childCount = childCountById.get(item.id) ?? 0;
+                  const expanded = !collapsedParentIds.has(item.id);
+                  const orphanSubUser =
+                    depth === 0 && item.role === "sub_user" && Boolean(item.parentUserName);
+                  const nestedSubUser = depth > 0 && Boolean(item.parentUserName);
+
+                  return (
+                    <div
+                      className="flex items-start gap-1"
+                      style={{ paddingRight: depth * 20 }}
+                    >
+                      {childCount > 0 ? (
+                        <button
+                          type="button"
+                          className="mt-0.5 shrink-0 rounded p-0.5 hover:bg-muted"
+                          onClick={() => toggleParentExpanded(item.id)}
+                          aria-label={expanded ? "بستن زیرمجموعه‌ها" : "باز کردن زیرمجموعه‌ها"}
+                        >
+                          {expanded ? (
+                            <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                          ) : (
+                            <ChevronLeft className="h-4 w-4 text-muted-foreground" />
+                          )}
+                        </button>
+                      ) : (
+                        <span className="mt-0.5 inline-block h-4 w-4 shrink-0" />
+                      )}
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span
+                            className={
+                              childCount > 0 ? "font-semibold leading-5" : "leading-5"
+                            }
+                          >
+                            {item.name}
+                          </span>
+                          {childCount > 0 ? (
+                            <Badge variant="secondary" className="text-[10px] font-normal">
+                              {formatPersianNumber(childCount)} زیرمجموعه
+                            </Badge>
+                          ) : null}
+                        </div>
+                        {orphanSubUser || nestedSubUser ? (
+                          <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
+                            زیردستِ {item.parentUserName}
+                          </p>
+                        ) : null}
+                      </div>
+                    </div>
+                  );
+                },
+              },
               {
                 key: "email",
                 label: "نام کاربری",
@@ -697,7 +825,7 @@ export function UsersAdmin({
                 ? [
                     {
                       key: "campaignIds" as const,
-                      label: "اقدامات",
+                      label: "راستاها",
                       render: (item: AdminUser) =>
                         (item.campaignIds ?? [])
                           .map((id) => campaigns.find((campaign) => campaign.id === id)?.title ?? id)
@@ -1020,7 +1148,7 @@ export function UsersAdmin({
                 )}
 
                 <div className="space-y-2">
-                  <Label>دسترسی به اقدامات</Label>
+                  <Label>دسترسی به راستاها</Label>
                   <div className="space-y-2 rounded-lg border p-3">
                     {campaigns.map((campaign) => (
                       <label key={campaign.id} className="flex items-center gap-2 text-sm">
@@ -1037,7 +1165,7 @@ export function UsersAdmin({
 
                 {rolesWithCampaignAccess.includes(selectedRole) && selectedCampaignIds.length > 0 && (
                   <div className="space-y-3">
-                    <Label>دسترسی به بخش‌های پنل (برای هر اقدام)</Label>
+                    <Label>دسترسی به بخش‌های پنل (برای هر راستا)</Label>
                     {selectedCampaignIds.map((campaignId) => {
                       const campaign = campaigns.find((item) => item.id === campaignId);
                       const permissions = normalizeContributorPermissions(
@@ -1098,10 +1226,10 @@ export function UsersAdmin({
             </p>
 
             <div className="space-y-2">
-              <Label>دسترسی به اقدامات</Label>
+              <Label>دسترسی به راستاها</Label>
               <div className="space-y-2 rounded-lg border p-3 max-h-48 overflow-y-auto">
                 {campaigns.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">اقدامی تعریف نشده است.</p>
+                  <p className="text-sm text-muted-foreground">راستایی تعریف نشده است.</p>
                 ) : (
                   campaigns.map((campaign) => (
                     <label key={campaign.id} className="flex items-center gap-2 text-sm">
@@ -1116,7 +1244,7 @@ export function UsersAdmin({
                 )}
               </div>
               <p className="text-xs text-muted-foreground">
-                اگر هیچ اقدامی انتخاب نشود، دسترسی همه کاربران انتخاب‌شده به اقدامات پاک می‌شود.
+                اگر هیچ راستایی انتخاب نشود، دسترسی همه کاربران انتخاب‌شده به راستاها پاک می‌شود.
               </p>
             </div>
 

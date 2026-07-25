@@ -106,9 +106,9 @@ export function CampaignOverviewSection({ data }: CampaignOverviewSectionProps) 
   ].filter((item) => item.show);
 
   return (
-    <section id="overview" data-export-section data-export-label="خلاصه اقدام">
+    <section id="overview" data-export-section data-export-label="خلاصه راستا">
       <SectionHeader
-        title="خلاصه اقدام"
+        title="خلاصه راستا"
         description={
           filterLabel
             ? `آمار محتوای شرکت‌ها: ${filterLabel}`

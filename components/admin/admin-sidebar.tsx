@@ -76,7 +76,7 @@ const allNavItems: {
 }[] = [
   { href: "/admin", label: "داشبورد", icon: LayoutDashboard },
   { href: "/admin/profile", label: "پروفایل من", icon: UserCircle },
-  { href: "/admin/settings", label: "تنظیمات اقدام", icon: Settings, adminOrClientOnly: true },
+  { href: "/admin/settings", label: "تنظیمات راستا", icon: Settings, adminOrClientOnly: true },
   { href: "/admin/capacity-map", label: "نقشه ملی ظرفیت", icon: Map, adminOrClientOnly: true },
   { href: "/admin/calendar", label: "تقویم ملی", icon: CalendarDays, alwaysVisible: true },
   { href: "/admin/tutorials", label: "آموزش بخش‌ها", icon: GraduationCap, adminOnly: true },
@@ -225,10 +225,10 @@ export function AdminSidebar() {
         )}
         {campaigns.length > 1 && (
           <div className="space-y-1.5">
-            <p className="text-xs text-muted-foreground">اقدام فعال</p>
+            <p className="text-xs text-muted-foreground">راستا فعال</p>
             <Select value={campaignId} onValueChange={setCampaignId}>
               <SelectTrigger className="h-9 text-xs">
-                <SelectValue placeholder="انتخاب اقدام" />
+                <SelectValue placeholder="انتخاب راستا" />
               </SelectTrigger>
               <SelectContent>
                 {campaigns.map((c) => (

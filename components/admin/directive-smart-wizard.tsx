@@ -608,7 +608,7 @@ export function DirectiveSmartWizard({
           </div>
           <DocumentUpload
             variant="letter"
-            label="نامه رسمی این اقدام"
+            label="نامه رسمی این راستا"
             value={letterUpload.url}
             fileName={letterUpload.fileName}
             fileSize={letterUpload.fileSize}

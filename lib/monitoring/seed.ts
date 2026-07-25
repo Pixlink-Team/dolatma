@@ -527,8 +527,8 @@ export async function seedMonitoringModule(campaignId?: string | null): Promise<
 
   if (campaignId) {
     await pgUpsertCampaignMonitoringSettings(campaignId, {
-      keywords: ["اقدام ملی", "روایت رسمی", "دستگاه‌های اجرایی"],
-      hashtags: ["#اقدام_ملی", "#رصد_رسانه"],
+      keywords: ["راستا ملی", "روایت رسمی", "دستگاه‌های اجرایی"],
+      hashtags: ["#راستا_ملی", "#رصد_رسانه"],
       slogans: ["هم‌صدایی ملی"],
       spokespersonNames: ["سخنگوی ستاد"],
       organizationNames: orgDefs.map((o) => o.shortName),

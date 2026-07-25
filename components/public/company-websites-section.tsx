@@ -105,7 +105,7 @@ export function CompanyWebsitesSection({ websites, groups }: CompanyWebsitesSect
     <CollapsibleSection
       id="company-websites"
       title="سایت‌های شرکت‌ها"
-      description="معرفی سایت‌هایی که شرکت‌ها در اقدام دارند"
+      description="معرفی سایت‌هایی که شرکت‌ها در راستا دارند"
     >
       <SectionTopCompaniesBox groups={locationFilteredGroups} />
       {filteredWebsites.length === 0 ? (

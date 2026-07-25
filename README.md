@@ -1,6 +1,6 @@
-# گزارش زنده کمپین — Campaign Live Report
+# گزارش زنده راستا — Rasta Live Report
 
-A responsive RTL Persian single-page campaign live report website with a full admin panel.
+A responsive RTL Persian single-page Rasta live report website with a full admin panel.
 
 ## Features
 

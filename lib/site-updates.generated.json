@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "da5cd7c9359e77b129c3056b55441fc2d5da0a0a",
+      "committedAt": "2026-07-25T11:06:40+03:30",
+      "title": "اعمال واقعی قطع دسترسی کاربران به بخش‌های پنل",
+      "subject": "Enforce contributor section permissions when admin revokes access"
+    },
+    {
       "hash": "9fdd66efb153064d452849c3c4aea72f7aa48d0e",
       "committedAt": "2026-07-25T11:04:58+03:30",
       "title": "بسته شدن پیش‌فرض کارت‌های درخت دستگاه‌ها",

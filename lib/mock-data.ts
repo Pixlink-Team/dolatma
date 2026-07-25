@@ -39,10 +39,10 @@ export const mockCampaigns: CampaignSettings[] = [
   {
     id: "campaign-1",
     slug: "summer-1404",
-    title: "اقدام تابستانی ۱۴۰۴",
-    tagline: "گزارش زنده پیشرفت اقدام تبلیغاتی",
+    title: "راستا تابستانی ۱۴۰۴",
+    tagline: "گزارش زنده پیشرفت راستا",
     description:
-      "گزارش زنده پیشرفت اقدام تبلیغاتی تابستانی شامل بیلبورد، پوستر، ویدیو، آمار سایت و مشارکت کاربران.",
+      "گزارش زنده پیشرفت راستا شامل بیلبورد، پوستر، ویدیو، آمار سایت و مشارکت کاربران.",
     status: "live",
     startDate: "2025-03-21",
     endDate: "2025-06-21",
@@ -57,8 +57,8 @@ export const mockCampaigns: CampaignSettings[] = [
   {
     id: "campaign-2",
     slug: "billboard-winter",
-    title: "اقدام بیلبورد زمستانه",
-    description: "اقدام فقط بیلبورد و پوستر — بدون سایت و مشارکت کاربران.",
+    title: "راستا بیلبورد زمستانه",
+    description: "راستا فقط بیلبورد و پوستر — بدون سایت و مشارکت کاربران.",
     status: "live",
     startDate: "2025-01-01",
     endDate: "2025-03-20",
@@ -88,7 +88,7 @@ export const mockCampaigns: CampaignSettings[] = [
   {
     id: "campaign-3",
     slug: "social-reels",
-    title: "اقدام شبکه‌های اجتماعی",
+    title: "راستا شبکه‌های اجتماعی",
     description: "فقط پوستر و ویدیو برای شبکه‌های اجتماعی.",
     status: "completed",
     startDate: "2024-12-01",
@@ -187,7 +187,7 @@ export const mockPosterCategories: MediaCategory[] = [
 ];
 
 export const mockPosters: Poster[] = [
-  { id: "p-1", campaignId: "campaign-1", categoryId: "pc-1", title: "پوستر اقدام تابستان", description: "طراحی اصلی", published: true, sortOrder: 1, createdAt: now, updatedAt: now },
+  { id: "p-1", campaignId: "campaign-1", categoryId: "pc-1", title: "پوستر راستا تابستان", description: "طراحی اصلی", published: true, sortOrder: 1, createdAt: now, updatedAt: now },
   { id: "p-2", campaignId: "campaign-1", categoryId: "pc-2", title: "استوری معرفی محصول", published: true, sortOrder: 1, createdAt: now, updatedAt: now },
   { id: "p-3", campaignId: "campaign-2", categoryId: "pc-3", title: "پوستر زمستانه", published: true, sortOrder: 1, createdAt: now, updatedAt: now },
   { id: "p-4", campaignId: "campaign-3", categoryId: "pc-4", title: "پست اینستاگرام", published: true, sortOrder: 1, createdAt: now, updatedAt: now },
@@ -251,7 +251,7 @@ export const mockSubmissions: CampaignSubmission[] = [
     participantPhone: "09121234567",
     participantEmail: "ali@example.com",
     title: "عکس در پارک",
-    text: "عکس گرفتم با محصول اقدام در پارک ملت",
+    text: "عکس گرفتم با محصول راستا در پارک ملت",
     mediaUrl: "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=400&h=300&fit=crop",
     status: "approved",
     published: true,

@@ -3,8 +3,8 @@ import type { LoginPageSettings } from "@/lib/types";
 export const DEFAULT_LOGIN_PAGE_SETTINGS: LoginPageSettings = {
   eyebrow: "ورود به سامانه",
   title: "25 درجه قرار همدلی",
-  subtitle: "مدیریت گزارش‌ها و محتوای اقدام",
-  footer: "سامانه مدیریت گزارش زنده اقدام",
+  subtitle: "مدیریت گزارش‌ها و محتوای راستا",
+  footer: "سامانه مدیریت گزارش زنده راستا",
 };
 
 const MAX_FIELD_LENGTH = 120;

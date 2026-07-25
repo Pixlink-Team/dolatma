@@ -128,7 +128,7 @@ export function CampaignTools({ isFullAdmin }: CampaignToolsProps) {
         return;
       }
 
-      toast.success("اقدام با موفقیت import شد");
+      toast.success("راستا با موفقیت import شد");
       window.location.reload();
     });
   };

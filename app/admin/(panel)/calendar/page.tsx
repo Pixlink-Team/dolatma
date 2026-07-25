@@ -31,7 +31,7 @@ export default async function NationalCalendarPage() {
       <div>
         <h1 className="text-2xl font-bold">تقویم ملی</h1>
         <p className="text-sm text-muted-foreground">
-          اقدامات و دستورکارها — هشدار تداخل فقط وقتی دستگاه، استان و موضوع هم‌زمان باشند.
+          راستاها و دستورکارها — هشدار تداخل فقط وقتی دستگاه، استان و موضوع هم‌زمان باشند.
         </p>
       </div>
       <NationalCalendarAdmin
