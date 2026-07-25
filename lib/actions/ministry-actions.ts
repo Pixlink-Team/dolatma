@@ -17,6 +17,7 @@ import { isPostgresConfigured } from "@/lib/utils";
 
 async function revalidateMinistryPages() {
   revalidatePath("/admin/ministries");
+  revalidatePath("/admin/devices");
   revalidatePath("/admin/users");
   revalidatePath("/admin/directives");
 }
@@ -76,6 +77,8 @@ export async function saveOrganizationAction(data: {
   name: string;
   fullName?: string | null;
   isActive?: boolean;
+  /** Device-tree parent; defaults to ministry root so nested orgs appear under the right node. */
+  parentId?: string | null;
 }) {
   const session = await getAuthSession();
   if (!session) {

@@ -40,6 +40,7 @@ function mapOrganization(row: Record<string, unknown>): MinistryOrganization {
       row.created_at instanceof Date
         ? row.created_at.toISOString()
         : String(row.created_at ?? new Date().toISOString()),
+    parentId: row.parent_id ? String(row.parent_id) : null,
   };
 }
 
@@ -95,9 +96,10 @@ export async function pgListMinistries(options?: {
   }
 
   const orgRows = await sql`
-    SELECT o.*, m.name AS ministry_name
+    SELECT o.*, m.name AS ministry_name, d.parent_id AS parent_id
     FROM ministry_organizations o
     JOIN ministries m ON m.id = o.ministry_id
+    LEFT JOIN devices d ON d.id = o.id
     ORDER BY o.name ASC
   `;
   const byMinistry = new Map<string, MinistryOrganization[]>();
@@ -118,16 +120,18 @@ export async function pgListOrganizations(ministryId?: string): Promise<Ministry
   const sql = getSql();
   const rows = ministryId
     ? await sql`
-        SELECT o.*, m.name AS ministry_name
+        SELECT o.*, m.name AS ministry_name, d.parent_id AS parent_id
         FROM ministry_organizations o
         JOIN ministries m ON m.id = o.ministry_id
+        LEFT JOIN devices d ON d.id = o.id
         WHERE o.ministry_id = ${ministryId}
         ORDER BY o.name ASC
       `
     : await sql`
-        SELECT o.*, m.name AS ministry_name
+        SELECT o.*, m.name AS ministry_name, d.parent_id AS parent_id
         FROM ministry_organizations o
         JOIN ministries m ON m.id = o.ministry_id
+        LEFT JOIN devices d ON d.id = o.id
         ORDER BY m.name ASC, o.name ASC
       `;
   return rows.map((row) => mapOrganization(row as Record<string, unknown>));
@@ -138,9 +142,10 @@ export async function pgGetOrganizationById(
 ): Promise<MinistryOrganization | null> {
   const sql = getSql();
   const rows = await sql`
-    SELECT o.*, m.name AS ministry_name
+    SELECT o.*, m.name AS ministry_name, d.parent_id AS parent_id
     FROM ministry_organizations o
     JOIN ministries m ON m.id = o.ministry_id
+    LEFT JOIN devices d ON d.id = o.id
     WHERE o.id = ${id}
     LIMIT 1
   `;
@@ -229,6 +234,8 @@ export async function pgSaveOrganization(data: {
   name: string;
   fullName?: string | null;
   isActive?: boolean;
+  /** Device-tree parent; defaults to the ministry root. */
+  parentId?: string | null;
 }): Promise<{ success: true; id: string } | { success: false; error: string }> {
   const sql = getSql();
   await ensureMinistryOrgSchema();
@@ -237,6 +244,7 @@ export async function pgSaveOrganization(data: {
   const name = data.name.trim();
   const fullName = data.fullName?.trim() || null;
   const isActive = data.isActive !== false;
+  const deviceParentId = data.parentId?.trim() || ministryId;
 
   if (!ministryId) return { success: false, error: "وزارتخانه الزامی است" };
   if (!name) return { success: false, error: "نام زیرمجموعه الزامی است" };
@@ -269,7 +277,7 @@ export async function pgSaveOrganization(data: {
         name: fullName || name,
         shortName: name,
         type: "organization",
-        parentId: ministryId,
+        parentId: deviceParentId,
         status: isActive ? "active" : "inactive",
         activityScope: "national",
       });

@@ -60,6 +60,11 @@ export interface MinistryOrganization {
   fullName?: string | null;
   isActive?: boolean;
   createdAt: string;
+  /**
+   * Device-tree parent (from `devices.parent_id`).
+   * Legacy org table is flat under ministry; nesting lives on the device tree.
+   */
+  parentId?: string | null;
 }
 
 /** Unified organizational entity (ministry, org, municipality, …). */

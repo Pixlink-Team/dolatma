@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "de38a1bb42cb8362e4be80220a5be62066250513",
+      "committedAt": "2026-07-25T17:00:44+03:30",
+      "title": "جلوگیری از دادن دسترسی‌هایی که خود کاربر ندارد و فعال‌سازی یکجای دسترسی‌ها",
+      "subject": "Cap subtree permission grants to actor access"
+    },
+    {
       "hash": "0d4af21b71fb90bba5bbd63a85281212a546a74a",
       "committedAt": "2026-07-25T16:58:44+03:30",
       "title": "اصلاح نام نمایشی از این نرم‌افزار به راستا",

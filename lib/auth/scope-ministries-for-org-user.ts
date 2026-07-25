@@ -41,7 +41,10 @@ export function scopeMinistriesForOrgUser(
     if (device.id === ministryId) continue;
     const existing = existingById.get(device.id);
     if (existing) {
-      pushOption(existing);
+      pushOption({
+        ...existing,
+        parentId: existing.parentId ?? device.parentId ?? null,
+      });
       continue;
     }
     pushOption({
@@ -51,6 +54,7 @@ export function scopeMinistriesForOrgUser(
       fullName: device.name,
       isActive: device.status !== "inactive",
       createdAt: device.createdAt,
+      parentId: device.parentId ?? null,
     });
   }
 
@@ -64,6 +68,7 @@ export function scopeMinistriesForOrgUser(
         fullName: null,
         isActive: true,
         createdAt: parentUser.createdAt,
+        parentId: null,
       }
     );
   }

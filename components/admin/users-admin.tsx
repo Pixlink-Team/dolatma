@@ -85,6 +85,43 @@ function compareUsersByName(a: AdminUser, b: AdminUser): number {
   return (a.name ?? "").localeCompare(b.name ?? "", "fa");
 }
 
+/** Flatten org tree for selects, preserving device-tree order with visual depth. */
+function flattenOrganizationsForSelect(
+  orgs: MinistryOrganization[],
+  ministryId: string
+): { id: string; name: string; depth: number; label: string }[] {
+  const byParent = new Map<string, MinistryOrganization[]>();
+  const ids = new Set(orgs.map((org) => org.id));
+
+  for (const org of orgs) {
+    const rawParent = org.parentId?.trim() || ministryId;
+    const parentKey = rawParent !== ministryId && ids.has(rawParent) ? rawParent : ministryId;
+    const list = byParent.get(parentKey) ?? [];
+    list.push(org);
+    byParent.set(parentKey, list);
+  }
+
+  for (const list of byParent.values()) {
+    list.sort((a, b) => a.name.localeCompare(b.name, "fa"));
+  }
+
+  const result: { id: string; name: string; depth: number; label: string }[] = [];
+  const visit = (parentKey: string, depth: number) => {
+    for (const org of byParent.get(parentKey) ?? []) {
+      const indent = depth > 0 ? `${"— ".repeat(depth)}` : "";
+      result.push({
+        id: org.id,
+        name: org.name,
+        depth,
+        label: `${indent}${org.name}`,
+      });
+      visit(org.id, depth + 1);
+    }
+  };
+  visit(ministryId, 0);
+  return result;
+}
+
 interface UsersAdminProps {
   initialUsers: AdminUser[];
   campaigns: CampaignSettings[];
@@ -125,6 +162,8 @@ export function UsersAdmin({
   const [ministriesList, setMinistriesList] = useState(ministries);
   const [creatingOrganization, setCreatingOrganization] = useState(false);
   const [newOrganizationName, setNewOrganizationName] = useState("");
+  /** Device-tree parent for the inline "create organization" flow. */
+  const [createUnderParentId, setCreateUnderParentId] = useState<string | null>(null);
   const [filterMinistryId, setFilterMinistryId] = useState(FILTER_ALL);
   const [filterOrganizationId, setFilterOrganizationId] = useState(FILTER_ALL);
   const [filterProvince, setFilterProvince] = useState(FILTER_ALL);
@@ -159,21 +198,23 @@ export function UsersAdmin({
   }, [rows, ministriesList]);
 
   const filterOrganizationOptions = useMemo(() => {
-    if (filterMinistryId === FILTER_ALL) return [] as { id: string; name: string }[];
-    const map = new Map<string, string>();
-    for (const user of rows) {
-      if (user.ministryId === filterMinistryId && user.organizationId) {
-        map.set(user.organizationId, user.organizationName?.trim() || "زیرمجموعه");
-      }
-    }
+    if (filterMinistryId === FILTER_ALL) return [] as { id: string; name: string; label: string }[];
     const ministryOrgs =
       ministriesList.find((ministry) => ministry.id === filterMinistryId)?.organizations ?? [];
-    for (const org of ministryOrgs) {
-      map.set(org.id, org.name);
+    const flattened = flattenOrganizationsForSelect(ministryOrgs, filterMinistryId);
+    const seen = new Set(flattened.map((org) => org.id));
+
+    // Include user-only org ids that are missing from the device catalog.
+    for (const user of rows) {
+      if (user.ministryId !== filterMinistryId || !user.organizationId || seen.has(user.organizationId)) {
+        continue;
+      }
+      seen.add(user.organizationId);
+      const name = user.organizationName?.trim() || "زیرمجموعه";
+      flattened.push({ id: user.organizationId, name, depth: 0, label: name });
     }
-    return [...map.entries()]
-      .map(([id, name]) => ({ id, name }))
-      .sort((a, b) => a.name.localeCompare(b.name, "fa"));
+
+    return flattened;
   }, [rows, ministriesList, filterMinistryId]);
 
   const filterProvinceOptions = useMemo(() => {
@@ -372,6 +413,7 @@ export function UsersAdmin({
           fullName: null,
           isActive: true,
           createdAt: new Date(0).toISOString(),
+          parentId: ministryId,
         });
       }
     }
@@ -388,6 +430,7 @@ export function UsersAdmin({
           fullName: null,
           isActive: true,
           createdAt: editingUser.createdAt,
+          parentId: ministryId,
         });
       }
     }
@@ -404,16 +447,41 @@ export function UsersAdmin({
     rows,
   ]);
 
+  const organizationSelectOptions = useMemo(() => {
+    const ministryId = selectedMinistryId || (isSubUsersMode ? parentMinistryId : null);
+    if (!ministryId) return [] as { id: string; name: string; label: string }[];
+    return flattenOrganizationsForSelect(organizationOptions, ministryId);
+  }, [organizationOptions, selectedMinistryId, isSubUsersMode, parentMinistryId]);
+
   const activeMinistryIdForOrg =
     selectedMinistryId || (isSubUsersMode ? parentMinistryId : null) || null;
+
+  const createUnderParentName = useMemo(() => {
+    if (!createUnderParentId) return null;
+    if (createUnderParentId === activeMinistryIdForOrg) {
+      return ministriesList.find((item) => item.id === createUnderParentId)?.name ?? "وزارتخانه";
+    }
+    return (
+      organizationOptions.find((org) => org.id === createUnderParentId)?.name ??
+      ministriesList.find((item) => item.id === createUnderParentId)?.name ??
+      null
+    );
+  }, [createUnderParentId, activeMinistryIdForOrg, organizationOptions, ministriesList]);
 
   const resetOrganizationCreate = () => {
     setCreatingOrganization(false);
     setNewOrganizationName("");
+    setCreateUnderParentId(null);
   };
 
   const handleOrganizationSelect = (value: string) => {
     if (value === CREATE_ORGANIZATION) {
+      const currentOrg = form.getValues("organizationId")?.trim() || null;
+      const parentForCreate =
+        currentOrg ||
+        (isScopedToOwnOrganization ? parentOrganizationId : null) ||
+        activeMinistryIdForOrg;
+      setCreateUnderParentId(parentForCreate);
       setCreatingOrganization(true);
       setNewOrganizationName("");
       return;
@@ -434,6 +502,11 @@ export function UsersAdmin({
       return;
     }
 
+    const deviceParentId =
+      createUnderParentId ||
+      (isScopedToOwnOrganization ? parentOrganizationId : null) ||
+      ministryId;
+
     const existing = ministriesList
       .find((ministry) => ministry.id === ministryId)
       ?.organizations?.find((org) => org.name.trim() === name);
@@ -445,19 +518,21 @@ export function UsersAdmin({
     }
 
     startTransition(async () => {
-      // Subunit managers create children under their own home — never peer orgs under the ministry.
-      const result = isScopedToOwnOrganization && parentOrganizationId
+      // Always write into the device tree so nested nodes appear under the right parent
+      // (e.g. under اراضی, not flattened under the ministry root).
+      const result = isScopedToOwnOrganization
         ? await saveDeviceAction({
             name,
             shortName: name,
             type: "organization",
-            parentId: parentOrganizationId,
+            parentId: deviceParentId,
             status: "active",
           })
         : await saveOrganizationAction({
             ministryId,
             name,
             isActive: true,
+            parentId: deviceParentId,
           });
       if (!result.success) {
         toast.error(result.error);
@@ -472,6 +547,7 @@ export function UsersAdmin({
         fullName: null,
         isActive: true,
         createdAt: new Date().toISOString(),
+        parentId: deviceParentId,
       };
 
       setMinistriesList((prev) =>
@@ -485,7 +561,11 @@ export function UsersAdmin({
       );
       form.setValue("organizationId", result.id);
       resetOrganizationCreate();
-      toast.success("زیرمجموعه ایجاد شد");
+      toast.success(
+        createUnderParentName
+          ? `زیرمجموعه «${name}» زیر «${createUnderParentName}» ایجاد شد`
+          : "زیرمجموعه ایجاد شد"
+      );
     });
   };
 
@@ -828,136 +908,134 @@ export function UsersAdmin({
         </p>
       </div>
 
-      <Tabs defaultValue={isSubUsersMode || isViewSubtreeMode ? "list" : "tree"}>
+      <Tabs defaultValue="tree">
         <TabsList>
-          {!isSubUsersMode && !isViewSubtreeMode && <TabsTrigger value="tree">نمای درختی</TabsTrigger>}
+          <TabsTrigger value="tree">نمای درختی</TabsTrigger>
           <TabsTrigger value="list">
             {isSubUsersMode || isViewSubtreeMode ? "لیست کاربران" : "لیست جدول"}
           </TabsTrigger>
           {isFullMode && <TabsTrigger value="import">ورود از Excel</TabsTrigger>}
         </TabsList>
 
-        {!isSubUsersMode && !isViewSubtreeMode && (
-          <TabsContent value="tree" className="mt-4 space-y-4">
-            {canManageUsers && (
-              <div className="flex justify-end">
-                <Button onClick={openCreate}>
-                  <Plus className="h-4 w-4" />
-                  کاربر جدید
-                </Button>
-              </div>
-            )}
+        <TabsContent value="tree" className="mt-4 space-y-4">
+          {canManageUsers && (
+            <div className="flex justify-end">
+              <Button onClick={openCreate}>
+                <Plus className="h-4 w-4" />
+                {isSubUsersMode ? "کاربر زیرمجموعه جدید" : "کاربر جدید"}
+              </Button>
+            </div>
+          )}
 
-            {isFullMode && (
-              <div className="flex flex-col gap-3 rounded-xl border bg-card/60 p-4">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 text-sm font-medium">
-                    <Filter className="h-4 w-4 shrink-0 text-primary" />
-                    فیلتر کاربران
-                  </div>
-                  {usersFilterActive && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={resetUsersFilters}
-                      className="gap-2"
-                    >
-                      <RotateCcw className="h-4 w-4" />
-                      ریست فیلتر
-                    </Button>
-                  )}
+          {isFullMode && (
+            <div className="flex flex-col gap-3 rounded-xl border bg-card/60 p-4">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <Filter className="h-4 w-4 shrink-0 text-primary" />
+                  فیلتر کاربران
                 </div>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                  <SearchableSelect
-                    value={filterMinistryId}
-                    onValueChange={(value) => {
-                      setFilterMinistryId(value);
-                      setFilterOrganizationId(FILTER_ALL);
-                    }}
-                    options={[
-                      { value: FILTER_ALL, label: "همه وزارتخانه‌ها" },
-                      ...filterMinistryOptions.map((ministry) => ({
-                        value: ministry.id,
-                        label: ministry.name,
-                      })),
-                    ]}
-                    placeholder="وزارتخانه"
-                    searchPlaceholder="جستجوی وزارتخانه..."
-                  />
-                  <SearchableSelect
-                    value={filterOrganizationId}
-                    onValueChange={setFilterOrganizationId}
-                    options={[
-                      { value: FILTER_ALL, label: "همه زیرمجموعه‌ها" },
-                      ...filterOrganizationOptions.map((org) => ({
-                        value: org.id,
-                        label: org.name,
-                      })),
-                    ]}
-                    placeholder={
-                      filterMinistryId === FILTER_ALL
-                        ? "ابتدا وزارتخانه را انتخاب کنید"
-                        : "زیرمجموعه"
-                    }
-                    searchPlaceholder="جستجوی زیرمجموعه..."
-                    disabled={filterMinistryId === FILTER_ALL}
-                  />
-                  <SearchableSelect
-                    value={filterProvince}
-                    onValueChange={(value) => {
-                      setFilterProvince(value);
-                      setFilterCity(FILTER_ALL);
-                    }}
-                    options={[
-                      { value: FILTER_ALL, label: "همه استان‌ها" },
-                      ...filterProvinceOptions.map((province) => ({
-                        value: province,
-                        label: province,
-                      })),
-                    ]}
-                    placeholder="استان"
-                    searchPlaceholder="جستجوی استان..."
-                  />
-                  <SearchableSelect
-                    value={filterCity}
-                    onValueChange={setFilterCity}
-                    options={[
-                      { value: FILTER_ALL, label: "همه شهرها" },
-                      ...filterCityOptions.map((city) => ({ value: city, label: city })),
-                    ]}
-                    placeholder={
-                      filterProvince === FILTER_ALL ? "ابتدا استان را انتخاب کنید" : "شهر"
-                    }
-                    searchPlaceholder="جستجوی شهر..."
-                    disabled={filterProvince === FILTER_ALL}
-                  />
-                </div>
+                {usersFilterActive && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={resetUsersFilters}
+                    className="gap-2"
+                  >
+                    <RotateCcw className="h-4 w-4" />
+                    ریست فیلتر
+                  </Button>
+                )}
               </div>
-            )}
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <SearchableSelect
+                  value={filterMinistryId}
+                  onValueChange={(value) => {
+                    setFilterMinistryId(value);
+                    setFilterOrganizationId(FILTER_ALL);
+                  }}
+                  options={[
+                    { value: FILTER_ALL, label: "همه وزارتخانه‌ها" },
+                    ...filterMinistryOptions.map((ministry) => ({
+                      value: ministry.id,
+                      label: ministry.name,
+                    })),
+                  ]}
+                  placeholder="وزارتخانه"
+                  searchPlaceholder="جستجوی وزارتخانه..."
+                />
+                <SearchableSelect
+                  value={filterOrganizationId}
+                  onValueChange={setFilterOrganizationId}
+                  options={[
+                    { value: FILTER_ALL, label: "همه زیرمجموعه‌ها" },
+                    ...filterOrganizationOptions.map((org) => ({
+                      value: org.id,
+                      label: org.label,
+                    })),
+                  ]}
+                  placeholder={
+                    filterMinistryId === FILTER_ALL
+                      ? "ابتدا وزارتخانه را انتخاب کنید"
+                      : "زیرمجموعه"
+                  }
+                  searchPlaceholder="جستجوی زیرمجموعه..."
+                  disabled={filterMinistryId === FILTER_ALL}
+                />
+                <SearchableSelect
+                  value={filterProvince}
+                  onValueChange={(value) => {
+                    setFilterProvince(value);
+                    setFilterCity(FILTER_ALL);
+                  }}
+                  options={[
+                    { value: FILTER_ALL, label: "همه استان‌ها" },
+                    ...filterProvinceOptions.map((province) => ({
+                      value: province,
+                      label: province,
+                    })),
+                  ]}
+                  placeholder="استان"
+                  searchPlaceholder="جستجوی استان..."
+                />
+                <SearchableSelect
+                  value={filterCity}
+                  onValueChange={setFilterCity}
+                  options={[
+                    { value: FILTER_ALL, label: "همه شهرها" },
+                    ...filterCityOptions.map((city) => ({ value: city, label: city })),
+                  ]}
+                  placeholder={
+                    filterProvince === FILTER_ALL ? "ابتدا استان را انتخاب کنید" : "شهر"
+                  }
+                  searchPlaceholder="جستجوی شهر..."
+                  disabled={filterProvince === FILTER_ALL}
+                />
+              </div>
+            </div>
+          )}
 
-            <UsersMinistryTree
-              users={filteredRows}
-              ministries={ministriesList}
-              onEdit={canManageUsers || isMinistryOnlyMode ? openEdit : undefined}
-              onDelete={
-                canManageUsers
-                  ? (user) => {
-                      startTransition(async () => {
-                        const result = await deleteUserAction(user.id);
-                        if (!result.success) {
-                          toast.error("error" in result ? result.error : "حذف نشد");
-                          return;
-                        }
-                        setRows((prev) => prev.filter((row) => row.id !== user.id));
-                        toast.success("حذف شد");
-                      });
-                    }
-                  : undefined
-              }
-            />
-          </TabsContent>
-        )}
+          <UsersMinistryTree
+            users={filteredRows}
+            ministries={ministriesList}
+            onEdit={canManageUsers || isMinistryOnlyMode ? openEdit : undefined}
+            onDelete={
+              canManageUsers
+                ? (user) => {
+                    startTransition(async () => {
+                      const result = await deleteUserAction(user.id);
+                      if (!result.success) {
+                        toast.error("error" in result ? result.error : "حذف نشد");
+                        return;
+                      }
+                      setRows((prev) => prev.filter((row) => row.id !== user.id));
+                      toast.success("حذف شد");
+                    });
+                  }
+                : undefined
+            }
+          />
+        </TabsContent>
 
         <TabsContent value="list" className="space-y-4 mt-4">
           {canManageUsers && (
@@ -1007,7 +1085,7 @@ export function UsersAdmin({
                     { value: FILTER_ALL, label: "همه زیرمجموعه‌ها" },
                     ...filterOrganizationOptions.map((org) => ({
                       value: org.id,
-                      label: org.name,
+                      label: org.label,
                     })),
                   ]}
                   placeholder={
@@ -1268,18 +1346,24 @@ export function UsersAdmin({
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value={NO_ORGANIZATION}>خود وزارتخانه</SelectItem>
-                      {organizationOptions
+                      {organizationSelectOptions
                         .filter((org) => Boolean(org.id))
                         .map((org) => (
                         <SelectItem key={org.id} value={org.id}>
-                          {org.name}
+                          {org.label}
                         </SelectItem>
                       ))}
                       <SelectItem value={CREATE_ORGANIZATION}>ایجاد زیرمجموعه جدید…</SelectItem>
                     </SelectContent>
                   </Select>
                   {creatingOrganization && (
-                    <div className="flex gap-2">
+                    <div className="space-y-2">
+                      {createUnderParentName ? (
+                        <p className="text-xs text-muted-foreground">
+                          زیرمجموعه جدید زیر «{createUnderParentName}» در درخت دستگاه ایجاد می‌شود.
+                        </p>
+                      ) : null}
+                      <div className="flex gap-2">
                       <Input
                         value={newOrganizationName}
                         onChange={(event) => setNewOrganizationName(event.target.value)}
@@ -1300,11 +1384,12 @@ export function UsersAdmin({
                       >
                         ایجاد
                       </Button>
+                      </div>
                     </div>
                   )}
                   <p className="text-xs text-muted-foreground">
-                    اگر زیرمجموعه انتخاب نشود، کاربر به خود وزارتخانه وصل می‌شود. اگر در لیست نبود،
-                    می‌توانید همان‌جا ایجاد کنید.
+                    اگر زیرمجموعه انتخاب نشود، کاربر به خود وزارتخانه وصل می‌شود. برای ساخت زیر
+                    یک گره موجود، ابتدا آن را انتخاب کنید سپس «ایجاد زیرمجموعه جدید» را بزنید.
                   </p>
                 </div>
               </>
@@ -1337,18 +1422,24 @@ export function UsersAdmin({
                     {!isScopedToOwnOrganization && (
                       <SelectItem value={NO_ORGANIZATION}>خود وزارتخانه</SelectItem>
                     )}
-                    {organizationOptions
+                    {organizationSelectOptions
                       .filter((org) => Boolean(org.id))
                       .map((org) => (
                       <SelectItem key={org.id} value={org.id}>
-                        {org.name}
+                        {org.label}
                       </SelectItem>
                     ))}
                     <SelectItem value={CREATE_ORGANIZATION}>ایجاد زیرمجموعه جدید…</SelectItem>
                   </SelectContent>
                 </Select>
                 {creatingOrganization && (
-                  <div className="flex gap-2">
+                  <div className="space-y-2">
+                    {createUnderParentName ? (
+                      <p className="text-xs text-muted-foreground">
+                        زیرمجموعه جدید زیر «{createUnderParentName}» در درخت دستگاه ایجاد می‌شود.
+                      </p>
+                    ) : null}
+                    <div className="flex gap-2">
                     <Input
                       value={newOrganizationName}
                       onChange={(event) => setNewOrganizationName(event.target.value)}
@@ -1369,11 +1460,13 @@ export function UsersAdmin({
                     >
                       ایجاد
                     </Button>
+                    </div>
                   </div>
                 )}
                 {isScopedToOwnOrganization && (
                   <p className="text-xs text-muted-foreground">
                     فقط زیرمجموعه خودتان و زیرمجموعه‌هایی که زیر آن تعریف کرده‌اید قابل انتخاب است.
+                    برای ساخت زیر یک گره، ابتدا آن را انتخاب کنید.
                   </p>
                 )}
               </div>
