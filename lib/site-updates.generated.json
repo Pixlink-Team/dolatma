@@ -1,6 +1,18 @@
 {
   "entries": [
     {
+      "hash": "1942c6ccea7d91591cdbb5f4f674111d41c8e774",
+      "committedAt": "2026-07-25T16:14:29+03:30",
+      "title": "امکان دادن یا برداشتن دسترسی تقویم ملی برای کاربران",
+      "subject": "Add grantable national calendar permission for users"
+    },
+    {
+      "hash": "7c7a5d2a249b728b9baeea71f67e8b8064666379",
+      "committedAt": "2026-07-25T16:13:34+03:30",
+      "title": "حذف انتخاب دسترسی به راستاها از مدیریت کاربران",
+      "subject": "Hide campaign access picker in user management"
+    },
+    {
       "hash": "e02c218b6774d00102f2f48467df657c8babff8d",
       "committedAt": "2026-07-25T16:07:35+03:30",
       "title": "حذف دارایی‌ها و ظرفیت‌ها از پروفایل؛ مدیریت فقط در شناسنامه دستگاه",

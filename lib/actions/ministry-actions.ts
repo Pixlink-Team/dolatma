@@ -1,7 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { canManageSubtreeUsers, isClientUser } from "@/lib/auth/access";
 import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
+import { pgGetUserById } from "@/lib/db/repository-extended";
 import {
   pgDeleteMinistry,
   pgDeleteOrganization,
@@ -17,6 +19,19 @@ async function revalidateMinistryPages() {
   revalidatePath("/admin/ministries");
   revalidatePath("/admin/users");
   revalidatePath("/admin/directives");
+}
+
+async function canSaveOrganization(
+  session: NonNullable<Awaited<ReturnType<typeof getAuthSession>>>,
+  ministryId: string,
+  isUpdate: boolean
+): Promise<boolean> {
+  if (isFullAdmin(session)) return true;
+  if (isClientUser(session) && !isUpdate) return true;
+  if (!canManageSubtreeUsers(session) || isUpdate || !session.userId) return false;
+  if (!isPostgresConfigured()) return false;
+  const user = await pgGetUserById(session.userId);
+  return Boolean(user?.ministryId && user.ministryId === ministryId);
 }
 
 export async function listMinistriesAction() {
@@ -61,10 +76,15 @@ export async function saveOrganizationAction(data: {
   isActive?: boolean;
 }) {
   const session = await getAuthSession();
-  if (!session || !isFullAdmin(session)) {
+  if (!session) {
     return { success: false as const, error: "Unauthorized" };
   }
   if (!isPostgresConfigured()) return { success: false as const, error: "Database required" };
+
+  const allowed = await canSaveOrganization(session, data.ministryId, Boolean(data.id));
+  if (!allowed) {
+    return { success: false as const, error: "Unauthorized" };
+  }
 
   const result = await pgSaveOrganization(data);
   if (result.success) await revalidateMinistryPages();
