@@ -1173,8 +1173,10 @@ export function DevicePassportView({
                   );
                 }}
               >
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
+                <SelectTrigger dir="rtl" className="text-right">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent dir="rtl">
                   {(DEVICE_CAPACITY_TYPES as DeviceCapacityType[]).map((key) => (
                     <SelectItem key={key} value={key}>
                       {DEVICE_CAPACITY_TYPE_LABELS[key]}
