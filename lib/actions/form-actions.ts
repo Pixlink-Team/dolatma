@@ -1,12 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
-import { canManageForms, isClientUser } from "@/lib/auth/access";
-import {
-  hasContributorPermission,
-  type ContributorPermissions,
-} from "@/lib/contributor-permissions";
+import { getAuthSession } from "@/lib/auth/get-session";
+import { canManageForms } from "@/lib/auth/access";
 import {
   normalizeFormFields,
   validateFormAnswers,
@@ -23,7 +19,6 @@ import {
   pgSubmitFormResponse,
   pgUpdateFormResponse,
 } from "@/lib/db/repository-forms";
-import { pgGetUserPermissionsForCampaign } from "@/lib/db/repository-extended";
 import type {
   CampaignForm,
   CampaignFormResponse,
@@ -46,24 +41,9 @@ async function revalidateForms() {
   revalidatePath("/admin");
 }
 
-async function getSessionPermissions(
-  userId: string | undefined,
-  campaignId: string
-): Promise<ContributorPermissions | null> {
-  if (!userId) return null;
-  return pgGetUserPermissionsForCampaign(userId, campaignId);
-}
-
-async function assertCanAccessForms(campaignId: string) {
+async function assertCanManageForms() {
   const session = await getAuthSession();
-  if (!session) return { error: UNAUTHORIZED, session: null as null };
-
-  if (isFullAdmin(session) || isClientUser(session)) {
-    return { error: null, session };
-  }
-
-  const permissions = await getSessionPermissions(session.userId ?? undefined, campaignId);
-  if (!hasContributorPermission(permissions, "forms")) {
+  if (!session || !canManageForms(session)) {
     return { error: UNAUTHORIZED, session: null as null };
   }
 
@@ -71,7 +51,7 @@ async function assertCanAccessForms(campaignId: string) {
 }
 
 export async function listCampaignFormsAction(campaignId: string) {
-  const access = await assertCanAccessForms(campaignId);
+  const access = await assertCanManageForms();
   if (access.error || !access.session) return access.error ?? UNAUTHORIZED;
 
   const dbError = requirePostgres();
@@ -158,7 +138,7 @@ export async function listFormResponsesAction(input: {
   campaignId: string;
   formId?: string;
 }) {
-  const access = await assertCanAccessForms(input.campaignId);
+  const access = await assertCanManageForms();
   if (access.error || !access.session) return access.error ?? UNAUTHORIZED;
 
   const dbError = requirePostgres();
@@ -179,7 +159,7 @@ export async function submitFormResponseAction(input: {
   campaignId: string;
   answers: Record<string, unknown>;
 }) {
-  const access = await assertCanAccessForms(input.campaignId);
+  const access = await assertCanManageForms();
   if (access.error || !access.session) return access.error ?? UNAUTHORIZED;
 
   const dbError = requirePostgres();
@@ -217,7 +197,7 @@ export async function updateFormResponseAction(input: {
   campaignId: string;
   answers: Record<string, unknown>;
 }) {
-  const access = await assertCanAccessForms(input.campaignId);
+  const access = await assertCanManageForms();
   if (access.error || !access.session) return access.error ?? UNAUTHORIZED;
 
   const dbError = requirePostgres();
@@ -258,7 +238,7 @@ export async function deleteFormResponseAction(
   responseId: string,
   campaignId: string
 ) {
-  const access = await assertCanAccessForms(campaignId);
+  const access = await assertCanManageForms();
   if (access.error || !access.session) return access.error ?? UNAUTHORIZED;
 
   const dbError = requirePostgres();

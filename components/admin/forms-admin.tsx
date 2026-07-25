@@ -64,7 +64,7 @@ export function FormsAdmin({ campaignId, canManage }: FormsAdminProps) {
         <FormInput className="h-10 w-10 mx-auto text-muted-foreground" />
         <p className="font-medium">دسترسی به ویرایش فرم‌ها ندارید</p>
         <p className="text-sm text-muted-foreground">
-          فقط مدیر و کارفرما می‌توانند فرم‌های افزودن محتوا را ویرایش کنند.
+          فقط مدیر و کارفرما به بخش فرم‌ها دسترسی دارند.
         </p>
       </div>
     );

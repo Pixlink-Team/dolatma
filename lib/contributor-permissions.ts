@@ -33,12 +33,16 @@ export const defaultContributorPermissions = (): ContributorPermissions => ({
   activities: true,
   submissions: true,
   directives: true,
-  forms: true,
+  // Forms are admin/client-only; never granted to regular users.
+  forms: false,
   mediaCommand: true,
   monitoring: true,
 });
 
-export const contributorPermissionLabels: Record<ContributorPermissionKey, string> = {
+/** Permissions shown when editing users. Excludes admin-only tools like forms. */
+export const contributorPermissionLabels: Partial<
+  Record<ContributorPermissionKey, string>
+> = {
   billboards: "تبلیغات محیطی",
   posters: "پوسترها",
   videos: "ویدیوها",
@@ -52,7 +56,6 @@ export const contributorPermissionLabels: Record<ContributorPermissionKey, strin
   activities: "اقدامات",
   submissions: "مشارکت‌ها",
   directives: "دستورکارها",
-  forms: "فرم‌ها",
   mediaCommand: "میز فرمان رسانه‌ای",
   monitoring: "رصد و واکنش سریع",
 };
@@ -78,7 +81,8 @@ export function normalizeContributorPermissions(
     activities: record.activities ?? defaults.activities,
     submissions: record.submissions ?? defaults.submissions,
     directives: record.directives ?? defaults.directives,
-    forms: record.forms ?? defaults.forms,
+    // Always deny — forms UI is admin/client-only.
+    forms: false,
     mediaCommand: record.mediaCommand ?? defaults.mediaCommand,
     monitoring: record.monitoring ?? defaults.monitoring,
   };

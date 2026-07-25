@@ -98,7 +98,7 @@ const allNavItems: {
   { href: "/admin/broadcast", label: "پخش صدا و سیما", icon: Radio, permissionKey: "broadcast" },
   { href: "/admin/meetings", label: "جلسات و مصوبات", icon: ClipboardList, permissionKey: "meetings" },
   { href: "/admin/submissions", label: "مشارکت‌ها", icon: FileText, permissionKey: "submissions" },
-  { href: "/admin/forms", label: "فرم‌ها", icon: FormInput, permissionKey: "forms" },
+  { href: "/admin/forms", label: "فرم‌ها", icon: FormInput, adminOrClientOnly: true },
   { href: "/admin/users", label: "کاربران", icon: Users, usersNav: true },
   { href: "/admin/best-practices", label: "بهترین اقدامات", icon: Award, alwaysVisible: true },
   { href: "/admin/updates", label: "آپدیت‌های سایت", icon: Rocket, adminOrClientOnly: true },
