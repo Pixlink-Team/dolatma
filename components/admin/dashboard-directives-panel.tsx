@@ -159,14 +159,14 @@ export function DashboardDirectivesPanel({
           <CardContent className="space-y-3">
             {aiSuggestions.map((item) => (
               <div key={item.id} className="rounded-lg border bg-background p-3 text-sm">
-                <div className="flex flex-wrap items-start justify-between gap-2">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                   <div className="min-w-0 space-y-1">
-                    <p className="font-medium">{item.title}</p>
+                    <p className="break-words font-medium">{item.title}</p>
                     {item.reason ? (
                       <p className="text-xs text-muted-foreground line-clamp-2">{item.reason}</p>
                     ) : null}
                   </div>
-                  <Button size="sm" variant="outline" asChild>
+                  <Button size="sm" variant="outline" className="w-full shrink-0 sm:w-auto" asChild>
                     <Link href={adminHref(`/admin/directives/${item.directiveId}`, campaignId)}>
                       اتاق عملیات
                     </Link>
@@ -183,9 +183,9 @@ export function DashboardDirectivesPanel({
           unreadCount > 0 && "border-red-500/40 bg-red-500/[0.04]"
         )}
       >
-        <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3 space-y-0 pb-3">
+        <CardHeader className="flex flex-col gap-3 space-y-0 pb-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
           <div className="min-w-0 space-y-1">
-            <CardTitle className="flex items-center gap-2 text-base">
+            <CardTitle className="flex flex-wrap items-center gap-2 text-base">
               <ClipboardCheck className="h-5 w-5 shrink-0 text-red-600" />
               دستورکارها
               {unreadCount > 0 && (
@@ -202,8 +202,12 @@ export function DashboardDirectivesPanel({
                     : "هنوز دستورکاری برای شما ارسال نشده است"}
             </p>
           </div>
-          <Link href={directivesHref}>
-            <Button variant={unreadCount > 0 ? "default" : "outline"} size="sm">
+          <Link href={directivesHref} className="w-full sm:w-auto">
+            <Button
+              variant={unreadCount > 0 ? "default" : "outline"}
+              size="sm"
+              className="w-full sm:w-auto"
+            >
               مشاهده همه
             </Button>
           </Link>
@@ -239,10 +243,10 @@ export function DashboardDirectivesPanel({
                   !item.confirmed && "border-red-500/30"
                 )}
               >
-                <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div className="min-w-0 flex-1 space-y-2">
                     <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="font-semibold">{item.title}</h3>
+                      <h3 className="min-w-0 break-words font-semibold">{item.title}</h3>
                       {item.creationMode === "smart" ? (
                         <Badge variant="outline">هوشمند</Badge>
                       ) : null}
@@ -265,18 +269,28 @@ export function DashboardDirectivesPanel({
                       <DirectiveDateRange item={item} />
                     </div>
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    <Button variant="outline" size="sm" onClick={() => setDetailItem(item)}>
+                  <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:justify-end">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 sm:flex-none"
+                      onClick={() => setDetailItem(item)}
+                    >
                       <Eye className="h-4 w-4" />
                       جزئیات
                     </Button>
                     {!item.confirmed ? (
-                      <Button size="sm" disabled={isPending} onClick={() => confirmSeen(item)}>
+                      <Button
+                        size="sm"
+                        className="flex-1 sm:flex-none"
+                        disabled={isPending}
+                        onClick={() => confirmSeen(item)}
+                      >
                         <Check className="h-4 w-4" />
                         تأیید مشاهده
                       </Button>
                     ) : (
-                      <Button size="sm" variant="outline" asChild>
+                      <Button size="sm" variant="outline" className="flex-1 sm:flex-none" asChild>
                         <Link href={directivesHref}>برنامه اقدام</Link>
                       </Button>
                     )}

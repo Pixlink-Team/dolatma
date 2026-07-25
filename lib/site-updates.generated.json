@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "b6adf95da115d0d85b97dca88d22c2edf43d4fd1",
+      "committedAt": "2026-07-25T21:12:09+03:30",
+      "title": "اصلاح تکمیل مأموریت زیرمجموعه‌ها تا قبل از افزودن کاربر",
+      "subject": "Require subordinate user for subsidiaries onboarding step"
+    },
+    {
       "hash": "0dbd973cfe773c86853b39d1e1a48c76ab5a6f38",
       "committedAt": "2026-07-25T20:59:30+03:30",
       "title": "بازگردانی چک‌لیست مراحل راه‌اندازی در داشبورد کاربران",

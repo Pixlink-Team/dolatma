@@ -468,11 +468,21 @@ export function DirectiveActionPlanDialog({
               />
             </div>
 
-            <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full sm:w-auto"
+                onClick={() => onOpenChange(false)}
+              >
                 انصراف
               </Button>
-              <Button type="button" disabled={isPending} onClick={submit}>
+              <Button
+                type="button"
+                className="w-full sm:w-auto"
+                disabled={isPending}
+                onClick={submit}
+              >
                 {existingPlan ? "به‌روزرسانی تعهد" : "ثبت تعهد و برنامه اقدام"}
               </Button>
             </div>

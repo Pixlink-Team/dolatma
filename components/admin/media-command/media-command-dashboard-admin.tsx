@@ -67,8 +67,9 @@ export function MediaCommandDashboardAdmin({ campaignId, bundle }: Props) {
                   href={task.href}
                   className="block rounded-lg border p-3 transition-colors hover:bg-accent"
                 >
-                  <div className="mb-1 flex items-center gap-2">
+                  <div className="mb-1 flex min-w-0 items-start gap-2">
                     <Badge
+                      className="shrink-0"
                       variant={
                         task.urgency === "high"
                           ? "destructive"
@@ -79,7 +80,7 @@ export function MediaCommandDashboardAdmin({ campaignId, bundle }: Props) {
                     >
                       {task.urgency === "high" ? "فوری" : task.urgency === "normal" ? "عادی" : "کم"}
                     </Badge>
-                    <span className="text-sm font-medium">{task.title}</span>
+                    <span className="min-w-0 break-words text-sm font-medium">{task.title}</span>
                   </div>
                   <p className="text-xs text-muted-foreground line-clamp-2">{task.description}</p>
                 </Link>

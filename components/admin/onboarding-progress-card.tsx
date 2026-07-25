@@ -30,12 +30,12 @@ function CircularProgress({
   const done = percent === 100;
 
   return (
-    <div className="relative mx-auto flex h-[168px] w-[168px] items-center justify-center">
+    <div className="relative mx-auto flex h-[132px] w-[132px] items-center justify-center sm:h-[168px] sm:w-[168px]">
       <svg
         width={size}
         height={size}
         viewBox={`0 0 ${size} ${size}`}
-        className="-rotate-90"
+        className="h-full w-full -rotate-90"
         aria-hidden
       >
         <circle
@@ -66,15 +66,15 @@ function CircularProgress({
       <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
         <span
           className={cn(
-            "text-3xl font-bold tracking-tight",
+            "text-2xl font-bold tracking-tight sm:text-3xl",
             done ? "text-emerald-600" : "text-foreground"
           )}
         >
           {formatPersianNumber(completedCount)}
-          <span className="mx-0.5 text-lg font-medium text-muted-foreground">/</span>
+          <span className="mx-0.5 text-base font-medium text-muted-foreground sm:text-lg">/</span>
           {formatPersianNumber(totalCount)}
         </span>
-        <span className="mt-0.5 text-xs text-muted-foreground">
+        <span className="mt-0.5 text-[11px] text-muted-foreground sm:text-xs">
           {done ? "تکمیل شد" : `${formatPersianNumber(percent)}٪ پیشرفت`}
         </span>
       </div>
@@ -115,8 +115,8 @@ export function OnboardingProgressCard({
         </div>
       </CardHeader>
       <CardContent>
-        <div className="grid gap-6 md:grid-cols-[200px_1fr] md:items-start">
-          <div className="flex flex-col items-center gap-2 rounded-xl bg-background/70 p-4 ring-1 ring-emerald-100">
+        <div className="grid gap-5 md:grid-cols-[minmax(0,180px)_1fr] md:items-start lg:grid-cols-[200px_1fr]">
+          <div className="flex flex-col items-center gap-2 rounded-xl bg-background/70 p-3 ring-1 ring-emerald-100 sm:p-4">
             <CircularProgress
               percent={percent}
               completedCount={completedCount}
@@ -138,7 +138,7 @@ export function OnboardingProgressCard({
                   <Link
                     href={step.href}
                     className={cn(
-                      "group flex items-start gap-3 rounded-xl border p-3 transition-colors",
+                      "group flex flex-col gap-2 rounded-xl border p-3 transition-colors sm:flex-row sm:items-start sm:gap-3",
                       isDone &&
                         "border-emerald-200 bg-emerald-50/70 text-emerald-900 hover:bg-emerald-50",
                       isCurrent &&
@@ -148,44 +148,46 @@ export function OnboardingProgressCard({
                         "border-border/70 bg-background/60 hover:bg-muted/40"
                     )}
                   >
-                    <span
-                      className={cn(
-                        "mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold",
-                        isDone && "bg-emerald-500 text-white",
-                        isCurrent && "bg-emerald-100 text-emerald-800",
-                        !isDone && !isCurrent && "bg-muted text-muted-foreground"
-                      )}
-                    >
-                      {isDone ? (
-                        <Check className="h-4 w-4" strokeWidth={3} />
-                      ) : (
-                        formatPersianNumber(index + 1)
-                      )}
-                    </span>
-
-                    <span className="min-w-0 flex-1 space-y-1">
-                      <span className="flex flex-wrap items-center gap-2">
-                        <span className="text-sm font-semibold">{step.title}</span>
+                    <div className="flex min-w-0 flex-1 items-start gap-3">
+                      <span
+                        className={cn(
+                          "mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold",
+                          isDone && "bg-emerald-500 text-white",
+                          isCurrent && "bg-emerald-100 text-emerald-800",
+                          !isDone && !isCurrent && "bg-muted text-muted-foreground"
+                        )}
+                      >
                         {isDone ? (
-                          <Badge className="bg-emerald-600 hover:bg-emerald-600 text-[10px]">
-                            انجام شد
-                          </Badge>
-                        ) : isCurrent ? (
-                          <Badge
-                            variant="outline"
-                            className="border-emerald-400 text-emerald-700 text-[10px]"
-                          >
-                            مأموریت فعلی
-                          </Badge>
-                        ) : null}
+                          <Check className="h-4 w-4" strokeWidth={3} />
+                        ) : (
+                          formatPersianNumber(index + 1)
+                        )}
                       </span>
-                      <span className="block text-xs text-muted-foreground">
-                        {step.detail || step.description}
+
+                      <span className="min-w-0 flex-1 space-y-1">
+                        <span className="flex flex-wrap items-center gap-2">
+                          <span className="text-sm font-semibold">{step.title}</span>
+                          {isDone ? (
+                            <Badge className="bg-emerald-600 hover:bg-emerald-600 text-[10px]">
+                              انجام شد
+                            </Badge>
+                          ) : isCurrent ? (
+                            <Badge
+                              variant="outline"
+                              className="border-emerald-400 text-emerald-700 text-[10px]"
+                            >
+                              مأموریت فعلی
+                            </Badge>
+                          ) : null}
+                        </span>
+                        <span className="block text-xs leading-5 text-muted-foreground sm:line-clamp-2">
+                          {step.detail || step.description}
+                        </span>
                       </span>
-                    </span>
+                    </div>
 
                     {!isDone ? (
-                      <span className="mt-1 inline-flex shrink-0 items-center gap-1 text-xs font-medium text-emerald-700 opacity-80 group-hover:opacity-100">
+                      <span className="inline-flex shrink-0 items-center justify-end gap-1 self-stretch text-xs font-medium text-emerald-700 opacity-90 group-hover:opacity-100 sm:mt-1 sm:self-start">
                         انجام مأموریت
                         <ArrowLeft className="h-3.5 w-3.5" />
                       </span>

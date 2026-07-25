@@ -356,8 +356,8 @@ export function DirectiveWorkspaceAdmin({
 
   return (
     <div className="space-y-6 text-right" dir="rtl">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="space-y-2">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
+        <div className="min-w-0 space-y-2">
           <Link
             href={adminHref("/admin/directives", campaignId)}
             className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
@@ -366,8 +366,10 @@ export function DirectiveWorkspaceAdmin({
             بازگشت به دستورکارها
           </Link>
           <div>
-            <h1 className="text-2xl font-bold">اتاق عملیات دستورکار</h1>
-            <p className="mt-1 text-sm text-muted-foreground">{bundle.directive.title}</p>
+            <h1 className="text-xl font-bold sm:text-2xl">اتاق عملیات دستورکار</h1>
+            <p className="mt-1 break-words text-sm text-muted-foreground">
+              {bundle.directive.title}
+            </p>
           </div>
           <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
             {bundle.directive.startDate && (
@@ -385,7 +387,7 @@ export function DirectiveWorkspaceAdmin({
           </div>
         </div>
         {canManage && (
-          <Button onClick={saveMeta} disabled={isPending}>
+          <Button className="w-full sm:w-auto" onClick={saveMeta} disabled={isPending}>
             ذخیره اتاق عملیات
           </Button>
         )}
@@ -649,8 +651,12 @@ export function DirectiveWorkspaceAdmin({
             ) : (
               <div className="space-y-2">
                 {kpis.map((kpi, index) => (
-                  <div key={kpi.id} className="grid gap-2 md:grid-cols-[1fr_120px_120px_auto]">
+                  <div
+                    key={kpi.id}
+                    className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_120px_120px_auto]"
+                  >
                     <Input
+                      className="sm:col-span-2 lg:col-span-1"
                       value={kpi.title}
                       disabled={!canManage}
                       placeholder="عنوان شاخص"
@@ -698,6 +704,7 @@ export function DirectiveWorkspaceAdmin({
                         type="button"
                         size="icon"
                         variant="ghost"
+                        className="justify-self-start lg:justify-self-center"
                         onClick={() =>
                           setKpis((prev) => prev.filter((_, itemIndex) => itemIndex !== index))
                         }

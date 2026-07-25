@@ -833,9 +833,9 @@ export function DirectivesAdmin({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold">دستورکارها</h1>
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-xl font-bold sm:text-2xl">دستورکارها</h1>
           <p className="text-sm text-muted-foreground">
             {canManage
               ? audienceScope === "subordinates"
@@ -845,7 +845,7 @@ export function DirectivesAdmin({
           </p>
         </div>
         {canManage && managerView === "manage" && manageListTab === "active" && (
-          <Button onClick={openCreate}>
+          <Button className="w-full sm:w-auto" onClick={openCreate}>
             <Plus className="h-4 w-4" />
             ثبت دستورکار
           </Button>
@@ -928,10 +928,12 @@ export function DirectivesAdmin({
                 item.priority === "urgent" && "border-destructive/40"
               )}
             >
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="space-y-2 min-w-0 flex-1">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                <div className="min-w-0 flex-1 space-y-2">
                   <div className="flex flex-wrap items-center gap-2">
-                    <h2 className="text-lg font-semibold">{item.title}</h2>
+                    <h2 className="min-w-0 break-words text-base font-semibold sm:text-lg">
+                      {item.title}
+                    </h2>
                     {item.creationMode === "smart" ? (
                       <Badge variant="outline">ساخت هوشمند</Badge>
                     ) : null}
@@ -942,7 +944,9 @@ export function DirectivesAdmin({
                     ) : null}
                     {item.priority === "urgent" && <Badge variant="destructive">فوری</Badge>}
                     {item.linkContentTopic && item.topic ? (
-                      <Badge variant="secondary">موضوع محتوا: {item.topic}</Badge>
+                      <Badge variant="secondary" className="max-w-full whitespace-normal">
+                        موضوع محتوا: {item.topic}
+                      </Badge>
                     ) : null}
                     {!showingInbox && (
                       <Badge variant="outline">{formatAudienceLabel(item, audienceScope)}</Badge>
@@ -956,7 +960,7 @@ export function DirectivesAdmin({
                       <Badge variant="secondary">تعهد ثبت‌شده</Badge>
                     )}
                   </div>
-                  <p className="text-sm text-muted-foreground line-clamp-2 whitespace-pre-wrap">
+                  <p className="line-clamp-2 whitespace-pre-wrap text-sm text-muted-foreground">
                     {item.body}
                   </p>
                   <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
@@ -975,19 +979,29 @@ export function DirectivesAdmin({
                   </div>
                 </div>
 
-                <div className="flex flex-wrap gap-2">
-                  <Button size="sm" asChild>
+                <div className="flex w-full flex-wrap gap-2 lg:w-auto lg:max-w-[22rem] lg:justify-end">
+                  <Button size="sm" className="flex-1 sm:flex-none" asChild>
                     <Link href={adminHref(`/admin/directives/${item.id}`, campaignId)}>
                       <LayoutDashboard className="h-4 w-4" />
                       اتاق عملیات
                     </Link>
                   </Button>
-                  <Button variant="outline" size="sm" onClick={() => setDetailItem(item)}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 sm:flex-none"
+                    onClick={() => setDetailItem(item)}
+                  >
                     <Eye className="h-4 w-4" />
                     جزئیات
                   </Button>
                   {showingInbox && !item.confirmed && (
-                    <Button size="sm" disabled={isPending} onClick={() => confirmSeen(item)}>
+                    <Button
+                      size="sm"
+                      className="flex-1 sm:flex-none"
+                      disabled={isPending}
+                      onClick={() => confirmSeen(item)}
+                    >
                       <Check className="h-4 w-4" />
                       تأیید مشاهده
                     </Button>
@@ -995,6 +1009,7 @@ export function DirectivesAdmin({
                   {showingInbox && item.confirmed && (
                     <Button
                       size="sm"
+                      className="flex-1 sm:flex-none"
                       variant={item.hasActionPlan ? "outline" : "default"}
                       onClick={() =>
                         setActionPlanTarget({ directive: item, mode: "edit" })
@@ -1006,19 +1021,30 @@ export function DirectivesAdmin({
                   )}
                   {!showingInbox && canManage && (
                     <>
-                      <Button variant="outline" size="sm" onClick={() => openTracking(item)}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 sm:flex-none"
+                        onClick={() => openTracking(item)}
+                      >
                         <Users className="h-4 w-4" />
                         پیگیری
                       </Button>
                       {!showingArchive && (
                         <>
-                          <Button variant="outline" size="sm" onClick={() => openEdit(item)}>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="flex-1 sm:flex-none"
+                            onClick={() => openEdit(item)}
+                          >
                             ویرایش مشخصات
                           </Button>
                           {item.creationMode !== "smart" ? (
                             <Button
                               variant="outline"
                               size="sm"
+                              className="flex-1 sm:flex-none"
                               disabled={isPending}
                               onClick={() => {
                                 setConvertMissionType(
@@ -1033,6 +1059,7 @@ export function DirectivesAdmin({
                           <Button
                             variant="outline"
                             size="sm"
+                            className="flex-1 sm:flex-none"
                             disabled={isPending}
                             onClick={() => {
                               if (
