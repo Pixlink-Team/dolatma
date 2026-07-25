@@ -112,3 +112,20 @@ export function matchesAnyPlanLabelFilter(
     matchesPlanLabelFilter(planLabels, legacyPlanLabel, label)
   );
 }
+
+/** Add a topic name to the campaign taxonomy if missing (no duplicate). */
+export function ensureContentTopicInList(
+  topics: ContentTopic[],
+  topicName: string
+): { topics: ContentTopic[]; added: boolean } {
+  const name = topicName.trim();
+  if (!name) return { topics, added: false };
+  const normalized = normalizeContentTopics(topics);
+  if (normalized.some((topic) => topic.name === name)) {
+    return { topics: normalized, added: false };
+  }
+  return {
+    topics: [...normalized, { name, subtopics: [] }],
+    added: true,
+  };
+}

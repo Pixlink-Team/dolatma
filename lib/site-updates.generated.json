@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "5f329bf1c5ee9bfced7e8f3321e281b664e8f46f",
+      "committedAt": "2026-07-25T14:20:53+03:30",
+      "title": "نمایش پیشرفت راه‌اندازی با نمودار دایره‌ای و لیست مأموریت‌ها",
+      "subject": "Show onboarding progress as circular chart with missions"
+    },
+    {
       "hash": "45161fa43a7679d0e0a19b290aee9975ed72d0fc",
       "committedAt": "2026-07-25T14:16:40+03:30",
       "title": "جداسازی سایت و اپ در دارایی‌ها و افزودن شبکه‌های تبلیغاتی و خبری",

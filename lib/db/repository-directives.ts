@@ -25,6 +25,7 @@ import type {
   DirectivePriority,
   DirectiveRecipient,
   DirectiveSmsStatus,
+  DirectiveTopicContentStat,
 } from "@/lib/types";
 import type { UserRegion } from "@/lib/user-regions";
 import { isAdminRole } from "@/lib/user-roles";
@@ -92,6 +93,10 @@ export async function ensureDirectiveCommandSchema(): Promise<void> {
   await sql`
     ALTER TABLE campaign_directives
       ADD COLUMN IF NOT EXISTS topic TEXT NOT NULL DEFAULT ''
+  `;
+  await sql`
+    ALTER TABLE campaign_directives
+      ADD COLUMN IF NOT EXISTS link_content_topic BOOLEAN NOT NULL DEFAULT false
   `;
   // Audience columns required by national calendar conflict detection.
   await sql`
@@ -277,6 +282,7 @@ function mapDirectiveRow(
       row.escalation_after_minutes != null ? Number(row.escalation_after_minutes) : 30,
     escalatedAt: toIsoString(row.escalated_at),
     topic: row.topic != null ? String(row.topic) : "",
+    linkContentTopic: Boolean(row.link_content_topic),
     creationMode: mapCreationMode(row.creation_mode),
     missionType: mapMissionType(row.mission_type),
     smartPayload: normalizeSmartPayload(row.smart_payload),
@@ -791,6 +797,7 @@ export interface SaveDirectiveInput {
   crisisMode?: boolean;
   escalationAfterMinutes?: number;
   topic?: string | null;
+  linkContentTopic?: boolean;
   creationMode?: DirectiveCreationMode;
   missionType?: DirectiveMissionType | null;
   smartPayload?: SmartDirectivePayload | null;
@@ -838,6 +845,7 @@ export async function pgSaveDirective(input: SaveDirectiveInput): Promise<{ id: 
     Math.min(24 * 60, Number(input.escalationAfterMinutes ?? 30) || 30)
   );
   const topic = input.topic?.trim() || "";
+  const linkContentTopic = Boolean(input.linkContentTopic) && Boolean(topic);
   const urgency = crisisMode ? "critical" : undefined;
   const authorityLevel = mapDirectiveAuthorityLevel(input.authorityLevel);
   const authorityOther =
@@ -905,7 +913,7 @@ export async function pgSaveDirective(input: SaveDirectiveInput): Promise<{ id: 
       cta_kind, cta_label, cta_url, cta_target,
       audience_type, audience_region, audience_ministry_id, audience_organization_id, audience_device_id, audience_cities,
       published, published_at, sort_order, created_at, updated_at,
-      crisis_mode, escalation_after_minutes, topic, urgency,
+      crisis_mode, escalation_after_minutes, topic, link_content_topic, urgency,
       authority_level, authority_other,
       creation_mode, mission_type, smart_payload, ai_understanding_confirmed_at
     ) VALUES (
@@ -940,6 +948,7 @@ export async function pgSaveDirective(input: SaveDirectiveInput): Promise<{ id: 
       ${crisisMode},
       ${escalationAfterMinutes},
       ${topic},
+      ${linkContentTopic},
       ${urgency ?? "normal"},
       ${authorityLevel},
       ${authorityOther},
@@ -974,6 +983,7 @@ export async function pgSaveDirective(input: SaveDirectiveInput): Promise<{ id: 
       crisis_mode = EXCLUDED.crisis_mode,
       escalation_after_minutes = EXCLUDED.escalation_after_minutes,
       topic = EXCLUDED.topic,
+      link_content_topic = EXCLUDED.link_content_topic,
       urgency = CASE
         WHEN EXCLUDED.crisis_mode THEN 'critical'
         ELSE campaign_directives.urgency
@@ -1357,4 +1367,180 @@ export async function pgConvertDirectiveToSmart(input: {
     RETURNING id
   `;
   return rows.length > 0;
+}
+
+/**
+ * Count content produced by each user under a directive topic
+ * (plan_labels / plan_label match, plus media_contents by topic or directive_id).
+ */
+export async function pgGetDirectiveTopicContentStats(input: {
+  campaignId: string;
+  directiveId: string;
+  topicName: string;
+  userIds: string[];
+}): Promise<DirectiveTopicContentStat[]> {
+  const topic = input.topicName.trim();
+  if (!topic || input.userIds.length === 0) return [];
+
+  const sql = getSql();
+  await ensureDirectiveCommandSchema();
+  const topicPrefix = `${topic}|%`;
+  const userIds = input.userIds;
+
+  const rows = await sql`
+    WITH matched AS (
+      SELECT p.owner_user_id, COALESCE(p.published, false) AS is_published
+      FROM posters p
+      WHERE p.campaign_id = ${input.campaignId}
+        AND p.owner_user_id IN ${sql(userIds)}
+        AND (
+          COALESCE(p.plan_label, '') = ${topic}
+          OR COALESCE(p.plan_label, '') LIKE ${topicPrefix}
+          OR EXISTS (
+            SELECT 1
+            FROM jsonb_array_elements_text(COALESCE(p.plan_labels, '[]'::jsonb)) AS lbl
+            WHERE lbl = ${topic} OR lbl LIKE ${topicPrefix}
+          )
+        )
+      UNION ALL
+      SELECT v.owner_user_id, COALESCE(v.published, false)
+      FROM videos v
+      WHERE v.campaign_id = ${input.campaignId}
+        AND v.owner_user_id IN ${sql(userIds)}
+        AND (
+          COALESCE(v.plan_label, '') = ${topic}
+          OR COALESCE(v.plan_label, '') LIKE ${topicPrefix}
+          OR EXISTS (
+            SELECT 1
+            FROM jsonb_array_elements_text(COALESCE(v.plan_labels, '[]'::jsonb)) AS lbl
+            WHERE lbl = ${topic} OR lbl LIKE ${topicPrefix}
+          )
+        )
+      UNION ALL
+      SELECT b.owner_user_id, COALESCE(b.published, false)
+      FROM billboards b
+      WHERE b.campaign_id = ${input.campaignId}
+        AND b.owner_user_id IN ${sql(userIds)}
+        AND (
+          COALESCE(b.plan_label, '') = ${topic}
+          OR COALESCE(b.plan_label, '') LIKE ${topicPrefix}
+          OR EXISTS (
+            SELECT 1
+            FROM jsonb_array_elements_text(COALESCE(b.plan_labels, '[]'::jsonb)) AS lbl
+            WHERE lbl = ${topic} OR lbl LIKE ${topicPrefix}
+          )
+        )
+      UNION ALL
+      SELECT sp.owner_user_id, COALESCE(sp.published, false)
+      FROM social_media_posts sp
+      WHERE sp.campaign_id = ${input.campaignId}
+        AND sp.owner_user_id IN ${sql(userIds)}
+        AND (
+          COALESCE(sp.plan_label, '') = ${topic}
+          OR COALESCE(sp.plan_label, '') LIKE ${topicPrefix}
+          OR EXISTS (
+            SELECT 1
+            FROM jsonb_array_elements_text(COALESCE(sp.plan_labels, '[]'::jsonb)) AS lbl
+            WHERE lbl = ${topic} OR lbl LIKE ${topicPrefix}
+          )
+        )
+      UNION ALL
+      SELECT ca.owner_user_id, COALESCE(ca.published, false)
+      FROM campaign_activities ca
+      WHERE ca.campaign_id = ${input.campaignId}
+        AND ca.owner_user_id IN ${sql(userIds)}
+        AND (
+          COALESCE(ca.plan_label, '') = ${topic}
+          OR COALESCE(ca.plan_label, '') LIKE ${topicPrefix}
+          OR EXISTS (
+            SELECT 1
+            FROM jsonb_array_elements_text(COALESCE(ca.plan_labels, '[]'::jsonb)) AS lbl
+            WHERE lbl = ${topic} OR lbl LIKE ${topicPrefix}
+          )
+        )
+      UNION ALL
+      SELECT br.owner_user_id, COALESCE(br.published, false)
+      FROM broadcast_reports br
+      WHERE br.campaign_id = ${input.campaignId}
+        AND br.owner_user_id IN ${sql(userIds)}
+        AND (
+          COALESCE(br.plan_label, '') = ${topic}
+          OR COALESCE(br.plan_label, '') LIKE ${topicPrefix}
+          OR EXISTS (
+            SELECT 1
+            FROM jsonb_array_elements_text(COALESCE(br.plan_labels, '[]'::jsonb)) AS lbl
+            WHERE lbl = ${topic} OR lbl LIKE ${topicPrefix}
+          )
+        )
+      UNION ALL
+      SELECT m.owner_user_id, COALESCE(m.published, false)
+      FROM campaign_meetings m
+      WHERE m.campaign_id = ${input.campaignId}
+        AND m.owner_user_id IN ${sql(userIds)}
+        AND (
+          COALESCE(m.plan_label, '') = ${topic}
+          OR COALESCE(m.plan_label, '') LIKE ${topicPrefix}
+          OR EXISTS (
+            SELECT 1
+            FROM jsonb_array_elements_text(COALESCE(m.plan_labels, '[]'::jsonb)) AS lbl
+            WHERE lbl = ${topic} OR lbl LIKE ${topicPrefix}
+          )
+        )
+      UNION ALL
+      SELECT cf.owner_user_id, COALESCE(cf.published, false)
+      FROM campaign_files cf
+      WHERE cf.campaign_id = ${input.campaignId}
+        AND cf.owner_user_id IN ${sql(userIds)}
+        AND (
+          COALESCE(cf.plan_label, '') = ${topic}
+          OR COALESCE(cf.plan_label, '') LIKE ${topicPrefix}
+          OR EXISTS (
+            SELECT 1
+            FROM jsonb_array_elements_text(COALESCE(cf.plan_labels, '[]'::jsonb)) AS lbl
+            WHERE lbl = ${topic} OR lbl LIKE ${topicPrefix}
+          )
+        )
+      UNION ALL
+      SELECT rmu.owner_user_id, COALESCE(rmu.published, false)
+      FROM raw_media_uploads rmu
+      WHERE rmu.campaign_id = ${input.campaignId}
+        AND rmu.owner_user_id IN ${sql(userIds)}
+        AND (
+          COALESCE(rmu.plan_label, '') = ${topic}
+          OR COALESCE(rmu.plan_label, '') LIKE ${topicPrefix}
+          OR EXISTS (
+            SELECT 1
+            FROM jsonb_array_elements_text(COALESCE(rmu.plan_labels, '[]'::jsonb)) AS lbl
+            WHERE lbl = ${topic} OR lbl LIKE ${topicPrefix}
+          )
+        )
+      UNION ALL
+      SELECT mc.owner_user_id,
+        (
+          mc.status IN ('published', 'partial_publish')
+          OR mc.published_at IS NOT NULL
+        ) AS is_published
+      FROM media_contents mc
+      WHERE mc.campaign_id = ${input.campaignId}
+        AND mc.owner_user_id IN ${sql(userIds)}
+        AND (
+          mc.directive_id = ${input.directiveId}
+          OR COALESCE(mc.topic, '') = ${topic}
+          OR COALESCE(mc.topic, '') LIKE ${topicPrefix}
+        )
+    )
+    SELECT
+      owner_user_id,
+      COUNT(*)::int AS created_count,
+      COUNT(*) FILTER (WHERE is_published)::int AS published_count
+    FROM matched
+    WHERE owner_user_id IS NOT NULL
+    GROUP BY owner_user_id
+  `;
+
+  return rows.map((row) => ({
+    userId: String(row.owner_user_id),
+    createdCount: Number(row.created_count ?? 0),
+    publishedCount: Number(row.published_count ?? 0),
+  }));
 }

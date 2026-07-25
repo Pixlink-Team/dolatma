@@ -882,6 +882,16 @@ export interface DirectiveRecipient {
   executedAt?: string | null;
   executionVerifiedAt?: string | null;
   executionVerifiedBy?: string | null;
+  /** Content rows tagged with this directive's topic (when linkContentTopic). */
+  contentCreatedCount?: number;
+  contentPublishedCount?: number;
+}
+
+/** Per-user content production stats under a directive topic. */
+export interface DirectiveTopicContentStat {
+  userId: string;
+  createdCount: number;
+  publishedCount: number;
 }
 
 /** Device commitment after acknowledging a directive (تعهد و برنامه اقدام). */
@@ -986,6 +996,11 @@ export interface CampaignDirective {
   escalatedAt?: string | null;
   /** Topic label used for national calendar conflict detection. */
   topic?: string;
+  /**
+   * When true, `topic` is also ensured as a campaign content topic
+   * so recipients can tag produced content for tracking.
+   */
+  linkContentTopic?: boolean;
   /** normal = classic form; smart = ساخت هوشمند wizard. */
   creationMode?: import("./directive-smart").DirectiveCreationMode;
   missionType?: import("./directive-smart").DirectiveMissionType | null;

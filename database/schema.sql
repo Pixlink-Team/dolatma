@@ -1476,6 +1476,8 @@ ALTER TABLE campaign_directives
   ADD COLUMN IF NOT EXISTS escalated_at TIMESTAMPTZ;
 ALTER TABLE campaign_directives
   ADD COLUMN IF NOT EXISTS topic TEXT NOT NULL DEFAULT '';
+ALTER TABLE campaign_directives
+  ADD COLUMN IF NOT EXISTS link_content_topic BOOLEAN NOT NULL DEFAULT false;
 
 -- Upstream authority level for directives and user accounts
 ALTER TABLE users

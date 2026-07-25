@@ -10,6 +10,7 @@ import {
 } from "@/lib/auth/access";
 import * as pgExt from "@/lib/db/repository-extended";
 import * as pgDirectives from "@/lib/db/repository-directives";
+import { pgEnsureCampaignContentTopic } from "@/lib/db/repository";
 import { getContentTitleValidationError } from "@/lib/content-constraints";
 import {
   normalizeDirectiveCtaInput,
@@ -144,6 +145,9 @@ export async function listCampaignDirectiveUsersAction(campaignId: string) {
 export async function getDirectiveRecipientsAction(directiveId: string): Promise<{
   success: boolean;
   recipients: DirectiveRecipient[];
+  contentTracking?:
+    | { enabled: true; topic: string; createdTotal: number; publishedTotal: number }
+    | { enabled: false };
   error?: string;
 }> {
   if (!isPostgresConfigured()) {
@@ -167,7 +171,39 @@ export async function getDirectiveRecipientsAction(directiveId: string): Promise
   }
 
   const recipients = await pgDirectives.pgListDirectiveRecipients(directiveId);
-  return { success: true, recipients };
+
+  if (directive.linkContentTopic && directive.topic?.trim()) {
+    const stats = await pgDirectives.pgGetDirectiveTopicContentStats({
+      campaignId: directive.campaignId,
+      directiveId: directive.id,
+      topicName: directive.topic,
+      userIds: recipients.map((row) => row.userId),
+    });
+    const byUser = new Map(stats.map((row) => [row.userId, row]));
+    return {
+      success: true,
+      recipients: recipients.map((row) => {
+        const stat = byUser.get(row.userId);
+        return {
+          ...row,
+          contentCreatedCount: stat?.createdCount ?? 0,
+          contentPublishedCount: stat?.publishedCount ?? 0,
+        };
+      }),
+      contentTracking: {
+        enabled: true,
+        topic: directive.topic.trim(),
+        createdTotal: stats.reduce((sum, row) => sum + row.createdCount, 0),
+        publishedTotal: stats.reduce((sum, row) => sum + row.publishedCount, 0),
+      },
+    };
+  }
+
+  return {
+    success: true,
+    recipients,
+    contentTracking: { enabled: false as const },
+  };
 }
 
 export async function saveDirectiveAction(input: {
@@ -207,6 +243,7 @@ export async function saveDirectiveAction(input: {
   crisisMode?: boolean;
   escalationAfterMinutes?: number;
   topic?: string | null;
+  linkContentTopic?: boolean;
   creationMode?: DirectiveCreationMode;
   missionType?: DirectiveMissionType | null;
   smartPayload?: SmartDirectivePayload | null;
@@ -223,6 +260,15 @@ export async function saveDirectiveAction(input: {
   }
   if (input.startDate.trim() > input.endDate.trim()) {
     return { success: false as const, error: "تاریخ شروع نمی‌تواند بعد از تاریخ پایان باشد" };
+  }
+
+  const topicTrimmed = input.topic?.trim() || "";
+  const linkContentTopic = Boolean(input.linkContentTopic);
+  if (linkContentTopic && !topicTrimmed) {
+    return {
+      success: false as const,
+      error: "برای ساخت موضوع محتوا، نام موضوع الزامی است",
+    };
   }
 
   if (!input.letterFileUrl?.trim()) {
@@ -452,12 +498,17 @@ export async function saveDirectiveAction(input: {
     parentUserId,
     crisisMode: cleaned.crisisMode,
     escalationAfterMinutes: cleaned.escalationAfterMinutes,
-    topic: cleaned.topic,
+    topic: topicTrimmed,
+    linkContentTopic,
     creationMode,
     missionType,
     smartPayload,
     aiUnderstandingConfirmedAt,
   });
+
+  if (linkContentTopic && topicTrimmed) {
+    await pgEnsureCampaignContentTopic(cleaned.campaignId, topicTrimmed);
+  }
 
   const shouldSendSms =
     (cleaned.sendSmsOnPublish ?? true) && (!isUpdate || !wasAlreadyPublished);

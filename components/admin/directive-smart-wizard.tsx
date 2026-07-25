@@ -123,6 +123,7 @@ interface DirectiveSmartWizardProps {
   initialStartDate?: string;
   initialEndDate?: string;
   initialTopic?: string;
+  initialLinkContentTopic?: boolean;
   initialLetter?: {
     url: string;
     fileName: string;
@@ -146,6 +147,7 @@ export function DirectiveSmartWizard({
   initialStartDate = "",
   initialEndDate = "",
   initialTopic = "",
+  initialLinkContentTopic = false,
   initialLetter,
   issuerAuthorityLevel = "internal",
   issuerAuthorityOther = null,
@@ -167,6 +169,7 @@ export function DirectiveSmartWizard({
   const [startDate, setStartDate] = useState(initialStartDate);
   const [endDate, setEndDate] = useState(initialEndDate);
   const [topic, setTopic] = useState(initialTopic);
+  const [linkContentTopic, setLinkContentTopic] = useState(initialLinkContentTopic);
   const [authorityLevel, setAuthorityLevel] =
     useState<DirectiveAuthorityLevel>(issuerAuthorityLevel);
   const [authorityOther, setAuthorityOther] = useState(issuerAuthorityOther ?? "");
@@ -336,6 +339,10 @@ export function DirectiveSmartWizard({
       toast.error("برای منبع «سایر» توضیح الزامی است");
       return;
     }
+    if (linkContentTopic && !topic.trim()) {
+      toast.error("برای ساخت موضوع محتوا، نام موضوع را وارد کنید");
+      return;
+    }
     if (asPublish && aiRequired && (!understanding || !aiConfirmed)) {
       toast.error("برای انتشار، تأیید برداشت AI الزامی است");
       setStep("ai_understanding");
@@ -377,6 +384,7 @@ export function DirectiveSmartWizard({
         audienceRegion: audienceType === "region" ? audienceRegion : null,
         sendSmsOnPublish: asPublish ? sendSms : false,
         topic: topic.trim(),
+        linkContentTopic,
         creationMode: "smart",
         missionType,
         smartPayload,
@@ -568,6 +576,15 @@ export function DirectiveSmartWizard({
           <div className="space-y-2">
             <Label>موضوع (تقویم ملی)</Label>
             <Input value={topic} onChange={(event) => setTopic(event.target.value)} />
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3">
+            <div>
+              <Label>ساخت موضوع محتوا</Label>
+              <p className="text-xs text-muted-foreground">
+                این موضوع به موضوعات راستا اضافه می‌شود و در فرم‌های محتوا قابل انتخاب است
+              </p>
+            </div>
+            <Switch checked={linkContentTopic} onCheckedChange={setLinkContentTopic} />
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">

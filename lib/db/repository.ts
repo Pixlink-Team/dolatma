@@ -35,7 +35,7 @@ import type {
 } from "@/lib/types";
 import { generateId, slugify } from "@/lib/utils";
 import { serializeAnalyticsConfig } from "@/lib/analytics-config";
-import { normalizePlanLabels, normalizeContentTopics } from "@/lib/content-topics";
+import { normalizePlanLabels, normalizeContentTopics, ensureContentTopicInList } from "@/lib/content-topics";
 import { resolveUploadFilePath } from "@/lib/uploads";
 import { unlink } from "fs/promises";
 import { ensureSectionContentFormsSchema } from "@/lib/db/repository-section-forms";
@@ -513,6 +513,27 @@ export async function pgDeleteCampaign(id: string) {
 export async function pgUpdateCampaignSettings(data: Partial<CampaignSettings>) {
   if (!data.id) return { success: false };
   return pgSaveCampaign(data);
+}
+
+/** Ensure a content topic exists on the campaign taxonomy (idempotent). */
+export async function pgEnsureCampaignContentTopic(
+  campaignId: string,
+  topicName: string
+): Promise<{ success: boolean; added: boolean }> {
+  const name = topicName.trim();
+  if (!name) return { success: false, added: false };
+
+  const existing = await pgGetCampaignById(campaignId);
+  if (!existing) return { success: false, added: false };
+
+  const { topics, added } = ensureContentTopicInList(
+    existing.contentTopics ?? [],
+    name
+  );
+  if (!added) return { success: true, added: false };
+
+  await pgSaveCampaign({ id: campaignId, contentTopics: topics });
+  return { success: true, added: true };
 }
 
 export async function pgSaveBillboard(data: Partial<Billboard> & { id?: string }) {

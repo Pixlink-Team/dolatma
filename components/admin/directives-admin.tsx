@@ -108,6 +108,7 @@ const schema = z.object({
   crisisMode: z.boolean().optional(),
   escalationAfterMinutes: z.coerce.number().min(5).max(1440).optional(),
   topic: z.string().optional(),
+  linkContentTopic: z.boolean().optional(),
   objective: z.string().optional(),
   expectedResults: z.string().optional(),
   mandatoryActions: z.string().optional(),
@@ -384,6 +385,11 @@ export function DirectivesAdmin({
   const [detailItem, setDetailItem] = useState<CampaignDirective | null>(null);
   const [trackingItem, setTrackingItem] = useState<CampaignDirective | null>(null);
   const [recipients, setRecipients] = useState<DirectiveRecipient[]>([]);
+  const [contentTracking, setContentTracking] = useState<
+    | { enabled: true; topic: string; createdTotal: number; publishedTotal: number }
+    | { enabled: false }
+    | null
+  >(null);
   const [recipientFilter, setRecipientFilter] = useState<"all" | "unseen" | "sms_error" | "no_plan">(
     "all"
   );
@@ -407,6 +413,7 @@ export function DirectivesAdmin({
       crisisMode: false,
       escalationAfterMinutes: 30,
       topic: "",
+      linkContentTopic: false,
       objective: "",
       expectedResults: "",
       mandatoryActions: "",
@@ -500,6 +507,7 @@ export function DirectivesAdmin({
       crisisMode: false,
       escalationAfterMinutes: 30,
       topic: "",
+      linkContentTopic: false,
       objective: "",
       expectedResults: "",
       mandatoryActions: "",
@@ -551,6 +559,7 @@ export function DirectivesAdmin({
       crisisMode: Boolean(item.crisisMode),
       escalationAfterMinutes: item.escalationAfterMinutes ?? 30,
       topic: item.topic ?? "",
+      linkContentTopic: Boolean(item.linkContentTopic),
       objective: "",
       expectedResults: "",
       mandatoryActions: "",
@@ -661,6 +670,11 @@ export function DirectivesAdmin({
       return;
     }
 
+    if (data.linkContentTopic && !data.topic?.trim()) {
+      toast.error("برای ساخت موضوع محتوا، نام موضوع را وارد کنید");
+      return;
+    }
+
     startTransition(async () => {
       const conflictCheck = await checkDirectiveCalendarConflictAction({
         campaignId,
@@ -719,6 +733,7 @@ export function DirectivesAdmin({
         crisisMode: Boolean(data.crisisMode) || data.urgency === "critical",
         escalationAfterMinutes: data.escalationAfterMinutes ?? 30,
         topic: data.topic?.trim() || "",
+        linkContentTopic: Boolean(data.linkContentTopic),
       });
 
       if (!result.success) {
@@ -773,6 +788,8 @@ export function DirectivesAdmin({
   const openTracking = (item: CampaignDirective) => {
     setTrackingItem(item);
     setRecipientFilter("all");
+    setContentTracking(null);
+    setRecipients([]);
     startTransition(async () => {
       const result = await getDirectiveRecipientsAction(item.id);
       if (!result.success) {
@@ -780,6 +797,7 @@ export function DirectivesAdmin({
         return;
       }
       setRecipients(result.recipients);
+      setContentTracking(result.contentTracking ?? { enabled: false });
     });
   };
 
@@ -968,6 +986,9 @@ export function DirectivesAdmin({
                       </Badge>
                     ) : null}
                     {item.priority === "urgent" && <Badge variant="destructive">فوری</Badge>}
+                    {item.linkContentTopic && item.topic ? (
+                      <Badge variant="secondary">موضوع محتوا: {item.topic}</Badge>
+                    ) : null}
                     {!showingInbox && (
                       <Badge variant="outline">{formatAudienceLabel(item, audienceScope)}</Badge>
                     )}
@@ -1164,6 +1185,7 @@ export function DirectivesAdmin({
                 editingSmartItem?.endDate ?? editingSmartItem?.dueDate ?? ""
               }
               initialTopic={editingSmartItem?.topic ?? ""}
+              initialLinkContentTopic={Boolean(editingSmartItem?.linkContentTopic)}
               initialLetter={
                 editingSmartItem?.letterFileUrl
                   ? {
@@ -1260,6 +1282,19 @@ export function DirectivesAdmin({
             <div className="space-y-2">
               <Label>موضوع (برای تقویم ملی)</Label>
               <Input {...form.register("topic")} placeholder="مثلاً سلامت / آموزش" />
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3">
+              <div>
+                <Label>ساخت موضوع محتوا</Label>
+                <p className="text-xs text-muted-foreground">
+                  این موضوع به موضوعات راستا اضافه می‌شود و در فرم‌های محتوا قابل انتخاب است؛ برای پیگیری تولید محتوا استفاده می‌شود
+                </p>
+              </div>
+              <Switch
+                checked={Boolean(form.watch("linkContentTopic"))}
+                onCheckedChange={(checked) => form.setValue("linkContentTopic", checked)}
+              />
             </div>
 
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3">
@@ -1906,10 +1941,11 @@ export function DirectivesAdmin({
           if (!next) {
             setTrackingItem(null);
             setRecipients([]);
+            setContentTracking(null);
           }
         }}
       >
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           {trackingItem && (
             <>
               <DialogHeader>
@@ -1917,11 +1953,24 @@ export function DirectivesAdmin({
               </DialogHeader>
               <div className="space-y-4">
                 <p className="text-sm text-muted-foreground">
+                  {formatPersianNumber(trackingItem.recipientCount ?? recipients.length)} مخاطب ·{" "}
                   {formatPersianNumber(trackingItem.seenCount ?? 0)} دیده‌اند ·{" "}
                   {formatPersianNumber(trackingItem.unseenCount ?? 0)} ندیده‌اند ·{" "}
-                  {formatPersianNumber(trackingItem.actionPlanCount ?? 0)} تعهد ·{" "}
-                  {formatPersianNumber(trackingItem.recipientCount ?? recipients.length)} مخاطب
+                  {formatPersianNumber(trackingItem.actionPlanCount ?? 0)} تعهد
+                  {contentTracking?.enabled ? (
+                    <>
+                      {" "}
+                      · {formatPersianNumber(contentTracking.createdTotal)} محتوا ساخته‌شده ·{" "}
+                      {formatPersianNumber(contentTracking.publishedTotal)} منتشرشده
+                      <span className="text-xs"> (موضوع: {contentTracking.topic})</span>
+                    </>
+                  ) : null}
                 </p>
+                {!contentTracking?.enabled ? (
+                  <p className="text-xs text-muted-foreground rounded-md border border-dashed px-3 py-2">
+                    برای پیگیری محتوا، هنگام ثبت دستورکار گزینه «ساخت موضوع محتوا» را فعال کنید.
+                  </p>
+                ) : null}
 
                 <Tabs
                   value={recipientFilter}
@@ -1947,6 +1996,12 @@ export function DirectivesAdmin({
                         <th className="px-3 py-2 font-medium">نقش</th>
                         <th className="px-3 py-2 font-medium">مشاهده</th>
                         <th className="px-3 py-2 font-medium">تعهد</th>
+                        {contentTracking?.enabled ? (
+                          <>
+                            <th className="px-3 py-2 font-medium">محتوا ساخته‌شده</th>
+                            <th className="px-3 py-2 font-medium">منتشرشده</th>
+                          </>
+                        ) : null}
                         <th className="px-3 py-2 font-medium">زمان تأیید</th>
                         <th className="px-3 py-2 font-medium">پیامک</th>
                       </tr>
@@ -1954,7 +2009,10 @@ export function DirectivesAdmin({
                     <tbody>
                       {filteredRecipients.length === 0 ? (
                         <tr>
-                          <td colSpan={6} className="px-3 py-6 text-center text-muted-foreground">
+                          <td
+                            colSpan={contentTracking?.enabled ? 8 : 6}
+                            className="px-3 py-6 text-center text-muted-foreground"
+                          >
                             موردی نیست
                           </td>
                         </tr>
@@ -2001,6 +2059,16 @@ export function DirectivesAdmin({
                                 "—"
                               )}
                             </td>
+                            {contentTracking?.enabled ? (
+                              <>
+                                <td className="px-3 py-2">
+                                  {formatPersianNumber(row.contentCreatedCount ?? 0)}
+                                </td>
+                                <td className="px-3 py-2">
+                                  {formatPersianNumber(row.contentPublishedCount ?? 0)}
+                                </td>
+                              </>
+                            ) : null}
                             <td className="px-3 py-2">
                               {row.seenAt ? formatPersianDateTime(row.seenAt) : "—"}
                             </td>
