@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "db355fc66ae4e0eb0ae70e1b6681ec6b55611be5",
+      "committedAt": "2026-07-25T15:19:51+03:30",
+      "title": "امکان تغییر استان و شهر دستگاه ریشه توسط مدیر وزارتخانه",
+      "subject": "Allow ministry managers to edit root device province and city"
+    },
+    {
       "hash": "bbf88e8579b89715554d6d6a4870b374a804484a",
       "committedAt": "2026-07-25T14:53:09+03:30",
       "title": "رفع خطا هنگام ویرایش دسترسی کاربران در پنل ادمین",
