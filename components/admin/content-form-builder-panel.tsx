@@ -20,6 +20,7 @@ import {
   contentFormSectionLabels,
   contentSystemWidgetLabels,
   createEmptyCustomContentField,
+  isDefaultRequiredSystemWidget,
   systemWidgetsForSection,
 } from "@/lib/section-content-forms";
 import type {
@@ -132,7 +133,7 @@ export function ContentFormBuilderPanel({
           widget,
           type: "text",
           label: contentSystemWidgetLabels[widget],
-          required: widget === "image" || widget === "map" || widget === "periods" || widget === "axis" || widget === "category",
+          required: isDefaultRequiredSystemWidget(widget),
         },
       ];
       emitDraft({ fields: next });

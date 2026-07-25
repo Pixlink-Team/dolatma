@@ -1,5 +1,6 @@
 import { getSql } from "@/lib/db/client";
 import {
+  CONTENT_FORM_SECTION_KEYS,
   contentFormSectionLabels,
   defaultContentFormFields,
   isContentFormSectionKey,
@@ -68,7 +69,7 @@ export async function pgListSectionContentForms(): Promise<SectionContentForm[]>
     if (mapped) byKey.set(mapped.sectionKey, mapped);
   }
 
-  return (["posters", "billboards"] as const).map(
+  return CONTENT_FORM_SECTION_KEYS.map(
     (sectionKey) =>
       byKey.get(sectionKey) ?? {
         sectionKey,

@@ -10,6 +10,7 @@ import {
 import {
   ContentSectionFormRenderer,
   emptyBillboardFormValues,
+  emptyGenericFormValues,
   emptyPosterFormValues,
 } from "@/components/admin/content-section-form-renderer";
 import { createDisplayPeriod } from "@/components/admin/billboard-display-periods-editor";
@@ -27,9 +28,70 @@ interface FormsAdminProps {
   canManage: boolean;
 }
 
+function FormPreview({
+  sectionKey,
+  fields,
+  campaignId,
+}: {
+  sectionKey: ContentFormSectionKey;
+  fields: SectionContentForm["fields"];
+  campaignId: string;
+}) {
+  if (sectionKey === "posters") {
+    return (
+      <ContentSectionFormRenderer
+        sectionKey="posters"
+        fields={fields}
+        values={{
+          ...emptyPosterFormValues(),
+          title: "نمونه عنوان پوستر",
+        }}
+        onChange={() => undefined}
+        campaignId={campaignId}
+        isNew
+        readOnly
+      />
+    );
+  }
+
+  if (sectionKey === "billboards") {
+    return (
+      <ContentSectionFormRenderer
+        sectionKey="billboards"
+        fields={fields}
+        values={{
+          ...emptyBillboardFormValues(),
+          axis: "نمونه محور",
+          periods: [createDisplayPeriod()],
+        }}
+        onChange={() => undefined}
+        campaignId={campaignId}
+        isNew
+        readOnly
+        showAdminNotes
+      />
+    );
+  }
+
+  return (
+    <ContentSectionFormRenderer
+      sectionKey={sectionKey}
+      fields={fields}
+      values={{
+        ...emptyGenericFormValues(),
+        title: `نمونه ${contentFormSectionLabels[sectionKey]}`,
+      }}
+      onChange={() => undefined}
+      campaignId={campaignId}
+      isNew
+      readOnly
+    />
+  );
+}
+
 export function FormsAdmin({ campaignId, canManage }: FormsAdminProps) {
   const [forms, setForms] = useState<SectionContentForm[]>([]);
-  const [sectionKey, setSectionKey] = useState<ContentFormSectionKey>("posters");
+  const [sectionKey, setSectionKey] = useState<ContentFormSectionKey>("billboards");
   const [loading, setLoading] = useState(true);
   const [draft, setDraft] = useState<ContentFormBuilderDraft | null>(null);
 
@@ -88,7 +150,7 @@ export function FormsAdmin({ campaignId, canManage }: FormsAdminProps) {
         </div>
       ) : (
         <div className="grid gap-6 xl:grid-cols-[240px_minmax(0,1fr)_minmax(0,1fr)]">
-          <div className="space-y-2">
+          <div className="space-y-2 max-h-[calc(100vh-12rem)] overflow-y-auto pe-1">
             {CONTENT_FORM_SECTION_KEYS.map((key) => {
               const isSelected = key === sectionKey;
               const form = forms.find((item) => item.sectionKey === key);
@@ -137,35 +199,11 @@ export function FormsAdmin({ campaignId, canManage }: FormsAdminProps) {
               </p>
             </div>
 
-            {sectionKey === "posters" ? (
-              <ContentSectionFormRenderer
-                sectionKey="posters"
-                fields={previewFields}
-                values={{
-                  ...emptyPosterFormValues(),
-                  title: "نمونه عنوان پوستر",
-                }}
-                onChange={() => undefined}
-                campaignId={campaignId}
-                isNew
-                readOnly
-              />
-            ) : (
-              <ContentSectionFormRenderer
-                sectionKey="billboards"
-                fields={previewFields}
-                values={{
-                  ...emptyBillboardFormValues(),
-                  axis: "نمونه محور",
-                  periods: [createDisplayPeriod()],
-                }}
-                onChange={() => undefined}
-                campaignId={campaignId}
-                isNew
-                readOnly
-                showAdminNotes
-              />
-            )}
+            <FormPreview
+              sectionKey={sectionKey}
+              fields={previewFields}
+              campaignId={campaignId}
+            />
           </div>
         </div>
       )}

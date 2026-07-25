@@ -62,6 +62,47 @@ export interface BillboardSectionFormValues {
   metadata: Record<string, unknown>;
 }
 
+/** Shared bag of fields for sections other than posters/billboards (builder preview + future wiring). */
+export interface GenericSectionFormValues {
+  title: string;
+  description: string;
+  notes: string;
+  planLabels: string[];
+  score?: number | null;
+  imageUrl: string;
+  videoUrl: string;
+  coverUrl: string;
+  documentUrl: string;
+  rawFileUrl: string;
+  pdfUrl: string;
+  audioUrl: string;
+  mediaUrl: string;
+  link: string;
+  location: string;
+  publishedDate: string;
+  activityDate: string;
+  reportDate: string;
+  meetingDate: string;
+  platform: string;
+  contentType: string;
+  videoType: string;
+  activityType: string;
+  mediaKind: string;
+  isCreative: boolean;
+  views: string;
+  likes: string;
+  comments: string;
+  shares: string;
+  discussionSummary: string;
+  attendees: string;
+  tasks: string;
+  decisions: string;
+  mediaItemsNote: string;
+  metadata: Record<string, unknown>;
+}
+
+type GenericFormSectionKey = Exclude<ContentFormSectionKey, "posters" | "billboards">;
+
 interface SharedRendererProps {
   fields: ContentFormField[];
   contentTopics?: ContentTopic[];
@@ -99,10 +140,20 @@ interface BillboardRendererProps extends SharedRendererProps {
   onLocationCenterChange?: (center: { lat: number; lng: number }) => void;
 }
 
+interface GenericRendererProps extends SharedRendererProps {
+  sectionKey: GenericFormSectionKey;
+  values: GenericSectionFormValues;
+  onChange: (patch: Partial<GenericSectionFormValues>) => void;
+  contentId?: string;
+  highlightTitle?: boolean;
+  highlightDescription?: boolean;
+  highlightMedia?: boolean;
+}
+
 export type ContentSectionFormRendererProps =
   | PosterRendererProps
-  | BillboardRendererProps;
-
+  | BillboardRendererProps
+  | GenericRendererProps;
 function CustomFieldInput({
   field,
   value,
@@ -375,6 +426,7 @@ export function ContentSectionFormRenderer(props: ContentSectionFormRendererProp
           }
         }
 
+        if (props.sectionKey === "billboards") {
         const values = props.values;
         const onChange = props.onChange;
 
@@ -551,6 +603,222 @@ export function ContentSectionFormRenderer(props: ContentSectionFormRendererProp
           default:
             return null;
         }
+        }
+
+        const values = props.values;
+        const onChange = props.onChange;
+        const requiredMark = field.required ? (
+          <span className="text-destructive mr-1">*</span>
+        ) : null;
+
+        const textField = (
+          key: keyof GenericSectionFormValues,
+          multiline = false
+        ) => (
+          <div key={field.id} className="space-y-2">
+            <Label className={cn(key === "title" && props.highlightTitle && "text-destructive")}>
+              {field.label}
+              {requiredMark}
+            </Label>
+            {multiline ? (
+              <Textarea
+                value={String(values[key] ?? "")}
+                onChange={(e) => onChange({ [key]: e.target.value })}
+                rows={3}
+                placeholder={field.placeholder}
+                readOnly={readOnly}
+              />
+            ) : (
+              <Input
+                value={String(values[key] ?? "")}
+                onChange={(e) => onChange({ [key]: e.target.value })}
+                maxLength={key === "title" ? CONTENT_TITLE_MAX_LENGTH : undefined}
+                placeholder={field.placeholder}
+                readOnly={readOnly}
+              />
+            )}
+          </div>
+        );
+
+        const fileField = (
+          urlKey: keyof GenericSectionFormValues,
+          labelFallback: string
+        ) => (
+          <DocumentUpload
+            key={field.id}
+            value={String(values[urlKey] ?? "")}
+            onChange={(payload) => onChange({ [urlKey]: payload.url })}
+            label={field.label || labelFallback}
+            disabled={readOnly}
+          />
+        );
+
+        const mediaField = (urlKey: keyof GenericSectionFormValues) => (
+          <MediaUpload
+            key={field.id}
+            label={field.label}
+            value={String(values[urlKey] ?? "")}
+            onChange={(url) => onChange({ [urlKey]: url })}
+            showPreview
+            showLinkInput={false}
+          />
+        );
+
+        const dateField = (dateKey: keyof GenericSectionFormValues) => (
+          <div key={field.id} className="space-y-2">
+            <Label>
+              {field.label}
+              {requiredMark}
+            </Label>
+            <PersianDateInput
+              value={String(values[dateKey] ?? "") || undefined}
+              onChange={(isoDate) => onChange({ [dateKey]: isoDate })}
+              allowEmpty={!field.required}
+            />
+          </div>
+        );
+
+        switch (widget) {
+          case "title":
+            return textField("title");
+          case "description":
+          case "discussionSummary":
+          case "attendees":
+          case "tasks":
+          case "decisions":
+          case "notes":
+            return textField(
+              widget === "description"
+                ? "description"
+                : widget === "discussionSummary"
+                  ? "discussionSummary"
+                  : widget === "attendees"
+                    ? "attendees"
+                    : widget === "tasks"
+                      ? "tasks"
+                      : widget === "decisions"
+                        ? "decisions"
+                        : "notes",
+              true
+            );
+          case "link":
+          case "location":
+          case "platform":
+          case "contentType":
+          case "videoType":
+          case "activityType":
+          case "mediaKind":
+            return textField(
+              widget === "link"
+                ? "link"
+                : widget === "location"
+                  ? "location"
+                  : widget === "platform"
+                    ? "platform"
+                    : widget === "contentType"
+                      ? "contentType"
+                      : widget === "videoType"
+                        ? "videoType"
+                        : widget === "activityType"
+                          ? "activityType"
+                          : "mediaKind"
+            );
+          case "publishedDate":
+            return dateField("publishedDate");
+          case "activityDate":
+            return dateField("activityDate");
+          case "reportDate":
+            return dateField("reportDate");
+          case "meetingDate":
+            return dateField("meetingDate");
+          case "planLabels":
+            return (
+              <PlanLabelSelect
+                key={field.id}
+                topics={contentTopics}
+                plans={contentPlans}
+                values={values.planLabels}
+                onChangeMultiple={(planLabels) => onChange({ planLabels })}
+              />
+            );
+          case "isCreative":
+            return (
+              <div
+                key={field.id}
+                className="flex items-center justify-between rounded-md border px-3 py-2"
+              >
+                <Label>{field.label}</Label>
+                <Switch
+                  checked={values.isCreative}
+                  onCheckedChange={(checked) => onChange({ isCreative: checked })}
+                  disabled={readOnly}
+                />
+              </div>
+            );
+          case "engagement":
+            return (
+              <div key={field.id} className="grid gap-3 sm:grid-cols-2">
+                {(
+                  [
+                    ["views", "بازدید"],
+                    ["likes", "لایک"],
+                    ["comments", "کامنت"],
+                    ["shares", "اشتراک"],
+                  ] as const
+                ).map(([key, label]) => (
+                  <div key={key} className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">{label}</Label>
+                    <Input
+                      type="number"
+                      value={values[key]}
+                      onChange={(e) => onChange({ [key]: e.target.value })}
+                      readOnly={readOnly}
+                    />
+                  </div>
+                ))}
+              </div>
+            );
+          case "image":
+            return mediaField("imageUrl");
+          case "cover":
+            return mediaField("coverUrl");
+          case "video":
+            return fileField("videoUrl", "آپلود ویدیو");
+          case "document":
+            return fileField("documentUrl", "آپلود فایل");
+          case "rawFile":
+            return fileField("rawFileUrl", "آپلود فایل خام");
+          case "pdf":
+            return fileField("pdfUrl", "آپلود PDF");
+          case "audio":
+            return fileField("audioUrl", "آپلود صوت");
+          case "media":
+            return fileField("mediaUrl", "آپلود رسانه");
+          case "mediaItems":
+            return (
+              <div key={field.id} className="space-y-2">
+                <Label>
+                  {field.label}
+                  {requiredMark}
+                </Label>
+                <Textarea
+                  value={values.mediaItemsNote}
+                  onChange={(e) => onChange({ mediaItemsNote: e.target.value })}
+                  rows={2}
+                  placeholder="فهرست رسانه‌ها (پیش‌نمایش)"
+                  readOnly={readOnly}
+                />
+              </div>
+            );
+          case "score":
+            return (
+              <div key={field.id} className="rounded-md border px-3 py-2 text-sm text-muted-foreground">
+                {field.label}: در حالت ویرایش محتوا نمایش داده می‌شود
+              </div>
+            );
+          default:
+            return null;
+        }
       })}
     </div>
   );
@@ -583,6 +851,46 @@ export function emptyBillboardFormValues(): BillboardSectionFormValues {
     planLabels: [],
     periods: [],
     score: null,
+    metadata: {},
+  };
+}
+
+export function emptyGenericFormValues(): GenericSectionFormValues {
+  return {
+    title: "",
+    description: "",
+    notes: "",
+    planLabels: [],
+    score: null,
+    imageUrl: "",
+    videoUrl: "",
+    coverUrl: "",
+    documentUrl: "",
+    rawFileUrl: "",
+    pdfUrl: "",
+    audioUrl: "",
+    mediaUrl: "",
+    link: "",
+    location: "",
+    publishedDate: "",
+    activityDate: "",
+    reportDate: "",
+    meetingDate: "",
+    platform: "",
+    contentType: "",
+    videoType: "",
+    activityType: "",
+    mediaKind: "",
+    isCreative: false,
+    views: "",
+    likes: "",
+    comments: "",
+    shares: "",
+    discussionSummary: "",
+    attendees: "",
+    tasks: "",
+    decisions: "",
+    mediaItemsNote: "",
     metadata: {},
   };
 }

@@ -325,8 +325,19 @@ export interface FormField {
   accept?: string;
 }
 
-/** Sections that currently have a wired content form builder. */
-export type ContentFormSectionKey = "posters" | "billboards";
+/** Sections with a configurable content form builder. */
+export type ContentFormSectionKey =
+  | "billboards"
+  | "posters"
+  | "videos"
+  | "files"
+  | "rawMedia"
+  | "sitePublications"
+  | "socialPosts"
+  | "pressPublications"
+  | "activities"
+  | "broadcast"
+  | "meetings";
 
 export type ContentSystemWidget =
   | "image"
@@ -341,7 +352,32 @@ export type ContentSystemWidget =
   | "areaSqm"
   | "address"
   | "map"
-  | "periods";
+  | "periods"
+  | "video"
+  | "videoType"
+  | "cover"
+  | "document"
+  | "rawFile"
+  | "mediaKind"
+  | "link"
+  | "publishedDate"
+  | "platform"
+  | "contentType"
+  | "engagement"
+  | "media"
+  | "activityType"
+  | "activityDate"
+  | "location"
+  | "mediaItems"
+  | "isCreative"
+  | "pdf"
+  | "reportDate"
+  | "meetingDate"
+  | "audio"
+  | "discussionSummary"
+  | "attendees"
+  | "tasks"
+  | "decisions";
 
 export interface ContentFormField {
   id: string;

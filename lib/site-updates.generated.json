@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "320557e2c3dc2a703c33eb2566be4df7b69e4f3d",
+      "committedAt": "2026-07-25T17:09:55+03:30",
+      "title": "رفع نمایش دیالوگ تأیید حذف کاربر پشت پنجره مودال",
+      "subject": "Fix delete confirm dialog appearing behind user modal"
+    },
+    {
       "hash": "ea1c52a515b8b6e68682f385ce04e768cf802625",
       "committedAt": "2026-07-25T17:03:49+03:30",
       "title": "نمایش کاربران در درخت واقعی دستگاه‌ها به‌جای لیست تخت زیر وزارتخانه",

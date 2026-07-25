@@ -7,11 +7,33 @@ import type {
 } from "@/lib/types";
 import { FORM_FIELD_TYPES } from "@/lib/campaign-forms";
 
-export const CONTENT_FORM_SECTION_KEYS = ["posters", "billboards"] as const;
+/** Content-creation sections with configurable add/edit forms. */
+export const CONTENT_FORM_SECTION_KEYS = [
+  "billboards",
+  "posters",
+  "videos",
+  "files",
+  "rawMedia",
+  "sitePublications",
+  "socialPosts",
+  "pressPublications",
+  "activities",
+  "broadcast",
+  "meetings",
+] as const;
 
 export const contentFormSectionLabels: Record<ContentFormSectionKey, string> = {
-  posters: "پوسترها",
   billboards: "تبلیغات محیطی",
+  posters: "پوسترها",
+  videos: "ویدیوها",
+  files: "فایل‌ها",
+  rawMedia: "راش تصویر",
+  sitePublications: "انتشار در سایت",
+  socialPosts: "پست‌های شبکه اجتماعی",
+  pressPublications: "مجله و روزنامه",
+  activities: "اقدامات",
+  broadcast: "پخش صدا و سیما",
+  meetings: "جلسات و مصوبات",
 };
 
 export const CONTENT_SYSTEM_WIDGETS: ContentSystemWidget[] = [
@@ -28,6 +50,31 @@ export const CONTENT_SYSTEM_WIDGETS: ContentSystemWidget[] = [
   "address",
   "map",
   "periods",
+  "video",
+  "videoType",
+  "cover",
+  "document",
+  "rawFile",
+  "mediaKind",
+  "link",
+  "publishedDate",
+  "platform",
+  "contentType",
+  "engagement",
+  "media",
+  "activityType",
+  "activityDate",
+  "location",
+  "mediaItems",
+  "isCreative",
+  "pdf",
+  "reportDate",
+  "meetingDate",
+  "audio",
+  "discussionSummary",
+  "attendees",
+  "tasks",
+  "decisions",
 ];
 
 export const contentSystemWidgetLabels: Record<ContentSystemWidget, string> = {
@@ -44,6 +91,31 @@ export const contentSystemWidgetLabels: Record<ContentSystemWidget, string> = {
   address: "آدرس",
   map: "نقشه",
   periods: "دوره‌های نمایش",
+  video: "ویدیو",
+  videoType: "نوع ویدیو",
+  cover: "کاور",
+  document: "فایل",
+  rawFile: "فایل خام",
+  mediaKind: "نوع فایل",
+  link: "لینک",
+  publishedDate: "تاریخ انتشار",
+  platform: "کانال",
+  contentType: "نوع محتوا",
+  engagement: "آمار تعامل",
+  media: "رسانه",
+  activityType: "نوع",
+  activityDate: "تاریخ",
+  location: "مکان",
+  mediaItems: "رسانه‌ها",
+  isCreative: "اقدام خلاقانه",
+  pdf: "فایل PDF",
+  reportDate: "تاریخ گزارش",
+  meetingDate: "تاریخ جلسه",
+  audio: "فایل صوتی",
+  discussionSummary: "خلاصه صحبت‌ها",
+  attendees: "حاضرین",
+  tasks: "مصوبات",
+  decisions: "تصمیم‌ها",
 };
 
 const POSTER_SYSTEM_WIDGETS: ContentSystemWidget[] = [
@@ -68,10 +140,116 @@ const BILLBOARD_SYSTEM_WIDGETS: ContentSystemWidget[] = [
   "periods",
 ];
 
+const VIDEO_SYSTEM_WIDGETS: ContentSystemWidget[] = [
+  "video",
+  "title",
+  "description",
+  "videoType",
+  "planLabels",
+  "score",
+  "cover",
+  "notes",
+];
+
+const FILE_SYSTEM_WIDGETS: ContentSystemWidget[] = [
+  "title",
+  "description",
+  "planLabels",
+  "document",
+];
+
+const RAW_MEDIA_SYSTEM_WIDGETS: ContentSystemWidget[] = [
+  "title",
+  "description",
+  "mediaKind",
+  "planLabels",
+  "rawFile",
+];
+
+const SITE_PUBLICATION_SYSTEM_WIDGETS: ContentSystemWidget[] = [
+  "title",
+  "link",
+  "publishedDate",
+  "planLabels",
+  "score",
+  "cover",
+  "description",
+];
+
+const SOCIAL_POST_SYSTEM_WIDGETS: ContentSystemWidget[] = [
+  "platform",
+  "contentType",
+  "title",
+  "planLabels",
+  "score",
+  "engagement",
+  "link",
+  "publishedDate",
+  "cover",
+  "media",
+  "description",
+];
+
+const PRESS_SYSTEM_WIDGETS: ContentSystemWidget[] = [
+  "title",
+  "activityType",
+  "activityDate",
+  "link",
+  "location",
+  "mediaItems",
+  "description",
+  "planLabels",
+];
+
+const ACTIVITY_SYSTEM_WIDGETS: ContentSystemWidget[] = [
+  "title",
+  "activityType",
+  "isCreative",
+  "activityDate",
+  "location",
+  "planLabels",
+  "score",
+  "mediaItems",
+  "description",
+];
+
+const BROADCAST_SYSTEM_WIDGETS: ContentSystemWidget[] = [
+  "title",
+  "reportDate",
+  "pdf",
+  "notes",
+];
+
+const MEETING_SYSTEM_WIDGETS: ContentSystemWidget[] = [
+  "title",
+  "meetingDate",
+  "location",
+  "image",
+  "audio",
+  "discussionSummary",
+  "attendees",
+  "tasks",
+  "decisions",
+];
+
+const SECTION_SYSTEM_WIDGETS: Record<ContentFormSectionKey, ContentSystemWidget[]> = {
+  posters: POSTER_SYSTEM_WIDGETS,
+  billboards: BILLBOARD_SYSTEM_WIDGETS,
+  videos: VIDEO_SYSTEM_WIDGETS,
+  files: FILE_SYSTEM_WIDGETS,
+  rawMedia: RAW_MEDIA_SYSTEM_WIDGETS,
+  sitePublications: SITE_PUBLICATION_SYSTEM_WIDGETS,
+  socialPosts: SOCIAL_POST_SYSTEM_WIDGETS,
+  pressPublications: PRESS_SYSTEM_WIDGETS,
+  activities: ACTIVITY_SYSTEM_WIDGETS,
+  broadcast: BROADCAST_SYSTEM_WIDGETS,
+  meetings: MEETING_SYSTEM_WIDGETS,
+};
+
 export function systemWidgetsForSection(
   sectionKey: ContentFormSectionKey
 ): ContentSystemWidget[] {
-  return sectionKey === "posters" ? POSTER_SYSTEM_WIDGETS : BILLBOARD_SYSTEM_WIDGETS;
+  return SECTION_SYSTEM_WIDGETS[sectionKey];
 }
 
 function isFormFieldType(value: unknown): value is FormFieldType {
@@ -108,21 +286,16 @@ function systemField(
   };
 }
 
-export function defaultContentFormFields(
-  sectionKey: ContentFormSectionKey
-): ContentFormField[] {
-  if (sectionKey === "posters") {
-    return [
-      systemField("image", "تصویر پوستر", true),
-      systemField("title", "عنوان", false),
-      systemField("description", "توضیحات", false),
-      systemField("planLabels", "موضوع", false),
-      systemField("notes", "یادداشت", false),
-      systemField("score", "امتیاز", false),
-    ];
-  }
-
-  return [
+const DEFAULT_FIELDS: Record<ContentFormSectionKey, () => ContentFormField[]> = {
+  posters: () => [
+    systemField("image", "تصویر پوستر", true),
+    systemField("title", "عنوان", false),
+    systemField("description", "توضیحات", false),
+    systemField("planLabels", "موضوع", false),
+    systemField("notes", "یادداشت", false),
+    systemField("score", "امتیاز", false),
+  ],
+  billboards: () => [
     systemField("category", "دسته‌بندی", true),
     systemField("provinceCity", "استان و شهر", false),
     systemField("axis", "محور / خیابان / بزرگراه", true),
@@ -133,7 +306,96 @@ export function defaultContentFormFields(
     systemField("planLabels", "موضوع", false),
     systemField("score", "امتیاز", false),
     systemField("periods", "دوره‌های نمایش", true),
-  ];
+  ],
+  videos: () => [
+    systemField("video", "ویدیو", true),
+    systemField("title", "عنوان", true),
+    systemField("description", "توضیحات", false),
+    systemField("videoType", "نوع ویدیو", false),
+    systemField("planLabels", "موضوع", false),
+    systemField("score", "امتیاز", false),
+    systemField("cover", "کاور سفارشی", false),
+    systemField("notes", "یادداشت", false),
+  ],
+  files: () => [
+    systemField("title", "عنوان", true),
+    systemField("description", "توضیحات", false),
+    systemField("planLabels", "موضوع", false),
+    systemField("document", "فایل", true),
+  ],
+  rawMedia: () => [
+    systemField("title", "عنوان", true),
+    systemField("description", "توضیحات", false),
+    systemField("mediaKind", "نوع فایل", true),
+    systemField("planLabels", "موضوع", false),
+    systemField("rawFile", "فایل خام", true),
+  ],
+  sitePublications: () => [
+    systemField("title", "عنوان", true),
+    systemField("link", "لینک مطلب", true),
+    systemField("publishedDate", "تاریخ انتشار", false),
+    systemField("planLabels", "موضوع", false),
+    systemField("score", "امتیاز", false),
+    systemField("cover", "تصویر شاخص", false),
+    systemField("description", "توضیح", false),
+  ],
+  socialPosts: () => [
+    systemField("platform", "کانال", true),
+    systemField("contentType", "نوع محتوا", true),
+    systemField("title", "عنوان / نام کاور", false),
+    systemField("planLabels", "موضوع", false),
+    systemField("score", "امتیاز", false),
+    systemField("engagement", "آمار تعامل", false),
+    systemField("link", "لینک پست", false),
+    systemField("publishedDate", "تاریخ انتشار", false),
+    systemField("cover", "تصویر کاور", false),
+    systemField("media", "رسانه", false),
+    systemField("description", "توضیحات", false),
+  ],
+  pressPublications: () => [
+    systemField("title", "عنوان", true),
+    systemField("activityType", "نوع (مجله / روزنامه)", true),
+    systemField("activityDate", "تاریخ", true),
+    systemField("link", "لینک مطلب", false),
+    systemField("location", "مکان", false),
+    systemField("mediaItems", "رسانه‌ها", false),
+    systemField("description", "توضیحات", false),
+    systemField("planLabels", "موضوع", false),
+  ],
+  activities: () => [
+    systemField("title", "عنوان", true),
+    systemField("activityType", "نوع اقدام", true),
+    systemField("isCreative", "اقدام خلاقانه", false),
+    systemField("activityDate", "تاریخ", true),
+    systemField("location", "مکان", false),
+    systemField("planLabels", "موضوع", false),
+    systemField("score", "امتیاز", false),
+    systemField("mediaItems", "رسانه‌ها", false),
+    systemField("description", "توضیحات", false),
+  ],
+  broadcast: () => [
+    systemField("title", "عنوان گزارش", true),
+    systemField("reportDate", "تاریخ گزارش", true),
+    systemField("pdf", "فایل PDF گزارش", true),
+    systemField("notes", "یادداشت", false),
+  ],
+  meetings: () => [
+    systemField("title", "عنوان جلسه", true),
+    systemField("meetingDate", "تاریخ جلسه", true),
+    systemField("location", "مکان جلسه", false),
+    systemField("image", "عکس جلسه", false),
+    systemField("audio", "فایل صوتی", false),
+    systemField("discussionSummary", "خلاصه صحبت‌ها", false),
+    systemField("attendees", "حاضرین", false),
+    systemField("tasks", "مصوبات", false),
+    systemField("decisions", "تصمیم‌ها", false),
+  ],
+};
+
+export function defaultContentFormFields(
+  sectionKey: ContentFormSectionKey
+): ContentFormField[] {
+  return DEFAULT_FIELDS[sectionKey]();
 }
 
 export function defaultSectionContentForm(
@@ -330,4 +592,28 @@ export function hasSystemWidget(
   widget: ContentSystemWidget
 ): boolean {
   return Boolean(fieldByWidget(fields, widget));
+}
+
+/** Widgets that are required by default when restored in the builder. */
+export function isDefaultRequiredSystemWidget(widget: ContentSystemWidget): boolean {
+  return (
+    widget === "image" ||
+    widget === "map" ||
+    widget === "periods" ||
+    widget === "axis" ||
+    widget === "category" ||
+    widget === "video" ||
+    widget === "document" ||
+    widget === "rawFile" ||
+    widget === "pdf" ||
+    widget === "title" ||
+    widget === "link" ||
+    widget === "platform" ||
+    widget === "contentType" ||
+    widget === "activityType" ||
+    widget === "activityDate" ||
+    widget === "reportDate" ||
+    widget === "meetingDate" ||
+    widget === "mediaKind"
+  );
 }
