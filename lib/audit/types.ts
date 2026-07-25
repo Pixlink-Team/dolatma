@@ -180,3 +180,13 @@ export interface AuditDayDetail {
   events: AuditEvent[];
 }
 
+/** Full activity dossier for a single user in the audit dashboard. */
+export interface AuditUserDetail {
+  actor: AuditActorSummary;
+  content: UserContentContribution | null;
+  recentEvents: AuditEvent[];
+  recentLogins: AuditEvent[];
+  topActions: AuditActionSummary[];
+  topPaths: AuditPathSummary[];
+}
+

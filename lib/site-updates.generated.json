@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "a79393b1035269717cbaa5e1816b4a85e09db794",
+      "committedAt": "2026-07-25T17:37:44+03:30",
+      "title": "امکان ویرایش سطح دسترسی وزارتخانه تا پایین درخت زیرمجموعه‌ها",
+      "subject": "Edit device access ceilings across full org tree"
+    },
+    {
       "hash": "4b8d0da3ce13240fe5ee98a21111828df2d79ddc",
       "committedAt": "2026-07-25T17:21:09+03:30",
       "title": "مخفی شدن مرحله صدور دستورکار برای کاربرانی که دسترسی ندارند",

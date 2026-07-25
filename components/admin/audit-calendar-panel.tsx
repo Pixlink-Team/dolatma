@@ -33,6 +33,7 @@ import type {
   AuditDayDetail,
   AuditEvent,
 } from "@/lib/audit/types";
+import type { AuditUserLookup } from "@/components/admin/audit-user-detail-modal";
 import {
   getPersianMonthName,
   isoToJalaali,
@@ -117,7 +118,11 @@ function UserCell({ name, email }: { name?: string | null; email?: string | null
   );
 }
 
-export function AuditCalendarPanel() {
+export function AuditCalendarPanel({
+  onSelectUser,
+}: {
+  onSelectUser?: (user: AuditUserLookup) => void;
+} = {}) {
   const todayIso = getTehranCalendarDateIso();
   const todayJalali = isoToJalaali(todayIso);
 
@@ -438,7 +443,7 @@ export function AuditCalendarPanel() {
                       {formatPersianNumber(dayDetail.actors.length)}
                     </Badge>
                   </h3>
-                  <DayActorsTable actors={dayDetail.actors} />
+                  <DayActorsTable actors={dayDetail.actors} onSelectUser={onSelectUser} />
                 </section>
 
                 <section className="space-y-2">
@@ -448,7 +453,7 @@ export function AuditCalendarPanel() {
                       {formatPersianNumber(dayDetail.events.length)}
                     </Badge>
                   </h3>
-                  <DayEventsTable events={dayDetail.events} />
+                  <DayEventsTable events={dayDetail.events} onSelectUser={onSelectUser} />
                 </section>
               </>
             )}
@@ -501,7 +506,13 @@ function groupFailedLogins(events: AuditEvent[]) {
   return Array.from(groups.values());
 }
 
-function DayActorsTable({ actors }: { actors: AuditActorSummary[] }) {
+function DayActorsTable({
+  actors,
+  onSelectUser,
+}: {
+  actors: AuditActorSummary[];
+  onSelectUser?: (user: AuditUserLookup) => void;
+}) {
   if (actors.length === 0) {
     return (
       <p className="text-sm text-muted-foreground py-3">در این روز فعالیت کاربری ثبت نشده است.</p>
@@ -526,7 +537,24 @@ function DayActorsTable({ actors }: { actors: AuditActorSummary[] }) {
         </thead>
         <tbody>
           {actors.map((actor) => (
-            <tr key={actor.actorKey} className="border-b last:border-0">
+            <tr
+              key={actor.actorKey}
+              className={`border-b last:border-0 ${
+                onSelectUser ? "cursor-pointer transition-colors hover:bg-muted/40" : ""
+              }`}
+              onClick={
+                onSelectUser
+                  ? () =>
+                      onSelectUser({
+                        actorKey: actor.actorKey,
+                        actorUserId: actor.actorUserId,
+                        actorEmail: actor.actorEmail,
+                        actorName: actor.actorName,
+                      })
+                  : undefined
+              }
+              title={onSelectUser ? "مشاهده جزئیات کاربر" : undefined}
+            >
               <td className="px-3 py-2.5">
                 <UserCell name={actor.actorName} email={actor.actorEmail} />
               </td>
@@ -552,7 +580,13 @@ function DayActorsTable({ actors }: { actors: AuditActorSummary[] }) {
   );
 }
 
-function DayEventsTable({ events }: { events: AuditEvent[] }) {
+function DayEventsTable({
+  events,
+  onSelectUser,
+}: {
+  events: AuditEvent[];
+  onSelectUser?: (user: AuditUserLookup) => void;
+}) {
   if (events.length === 0) {
     return <p className="text-sm text-muted-foreground py-3">رویدادی در این روز ثبت نشده است.</p>;
   }
@@ -572,7 +606,25 @@ function DayEventsTable({ events }: { events: AuditEvent[] }) {
         </thead>
         <tbody>
           {events.map((event) => (
-            <tr key={event.id} className="border-b last:border-0">
+            <tr
+              key={event.id}
+              className={`border-b last:border-0 ${
+                onSelectUser ? "cursor-pointer transition-colors hover:bg-muted/40" : ""
+              }`}
+              onClick={
+                onSelectUser
+                  ? () =>
+                      onSelectUser({
+                        actorKey:
+                          event.actorUserId || event.actorEmail || event.actorName || event.id,
+                        actorUserId: event.actorUserId,
+                        actorEmail: event.actorEmail,
+                        actorName: event.actorName,
+                      })
+                  : undefined
+              }
+              title={onSelectUser ? "مشاهده جزئیات کاربر" : undefined}
+            >
               <td className="px-3 py-2.5 text-xs text-muted-foreground whitespace-nowrap">
                 {formatPersianDateTime(event.createdAt)}
               </td>

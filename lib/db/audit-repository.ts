@@ -762,3 +762,219 @@ export async function pgGetAuditDayDetail(dateIso: string): Promise<AuditDayDeta
     events: events.filter((event) => event.action !== "presence.heartbeat"),
   };
 }
+
+function normalizeActorKey(value: string | null | undefined): string | null {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : null;
+}
+
+/** Activity dossier for one actor (by user id, email, or actor key). */
+export async function pgGetAuditUserDetail(options: {
+  actorKey?: string | null;
+  actorUserId?: string | null;
+  actorEmail?: string | null;
+}): Promise<import("@/lib/audit/types").AuditUserDetail | null> {
+  if (!isPostgresConfigured()) return null;
+
+  const actorUserId = normalizeActorKey(options.actorUserId);
+  const actorEmail = normalizeActorKey(options.actorEmail)?.toLowerCase() ?? null;
+  const actorKey = normalizeActorKey(options.actorKey);
+
+  if (!actorUserId && !actorEmail && !actorKey) return null;
+
+  const sql = getSql();
+
+  const summaryRows = await sql`
+    WITH matched AS (
+      SELECT
+        COALESCE(e.actor_user_id::text, NULLIF(e.actor_email, ''), NULLIF(e.actor_name, ''), 'unknown') AS actor_key,
+        e.actor_user_id,
+        NULLIF(MAX(e.actor_name), '') AS event_name,
+        NULLIF(MAX(e.actor_email), '') AS event_email,
+        NULLIF(MAX(e.actor_role), '') AS event_role,
+        MAX(u.name) AS user_name,
+        MAX(u.email) AS user_email,
+        MAX(u.role) AS user_role,
+        COUNT(*)::int AS event_count,
+        COUNT(*) FILTER (WHERE e.action = 'auth.login')::int AS login_count,
+        COUNT(*) FILTER (WHERE e.action = 'content.create')::int AS content_create_count,
+        COUNT(*) FILTER (WHERE e.action = 'content.update')::int AS content_update_count,
+        COUNT(*) FILTER (WHERE e.action = 'content.delete')::int AS content_delete_count,
+        COUNT(*) FILTER (WHERE e.action = 'navigation.page_view')::int AS page_view_count,
+        COUNT(*) FILTER (WHERE e.action = 'ui.click')::int AS click_count,
+        MAX(e.created_at) AS last_seen_at
+      FROM user_audit_events e
+      LEFT JOIN users u ON u.id = e.actor_user_id
+      WHERE e.action NOT IN ('auth.login_failed', 'presence.heartbeat')
+        AND (
+          (${actorUserId}::uuid IS NOT NULL AND e.actor_user_id = ${actorUserId}::uuid)
+          OR (
+            ${actorUserId}::uuid IS NULL
+            AND ${actorEmail}::text IS NOT NULL
+            AND lower(COALESCE(NULLIF(u.email, ''), NULLIF(e.actor_email, ''))) = ${actorEmail}
+          )
+          OR (
+            ${actorUserId}::uuid IS NULL
+            AND ${actorEmail}::text IS NULL
+            AND ${actorKey}::text IS NOT NULL
+            AND COALESCE(e.actor_user_id::text, NULLIF(e.actor_email, ''), NULLIF(e.actor_name, ''), 'unknown') = ${actorKey}
+          )
+        )
+      GROUP BY
+        COALESCE(e.actor_user_id::text, NULLIF(e.actor_email, ''), NULLIF(e.actor_name, ''), 'unknown'),
+        e.actor_user_id
+      ORDER BY event_count DESC
+      LIMIT 1
+    )
+    SELECT * FROM matched
+  `;
+
+  if (summaryRows.length === 0) {
+    // Still allow content-only dossier when the user has uploads but no audit trail yet.
+    if (!actorUserId) return null;
+  }
+
+  const actor =
+    summaryRows.length > 0
+      ? mapAuditActorRow(summaryRows[0] as Record<string, unknown>)
+      : {
+          actorKey: actorUserId ?? actorKey ?? actorEmail ?? "unknown",
+          actorUserId,
+          actorName: "کاربر",
+          actorEmail,
+          actorRole: null,
+          eventCount: 0,
+          loginCount: 0,
+          contentCreateCount: 0,
+          contentUpdateCount: 0,
+          contentDeleteCount: 0,
+          pageViewCount: 0,
+          clickCount: 0,
+          lastSeenAt: null,
+          isOnline: false,
+        };
+
+  const resolvedUserId = actor.actorUserId ?? actorUserId;
+  const resolvedKey = actor.actorKey;
+
+  const [recentEvents, recentLogins, topActions, topPaths, contentRows] = await Promise.all([
+    sql`
+      SELECT e.*, u.name AS join_name, u.email AS join_email, u.role AS join_role
+      FROM user_audit_events e
+      LEFT JOIN users u ON u.id = e.actor_user_id
+      WHERE e.action <> 'presence.heartbeat'
+        AND COALESCE(e.actor_user_id::text, NULLIF(e.actor_email, ''), NULLIF(e.actor_name, ''), 'unknown') = ${resolvedKey}
+      ORDER BY e.created_at DESC
+      LIMIT 80
+    `,
+    sql`
+      SELECT e.*, u.name AS join_name, u.email AS join_email, u.role AS join_role
+      FROM user_audit_events e
+      LEFT JOIN users u ON u.id = e.actor_user_id
+      WHERE e.action = 'auth.login'
+        AND COALESCE(e.actor_user_id::text, NULLIF(e.actor_email, ''), NULLIF(e.actor_name, ''), 'unknown') = ${resolvedKey}
+      ORDER BY e.created_at DESC
+      LIMIT 20
+    `,
+    sql`
+      SELECT action, category, COUNT(*)::int AS count
+      FROM user_audit_events
+      WHERE action NOT IN ('auth.login_failed', 'presence.heartbeat')
+        AND COALESCE(actor_user_id::text, NULLIF(actor_email, ''), NULLIF(actor_name, ''), 'unknown') = ${resolvedKey}
+      GROUP BY action, category
+      ORDER BY count DESC
+      LIMIT 10
+    `,
+    sql`
+      SELECT path, COUNT(*)::int AS count
+      FROM user_audit_events
+      WHERE action = 'navigation.page_view'
+        AND path IS NOT NULL
+        AND COALESCE(actor_user_id::text, NULLIF(actor_email, ''), NULLIF(actor_name, ''), 'unknown') = ${resolvedKey}
+      GROUP BY path
+      ORDER BY count DESC
+      LIMIT 10
+    `,
+    resolvedUserId
+      ? sql`
+          WITH counts AS (
+            SELECT 'billboards' AS kind, COUNT(*)::int AS c FROM billboards WHERE owner_user_id = ${resolvedUserId}::uuid
+            UNION ALL SELECT 'posters', COUNT(*)::int FROM posters WHERE owner_user_id = ${resolvedUserId}::uuid
+            UNION ALL SELECT 'videos', COUNT(*)::int FROM videos WHERE owner_user_id = ${resolvedUserId}::uuid
+            UNION ALL SELECT 'files', COUNT(*)::int FROM campaign_files WHERE owner_user_id = ${resolvedUserId}::uuid
+            UNION ALL SELECT 'rawMedia', COUNT(*)::int FROM raw_media_uploads WHERE owner_user_id = ${resolvedUserId}::uuid
+            UNION ALL SELECT 'socialPosts', COUNT(*)::int FROM social_media_posts WHERE owner_user_id = ${resolvedUserId}::uuid
+            UNION ALL SELECT 'activities', COUNT(*)::int FROM campaign_activities WHERE owner_user_id = ${resolvedUserId}::uuid
+            UNION ALL SELECT 'broadcast', COUNT(*)::int FROM broadcast_reports WHERE owner_user_id = ${resolvedUserId}::uuid
+            UNION ALL SELECT 'meetings', COUNT(*)::int FROM campaign_meetings WHERE owner_user_id = ${resolvedUserId}::uuid
+            UNION ALL SELECT 'analytics', COUNT(*)::int FROM company_websites WHERE owner_user_id = ${resolvedUserId}::uuid
+            UNION ALL SELECT 'submissions', COUNT(*)::int FROM campaign_submissions WHERE owner_user_id = ${resolvedUserId}::uuid
+          )
+          SELECT
+            COALESCE(SUM(c) FILTER (WHERE kind = 'billboards'), 0)::int AS billboards,
+            COALESCE(SUM(c) FILTER (WHERE kind = 'posters'), 0)::int AS posters,
+            COALESCE(SUM(c) FILTER (WHERE kind = 'videos'), 0)::int AS videos,
+            COALESCE(SUM(c) FILTER (WHERE kind = 'files'), 0)::int AS files,
+            COALESCE(SUM(c) FILTER (WHERE kind = 'rawMedia'), 0)::int AS raw_media,
+            COALESCE(SUM(c) FILTER (WHERE kind = 'socialPosts'), 0)::int AS social_posts,
+            COALESCE(SUM(c) FILTER (WHERE kind = 'activities'), 0)::int AS activities,
+            COALESCE(SUM(c) FILTER (WHERE kind = 'broadcast'), 0)::int AS broadcast,
+            COALESCE(SUM(c) FILTER (WHERE kind = 'meetings'), 0)::int AS meetings,
+            COALESCE(SUM(c) FILTER (WHERE kind = 'analytics'), 0)::int AS analytics,
+            COALESCE(SUM(c) FILTER (WHERE kind = 'submissions'), 0)::int AS submissions,
+            COALESCE(SUM(c), 0)::int AS total
+          FROM counts
+        `
+      : Promise.resolve([] as Record<string, unknown>[]),
+  ]);
+
+  const mapJoinedEvent = (row: Record<string, unknown>) => {
+    const mapped = mapAuditRow({
+      ...row,
+      actor_name: row.join_name ?? row.actor_name,
+      actor_email: row.join_email ?? row.actor_email,
+      actor_role: row.join_role ?? row.actor_role,
+    });
+    return mapped;
+  };
+
+  const contentRow = contentRows[0] as Record<string, unknown> | undefined;
+  const contentTotal = Number(contentRow?.total ?? 0);
+  const content =
+    resolvedUserId && contentRow && contentTotal > 0
+      ? {
+          userId: resolvedUserId,
+          name: actor.actorName,
+          email: actor.actorEmail ?? "",
+          role: actor.actorRole ?? "",
+          billboards: Number(contentRow.billboards ?? 0),
+          posters: Number(contentRow.posters ?? 0),
+          videos: Number(contentRow.videos ?? 0),
+          files: Number(contentRow.files ?? 0),
+          rawMedia: Number(contentRow.raw_media ?? 0),
+          socialPosts: Number(contentRow.social_posts ?? 0),
+          activities: Number(contentRow.activities ?? 0),
+          broadcast: Number(contentRow.broadcast ?? 0),
+          meetings: Number(contentRow.meetings ?? 0),
+          analytics: Number(contentRow.analytics ?? 0),
+          submissions: Number(contentRow.submissions ?? 0),
+          total: contentTotal,
+        }
+      : null;
+
+  return {
+    actor,
+    content,
+    recentEvents: (recentEvents as Record<string, unknown>[]).map(mapJoinedEvent),
+    recentLogins: (recentLogins as Record<string, unknown>[]).map(mapJoinedEvent),
+    topActions: (topActions as Record<string, unknown>[]).map((row) => ({
+      action: String(row.action),
+      category: row.category as import("@/lib/audit/types").AuditCategory,
+      count: Number(row.count ?? 0),
+    })),
+    topPaths: (topPaths as Record<string, unknown>[]).map((row) => ({
+      path: String(row.path),
+      count: Number(row.count ?? 0),
+    })),
+  };
+}

@@ -34,6 +34,10 @@ import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { AuditCalendarPanel } from "@/components/admin/audit-calendar-panel";
 import { AuditProblemsPanel } from "@/components/admin/audit-problems-panel";
 import { AuditStuckBehaviorPanel } from "@/components/admin/audit-stuck-behavior-panel";
+import {
+  AuditUserDetailModal,
+  type AuditUserLookup,
+} from "@/components/admin/audit-user-detail-modal";
 import { useChartTheme } from "@/lib/hooks/use-chart-theme";
 import {
   formatPersianDateShort,
@@ -136,12 +140,14 @@ function AuditDataTable<T>({
   getRowKey,
   emptyMessage = "موردی ثبت نشده است.",
   minWidth = "720px",
+  onRowClick,
 }: {
   columns: AuditColumnDef<T>[];
   rows: T[];
   getRowKey: (row: T) => string;
   emptyMessage?: string;
   minWidth?: string;
+  onRowClick?: (row: T) => void;
 }) {
   return (
     <div className="overflow-x-auto">
@@ -170,7 +176,16 @@ function AuditDataTable<T>({
             </tr>
           ) : (
             rows.map((row) => (
-              <tr key={getRowKey(row)} className="border-b last:border-0">
+              <tr
+                key={getRowKey(row)}
+                className={`border-b last:border-0 ${
+                  onRowClick
+                    ? "cursor-pointer transition-colors hover:bg-muted/40"
+                    : ""
+                }`}
+                onClick={onRowClick ? () => onRowClick(row) : undefined}
+                title={onRowClick ? "مشاهده جزئیات کاربر" : undefined}
+              >
                 {columns.map((column) => (
                   <td
                     key={column.key}
@@ -186,6 +201,33 @@ function AuditDataTable<T>({
       </table>
     </div>
   );
+}
+
+function actorLookupFromSummary(actor: AuditActorSummary): AuditUserLookup {
+  return {
+    actorKey: actor.actorKey,
+    actorUserId: actor.actorUserId,
+    actorEmail: actor.actorEmail,
+    actorName: actor.actorName,
+  };
+}
+
+function actorLookupFromEvent(event: AuditEvent): AuditUserLookup {
+  return {
+    actorKey: event.actorUserId || event.actorEmail || event.actorName || event.id,
+    actorUserId: event.actorUserId,
+    actorEmail: event.actorEmail,
+    actorName: event.actorName,
+  };
+}
+
+function actorLookupFromContent(row: UserContentContribution): AuditUserLookup {
+  return {
+    actorKey: row.userId,
+    actorUserId: row.userId,
+    actorEmail: row.email,
+    actorName: row.name,
+  };
 }
 
 function StatCard({
@@ -415,6 +457,7 @@ export function AuditAdmin({ data, databaseReady }: AuditAdminProps) {
   const chartTheme = useChartTheme();
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<AuditCategory | "all">("all");
+  const [selectedUser, setSelectedUser] = useState<AuditUserLookup | null>(null);
 
   const dailyChartData = useMemo(
     () =>
@@ -599,9 +642,12 @@ export function AuditAdmin({ data, databaseReady }: AuditAdminProps) {
               <div className="max-h-[360px] overflow-y-auto">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 p-4">
                   {groupedLoginsToday.map(({ event, loginCount }) => (
-                    <div
+                    <button
+                      type="button"
                       key={event.id}
-                      className="rounded-lg border bg-card px-3 py-3 flex items-start gap-3"
+                      className="rounded-lg border bg-card px-3 py-3 flex items-start gap-3 text-right transition-colors hover:bg-muted/40 hover:border-primary/40"
+                      onClick={() => setSelectedUser(actorLookupFromEvent(event))}
+                      title="مشاهده جزئیات کاربر"
                     >
                       <LogIn className="mt-1 h-4 w-4 shrink-0 text-primary" />
                       <div className="min-w-0 flex-1">
@@ -632,7 +678,7 @@ export function AuditAdmin({ data, databaseReady }: AuditAdminProps) {
                           </p>
                         )}
                       </div>
-                    </div>
+                    </button>
                   ))}
                 </div>
               </div>
@@ -721,9 +767,19 @@ export function AuditAdmin({ data, databaseReady }: AuditAdminProps) {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {data.onlineUsers.map((user) => (
-                <div
+                <button
+                  type="button"
                   key={user.actorKey}
-                  className="rounded-lg border bg-card px-3 py-3 flex items-start gap-3"
+                  className="rounded-lg border bg-card px-3 py-3 flex items-start gap-3 text-right transition-colors hover:bg-muted/40 hover:border-primary/40"
+                  onClick={() =>
+                    setSelectedUser({
+                      actorKey: user.actorKey,
+                      actorUserId: user.actorUserId,
+                      actorEmail: user.actorEmail,
+                      actorName: user.actorName,
+                    })
+                  }
+                  title="مشاهده جزئیات کاربر"
                 >
                   <span className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-emerald-500" />
                   <div className="min-w-0 flex-1">
@@ -749,7 +805,7 @@ export function AuditAdmin({ data, databaseReady }: AuditAdminProps) {
                       </p>
                     )}
                   </div>
-                </div>
+                </button>
               ))}
             </div>
           )}
@@ -784,7 +840,7 @@ export function AuditAdmin({ data, databaseReady }: AuditAdminProps) {
         </TabsList>
 
         <TabsContent value="calendar">
-          <AuditCalendarPanel />
+          <AuditCalendarPanel onSelectUser={setSelectedUser} />
         </TabsContent>
 
         <TabsContent value="problems">
@@ -985,6 +1041,7 @@ export function AuditAdmin({ data, databaseReady }: AuditAdminProps) {
                 rows={data.topActors}
                 getRowKey={(actor) => actor.actorKey}
                 minWidth="960px"
+                onRowClick={(actor) => setSelectedUser(actorLookupFromSummary(actor))}
               />
             </CardContent>
           </Card>
@@ -1008,6 +1065,7 @@ export function AuditAdmin({ data, databaseReady }: AuditAdminProps) {
                 rows={data.contentByUser}
                 getRowKey={(row) => row.userId}
                 minWidth="1000px"
+                onRowClick={(row) => setSelectedUser(actorLookupFromContent(row))}
               />
             </CardContent>
           </Card>
@@ -1030,6 +1088,7 @@ export function AuditAdmin({ data, databaseReady }: AuditAdminProps) {
                 getRowKey={(event) => event.id}
                 emptyMessage="امروز هنوز ورودی ثبت نشده است."
                 minWidth="640px"
+                onRowClick={(event) => setSelectedUser(actorLookupFromEvent(event))}
               />
             </CardContent>
           </Card>
@@ -1044,6 +1103,7 @@ export function AuditAdmin({ data, databaseReady }: AuditAdminProps) {
                 rows={data.logins}
                 getRowKey={(event) => event.id}
                 minWidth="640px"
+                onRowClick={(event) => setSelectedUser(actorLookupFromEvent(event))}
               />
             </CardContent>
           </Card>
@@ -1096,11 +1156,19 @@ export function AuditAdmin({ data, databaseReady }: AuditAdminProps) {
                 getRowKey={(event) => event.id}
                 emptyMessage="موردی یافت نشد."
                 minWidth="900px"
+                onRowClick={(event) => setSelectedUser(actorLookupFromEvent(event))}
               />
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
+
+      <AuditUserDetailModal
+        target={selectedUser}
+        onOpenChange={(open) => {
+          if (!open) setSelectedUser(null);
+        }}
+      />
     </div>
   );
 }
