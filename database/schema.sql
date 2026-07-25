@@ -1189,18 +1189,20 @@ WHERE category = 'bus_shelter';
 UPDATE billboards SET category = 'scaffolding', updated_at = now()
 WHERE category = 'darbast';
 
--- Replace legacy org branding on the fixed راستا with a neutral software label.
+-- Replace legacy org branding on the fixed راستا with the product name.
 UPDATE campaign_settings
-SET title = 'این نرم‌افزار', updated_at = now()
+SET title = 'راستا', updated_at = now()
 WHERE title IN (
+  'این نرم‌افزار',
   'دبیرخانه شورای اطلاع رسانی دولت',
   'دبیرخانه شورای اطلاع‌رسانی دولت',
   'دبیرخانه شوراهای اطلاع رسانی دولت',
   'دبیرخانه شوراهای اطلاع‌رسانی دولت'
 );
 UPDATE campaign_settings
-SET admin_owner_label = 'این نرم‌افزار', updated_at = now()
+SET admin_owner_label = 'راستا', updated_at = now()
 WHERE admin_owner_label IN (
+  'این نرم‌افزار',
   'دبیرخانه شورای اطلاع رسانی دولت',
   'دبیرخانه شورای اطلاع‌رسانی دولت',
   'دبیرخانه شوراهای اطلاع رسانی دولت',

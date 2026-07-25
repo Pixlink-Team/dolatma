@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "66a569f23c552c73de8b441f147e310756d261e5",
+      "committedAt": "2026-07-25T16:40:32+03:30",
+      "title": "نمایش کاربران فقط زیر وزارتخانه و زیرمجموعه، نه زیر مسئول",
+      "subject": "Show users under ministry/org, not under managers"
+    },
+    {
       "hash": "a3f6e05577abafffe0e9ac8f922e1cce57dcdf42",
       "committedAt": "2026-07-25T16:30:46+03:30",
       "title": "مشاهده ساختار زیرمجموعه‌ها حتی بعد از قطع دسترسی مدیریت والد",
