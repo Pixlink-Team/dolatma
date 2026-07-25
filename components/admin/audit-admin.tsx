@@ -611,19 +611,26 @@ export function AuditAdmin({ data, databaseReady }: AuditAdminProps) {
     },
     dateIso?: string
   ) {
-    if (lookup.actorUserId) {
+    const userId = lookup.actorUserId?.trim() || null;
+    const email = lookup.actorEmail?.trim() || null;
+
+    // Always open the day-scoped profile (with presence timeline) when we can
+    // identify the actor by user id or email.
+    if (userId || email) {
       setProfileUser({
-        userId: lookup.actorUserId,
+        userId,
         name: lookup.actorName,
-        email: lookup.actorEmail,
+        email,
         role: lookup.role,
         isOnline: lookup.isOnline,
         lastSeenAt: lookup.lastSeenAt,
       });
       setProfileDate(dateIso);
       setProfileOpen(true);
+      setDetailTarget(null);
       return;
     }
+
     setDetailTarget(lookup);
   }
 

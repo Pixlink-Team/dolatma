@@ -43,6 +43,7 @@ export interface AuditEvent {
 
 export interface AuditEventFilters {
   actorUserId?: string;
+  actorEmail?: string;
   category?: AuditCategory;
   action?: string;
   entityType?: string;

@@ -95,9 +95,16 @@ export type UserAuditProfileResult = {
  * activity events, online sessions (from heartbeats), charts series.
  */
 export async function getUserAuditProfileAction(
-  userId: string,
-  dateIso: string
+  input: { userId?: string | null; email?: string | null; dateIso: string } | string,
+  dateIsoArg?: string
 ): Promise<{ ok: true; data: UserAuditProfileResult } | { ok: false; error: string }> {
+  // Backward-compatible: getUserAuditProfileAction(userId, dateIso)
+  const userId =
+    typeof input === "string" ? input : (input.userId?.trim() || null);
+  const email =
+    typeof input === "string" ? null : (input.email?.trim().toLowerCase() || null);
+  const dateIso = typeof input === "string" ? (dateIsoArg ?? "") : input.dateIso;
+
   const session = await getAuthSession();
   if (!session || !isFullAdmin(session)) {
     return { ok: false, error: "دسترسی مجاز نیست." };
@@ -107,8 +114,9 @@ export async function getUserAuditProfileAction(
     return { ok: false, error: "پایگاه‌داده پیکربندی نشده است." };
   }
 
-  const trimmed = userId?.trim() ?? "";
-  if (!UUID_RE.test(trimmed)) {
+  const trimmedUserId = userId?.trim() || "";
+  const hasUuid = Boolean(trimmedUserId && UUID_RE.test(trimmedUserId));
+  if (!hasUuid && !email) {
     return { ok: false, error: "شناسه کاربر نامعتبر است." };
   }
 
@@ -120,13 +128,14 @@ export async function getUserAuditProfileAction(
   try {
     const [rawDayEvents, dailySeries] = await Promise.all([
       pgListAuditEvents({
-        actorUserId: trimmed,
+        actorUserId: hasUuid ? trimmedUserId : undefined,
+        actorEmail: hasUuid ? undefined : email ?? undefined,
         from: bounds.from,
         to: bounds.to,
         limit: 2000,
         excludeHeartbeat: false,
       }),
-      pgGetUserAuditDailySeries(trimmed, 14),
+      hasUuid ? pgGetUserAuditDailySeries(trimmedUserId, 14) : Promise.resolve([]),
     ]);
 
     const events = rawDayEvents.filter((event) => event.action !== "presence.heartbeat");

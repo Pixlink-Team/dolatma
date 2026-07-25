@@ -62,7 +62,7 @@ import {
 } from "@/lib/utils";
 
 export type AuditProfileUser = {
-  userId: string;
+  userId?: string | null;
   name?: string | null;
   email?: string | null;
   role?: string | null;
@@ -190,16 +190,19 @@ export function AuditUserProfileDialog({
   useEffect(() => {
     if (!open) return;
     setSelectedDate(initialDate || getTehranCalendarDateIso());
-  }, [open, initialDate, user?.userId]);
+  }, [open, initialDate, user?.userId, user?.email]);
 
   useEffect(() => {
-    if (!open || !user?.userId) return;
+    if (!open) return;
+    const userId = user?.userId?.trim() || null;
+    const email = user?.email?.trim() || null;
+    if (!userId && !email) return;
 
     let cancelled = false;
     setLoading(true);
     setError(null);
 
-    void getUserAuditProfileAction(user.userId, selectedDate).then((result) => {
+    void getUserAuditProfileAction({ userId, email, dateIso: selectedDate }).then((result) => {
       if (cancelled) return;
       if (!result.ok) {
         setError(result.error);
@@ -213,7 +216,7 @@ export function AuditUserProfileDialog({
     return () => {
       cancelled = true;
     };
-  }, [open, user?.userId, selectedDate]);
+  }, [open, user?.userId, user?.email, selectedDate]);
 
   const dailyChartData = useMemo(
     () =>
@@ -251,7 +254,7 @@ export function AuditUserProfileDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[92vh] w-[min(96vw,1100px)] max-w-5xl overflow-hidden flex flex-col gap-0 p-0">
+      <DialogContent className="!flex max-h-[92vh] w-[min(96vw,1100px)] max-w-5xl flex-col gap-0 overflow-hidden p-0">
         <DialogHeader className="px-6 pt-6 pb-3 border-b shrink-0 space-y-3">
           <DialogTitle className="flex flex-wrap items-center gap-2">
             {user?.isOnline !== undefined && (
@@ -703,15 +706,17 @@ function DayPresenceBar({
 
   return (
     <div className="space-y-2" dir="ltr">
-      <div className="relative h-10 rounded-lg bg-muted/60 overflow-hidden border">
+      <div className="relative h-14 rounded-lg bg-muted border overflow-hidden">
+        {/* Empty-day guide track so the timeline is always visible */}
+        <div className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-border/80" />
         {sessions.map((session) => {
           const left = dayPositionPercent(session.startAt, dateIso);
           const right = dayPositionPercent(session.endAt, dateIso);
-          const width = Math.max(0.4, right - left);
+          const width = Math.max(0.8, right - left);
           return (
             <div
               key={`${session.startAt}-${session.endAt}`}
-              className="absolute top-1 bottom-1 rounded-md bg-emerald-500/70"
+              className="absolute top-2 bottom-2 rounded-md bg-emerald-500/80 ring-1 ring-emerald-600/40"
               style={{ left: `${left}%`, width: `${width}%` }}
               title={`${formatTehranClock(session.startAt)} – ${formatTehranClock(session.endAt)}`}
             />
@@ -720,7 +725,7 @@ function DayPresenceBar({
         {markers.map((marker) => (
           <div
             key={marker.id}
-            className={`absolute top-0 bottom-0 w-0.5 ${marker.tone}`}
+            className={`absolute top-0 bottom-0 w-1 ${marker.tone}`}
             style={{ left: `${marker.left}%` }}
             title={marker.title}
           />
@@ -735,15 +740,15 @@ function DayPresenceBar({
       </div>
       <div className="flex flex-wrap gap-3 text-[11px] text-muted-foreground">
         <span className="inline-flex items-center gap-1.5">
-          <span className="h-2.5 w-4 rounded-sm bg-emerald-500/70" />
+          <span className="h-2.5 w-4 rounded-sm bg-emerald-500/80" />
           بازه آنلاین
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <span className="h-2.5 w-0.5 bg-emerald-500" />
+          <span className="h-2.5 w-1 bg-emerald-500" />
           ورود
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <span className="h-2.5 w-0.5 bg-amber-500" />
+          <span className="h-2.5 w-1 bg-amber-500" />
           تغییر محتوا
         </span>
       </div>

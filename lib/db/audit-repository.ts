@@ -120,6 +120,10 @@ export async function pgListAuditEvents(filters: AuditEventFilters = {}): Promis
     FROM user_audit_events
     WHERE 1=1
       AND (${filters.actorUserId ?? null}::uuid IS NULL OR actor_user_id = ${filters.actorUserId ?? null})
+      AND (
+        ${filters.actorEmail ?? null}::text IS NULL
+        OR lower(COALESCE(actor_email, '')) = lower(${filters.actorEmail ?? null})
+      )
       AND (${filters.category ?? null}::text IS NULL OR category = ${filters.category ?? null})
       AND (${filters.action ?? null}::text IS NULL OR action = ${filters.action ?? null})
       AND (${filters.entityType ?? null}::text IS NULL OR entity_type = ${filters.entityType ?? null})
