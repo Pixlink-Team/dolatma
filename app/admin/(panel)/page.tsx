@@ -11,7 +11,9 @@ import { DASHBOARD_STAT_DEFINITIONS } from "@/lib/admin-dashboard-stats";
 import { resolveAdminBillboards } from "@/lib/billboards";
 import type { Billboard, CampaignSettings } from "@/lib/types";
 import { BulkContentImport } from "@/components/admin/bulk-content-import";
+import { OnboardingProgressCard } from "@/components/admin/onboarding-progress-card";
 import { canManageDirectives } from "@/lib/auth/access";
+import { getSessionHomeDeviceId } from "@/lib/auth/device-access";
 import { getAuthSession, getOwnerFilter, isFullAdmin } from "@/lib/auth/get-session";
 import { getAllUsers } from "@/lib/data-access/admin";
 import {
@@ -27,7 +29,10 @@ import {
   type CategoryCompletenessSummary,
   type EditSuggestionContentType,
 } from "@/lib/edit-suggestions";
+import { evaluateDeviceOnboarding } from "@/lib/onboarding/progress";
+import type { OnboardingProgress } from "@/lib/onboarding/types";
 import { withFileAccessTokensDeep } from "@/lib/uploads";
+import { isOrgUserRole } from "@/lib/user-roles";
 import { formatPersianNumber, adminHref, isPostgresConfigured } from "@/lib/utils";
 
 const PERMISSION_TO_CONTENT_TYPE: Partial<
@@ -163,6 +168,34 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
       : [];
   const bulkImportUsers = canManageAll ? await getAllUsers() : [];
 
+  let onboardingProgress: OnboardingProgress | null = null;
+  if (
+    session &&
+    isOrgUserRole(session.role) &&
+    !canManageAll &&
+    isPostgresConfigured()
+  ) {
+    const homeDeviceId = await getSessionHomeDeviceId(session);
+    if (homeDeviceId) {
+      const ownerIds =
+        typeof ownerUserId === "string"
+          ? [ownerUserId]
+          : Array.isArray(ownerUserId)
+            ? ownerUserId
+            : session.userId
+              ? [session.userId]
+              : undefined;
+      onboardingProgress = await evaluateDeviceOnboarding({
+        deviceId: homeDeviceId,
+        campaignId,
+        features,
+        permissions: contributorPermissions,
+        ownerUserIds: ownerIds,
+        issuerUserId: session.userId,
+      });
+    }
+  }
+
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between flex-wrap gap-4">
@@ -181,6 +214,10 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
           </Link>
         )}
       </div>
+
+      {onboardingProgress && onboardingProgress.totalCount > 0 ? (
+        <OnboardingProgressCard progress={onboardingProgress} />
+      ) : null}
 
       {canManageAll ? (
         <BulkContentImport

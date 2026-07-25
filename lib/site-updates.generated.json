@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "c4af614398c522383e02e5108d50f28fda139c85",
+      "committedAt": "2026-07-25T20:54:28+03:30",
+      "title": "رفع قرار گرفتن آموزش زیر لیست بازشده زیرمجموعه",
+      "subject": "Hide field tips while Select dropdown is open"
+    },
+    {
       "hash": "2d7bfef41cdbd5f6b19a80b24043b9371348b6dd",
       "committedAt": "2026-07-25T20:38:50+03:30",
       "title": "نمایش فقط درصد تکمیل راه‌اندازی دستگاه در رصد کاربران",
