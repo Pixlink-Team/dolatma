@@ -38,10 +38,13 @@ import {
   inferDefaultAuthorityLevel,
   type DirectiveAuthorityLevel,
 } from "@/lib/directive-authority";
+import type { OrgRole } from "@/lib/org-roles";
+import { isOrgRole } from "@/lib/org-roles";
 import type { ParsedUserImportRow } from "@/lib/services/users-excel-parser";
 import { normalizePlanLabels } from "@/lib/content-topics";
 import { generateId } from "@/lib/utils";
 import { hashPassword } from "@/lib/auth/password";
+import { normalizeAdminRole } from "@/lib/user-roles";
 
 /** Ensure authority columns exist on older databases without a full migrate. */
 export async function ensureUserAuthoritySchema(): Promise<void> {
@@ -54,6 +57,51 @@ export async function ensureUserAuthoritySchema(): Promise<void> {
     ALTER TABLE users
       ADD COLUMN IF NOT EXISTS authority_other TEXT
   `;
+}
+
+/** Ensure org_role column + migrate legacy panel roles to org_user. */
+export async function ensureOrgUserSchema(): Promise<void> {
+  const sql = getSql();
+  await ensureUserAuthoritySchema();
+  await sql`
+    ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS org_role TEXT
+  `;
+  await sql`ALTER TABLE users DROP CONSTRAINT IF EXISTS users_org_role_check`;
+  await sql`
+    ALTER TABLE users ADD CONSTRAINT users_org_role_check
+      CHECK (org_role IS NULL OR org_role IN ('primary', 'supervisor', 'deputy', 'pr'))
+  `;
+  await sql`ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check`;
+  await sql`
+    ALTER TABLE users ADD CONSTRAINT users_role_check
+      CHECK (role IN (
+        'admin', 'client', 'org_user',
+        'contributor', 'ministry_parent', 'sub_user'
+      ))
+  `;
+
+  await sql`
+    UPDATE users
+    SET org_role = COALESCE(org_role, 'primary'), role = 'org_user'
+    WHERE role = 'ministry_parent'
+  `;
+  await sql`
+    UPDATE users
+    SET org_role = COALESCE(org_role, 'pr'), role = 'org_user'
+    WHERE role = 'sub_user'
+  `;
+  await sql`
+    UPDATE users
+    SET org_role = COALESCE(org_role, 'pr'), role = 'org_user'
+    WHERE role = 'contributor'
+  `;
+  await sql`
+    UPDATE users
+    SET org_role = NULL
+    WHERE role IN ('admin', 'client')
+  `;
+  await sql`CREATE INDEX IF NOT EXISTS idx_users_org_role ON users(org_role)`;
 }
 
 function resolvePlanFields(data: Partial<Ownable>) {
@@ -133,7 +181,7 @@ export async function pgGetUserAuthByLogin(identifier: string) {
 
 export async function pgGetUserById(id: string) {
   const sql = getSql();
-  await ensureUserAuthoritySchema();
+  await ensureOrgUserSchema();
   const rows = await sql`
     SELECT
       u.*,
@@ -189,7 +237,7 @@ export async function pgGetUserPermissionsForCampaign(userId: string, campaignId
 
 export async function pgGetAllUsers(): Promise<AdminUser[]> {
   const sql = getSql();
-  await ensureUserAuthoritySchema();
+  await ensureOrgUserSchema();
   const rows = await sql`
     SELECT
       u.*,
@@ -214,7 +262,7 @@ export async function pgGetAllUsers(): Promise<AdminUser[]> {
 
 export async function pgGetSubUsersForParent(parentUserId: string): Promise<AdminUser[]> {
   const sql = getSql();
-  await ensureUserAuthoritySchema();
+  await ensureOrgUserSchema();
   const rows = await sql`
     SELECT
       u.*,
@@ -226,7 +274,7 @@ export async function pgGetSubUsersForParent(parentUserId: string): Promise<Admi
     LEFT JOIN ministry_organizations o ON o.id = u.organization_id
     LEFT JOIN users p ON p.id = u.parent_user_id
     WHERE u.parent_user_id = ${parentUserId}
-      AND u.role = 'sub_user'
+      AND u.role = 'org_user'
     ORDER BY u.created_at DESC
   `;
   const users: AdminUser[] = [];
@@ -237,11 +285,29 @@ export async function pgGetSubUsersForParent(parentUserId: string): Promise<Admi
   return users;
 }
 
+/** User IDs attached to any device in the subtree rooted at homeDeviceId. */
+export async function pgListUserIdsInDeviceSubtree(homeDeviceId: string): Promise<string[]> {
+  const sql = getSql();
+  const rows = await sql`
+    WITH RECURSIVE subtree AS (
+      SELECT id FROM devices WHERE id = ${homeDeviceId}
+      UNION ALL
+      SELECT d.id FROM devices d
+      INNER JOIN subtree s ON d.parent_id = s.id
+    )
+    SELECT u.id
+    FROM users u
+    WHERE COALESCE(u.device_id, u.organization_id, u.ministry_id) IN (SELECT id FROM subtree)
+  `;
+  return rows.map((row) => String(row.id));
+}
+
 export async function pgSaveUser(data: {
   id?: string;
   email: string;
   name: string;
   role: AdminUser["role"];
+  orgRole?: OrgRole | null;
   password?: string;
   province?: string | null;
   city?: string | null;
@@ -259,7 +325,7 @@ export async function pgSaveUser(data: {
   campaignPermissions?: Record<string, ContributorPermissions>;
 }) {
   const sql = getSql();
-  await ensureUserAuthoritySchema();
+  await ensureOrgUserSchema();
   const id = data.id ?? generateId();
   const email = normalizeStoredUserEmail(data.email);
   const now = new Date().toISOString();
@@ -286,6 +352,14 @@ export async function pgSaveUser(data: {
   let organizationId = data.organizationId?.trim() || null;
   const parentUserId = data.parentUserId?.trim() || null;
   let deviceId: string | null = organizationId ?? ministryId ?? null;
+
+  const role = normalizeAdminRole(data.role);
+  const orgRole: OrgRole | null =
+    role === "org_user"
+      ? isOrgRole(data.orgRole)
+        ? data.orgRole
+        : "pr"
+      : null;
 
   if (organizationId) {
     const orgRows = await sql`
@@ -316,7 +390,7 @@ export async function pgSaveUser(data: {
 
   // Authority is always derived from ministry/org placement — never taken from client input.
   const authorityLevel = inferDefaultAuthorityLevel({
-    role: data.role,
+    role,
     organizationId,
     ministryId,
   });
@@ -350,7 +424,8 @@ export async function pgSaveUser(data: {
         UPDATE users SET
           email = ${email},
           name = ${data.name},
-          role = ${data.role},
+          role = ${role},
+          org_role = ${orgRole},
           province = ${province},
           city = ${city},
           region = ${region},
@@ -372,7 +447,8 @@ export async function pgSaveUser(data: {
         UPDATE users SET
           email = ${email},
           name = ${data.name},
-          role = ${data.role},
+          role = ${role},
+          org_role = ${orgRole},
           province = ${province},
           city = ${city},
           region = ${region},
@@ -396,13 +472,13 @@ export async function pgSaveUser(data: {
     const passwordHash = await hashPassword(data.password);
     await sql`
       INSERT INTO users (
-        id, email, password_hash, name, role, province, city, region, phone,
+        id, email, password_hash, name, role, org_role, province, city, region, phone,
         account_manager_name, alternate_contact_name, alternate_contact_phone,
         ministry_id, organization_id, device_id, parent_user_id,
         authority_level, authority_other, created_at
       )
       VALUES (
-        ${id}, ${email}, ${passwordHash}, ${data.name}, ${data.role}, ${province}, ${city},
+        ${id}, ${email}, ${passwordHash}, ${data.name}, ${role}, ${orgRole}, ${province}, ${city},
         ${region}, ${phone}, ${accountManagerName}, ${alternateContactName}, ${alternateContactPhone},
         ${ministryId}, ${organizationId},
         ${deviceId}, ${parentUserId}, ${authorityLevel}, ${authorityOther}, ${now}
@@ -559,7 +635,8 @@ export async function pgImportUsersFromExcel(params: {
             password_hash = ${passwordHash},
             province = ${row.province},
             city = ${row.city},
-            role = 'contributor'
+            role = 'org_user',
+            org_role = COALESCE(org_role, 'pr')
           WHERE id = ${userId}
         `;
 
@@ -584,13 +661,14 @@ export async function pgImportUsersFromExcel(params: {
       const userId = generateId();
       const passwordHash = await hashPassword(row.password);
       await sql`
-        INSERT INTO users (id, email, password_hash, name, role, province, city, created_at)
+        INSERT INTO users (id, email, password_hash, name, role, org_role, province, city, created_at)
         VALUES (
           ${userId},
           ${email},
           ${passwordHash},
           ${row.companyName},
-          'contributor',
+          'org_user',
+          'pr',
           ${row.province},
           ${row.city},
           ${now}

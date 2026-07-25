@@ -24,7 +24,7 @@ export async function assertContributorTutorialCompleted(
     return null;
   }
 
-  if (session.role !== "contributor") {
+  if (session.role !== "contributor" && session.role !== "org_user") {
     return null;
   }
 

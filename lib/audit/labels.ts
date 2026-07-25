@@ -63,9 +63,15 @@ export function getAuditEntityLabel(entityType: string | null): string {
 export function getAuditRoleLabel(role: string | null): string {
   switch (role) {
     case "admin":
-      return "مدیر";
+      return "مدیر سیستم";
+    case "org_user":
+      return "کاربر دستگاه";
     case "contributor":
-      return "همکار";
+      return "کاربر دستگاه";
+    case "ministry_parent":
+      return "مدیر";
+    case "sub_user":
+      return "کاربر دستگاه";
     case "client":
       return "کارفرما";
     default:

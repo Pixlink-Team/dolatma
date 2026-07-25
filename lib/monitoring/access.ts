@@ -1,5 +1,8 @@
 import type { AuthSession } from "@/lib/types";
 import type { MonitoringRole } from "@/lib/monitoring/types";
+import { getMonitoringRoleForOrgRole } from "@/lib/org-role-presets";
+import { isOrgRole } from "@/lib/org-roles";
+import { isOrgUserRole } from "@/lib/user-roles";
 
 export type MonitoringCapability =
   | "view_dashboard"
@@ -126,8 +129,15 @@ export function resolveMonitoringRole(session: AuthSession | null): MonitoringRo
   if (!session) return "viewer";
   if (session.type === "env_admin" || session.role === "admin") return "super_admin";
   if (session.role === "client") return "central_command_manager";
-  if (session.role === "ministry_parent") return "organization_manager";
-  if (session.role === "sub_user") return "content_manager";
+  if (isOrgUserRole(session.role)) {
+    if (isOrgRole(session.orgRole)) {
+      return getMonitoringRoleForOrgRole(session.orgRole);
+    }
+    // Legacy cookies before orgRole enrichment.
+    if (session.role === "ministry_parent") return "organization_manager";
+    if (session.role === "sub_user") return "content_manager";
+    return "monitoring_operator";
+  }
   return "monitoring_operator";
 }
 

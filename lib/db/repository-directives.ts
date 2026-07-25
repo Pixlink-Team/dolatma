@@ -354,7 +354,7 @@ export async function pgListCampaignUsersForDirectives(
         LEFT JOIN ministry_organizations o ON o.id = u.organization_id
         WHERE uca.campaign_id = ${campaignId}
           AND u.parent_user_id = ${parentUserId}
-          AND u.role = 'sub_user'
+          AND u.role = 'org_user'
         ORDER BY u.name ASC
       `
     : await sql`
@@ -367,7 +367,7 @@ export async function pgListCampaignUsersForDirectives(
         LEFT JOIN ministries m ON m.id = u.ministry_id
         LEFT JOIN ministry_organizations o ON o.id = u.organization_id
         WHERE uca.campaign_id = ${campaignId}
-          AND u.role IN ('contributor', 'client', 'ministry_parent', 'sub_user')
+          AND u.role IN ('org_user', 'client', 'contributor', 'ministry_parent', 'sub_user')
         ORDER BY u.name ASC
       `;
 
@@ -375,7 +375,7 @@ export async function pgListCampaignUsersForDirectives(
     id: String(row.id),
     name: String(row.name ?? ""),
     email: String(row.email ?? ""),
-    role: String(row.role ?? "contributor"),
+    role: String(row.role ?? "org_user"),
     region: mapRegion(row.region),
     phone: typeof row.phone === "string" && row.phone.trim() ? String(row.phone).trim() : null,
     province: typeof row.province === "string" && row.province.trim() ? String(row.province).trim() : null,
@@ -439,10 +439,12 @@ export async function pgResolveDirectiveAudienceUserIds(input: {
         if (!inScope(user.id)) return false;
         if (user.ministryId !== ministryId) return false;
         if (organizationId && user.organizationId !== organizationId) {
-          // Parent of the ministry still receives ministry/org-scoped directives.
-          if (user.role !== "ministry_parent") return false;
+          // Device-root managers still receive ministry/org-scoped directives.
+          if (user.role !== "ministry_parent" && user.role !== "org_user") return false;
+          if (user.organizationId) return false;
         }
         if (user.role === "ministry_parent") return true;
+        if (user.role === "org_user" && !user.organizationId) return true;
         return Boolean(user.province && provinceSet.has(user.province.toLowerCase()));
       })
       .map((user) => user.id);
@@ -716,9 +718,9 @@ export async function pgListDirectiveRecipients(
     userId: String(row.user_id),
     userName: String(row.user_name ?? ""),
     userEmail: String(row.user_email ?? ""),
-    userRole: (isAdminRole(String(row.user_role ?? "contributor"))
+    userRole: (isAdminRole(String(row.user_role ?? "org_user"))
       ? String(row.user_role)
-      : "contributor") as DirectiveRecipient["userRole"],
+      : "org_user") as DirectiveRecipient["userRole"],
     userPhone:
       typeof row.user_phone === "string" && row.user_phone.trim()
         ? String(row.user_phone).trim()

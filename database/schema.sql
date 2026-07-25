@@ -841,7 +841,40 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS parent_user_id UUID REFERENCES users(
 
 ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
 ALTER TABLE users ADD CONSTRAINT users_role_check
-  CHECK (role IN ('admin', 'contributor', 'client', 'ministry_parent', 'sub_user'));
+  CHECK (role IN (
+    'admin', 'client', 'org_user',
+    'contributor', 'ministry_parent', 'sub_user'
+  ));
+
+ALTER TABLE users ADD COLUMN IF NOT EXISTS org_role TEXT;
+ALTER TABLE users DROP CONSTRAINT IF EXISTS users_org_role_check;
+ALTER TABLE users ADD CONSTRAINT users_org_role_check
+  CHECK (org_role IS NULL OR org_role IN ('primary', 'supervisor', 'deputy', 'pr'));
+
+CREATE INDEX IF NOT EXISTS idx_users_org_role ON users(org_role);
+
+-- Migrate legacy panel roles to org_user + org_role
+UPDATE users
+SET
+  org_role = COALESCE(org_role, 'primary'),
+  role = 'org_user'
+WHERE role = 'ministry_parent';
+
+UPDATE users
+SET
+  org_role = COALESCE(org_role, 'pr'),
+  role = 'org_user'
+WHERE role = 'sub_user';
+
+UPDATE users
+SET
+  org_role = COALESCE(org_role, 'pr'),
+  role = 'org_user'
+WHERE role = 'contributor';
+
+UPDATE users
+SET org_role = NULL
+WHERE role IN ('admin', 'client');
 
 CREATE INDEX IF NOT EXISTS idx_users_ministry ON users(ministry_id);
 CREATE INDEX IF NOT EXISTS idx_users_organization ON users(organization_id);
@@ -1427,6 +1460,7 @@ SET authority_level = 'presidency', authority_other = NULL
 WHERE organization_id IS NULL
   AND (
     ministry_id IS NOT NULL
+    OR role = 'org_user'
     OR role IN ('ministry_parent', 'sub_user')
   );
 
@@ -1434,7 +1468,7 @@ UPDATE users
 SET authority_level = 'internal', authority_other = NULL
 WHERE organization_id IS NULL
   AND ministry_id IS NULL
-  AND role NOT IN ('ministry_parent', 'sub_user');
+  AND role NOT IN ('org_user', 'ministry_parent', 'sub_user');
 
 CREATE TABLE IF NOT EXISTS directive_blockers (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

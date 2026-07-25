@@ -33,11 +33,11 @@ export const DEVICE_STATUS_LABELS: Record<DeviceStatus, string> = {
 };
 
 export const DEVICE_OFFICIAL_ROLE_LABELS: Record<DeviceOfficialRole, string> = {
-  primary: "مسئول اصلی",
-  deputy: "جانشین مسئول",
-  pr: "مسئول روابط عمومی",
+  primary: "مدیر",
+  deputy: "معاون",
+  pr: "روابط عمومی",
   campaign_exec: "مسئول اجرای کمپین‌ها",
-  supervisor: "ناظر / تأییدکننده",
+  supervisor: "ناظر",
 };
 
 export const DEVICE_STAFF_GENDER_LABELS: Record<DeviceStaffGender, string> = {

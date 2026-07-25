@@ -150,8 +150,19 @@ export function AdminSidebar() {
         if (cancelled || !session) return;
         setIsFullAdminUser(session.type === "env_admin" || session.role === "admin");
         setIsClientRole(session.role === "client");
-        setIsMinistryParent(session.role === "ministry_parent");
-        setIsSubUser(session.role === "sub_user");
+        const canManageUsers =
+          Boolean(session.manageSubtreeUsers) ||
+          Boolean(session.permissions?.manageSubtreeUsers) ||
+          session.orgRole === "primary" ||
+          session.orgRole === "deputy" ||
+          session.role === "ministry_parent";
+        setIsMinistryParent(canManageUsers && session.role !== "admin" && session.role !== "client");
+        setIsSubUser(
+          session.role === "org_user" ||
+            session.role === "sub_user" ||
+            session.role === "contributor" ||
+            session.role === "ministry_parent"
+        );
         setPermissions(session.permissions ?? null);
       });
     };

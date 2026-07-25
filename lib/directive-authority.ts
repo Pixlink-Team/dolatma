@@ -106,6 +106,7 @@ export function inferDefaultAuthorityLevel(user: {
   if (user.organizationId?.trim()) return "ministry";
   if (
     user.ministryId?.trim() ||
+    user.role === "org_user" ||
     user.role === "ministry_parent" ||
     user.role === "sub_user"
   ) {

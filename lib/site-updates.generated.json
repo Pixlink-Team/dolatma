@@ -1,6 +1,18 @@
 {
   "entries": [
     {
+      "hash": "7f6cbe3beaaee1d764628d01f750e9ffd4a1663f",
+      "committedAt": "2026-07-25T11:40:28+03:30",
+      "title": "بسته‌بودن پیش‌فرض کارت‌های درخت کاربران",
+      "subject": "Collapse users ministry tree cards by default"
+    },
+    {
+      "hash": "4618a9367b4d9fe351f8062088d2206ccdcd1768",
+      "committedAt": "2026-07-25T11:39:48+03:30",
+      "title": "محاسبه خودکار سطح بالادستی کاربران و قرار گرفتن وزارتخانه‌ها زیر ریاست جمهوری",
+      "subject": "Auto-compute user authority under presidency"
+    },
+    {
       "hash": "d5576ca70cc2e72cb14ada07349a7c878a708509",
       "committedAt": "2026-07-25T11:34:14+03:30",
       "title": "نمایش درختی کاربران بر اساس وزارتخانه، یوزر مادر و زیرمجموعه",

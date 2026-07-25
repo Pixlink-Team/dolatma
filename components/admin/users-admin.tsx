@@ -31,10 +31,13 @@ import {
   contributorPermissionLabels,
   defaultContributorPermissions,
   normalizeContributorPermissions,
+  subtreeManagementKeys,
   type ContributorPermissionKey,
   type ContributorPermissions,
 } from "@/lib/contributor-permissions";
-import { getRoleLabel } from "@/lib/user-roles";
+import { getOrgRolePermissionPreset, subtreeManagementPermissionLabels } from "@/lib/org-role-presets";
+import { ORG_ROLE_LABELS, ORG_ROLES, type OrgRole } from "@/lib/org-roles";
+import { getUserRoleDisplayLabel, isOrgUserRole } from "@/lib/user-roles";
 import {
   getAuthorityBadgeLabel,
   inferDefaultAuthorityLevel,
@@ -51,7 +54,8 @@ const FILTER_ALL = "all";
 const schema = z.object({
   email: z.string().min(1, "نام کاربری یا ایمیل الزامی است"),
   name: z.string().min(1),
-  role: z.enum(["admin", "contributor", "client", "ministry_parent", "sub_user"]),
+  role: z.enum(["admin", "client", "org_user"]),
+  orgRole: z.enum(["primary", "supervisor", "deputy", "pr"]).nullable().optional(),
   password: z.string().optional(),
   province: z.string().optional(),
   city: z.string().optional(),
@@ -64,12 +68,16 @@ const schema = z.object({
 
 const permissionKeys = Object.keys(contributorPermissionLabels) as ContributorPermissionKey[];
 
-const rolesWithCampaignAccess: AdminRole[] = [
-  "contributor",
-  "client",
-  "ministry_parent",
-  "sub_user",
-];
+const rolesWithCampaignAccess: AdminRole[] = ["org_user", "client"];
+
+function isSubtreeParentUser(user: AdminUser): boolean {
+  if (!isOrgUserRole(user.role)) return false;
+  return (
+    user.orgRole === "primary" ||
+    user.orgRole === "deputy" ||
+    Boolean(user.campaignIds.some((id) => user.campaignPermissions[id]?.manageSubtreeUsers))
+  );
+}
 
 interface UsersAdminProps {
   initialUsers: AdminUser[];
@@ -113,7 +121,7 @@ export function UsersAdmin({
   const [collapsedParentIds, setCollapsedParentIds] = useState<Set<string>>(() => new Set());
 
   const parentOptions = useMemo(
-    () => rows.filter((user) => user.role === "ministry_parent"),
+    () => rows.filter((user) => isSubtreeParentUser(user)),
     [rows]
   );
 
@@ -213,16 +221,16 @@ export function UsersAdmin({
       for (const child of children) nestedChildIds.add(child.id);
     }
 
-    const roleRank = (role: AdminRole) => {
-      if (role === "ministry_parent") return 0;
-      if (role === "sub_user") return 2;
+    const roleRank = (user: AdminUser) => {
+      if (isSubtreeParentUser(user)) return 0;
+      if (user.parentUserId) return 2;
       return 1;
     };
 
     const roots = filteredRows
       .filter((user) => !nestedChildIds.has(user.id))
       .sort((a, b) => {
-        const byRole = roleRank(a.role) - roleRank(b.role);
+        const byRole = roleRank(a) - roleRank(b);
         if (byRole !== 0) return byRole;
         return a.name.localeCompare(b.name, "fa");
       });
@@ -268,7 +276,8 @@ export function UsersAdmin({
     defaultValues: {
       email: "",
       name: "",
-      role: (isSubUsersMode ? "sub_user" : "contributor") as AdminRole,
+      role: "org_user" as const,
+      orgRole: "pr" as OrgRole,
       password: "",
       province: "",
       city: "",
@@ -282,11 +291,24 @@ export function UsersAdmin({
 
   const selectedCampaignIds = form.watch("campaignIds") ?? [];
   const selectedRole = form.watch("role");
+  const selectedOrgRole = form.watch("orgRole");
   const selectedProvince = form.watch("province");
   const selectedCity = form.watch("city");
   const selectedMinistryId = form.watch("ministryId");
   const selectedOrganizationId = form.watch("organizationId");
   const selectedParentUserId = form.watch("parentUserId");
+
+  const applyOrgRolePreset = (orgRole: OrgRole) => {
+    const preset = getOrgRolePermissionPreset(orgRole);
+    const campaignIds = form.getValues("campaignIds") ?? [];
+    if (campaignIds.length === 0) {
+      setCampaignPermissions({});
+      return;
+    }
+    setCampaignPermissions(
+      Object.fromEntries(campaignIds.map((campaignId) => [campaignId, { ...preset }]))
+    );
+  };
 
   const organizationOptions = useMemo(() => {
     const ministryId = selectedMinistryId || (isSubUsersMode ? parentMinistryId : null);
@@ -305,9 +327,14 @@ export function UsersAdmin({
     }
 
     form.setValue("campaignIds", [...current, campaignId]);
+    const orgRole = form.getValues("orgRole");
+    const preset =
+      selectedRole === "org_user" && orgRole
+        ? getOrgRolePermissionPreset(orgRole)
+        : defaultContributorPermissions();
     setCampaignPermissions((prev) => ({
       ...prev,
-      [campaignId]: prev[campaignId] ?? defaultContributorPermissions(),
+      [campaignId]: prev[campaignId] ?? preset,
     }));
   };
 
@@ -432,22 +459,20 @@ export function UsersAdmin({
       return;
     }
 
-    const role: AdminRole = isSubUsersMode ? "sub_user" : data.role;
+    const role: AdminRole = isSubUsersMode ? "org_user" : data.role;
+    const orgRole: OrgRole | null =
+      role === "org_user" ? (data.orgRole ?? "pr") : null;
     const ministryId =
       (isSubUsersMode ? parentMinistryId : null) || data.ministryId || null;
     const organizationId = data.organizationId ?? null;
     const nextParentUserId = isSubUsersMode
       ? parentUserId ?? null
-      : role === "sub_user"
+      : role === "org_user"
         ? data.parentUserId ?? null
         : null;
 
-    if (isFullMode && role === "ministry_parent" && !ministryId) {
-      toast.error("برای یوزر مادر انتخاب وزارتخانه الزامی است");
-      return;
-    }
-    if (isFullMode && role === "sub_user" && !nextParentUserId) {
-      toast.error("برای کاربر زیرمجموعه انتخاب یوزر مادر الزامی است");
+    if (isFullMode && role === "org_user" && !ministryId) {
+      toast.error("برای کاربر دستگاه انتخاب وزارتخانه الزامی است");
       return;
     }
 
@@ -461,6 +486,7 @@ export function UsersAdmin({
       const result = await saveUserAction({
         ...data,
         role,
+        orgRole,
         email: normalizeStoredUserEmail(data.email),
         id: editingId ?? undefined,
         province: data.province?.trim() || null,
@@ -494,6 +520,7 @@ export function UsersAdmin({
         email: normalizeStoredUserEmail(data.email),
         name: data.name,
         role,
+        orgRole,
         province: data.province?.trim() || null,
         city: data.city?.trim() || null,
         phone: data.phone?.trim() || null,
@@ -522,11 +549,13 @@ export function UsersAdmin({
   const openCreate = () => {
     if (!canManageUsers) return;
     setEditingId(null);
+    const defaultOrgRole: OrgRole = "pr";
     setCampaignPermissions({});
     form.reset({
       email: "",
       name: "",
-      role: isSubUsersMode ? "sub_user" : "contributor",
+      role: "org_user",
+      orgRole: defaultOrgRole,
       password: "",
       province: "",
       city: "",
@@ -555,10 +584,15 @@ export function UsersAdmin({
         ])
       )
     );
+    const role: AdminRole =
+      user.role === "admin" || user.role === "client" || user.role === "org_user"
+        ? user.role
+        : "org_user";
     form.reset({
       email: getLoginUsernameFromEmail(user.email ?? ""),
       name: user.name ?? "",
-      role: user.role ?? (isSubUsersMode ? "sub_user" : "contributor"),
+      role,
+      orgRole: user.orgRole ?? (role === "org_user" ? "pr" : null),
       password: "",
       province: normalizedProvince,
       city: normalizedCity,
@@ -579,9 +613,9 @@ export function UsersAdmin({
         </h1>
         <p className="text-sm text-muted-foreground">
           {isFullMode
-            ? "درخت وزارتخانه‌ها، یوزر مادر و زیرمجموعه‌ها — ببینید کاربران هر وزارتخانه چطور پخش شده‌اند"
+            ? "سمت‌های سازمانی (مدیر، ناظر، معاون، روابط عمومی) و دسترسی‌های زیرشاخه"
             : isSubUsersMode
-              ? "ایجاد و مدیریت کاربران زیرمجموعه با استان، شهر و شماره موبایل"
+              ? "ایجاد و مدیریت کاربران زیرمجموعه با سمت سازمانی"
               : "تعیین وزارتخانه کاربران و مشاهده توزیع درختی"}
         </p>
       </div>
@@ -827,7 +861,7 @@ export function UsersAdmin({
                   const childCount = childCountById.get(item.id) ?? 0;
                   const expanded = !collapsedParentIds.has(item.id);
                   const orphanSubUser =
-                    depth === 0 && item.role === "sub_user" && Boolean(item.parentUserName);
+                    depth === 0 && Boolean(item.parentUserId) && Boolean(item.parentUserName);
                   const nestedSubUser = depth > 0 && Boolean(item.parentUserName);
 
                   return (
@@ -900,8 +934,8 @@ export function UsersAdmin({
               },
               {
                 key: "role",
-                label: "نقش",
-                render: (item) => getRoleLabel(item.role),
+                label: "نقش / سمت",
+                render: (item) => getUserRoleDisplayLabel(item),
               },
               {
                 key: "authorityLevel",
@@ -1148,29 +1182,74 @@ export function UsersAdmin({
                 {isFullMode && (
                   <>
                     <div className="space-y-2">
-                      <Label>نقش</Label>
+                      <Label>نقش سیستمی</Label>
                       <Select
                         value={selectedRole}
                         onValueChange={(value) => {
-                          form.setValue("role", value as AdminRole);
+                          const nextRole = value as "admin" | "client" | "org_user";
+                          form.setValue("role", nextRole);
+                          if (nextRole === "org_user") {
+                            const orgRole = (form.getValues("orgRole") ?? "pr") as OrgRole;
+                            form.setValue("orgRole", orgRole);
+                            applyOrgRolePreset(orgRole);
+                          } else {
+                            form.setValue("orgRole", null);
+                            form.setValue("parentUserId", null);
+                          }
                         }}
                       >
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="contributor">کاربر (فقط داده خودش)</SelectItem>
-                          <SelectItem value="ministry_parent">یوزر مادر وزارتخانه</SelectItem>
-                          <SelectItem value="sub_user">کاربر زیرمجموعه</SelectItem>
+                          <SelectItem value="org_user">کاربر دستگاه</SelectItem>
                           <SelectItem value="client">کارفرما</SelectItem>
-                          <SelectItem value="admin">مدیر</SelectItem>
+                          <SelectItem value="admin">مدیر سیستم</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
 
-                    {selectedRole === "sub_user" && (
+                    {(selectedRole === "org_user" || isSubUsersMode) && (
                       <div className="space-y-2">
-                        <Label>یوزر مادر</Label>
+                        <Label>سمت سازمانی</Label>
+                        <Select
+                          value={selectedOrgRole ?? "pr"}
+                          onValueChange={(value) => {
+                            const orgRole = value as OrgRole;
+                            form.setValue("orgRole", orgRole);
+                            applyOrgRolePreset(orgRole);
+                          }}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {ORG_ROLES.map((key) => (
+                              <SelectItem key={key} value={key}>
+                                {ORG_ROLE_LABELS[key]}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="w-full"
+                          onClick={() => {
+                            const orgRole = (form.getValues("orgRole") ?? "pr") as OrgRole;
+                            applyOrgRolePreset(orgRole);
+                            toast.success("پیش‌فرض سمت اعمال شد");
+                          }}
+                        >
+                          بازنشانی به پیش‌فرض نقش
+                        </Button>
+                      </div>
+                    )}
+
+                    {selectedRole === "org_user" && (
+                      <div className="space-y-2">
+                        <Label>کاربر والد (اختیاری)</Label>
                         <Select
                           value={selectedParentUserId ?? NO_PARENT}
                           onValueChange={(value) =>
@@ -1178,13 +1257,16 @@ export function UsersAdmin({
                           }
                         >
                           <SelectTrigger>
-                            <SelectValue placeholder="انتخاب یوزر مادر" />
+                            <SelectValue placeholder="بدون والد / ریشه دستگاه" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value={NO_PARENT}>انتخاب کنید</SelectItem>
+                            <SelectItem value={NO_PARENT}>بدون والد</SelectItem>
                             {parentOptions.map((parent) => (
                               <SelectItem key={parent.id} value={parent.id}>
                                 {parent.name}
+                                {parent.orgRole
+                                  ? ` — ${ORG_ROLE_LABELS[parent.orgRole]}`
+                                  : ""}
                                 {parent.ministryName ? ` — ${parent.ministryName}` : ""}
                               </SelectItem>
                             ))}
@@ -1193,6 +1275,45 @@ export function UsersAdmin({
                       </div>
                     )}
                   </>
+                )}
+
+                {isSubUsersMode && (
+                  <div className="space-y-2">
+                    <Label>سمت سازمانی</Label>
+                    <Select
+                      value={selectedOrgRole ?? "pr"}
+                      onValueChange={(value) => {
+                        const orgRole = value as OrgRole;
+                        form.setValue("role", "org_user");
+                        form.setValue("orgRole", orgRole);
+                        applyOrgRolePreset(orgRole);
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {ORG_ROLES.map((key) => (
+                          <SelectItem key={key} value={key}>
+                            {ORG_ROLE_LABELS[key]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      onClick={() => {
+                        const orgRole = (form.getValues("orgRole") ?? "pr") as OrgRole;
+                        applyOrgRolePreset(orgRole);
+                        toast.success("پیش‌فرض سمت اعمال شد");
+                      }}
+                    >
+                      بازنشانی به پیش‌فرض نقش
+                    </Button>
+                  </div>
                 )}
 
                 <div className="space-y-2">
@@ -1220,24 +1341,50 @@ export function UsersAdmin({
                         campaignPermissions[campaignId] ?? defaultContributorPermissions()
                       );
                       return (
-                        <div key={campaignId} className="rounded-lg border p-3 space-y-2">
+                        <div key={campaignId} className="rounded-lg border p-3 space-y-3">
                           <p className="text-sm font-medium">{campaign?.title ?? campaignId}</p>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                            {permissionKeys.map((key) => (
-                              <label
-                                key={key}
-                                className="flex items-center justify-between gap-3 text-sm rounded-md border px-3 py-2"
-                              >
-                                <span>{contributorPermissionLabels[key]}</span>
-                                <Switch
-                                  checked={permissions[key]}
-                                  onCheckedChange={(value) =>
-                                    togglePermission(campaignId, key, value)
-                                  }
-                                />
-                              </label>
-                            ))}
+                          <div className="space-y-2">
+                            <p className="text-xs font-medium text-muted-foreground">بخش‌های محتوا</p>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              {permissionKeys.map((key) => (
+                                <label
+                                  key={key}
+                                  className="flex items-center justify-between gap-3 text-sm rounded-md border px-3 py-2"
+                                >
+                                  <span>{contributorPermissionLabels[key]}</span>
+                                  <Switch
+                                    checked={permissions[key]}
+                                    onCheckedChange={(value) =>
+                                      togglePermission(campaignId, key, value)
+                                    }
+                                  />
+                                </label>
+                              ))}
+                            </div>
                           </div>
+                          {selectedRole === "org_user" && (
+                            <div className="space-y-2">
+                              <p className="text-xs font-medium text-muted-foreground">
+                                قابلیت‌های مدیریتی زیرشاخه
+                              </p>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                {subtreeManagementKeys.map((key) => (
+                                  <label
+                                    key={key}
+                                    className="flex items-center justify-between gap-3 text-sm rounded-md border px-3 py-2"
+                                  >
+                                    <span>{subtreeManagementPermissionLabels[key]}</span>
+                                    <Switch
+                                      checked={permissions[key]}
+                                      onCheckedChange={(value) =>
+                                        togglePermission(campaignId, key, value)
+                                      }
+                                    />
+                                  </label>
+                                ))}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       );
                     })}

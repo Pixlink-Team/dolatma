@@ -15,6 +15,14 @@ export interface ContributorPermissions {
   forms: boolean;
   mediaCommand: boolean;
   monitoring: boolean;
+  /** Scoped management: create/edit users under own device subtree. */
+  manageSubtreeUsers: boolean;
+  /** Scoped management: issue directives to subtree audience. */
+  manageSubtreeDirectives: boolean;
+  /** Scoped management: score content owned within subtree. */
+  scoreSubtreeContent: boolean;
+  /** Scoped management: mutate devices inside subtree. */
+  manageSubtreeDevices: boolean;
 }
 
 export type ContributorPermissionKey = keyof ContributorPermissions;
@@ -37,9 +45,13 @@ export const defaultContributorPermissions = (): ContributorPermissions => ({
   forms: false,
   mediaCommand: true,
   monitoring: true,
+  manageSubtreeUsers: false,
+  manageSubtreeDirectives: false,
+  scoreSubtreeContent: false,
+  manageSubtreeDevices: false,
 });
 
-/** Permissions shown when editing users. Excludes admin-only tools like forms. */
+/** Content section permissions shown when editing users. */
 export const contributorPermissionLabels: Partial<
   Record<ContributorPermissionKey, string>
 > = {
@@ -59,6 +71,13 @@ export const contributorPermissionLabels: Partial<
   mediaCommand: "میز فرمان رسانه‌ای",
   monitoring: "رصد و واکنش سریع",
 };
+
+export const subtreeManagementKeys = [
+  "manageSubtreeUsers",
+  "manageSubtreeDirectives",
+  "scoreSubtreeContent",
+  "manageSubtreeDevices",
+] as const satisfies readonly ContributorPermissionKey[];
 
 export function normalizeContributorPermissions(
   value: unknown
@@ -85,6 +104,11 @@ export function normalizeContributorPermissions(
     forms: false,
     mediaCommand: record.mediaCommand ?? defaults.mediaCommand,
     monitoring: record.monitoring ?? defaults.monitoring,
+    manageSubtreeUsers: record.manageSubtreeUsers ?? defaults.manageSubtreeUsers,
+    manageSubtreeDirectives:
+      record.manageSubtreeDirectives ?? defaults.manageSubtreeDirectives,
+    scoreSubtreeContent: record.scoreSubtreeContent ?? defaults.scoreSubtreeContent,
+    manageSubtreeDevices: record.manageSubtreeDevices ?? defaults.manageSubtreeDevices,
   };
 }
 
@@ -115,4 +139,8 @@ export const deniedContributorPermissions = (): ContributorPermissions => ({
   forms: false,
   mediaCommand: false,
   monitoring: false,
+  manageSubtreeUsers: false,
+  manageSubtreeDirectives: false,
+  scoreSubtreeContent: false,
+  manageSubtreeDevices: false,
 });

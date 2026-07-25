@@ -5,11 +5,23 @@ import { Building2, ChevronDown, ChevronLeft, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { AdminItemActions } from "@/components/admin/admin-item-actions";
 import { getLoginUsernameFromEmail } from "@/lib/auth/user-login";
-import { getRoleLabel } from "@/lib/user-roles";
+import {
+  canOrgRoleManageSubtreeUsers,
+  getUserRoleDisplayLabel,
+  isOrgUserRole,
+} from "@/lib/user-roles";
 import type { AdminUser, Ministry } from "@/lib/types";
 import { formatPersianNumber } from "@/lib/utils";
 
 const NO_MINISTRY = "__none__";
+
+function isSubtreeParentUser(user: AdminUser): boolean {
+  if (!isOrgUserRole(user.role)) return false;
+  if (canOrgRoleManageSubtreeUsers(user.orgRole)) return true;
+  return Boolean(
+    user.campaignIds.some((id) => user.campaignPermissions[id]?.manageSubtreeUsers)
+  );
+}
 
 interface UsersMinistryTreeProps {
   users: AdminUser[];
@@ -64,7 +76,7 @@ function buildMinistryGroups(
     }
 
     const parents: ParentBranch[] = groupUsers
-      .filter((user) => user.role === "ministry_parent")
+      .filter((user) => isSubtreeParentUser(user))
       .sort(sortByName)
       .map((user) => ({
         user,
@@ -242,7 +254,7 @@ export function UsersMinistryTree({
                           <div className="flex flex-wrap items-center gap-2">
                             <span className="font-medium">{branch.user.name}</span>
                             <Badge variant="secondary">
-                              {getRoleLabel(branch.user.role)}
+                              {getUserRoleDisplayLabel(branch.user)}
                             </Badge>
                             {hasChildren ? (
                               <Badge variant="outline" className="text-[10px] font-normal">
@@ -278,7 +290,7 @@ export function UsersMinistryTree({
                                 <div className="flex flex-wrap items-center gap-2">
                                   <span className="text-sm">{child.name}</span>
                                   <Badge variant="outline" className="text-[10px]">
-                                    {getRoleLabel(child.role)}
+                                    {getUserRoleDisplayLabel(child)}
                                   </Badge>
                                 </div>
                                 <UserMeta user={child} />
@@ -310,8 +322,8 @@ export function UsersMinistryTree({
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="font-medium">{user.name}</span>
-                        <Badge variant="outline">{getRoleLabel(user.role)}</Badge>
-                        {user.role === "sub_user" && user.parentUserName ? (
+                        <Badge variant="outline">{getUserRoleDisplayLabel(user)}</Badge>
+                        {user.parentUserId && user.parentUserName ? (
                           <span className="text-[11px] text-muted-foreground">
                             زیردستِ {user.parentUserName}
                           </span>

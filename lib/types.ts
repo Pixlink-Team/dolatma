@@ -10,10 +10,16 @@ export type AnalyticsDeviceType = "mobile" | "desktop" | "tablet";
 export type ClientDeviceType = AnalyticsDeviceType;
 export type AdminRole =
   | "admin"
-  | "contributor"
   | "client"
+  | "org_user"
+  /** @deprecated Migrated to org_user — kept for old sessions/rows during transition. */
+  | "contributor"
+  /** @deprecated Migrated to org_user + org_role=primary. */
   | "ministry_parent"
+  /** @deprecated Migrated to org_user + org_role. */
   | "sub_user";
+
+export type OrgRole = import("./org-roles").OrgRole;
 
 /** Upstream authority for directives and user accounts. */
 export type DirectiveAuthorityLevel = import("./directive-authority").DirectiveAuthorityLevel;
@@ -697,6 +703,8 @@ export interface AdminUser {
   email: string;
   name: string;
   role: AdminRole;
+  /** Organizational position on the home device (org_user only). */
+  orgRole?: OrgRole | null;
   province?: string | null;
   city?: string | null;
   /** Geographic zone set by admin/client: north/south/east/west. */
@@ -721,7 +729,7 @@ export interface AdminUser {
   /** Unified device assignment (organization preferred over ministry). */
   deviceId?: string | null;
   deviceName?: string | null;
-  /** Parent ministry user for sub_user rows. */
+  /** Parent org user for subtree hierarchy. */
   parentUserId?: string | null;
   parentUserName?: string | null;
   /** Upstream authority level for this account. */
@@ -1100,6 +1108,13 @@ export interface AuthSession {
   type: "env_admin" | "db_user";
   userId: string | null;
   role: SessionRole;
+  /** Loaded from DB for org_user sessions (not stored in cookie). */
+  orgRole?: OrgRole | null;
+  /** Effective subtree management flags (OR across campaign memberships). */
+  manageSubtreeUsers?: boolean;
+  manageSubtreeDirectives?: boolean;
+  scoreSubtreeContent?: boolean;
+  manageSubtreeDevices?: boolean;
   email?: string;
   name?: string;
   /** Bumped on logout so previous cookies become invalid. */

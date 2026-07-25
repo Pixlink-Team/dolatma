@@ -29,8 +29,14 @@ export async function saveContentScoreAction(input: {
   score: number | null;
 }): Promise<{ success: boolean; error?: string }> {
   const session = await getAuthSession();
-  if (!session || !canScoreContent(session)) {
-    return { success: false, error: "فقط مدیر و کارفرما می‌توانند امتیاز بدهند" };
+  let permissions = null;
+  if (session?.userId && session.role === "org_user") {
+    const { pgGetUserById } = await import("@/lib/db/repository-extended");
+    const user = await pgGetUserById(session.userId);
+    permissions = user?.campaignPermissions[input.campaignId] ?? null;
+  }
+  if (!session || !canScoreContent(session, permissions)) {
+    return { success: false, error: "دسترسی امتیازدهی ندارید" };
   }
 
   if (!isPostgresConfigured()) {

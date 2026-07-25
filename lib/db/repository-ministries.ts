@@ -336,7 +336,7 @@ export async function pgListSubUserIds(parentUserId: string): Promise<string[]> 
   const rows = await sql`
     SELECT id FROM users
     WHERE parent_user_id = ${parentUserId}
-      AND role = 'sub_user'
+      AND role = 'org_user'
   `;
   return rows.map((row) => String(row.id));
 }

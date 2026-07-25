@@ -35,6 +35,8 @@ import {
   normalizePlanLabels,
 } from "@/lib/content-topics";
 import { truncateMeetingSummary } from "@/lib/meeting-preview";
+import { mapOrgRole } from "@/lib/org-roles";
+import { normalizeAdminRole } from "@/lib/user-roles";
 
 function toDateString(value: unknown): string {
   if (value instanceof Date) {
@@ -566,11 +568,19 @@ export function mapUserFromDb(
   row: any,
   campaignAccess: { campaignId: string; permissions: ContributorPermissions }[] = []
 ): AdminUser {
+  const role = normalizeAdminRole(String(row.role ?? "org_user"));
+  const orgRole =
+    role === "org_user"
+      ? mapOrgRole(row.org_role) ??
+        (String(row.role) === "ministry_parent" ? "primary" : "pr")
+      : null;
+
   return {
     id: row.id,
     email: row.email,
     name: row.name,
-    role: row.role,
+    role,
+    orgRole,
     province: row.province ?? null,
     city: row.city ?? null,
     region: row.region === "north" || row.region === "south" || row.region === "east" || row.region === "west"
@@ -601,7 +611,7 @@ export function mapUserFromDb(
     parentUserId: row.parent_user_id ? String(row.parent_user_id) : null,
     parentUserName: typeof row.parent_user_name === "string" ? row.parent_user_name : null,
     authorityLevel: inferDefaultAuthorityLevel({
-      role: String(row.role ?? ""),
+      role,
       organizationId: row.organization_id ? String(row.organization_id) : null,
       ministryId: row.ministry_id ? String(row.ministry_id) : null,
     }),
