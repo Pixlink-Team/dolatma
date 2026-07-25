@@ -1,6 +1,18 @@
 {
   "entries": [
     {
+      "hash": "b9c122cb2e797cfdb975cc10ea1567f330ed6cd3",
+      "committedAt": "2026-07-25T11:16:08+03:30",
+      "title": "نمایش نام کاربری عادی در پروفایل به‌جای آدرس ایمیل داخلی",
+      "subject": "Show login username without @example.com on profile"
+    },
+    {
+      "hash": "dcc0730d8187b829a057ecc3f8dbef9ffede5b27",
+      "committedAt": "2026-07-25T11:15:54+03:30",
+      "title": "تغییر نام سامانه از اقدام به راستا در سراسر سایت",
+      "subject": "Rename campaign brand from اقدام to راستا"
+    },
+    {
       "hash": "da5cd7c9359e77b129c3056b55441fc2d5da0a0a",
       "committedAt": "2026-07-25T11:06:40+03:30",
       "title": "اعمال واقعی قطع دسترسی کاربران به بخش‌های پنل",
