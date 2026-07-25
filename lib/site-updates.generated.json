@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "c009ffd927716fc4b8bfba1a80cb2e37034b4f98",
+      "committedAt": "2026-07-25T11:54:11+03:30",
+      "title": "افزودن سمت‌های سازمانی مدیر، ناظر، معاون و روابط عمومی برای کاربران دستگاه",
+      "subject": "Add organizational roles for device users with scoped permission presets."
+    },
+    {
       "hash": "7f6cbe3beaaee1d764628d01f750e9ffd4a1663f",
       "committedAt": "2026-07-25T11:40:28+03:30",
       "title": "بسته‌بودن پیش‌فرض کارت‌های درخت کاربران",

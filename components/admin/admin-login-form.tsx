@@ -188,21 +188,26 @@ export function AdminLoginForm({ settings = DEFAULT_LOGIN_PAGE_SETTINGS }: Admin
 
   return (
     <main
-      className="dark relative isolate flex min-h-[100dvh] flex-col items-center justify-center overflow-hidden bg-slate-950 px-4 py-8 text-white"
+      className="dark relative flex min-h-[100dvh] flex-col items-center justify-center overflow-hidden px-4 py-8 text-white"
       dir="rtl"
       onPointerMove={handlePagePointerMove}
     >
-      {ALL_PERIOD_BACKGROUNDS.map((src) => (
-        <div
-          key={src}
-          className="pointer-events-none absolute inset-0 -z-20 bg-cover bg-center transition-opacity duration-1000 ease-in-out"
-          style={{
-            backgroundImage: `url('${src}')`,
-            opacity: timeOfDay?.backgroundSrc === src ? 1 : 0,
-          }}
-          aria-hidden
-        />
-      ))}
+      {ALL_PERIOD_BACKGROUNDS.map((src) => {
+        const isActive = timeOfDay
+          ? timeOfDay.backgroundSrc === src
+          : src === ALL_PERIOD_BACKGROUNDS[0];
+        return (
+          <div
+            key={src}
+            className="pointer-events-none absolute inset-0 z-0 bg-cover bg-center transition-opacity duration-1000 ease-in-out"
+            style={{
+              backgroundImage: `url('${src}')`,
+              opacity: isActive ? 1 : 0,
+            }}
+            aria-hidden
+          />
+        );
+      })}
 
       {now && timeOfDay && greetingText ? (
         <div
