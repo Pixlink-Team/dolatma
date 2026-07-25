@@ -1,6 +1,18 @@
 {
   "entries": [
     {
+      "hash": "e5e0889b99f4708ba51cc39a01dffa9660dd1abd",
+      "committedAt": "2026-07-25T20:26:57+03:30",
+      "title": "خالی بودن فیلد عنوان هنگام افزودن پوستر و ویدیو",
+      "subject": "Leave poster and video title empty on create"
+    },
+    {
+      "hash": "c3c2446e3d61c004e313a93e374e6981ecff22de",
+      "committedAt": "2026-07-25T20:23:56+03:30",
+      "title": "رفع خطای صفحه هنگام حذف زیرمجموعه‌های دستگاه‌ها",
+      "subject": "Harden device tree delete against cycles and FK errors"
+    },
+    {
       "hash": "a64c939f10e014eeea68bb311b39b7141ebe3ce3",
       "committedAt": "2026-07-25T20:11:13+03:30",
       "title": "امکان فعال و غیرفعال کردن آموزش هر بخش به‌صورت جداگانه",
