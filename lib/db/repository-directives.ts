@@ -1273,42 +1273,6 @@ export async function pgListCalendarDirectives(campaignId?: string | null) {
   }));
 }
 
-export async function pgListCalendarCampaigns() {
-  const sql = getSql();
-  // campaign_settings has updated_at only (no created_at).
-  await sql`
-    ALTER TABLE campaign_settings
-      ADD COLUMN IF NOT EXISTS content_plans JSONB NOT NULL DEFAULT '[]'::jsonb
-  `;
-  const rows = await sql`
-    SELECT id, title, start_date, end_date, content_plans
-    FROM campaign_settings
-    ORDER BY COALESCE(start_date, end_date, updated_at::date) ASC
-  `;
-  return rows.map((row) => {
-    const rawPlans = row.content_plans;
-    let plans: string[] = [];
-    if (Array.isArray(rawPlans)) {
-      plans = rawPlans
-        .map((p) => {
-          if (typeof p === "string") return p.trim();
-          if (p && typeof p === "object" && "name" in p) {
-            return String((p as { name?: string }).name ?? "").trim();
-          }
-          return "";
-        })
-        .filter(Boolean);
-    }
-    return {
-      id: String(row.id),
-      title: String(row.title ?? ""),
-      startDate: toDateString(row.start_date),
-      endDate: toDateString(row.end_date),
-      topics: plans,
-    };
-  });
-}
-
 export async function pgUpdateRecipientSmsStatus(input: {
   directiveId: string;
   userId: string;

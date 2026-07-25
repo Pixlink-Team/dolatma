@@ -31,11 +31,10 @@ export default async function NationalCalendarPage() {
       <div>
         <h1 className="text-2xl font-bold">تقویم ملی</h1>
         <p className="text-sm text-muted-foreground">
-          راستاها و دستورکارها — هشدار تداخل فقط وقتی دستگاه، استان و موضوع هم‌زمان باشند.
+          دستورکارها — هشدار تداخل فقط وقتی دستگاه، استان و موضوع هم‌زمان باشند.
         </p>
       </div>
       <NationalCalendarAdmin
-        campaigns={result.campaigns}
         directives={result.directives}
         conflicts={result.conflicts}
       />

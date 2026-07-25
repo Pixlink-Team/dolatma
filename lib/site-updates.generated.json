@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "740b13d38d7f2fcabebf20aea85f726fb25af900",
+      "committedAt": "2026-07-25T16:03:47+03:30",
+      "title": "امکان آپلود لوگو با کشیدن و رها کردن و بهینه‌سازی خودکار اندازه",
+      "subject": "Replace device logo URL with drag-drop upload"
+    },
+    {
       "hash": "db355fc66ae4e0eb0ae70e1b6681ec6b55611be5",
       "committedAt": "2026-07-25T15:19:51+03:30",
       "title": "امکان تغییر استان و شهر دستگاه ریشه توسط مدیر وزارتخانه",

@@ -1,10 +1,7 @@
 "use server";
 
 import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
-import {
-  pgListCalendarCampaigns,
-  pgListCalendarDirectives,
-} from "@/lib/db/repository-directives";
+import { pgListCalendarDirectives } from "@/lib/db/repository-directives";
 import { detectCalendarConflict } from "@/lib/directive-funnel";
 import { isPostgresConfigured } from "@/lib/utils";
 import * as pgExt from "@/lib/db/repository-extended";
@@ -12,14 +9,13 @@ import * as pgExt from "@/lib/db/repository-extended";
 export async function getNationalCalendarAction(campaignId?: string | null) {
   const session = await getAuthSession();
   if (!session) {
-    return { success: false as const, error: "Unauthorized", campaigns: [], directives: [], conflicts: [] };
+    return { success: false as const, error: "Unauthorized", directives: [], conflicts: [] };
   }
   if (!isFullAdmin(session) && session.role !== "client") {
     if (!session.userId || !isPostgresConfigured()) {
       return {
         success: false as const,
         error: "Unauthorized",
-        campaigns: [],
         directives: [],
         conflicts: [],
       };
@@ -30,17 +26,13 @@ export async function getNationalCalendarAction(campaignId?: string | null) {
     return {
       success: false as const,
       error: "Database required",
-      campaigns: [],
       directives: [],
       conflicts: [],
     };
   }
 
   try {
-    const [campaigns, directives] = await Promise.all([
-      pgListCalendarCampaigns(),
-      pgListCalendarDirectives(campaignId),
-    ]);
+    const directives = await pgListCalendarDirectives(campaignId);
 
     const conflicts: Array<{
       aId: string;
@@ -84,14 +76,13 @@ export async function getNationalCalendarAction(campaignId?: string | null) {
       }
     }
 
-    return { success: true as const, campaigns, directives, conflicts };
+    return { success: true as const, directives, conflicts };
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "بارگذاری تقویم ناموفق بود";
     return {
       success: false as const,
       error: message,
-      campaigns: [],
       directives: [],
       conflicts: [],
     };

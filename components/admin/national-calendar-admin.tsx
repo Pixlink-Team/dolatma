@@ -5,7 +5,6 @@ import { formatPersianDate } from "@/lib/utils";
 
 interface CalendarEvent {
   id: string;
-  kind: "campaign" | "directive";
   title: string;
   startDate?: string | null;
   endDate?: string | null;
@@ -15,13 +14,6 @@ interface CalendarEvent {
 }
 
 interface NationalCalendarAdminProps {
-  campaigns: Array<{
-    id: string;
-    title: string;
-    startDate?: string | null;
-    endDate?: string | null;
-    topics: string[];
-  }>;
   directives: Array<{
     id: string;
     title: string;
@@ -42,30 +34,20 @@ interface NationalCalendarAdminProps {
 }
 
 export function NationalCalendarAdmin({
-  campaigns,
   directives,
   conflicts,
 }: NationalCalendarAdminProps) {
-  const events: CalendarEvent[] = [
-    ...campaigns.map((item) => ({
+  const events: CalendarEvent[] = [...directives]
+    .map((item) => ({
       id: item.id,
-      kind: "campaign" as const,
-      title: item.title,
-      startDate: item.startDate,
-      endDate: item.endDate,
-      topic: item.topics.filter(Boolean).join("، ") || "",
-    })),
-    ...directives.map((item) => ({
-      id: item.id,
-      kind: "directive" as const,
       title: item.title,
       startDate: item.startDate,
       endDate: item.endDate,
       topic: item.topic,
       campaignTitle: item.campaignTitle,
       crisisMode: item.crisisMode,
-    })),
-  ].sort((a, b) => String(a.startDate ?? "").localeCompare(String(b.startDate ?? "")));
+    }))
+    .sort((a, b) => String(a.startDate ?? "").localeCompare(String(b.startDate ?? "")));
 
   return (
     <div className="space-y-6">
@@ -104,12 +86,10 @@ export function NationalCalendarAdmin({
               </tr>
             ) : (
               events.map((event) => (
-                <tr key={`${event.kind}-${event.id}`} className="border-t">
+                <tr key={event.id} className="border-t">
                   <td className="p-3">
                     <div className="flex flex-wrap gap-1">
-                      <Badge variant={event.kind === "campaign" ? "default" : "secondary"}>
-                        {event.kind === "campaign" ? "راستا" : "دستورکار"}
-                      </Badge>
+                      <Badge variant="secondary">دستورکار</Badge>
                       {event.crisisMode ? (
                         <Badge variant="destructive">بحران</Badge>
                       ) : null}
