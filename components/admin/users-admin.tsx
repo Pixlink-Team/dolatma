@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -27,6 +27,7 @@ import {
   saveUserAction,
   saveUserMinistryAction,
 } from "@/lib/actions/extended-actions";
+import { getDeviceCeilingAction } from "@/lib/actions/device-access-actions";
 import { saveDeviceAction } from "@/lib/actions/device-actions";
 import { saveOrganizationAction } from "@/lib/actions/ministry-actions";
 import {
@@ -169,6 +170,10 @@ export function UsersAdmin({
   const [filterProvince, setFilterProvince] = useState(FILTER_ALL);
   const [filterCity, setFilterCity] = useState(FILTER_ALL);
   const [campaignPermissions, setCampaignPermissions] = useState<Record<string, ContributorPermissions>>({});
+  /** Effective device-tree ceiling for the selected ministry/org (null = no ceiling). */
+  const [deviceCeilingByCampaign, setDeviceCeilingByCampaign] = useState<
+    Record<string, ContributorPermissions>
+  >({});
   const [isPending, startTransition] = useTransition();
   const [bulkAccessOpen, setBulkAccessOpen] = useState(false);
   const [bulkSelectedUsers, setBulkSelectedUsers] = useState<AdminUser[]>([]);
@@ -318,14 +323,69 @@ export function UsersAdmin({
     return normalizeContributorPermissions(raw);
   };
 
+  const getDeviceCeiling = (campaignId: string): ContributorPermissions | null => {
+    const raw = deviceCeilingByCampaign[campaignId];
+    return raw ? normalizeContributorPermissions(raw) : null;
+  };
+
+  /** Combined cap: grantor (subtree manager) ∩ device ceiling. */
+  const getPermissionCap = (campaignId: string): ContributorPermissions | null => {
+    const grantor = getGrantorPermissions(campaignId);
+    const deviceCeiling = getDeviceCeiling(campaignId);
+    if (grantor && deviceCeiling) {
+      return intersectContributorPermissions(grantor, deviceCeiling);
+    }
+    return grantor ?? deviceCeiling;
+  };
+
   const clampToGrantor = (
     campaignId: string,
     permissions: ContributorPermissions
   ): ContributorPermissions => {
-    const grantor = getGrantorPermissions(campaignId);
-    if (!grantor) return permissions;
-    return intersectContributorPermissions(permissions, grantor);
+    const cap = getPermissionCap(campaignId);
+    if (!cap) return permissions;
+    return intersectContributorPermissions(permissions, cap);
   };
+
+  const homeDeviceIdForForm =
+    selectedOrganizationId?.trim() ||
+    selectedMinistryId?.trim() ||
+    (isSubUsersMode ? parentOrganizationId || parentMinistryId : null) ||
+    null;
+
+  useEffect(() => {
+    if (!open || !homeDeviceIdForForm || soleCampaignIds.length === 0) {
+      setDeviceCeilingByCampaign({});
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const next: Record<string, ContributorPermissions> = {};
+      for (const campaignId of soleCampaignIds) {
+        const result = await getDeviceCeilingAction(homeDeviceIdForForm, campaignId);
+        if (result.success && result.ceiling) {
+          next[campaignId] = result.ceiling;
+        }
+      }
+      if (!cancelled) {
+        setDeviceCeilingByCampaign(next);
+        // Re-clamp current toggles when the home device ceiling changes.
+        setCampaignPermissions((prev) => {
+          const clamped: Record<string, ContributorPermissions> = {};
+          for (const [campaignId, perms] of Object.entries(prev)) {
+            const ceiling = next[campaignId];
+            clamped[campaignId] = ceiling
+              ? intersectContributorPermissions(perms, ceiling)
+              : perms;
+          }
+          return clamped;
+        });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, homeDeviceIdForForm, soleCampaignIds]);
 
   const bindSoleCampaignAccess = (preset: ContributorPermissions) => {
     if (soleCampaignIds.length === 0) {
@@ -350,11 +410,11 @@ export function UsersAdmin({
 
   /** Enable every section the current actor is allowed to grant (one click). */
   const enableAllGrantablePermissions = (campaignId: string) => {
-    const grantor = getGrantorPermissions(campaignId);
-    if (grantor) {
+    const cap = getPermissionCap(campaignId);
+    if (cap) {
       setCampaignPermissions((prev) => ({
         ...prev,
-        [campaignId]: { ...grantor },
+        [campaignId]: { ...cap },
       }));
       return;
     }
@@ -380,21 +440,21 @@ export function UsersAdmin({
   };
 
   const visiblePermissionKeys = (campaignId: string): ContributorPermissionKey[] => {
-    const grantor = getGrantorPermissions(campaignId);
-    if (!grantor) return permissionKeys;
-    return permissionKeys.filter((key) => grantor[key]);
+    const cap = getPermissionCap(campaignId);
+    if (!cap) return permissionKeys;
+    return permissionKeys.filter((key) => cap[key]);
   };
 
   const visiblePanelKeys = (campaignId: string): ContributorPermissionKey[] => {
-    const grantor = getGrantorPermissions(campaignId);
-    if (!grantor) return [...panelManagementKeys];
-    return panelManagementKeys.filter((key) => grantor[key]);
+    const cap = getPermissionCap(campaignId);
+    if (!cap) return [...panelManagementKeys];
+    return panelManagementKeys.filter((key) => cap[key]);
   };
 
   const visibleSubtreeKeys = (campaignId: string): ContributorPermissionKey[] => {
-    const grantor = getGrantorPermissions(campaignId);
-    if (!grantor) return [...subtreeManagementKeys];
-    return subtreeManagementKeys.filter((key) => grantor[key]);
+    const cap = getPermissionCap(campaignId);
+    if (!cap) return [...subtreeManagementKeys];
+    return subtreeManagementKeys.filter((key) => cap[key]);
   };
 
   const organizationOptions = useMemo(() => {
@@ -570,9 +630,14 @@ export function UsersAdmin({
   };
 
   const togglePermission = (campaignId: string, key: ContributorPermissionKey, value: boolean) => {
-    const grantor = getGrantorPermissions(campaignId);
-    if (grantor && value && !grantor[key]) {
-      toast.error("نمی‌توانید دسترسی‌ای را بدهید که خودتان ندارید");
+    const cap = getPermissionCap(campaignId);
+    if (cap && value && !cap[key]) {
+      const grantor = getGrantorPermissions(campaignId);
+      toast.error(
+        grantor && !grantor[key]
+          ? "نمی‌توانید دسترسی‌ای را بدهید که خودتان ندارید"
+          : "این دسترسی در سقف دستگاه فعال نیست"
+      );
       return;
     }
     setCampaignPermissions((prev) => ({
@@ -1673,6 +1738,11 @@ export function UsersAdmin({
                     {permissionCapActive ? (
                       <p className="text-xs text-muted-foreground">
                         فقط دسترسی‌هایی را می‌توانید بدهید که خودتان دارید؛ این محدودیت تا پایین درخت ادامه دارد.
+                      </p>
+                    ) : null}
+                    {primaryCampaignId && getDeviceCeiling(primaryCampaignId) ? (
+                      <p className="text-xs text-muted-foreground">
+                        سقف دسترسی دستگاه برای این کاربر فعال است؛ نمی‌توانید بیشتر از دسترسی دستگاه بدهید.
                       </p>
                     ) : null}
                     {(() => {

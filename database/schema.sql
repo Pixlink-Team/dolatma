@@ -1145,6 +1145,28 @@ SET audience_device_id = COALESCE(audience_organization_id, audience_ministry_id
 WHERE audience_device_id IS NULL
   AND COALESCE(audience_organization_id, audience_ministry_id) IS NOT NULL;
 
+-- Device-level campaign permissions (ceiling for the device subtree + its users).
+CREATE TABLE IF NOT EXISTS device_campaign_access (
+  device_id UUID NOT NULL REFERENCES devices(id) ON DELETE CASCADE,
+  campaign_id UUID NOT NULL REFERENCES campaign_settings(id) ON DELETE CASCADE,
+  permissions JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (device_id, campaign_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_device_campaign_access_campaign
+  ON device_campaign_access(campaign_id);
+
+REVOKE ALL ON TABLE device_campaign_access FROM PUBLIC;
+ALTER TABLE device_campaign_access ENABLE ROW LEVEL SECURITY;
+ALTER TABLE device_campaign_access NO FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS device_campaign_access_app_access ON device_campaign_access;
+CREATE POLICY device_campaign_access_app_access ON device_campaign_access
+  FOR ALL
+  USING (true)
+  WITH CHECK (true);
+
 ALTER TABLE devices ENABLE ROW LEVEL SECURITY;
 ALTER TABLE devices NO FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS devices_app_access ON devices;

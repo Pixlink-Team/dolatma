@@ -394,6 +394,20 @@ async function ensureDeviceSchemaOnce(): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_campaign_directives_audience_device
       ON campaign_directives(audience_device_id)
   `;
+  await sql`
+    CREATE TABLE IF NOT EXISTS device_campaign_access (
+      device_id UUID NOT NULL REFERENCES devices(id) ON DELETE CASCADE,
+      campaign_id UUID NOT NULL REFERENCES campaign_settings(id) ON DELETE CASCADE,
+      permissions JSONB NOT NULL DEFAULT '{}'::jsonb,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      PRIMARY KEY (device_id, campaign_id)
+    )
+  `;
+  await sql`
+    CREATE INDEX IF NOT EXISTS idx_device_campaign_access_campaign
+      ON device_campaign_access(campaign_id)
+  `;
 
   // Migrate legacy ministries/orgs into devices (idempotent by id).
   // Ignore unique-name conflicts from partial prior seeds.

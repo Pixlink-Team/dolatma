@@ -12,6 +12,7 @@ import {
   IdCard,
   Pencil,
   Plus,
+  Shield,
   Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -33,9 +34,21 @@ import {
   saveDeviceAction,
 } from "@/lib/actions/device-actions";
 import {
+  clearDeviceAccessAction,
+  getDeviceAccessAction,
+  saveDeviceAccessAction,
+} from "@/lib/actions/device-access-actions";
+import { ContributorPermissionsEditor } from "@/components/admin/contributor-permissions-editor";
+import {
   DEVICE_STATUS_LABELS,
   DEVICE_TYPE_LABELS,
 } from "@/lib/device-labels";
+import {
+  allContributorPermissionKeys,
+  defaultContributorPermissions,
+  deniedContributorPermissions,
+  type ContributorPermissions,
+} from "@/lib/contributor-permissions";
 import type { Device, DeviceStatus, DeviceType } from "@/lib/types";
 import { adminHref } from "@/lib/utils";
 import { useAdminCampaign } from "@/components/admin/admin-campaign-provider";
@@ -64,6 +77,8 @@ interface DevicesAdminProps {
   canCreateRoot?: boolean;
   /** Create / edit / delete devices in the tree (manageSubtreeDevices). */
   canManageDevices?: boolean;
+  /** Set campaign access ceiling on devices (cascades to subtree users). */
+  canManageAccess?: boolean;
   /** Passport (360°) is admin-only for now. */
   showPassport?: boolean;
   /** Scoped user's home node — cannot be deleted. */
@@ -78,6 +93,7 @@ export function DevicesAdmin({
   initialDevices,
   canCreateRoot = true,
   canManageDevices = true,
+  canManageAccess = false,
   showPassport = true,
   homeDeviceId = null,
 }: DevicesAdminProps) {
@@ -91,6 +107,16 @@ export function DevicesAdmin({
   const [expandedIds, setExpandedIds] = useState<Set<string>>(() => new Set());
   const [rows] = useState(initialDevices);
   const [isPending, startTransition] = useTransition();
+
+  const [accessOpen, setAccessOpen] = useState(false);
+  const [accessDevice, setAccessDevice] = useState<Device | null>(null);
+  const [accessPermissions, setAccessPermissions] = useState<ContributorPermissions>(
+    defaultContributorPermissions()
+  );
+  const [accessParentCeiling, setAccessParentCeiling] =
+    useState<ContributorPermissions | null>(null);
+  const [accessHasOwnRow, setAccessHasOwnRow] = useState(false);
+  const [accessLoading, setAccessLoading] = useState(false);
 
   const childrenByParent = useMemo(() => {
     const map = new Map<string, Device[]>();
@@ -203,6 +229,79 @@ export function DevicesAdmin({
       status: "active",
     });
     setChildOpen(true);
+  };
+
+  const openAccess = (device: Device) => {
+    if (!campaignId) {
+      toast.error("راستا انتخاب نشده است");
+      return;
+    }
+    setAccessDevice(device);
+    setAccessOpen(true);
+    setAccessLoading(true);
+    setAccessPermissions(defaultContributorPermissions());
+    setAccessParentCeiling(null);
+    setAccessHasOwnRow(false);
+    startTransition(async () => {
+      const result = await getDeviceAccessAction(device.id, campaignId);
+      setAccessLoading(false);
+      if (!result.success || !result.permissions) {
+        toast.error(result.error || "بارگذاری دسترسی ناموفق بود");
+        setAccessOpen(false);
+        return;
+      }
+      setAccessPermissions(result.permissions);
+      setAccessParentCeiling(result.parentCeiling);
+      setAccessHasOwnRow(result.hasOwnRow);
+    });
+  };
+
+  const onSaveAccess = () => {
+    if (!accessDevice || !campaignId) return;
+    startTransition(async () => {
+      const result = await saveDeviceAccessAction({
+        deviceId: accessDevice.id,
+        campaignId,
+        permissions: accessPermissions,
+        applyToSubtree: true,
+      });
+      if (!result.success) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success(
+        `دسترسی ذخیره شد و روی ${result.clampedUsers} کاربر و ${result.clampedDevices} زیردستگاه اعمال شد`
+      );
+      setAccessOpen(false);
+    });
+  };
+
+  const onClearAccess = () => {
+    if (!accessDevice || !campaignId || !canCreateRoot) return;
+    if (!confirm("سقف دسترسی اختصاصی این دستگاه حذف شود؟ (ارث از والد باقی می‌ماند)")) {
+      return;
+    }
+    startTransition(async () => {
+      const result = await clearDeviceAccessAction(accessDevice.id, campaignId);
+      if (!result.success) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success("سقف اختصاصی دستگاه حذف شد");
+      setAccessOpen(false);
+    });
+  };
+
+  const enableAllAccess = () => {
+    const next = deniedContributorPermissions();
+    for (const key of allContributorPermissionKeys) {
+      next[key] = accessParentCeiling ? Boolean(accessParentCeiling[key]) : true;
+    }
+    setAccessPermissions(next);
+  };
+
+  const disableAllAccess = () => {
+    setAccessPermissions(deniedContributorPermissions());
   };
 
   const onSaveDevice = form.handleSubmit((data) => {
@@ -328,6 +427,16 @@ export function DevicesAdmin({
                 <IdCard className="ml-1 h-4 w-4" />
                 {isHome ? "تکمیل شناسنامه" : "مشاهده شناسنامه"}
               </Link>
+            </Button>
+          ) : null}
+          {canManageAccess ? (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => openAccess(device)}
+              title="دسترسی‌های دستگاه"
+            >
+              <Shield className="h-4 w-4" />
             </Button>
           ) : null}
           {canManageDevices ? (
@@ -505,6 +614,79 @@ export function DevicesAdmin({
               ایجاد زیرمجموعه
             </Button>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={accessOpen}
+        onOpenChange={(next) => {
+          setAccessOpen(next);
+          if (!next) setAccessDevice(null);
+        }}
+      >
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" dir="rtl">
+          <DialogHeader>
+            <DialogTitle>
+              دسترسی دستگاه
+              {accessDevice
+                ? ` — ${accessDevice.shortName || accessDevice.name}`
+                : ""}
+            </DialogTitle>
+          </DialogHeader>
+          {accessLoading ? (
+            <p className="text-sm text-muted-foreground">در حال بارگذاری…</p>
+          ) : (
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                این دسترسی به‌عنوان سقف برای خود دستگاه، همه زیردستگاه‌ها و کاربران
+                زیرمجموعه اعمال می‌شود. بعداً می‌توانید برای هر کاربر جداگانه محدودتر کنید.
+              </p>
+              {accessParentCeiling ? (
+                <p className="text-xs text-muted-foreground">
+                  سقف والد فعال است؛ نمی‌توانید بیشتر از دستگاه بالادست بدهید.
+                </p>
+              ) : null}
+              {!accessHasOwnRow ? (
+                <p className="text-xs text-amber-700 dark:text-amber-400">
+                  هنوز سقف اختصاصی ثبت نشده؛ با ذخیره برای این دستگاه و زیرمجموعه‌اش اعمال می‌شود.
+                </p>
+              ) : null}
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" variant="outline" size="sm" onClick={enableAllAccess}>
+                  فعال‌سازی همه مجاز
+                </Button>
+                <Button type="button" variant="outline" size="sm" onClick={disableAllAccess}>
+                  خاموش کردن همه
+                </Button>
+              </div>
+              <ContributorPermissionsEditor
+                permissions={accessPermissions}
+                onChange={setAccessPermissions}
+                ceiling={accessParentCeiling}
+                disabled={isPending}
+              />
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Button
+                  type="button"
+                  className="flex-1"
+                  disabled={isPending}
+                  onClick={onSaveAccess}
+                >
+                  ذخیره و اعمال روی زیرمجموعه
+                </Button>
+                {canCreateRoot && accessHasOwnRow ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={isPending}
+                    onClick={onClearAccess}
+                  >
+                    حذف سقف اختصاصی
+                  </Button>
+                ) : null}
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

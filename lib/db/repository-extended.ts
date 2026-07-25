@@ -189,10 +189,45 @@ async function loadUserCampaignAccess(userId: string): Promise<CampaignAccessRow
   const rows = await sql`
     SELECT campaign_id, permissions FROM user_campaign_access WHERE user_id = ${userId}
   `;
-  return rows.map((row) => ({
+  const access = rows.map((row) => ({
     campaignId: String(row.campaign_id),
     permissions: normalizeContributorPermissions(row.permissions),
   }));
+
+  try {
+    const userRows = await sql`
+      SELECT organization_id, ministry_id, device_id
+      FROM users WHERE id = ${userId} LIMIT 1
+    `;
+    if (!userRows[0]) return access;
+    const {
+      clampPermissionsToDeviceCeiling,
+      resolveHomeDeviceId,
+    } = await import("@/lib/db/repository-device-access");
+    const homeDeviceId = resolveHomeDeviceId({
+      organizationId: userRows[0].organization_id
+        ? String(userRows[0].organization_id)
+        : null,
+      ministryId: userRows[0].ministry_id ? String(userRows[0].ministry_id) : null,
+      deviceId: userRows[0].device_id ? String(userRows[0].device_id) : null,
+    });
+    if (!homeDeviceId) return access;
+
+    const clamped: CampaignAccessRow[] = [];
+    for (const row of access) {
+      clamped.push({
+        campaignId: row.campaignId,
+        permissions: await clampPermissionsToDeviceCeiling(
+          homeDeviceId,
+          row.campaignId,
+          row.permissions
+        ),
+      });
+    }
+    return clamped;
+  } catch {
+    return access;
+  }
 }
 
 function mapAccessToUser(row: Record<string, unknown>, access: CampaignAccessRow[]): AdminUser {
@@ -390,12 +425,28 @@ export async function pgFindUserIdByName(name: string): Promise<string | null> {
 export async function pgGetUserPermissionsForCampaign(userId: string, campaignId: string) {
   const sql = getSql();
   const rows = await sql`
-    SELECT permissions FROM user_campaign_access
-    WHERE user_id = ${userId} AND campaign_id = ${campaignId}
+    SELECT uca.permissions, u.organization_id, u.ministry_id, u.device_id
+    FROM user_campaign_access uca
+    INNER JOIN users u ON u.id = uca.user_id
+    WHERE uca.user_id = ${userId} AND uca.campaign_id = ${campaignId}
     LIMIT 1
   `;
   if (!rows[0]) return null;
-  return normalizeContributorPermissions(rows[0].permissions);
+  const stored = normalizeContributorPermissions(rows[0].permissions);
+  try {
+    const {
+      clampPermissionsToDeviceCeiling,
+      resolveHomeDeviceId,
+    } = await import("@/lib/db/repository-device-access");
+    const homeDeviceId = resolveHomeDeviceId({
+      organizationId: rows[0].organization_id ? String(rows[0].organization_id) : null,
+      ministryId: rows[0].ministry_id ? String(rows[0].ministry_id) : null,
+      deviceId: rows[0].device_id ? String(rows[0].device_id) : null,
+    });
+    return clampPermissionsToDeviceCeiling(homeDeviceId, campaignId, stored);
+  } catch {
+    return stored;
+  }
 }
 
 export async function pgGetAllUsers(): Promise<AdminUser[]> {
@@ -678,9 +729,22 @@ export async function pgSaveUser(data: {
     const existing = new Set(campaignRows.map((row) => String(row.id)));
     validCampaignIds = requestedCampaignIds.filter((campaignId) => existing.has(campaignId));
   }
+  const {
+    clampPermissionsToDeviceCeiling,
+    resolveHomeDeviceId,
+  } = await import("@/lib/db/repository-device-access");
+  const homeDeviceId = resolveHomeDeviceId({
+    organizationId,
+    ministryId,
+    deviceId,
+  });
   for (const campaignId of validCampaignIds) {
-    const permissions = normalizeContributorPermissions(
-      data.campaignPermissions?.[campaignId] ?? defaultContributorPermissions()
+    const permissions = await clampPermissionsToDeviceCeiling(
+      homeDeviceId,
+      campaignId,
+      normalizeContributorPermissions(
+        data.campaignPermissions?.[campaignId] ?? defaultContributorPermissions()
+      )
     );
     await sql`
       INSERT INTO user_campaign_access (user_id, campaign_id, permissions, created_at)
@@ -731,15 +795,37 @@ export async function pgBulkUpdateUsersAccess(input: {
   }
 
   try {
+    const {
+      clampPermissionsToDeviceCeiling,
+      resolveHomeDeviceId,
+    } = await import("@/lib/db/repository-device-access");
+
     for (const userId of userIds) {
+      const userRows = await sql`
+        SELECT organization_id, ministry_id, device_id
+        FROM users WHERE id = ${userId} LIMIT 1
+      `;
+      const homeDeviceId = resolveHomeDeviceId({
+        organizationId: userRows[0]?.organization_id
+          ? String(userRows[0].organization_id)
+          : null,
+        ministryId: userRows[0]?.ministry_id ? String(userRows[0].ministry_id) : null,
+        deviceId: userRows[0]?.device_id ? String(userRows[0].device_id) : null,
+      });
+
       await sql`DELETE FROM user_campaign_access WHERE user_id = ${userId}`;
       for (const campaignId of validCampaignIds) {
+        const clamped = await clampPermissionsToDeviceCeiling(
+          homeDeviceId,
+          campaignId,
+          permissions
+        );
         await sql`
           INSERT INTO user_campaign_access (user_id, campaign_id, permissions, created_at)
           VALUES (
             ${userId},
             ${campaignId},
-            ${sql.json(JSON.parse(JSON.stringify(permissions)))},
+            ${sql.json(JSON.parse(JSON.stringify(clamped)))},
             ${now}
           )
           ON CONFLICT (user_id, campaign_id) DO UPDATE SET
