@@ -95,7 +95,7 @@ export const DASHBOARD_STAT_DEFINITIONS: DashboardStatDefinition[] = [
   {
     permissionKey: "analytics",
     featureKey: "analytics",
-    label: "سایت‌های شرکت‌ها",
+    label: "سایت‌ها",
     href: "/admin/analytics",
     icon: Globe,
     getCount: (data) => (data.companyWebsites ?? []).length,

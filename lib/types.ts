@@ -207,6 +207,9 @@ export interface DeviceStaff {
 /** Type-specific structured fields for capacity reporting (JSONB). */
 export type CapacityDetailsPayload = Record<string, unknown>;
 
+/** Origin of an auto-synced capacity row (campaign content → device assets). */
+export type DeviceCapacitySourceType = "company_website" | "social_platform_stat";
+
 export interface DeviceCapacity {
   id: string;
   deviceId: string;
@@ -222,6 +225,9 @@ export interface DeviceCapacity {
   address?: string | null;
   /** Structured metrics keyed by capacityType. */
   details?: CapacityDetailsPayload;
+  /** When set, this capacity was synced from campaign content. */
+  sourceType?: DeviceCapacitySourceType | null;
+  sourceId?: string | null;
   lastUpdatedAt: string;
   createdAt: string;
 }

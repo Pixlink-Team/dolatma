@@ -131,7 +131,7 @@ function CampaignDashboardBody({
 
         {sections.analytics && (
           <DeferredSection minHeight={240} forceRender={forceRender}>
-            <section data-export-section data-export-label="سایت‌های شرکت‌ها">
+            <section data-export-section data-export-label="سایت‌ها">
               <CompanyWebsitesSection
                 websites={data.companyWebsites}
                 groups={data.companyWebsiteGroups}

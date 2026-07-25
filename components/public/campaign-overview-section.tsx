@@ -94,7 +94,7 @@ export function CampaignOverviewSection({ data }: CampaignOverviewSectionProps) 
     { show: kpiVisibility.billboards, title: "تبلیغات محیطی", value: kpis.totalBillboards, icon: LayoutGrid, sectionId: "billboards", todayDelta: todayDeltas.billboards },
     { show: kpiVisibility.posters, title: "پوسترها", value: kpis.totalPosters, icon: ImageIcon, sectionId: "posters", todayDelta: todayDeltas.posters },
     { show: kpiVisibility.videos, title: "ویدیوها", value: kpis.totalVideos, icon: Video, sectionId: "videos", todayDelta: todayDeltas.videos },
-    { show: kpiVisibility.analytics, title: "سایت‌های شرکت‌ها", value: kpis.totalCompanyWebsites, icon: Globe, sectionId: "company-websites" },
+    { show: kpiVisibility.analytics, title: "سایت‌ها", value: kpis.totalCompanyWebsites, icon: Globe, sectionId: "company-websites" },
     { show: kpiVisibility.socialAnalytics, title: "فالوور اجتماعی", value: kpis.totalSocialFollowers, icon: Share2, sectionId: "social-analytics", todayDelta: todayDeltas.socialFollowers },
     { show: kpiVisibility.socialPosts, title: "بازدید پست‌های اجتماعی", value: kpis.totalSocialPostViews, icon: Eye, sectionId: "social-posts", compactValue: true },
     { show: kpiVisibility.socialPosts, title: "پست‌های اجتماعی", value: kpis.totalSocialPosts, icon: Share2, sectionId: "social-posts", todayDelta: todayDeltas.socialPosts },

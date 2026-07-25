@@ -73,7 +73,7 @@ export const contributorPermissionLabels: Partial<
   videos: "ویدیوها",
   files: "فایل‌ها",
   rawMedia: "راش تصویر",
-  analytics: "سایت‌های شرکت‌ها",
+  analytics: "سایت‌ها",
   socialPosts: "پست‌ها و شبکه‌های اجتماعی",
   sitePublications: "انتشار در سایت",
   broadcast: "پخش صدا و سیما",

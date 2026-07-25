@@ -1083,6 +1083,13 @@ ALTER TABLE device_capacities
 CREATE INDEX IF NOT EXISTS idx_device_capacities_location
   ON device_capacities(province, city);
 
+ALTER TABLE device_capacities ADD COLUMN IF NOT EXISTS source_type TEXT;
+ALTER TABLE device_capacities ADD COLUMN IF NOT EXISTS source_id TEXT;
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_device_capacities_source
+  ON device_capacities(device_id, source_type, source_id)
+  WHERE source_type IS NOT NULL AND source_id IS NOT NULL;
+
 -- Migrate ministries → devices (preserve UUID)
 INSERT INTO devices (
   id, name, short_name, type, parent_id, mission, activity_scope,

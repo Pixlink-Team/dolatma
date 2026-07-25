@@ -421,7 +421,24 @@ export async function saveCompanyWebsiteAction(data: Partial<CompanyWebsite> & {
     data.id
   );
   if (tutorialDenied) return tutorialDenied;
-  const result = await saveCompanyWebsite(await withOwnerScope(auth, data));
+  const payload = await withOwnerScope(auth, data);
+  const result = await saveCompanyWebsite(payload);
+  const syncedId =
+    result.success && "id" in result && typeof result.id === "string"
+      ? result.id
+      : data.id;
+  if (result.success && syncedId && isPostgresConfigured()) {
+    const { syncWebsiteCapacityFromContent } = await import(
+      "@/lib/db/sync-capacity-from-content"
+    );
+    await syncWebsiteCapacityFromContent({
+      ownerUserId: payload.ownerUserId,
+      sourceId: syncedId,
+      title: payload.title ?? "",
+      url: payload.url ?? "",
+      description: payload.description,
+    });
+  }
   await auditContentChange({
     isUpdate: Boolean(data.id),
     entityType: "company_website",
@@ -439,6 +456,10 @@ export async function deleteCompanyWebsiteAction(id: string) {
   const denied = await assertCanMutateOwnedContent(auth, "company_websites", id);
   if (denied) return denied;
   const result = await deleteCompanyWebsite(id);
+  if (result.success && isPostgresConfigured()) {
+    const { removeSyncedCapacity } = await import("@/lib/db/sync-capacity-from-content");
+    await removeSyncedCapacity("company_website", id);
+  }
   await auditContentDelete({ entityType: "company_website", entityId: id });
   await revalidateAll();
   return result;

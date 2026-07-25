@@ -226,6 +226,15 @@ function asOptionalText(value: unknown): string | null {
   return trimmed || null;
 }
 
+function asCapacitySourceType(
+  value: unknown
+): DeviceCapacity["sourceType"] {
+  if (value === "company_website" || value === "social_platform_stat") {
+    return value;
+  }
+  return null;
+}
+
 function mapCapacity(row: Record<string, unknown>): DeviceCapacity {
   const capacityType = asCapacityType(row.capacity_type);
   return {
@@ -253,6 +262,8 @@ function mapCapacity(row: Record<string, unknown>): DeviceCapacity {
       capacityType,
       row.details
     ) as CapacityDetailsPayload,
+    sourceType: asCapacitySourceType(row.source_type),
+    sourceId: asOptionalText(row.source_id),
     lastUpdatedAt: toIso(row.last_updated_at),
     createdAt: toIso(row.created_at),
   };
@@ -356,6 +367,13 @@ async function ensureDeviceSchemaOnce(): Promise<void> {
   await sql`
     CREATE INDEX IF NOT EXISTS idx_device_capacities_location
       ON device_capacities(province, city)
+  `;
+  await sql`ALTER TABLE device_capacities ADD COLUMN IF NOT EXISTS source_type TEXT`;
+  await sql`ALTER TABLE device_capacities ADD COLUMN IF NOT EXISTS source_id TEXT`;
+  await sql`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_device_capacities_source
+      ON device_capacities(device_id, source_type, source_id)
+      WHERE source_type IS NOT NULL AND source_id IS NOT NULL
   `;
   // Migrate legacy capacity types, then refresh allowed-values check.
   await sql`

@@ -148,9 +148,9 @@ export function CompanyWebsitesAdmin({ campaignId, initialItems }: CompanyWebsit
       {tutorialModal}
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">سایت‌های شرکت‌ها</h1>
+          <h1 className="text-2xl font-bold">سایت‌ها</h1>
           <p className="text-sm text-muted-foreground">
-            معرفی سایت شرکت شما با نام و لینک — جدا از بخش انتشار مطلب در سایت
+            معرفی سایت‌ها با نام و لینک — جدا از بخش انتشار مطلب در سایت
           </p>
         </div>
         <Button onClick={openCreate} disabled={isPending}>

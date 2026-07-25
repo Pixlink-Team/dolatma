@@ -90,7 +90,7 @@ const allNavItems: {
   { href: "/admin/videos", label: "ویدیوها", icon: Video, permissionKey: "videos" },
   { href: "/admin/files", label: "فایل‌ها", icon: FileStack, permissionKey: "files" },
   { href: "/admin/raw-media", label: "راش تصویر", icon: HardDrive, permissionKey: "rawMedia" },
-  { href: "/admin/analytics", label: "سایت‌های شرکت‌ها", icon: Globe, permissionKey: "analytics" },
+  { href: "/admin/analytics", label: "سایت‌ها", icon: Globe, permissionKey: "analytics" },
   { href: "/admin/site-publications", label: "انتشار در سایت", icon: Globe, permissionKey: "sitePublications" },
   { href: "/admin/social-analytics", label: "شبکه‌های اجتماعی", icon: Share2, permissionKey: "socialPosts" },
   { href: "/admin/social-posts", label: "پست‌های شبکه اجتماعی", icon: Images, permissionKey: "socialPosts" },

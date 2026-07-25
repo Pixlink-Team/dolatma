@@ -18,7 +18,7 @@ import {
 import { hashPassword } from "@/lib/auth/password";
 import * as pgExt from "@/lib/db/repository-extended";
 import type { MeetingDecisionPayload, MeetingTaskPayload } from "@/lib/db/repository-extended";
-import type { AdminRole, BroadcastReport, CampaignActivity, CampaignMeeting, SocialMediaPost, SocialPlatformStat } from "@/lib/types";
+import type { AdminRole, BroadcastReport, CampaignActivity, CampaignMeeting, SocialMediaPost, SocialPlatform, SocialPlatformStat } from "@/lib/types";
 import {
   inferDefaultAuthorityLevel,
   type DirectiveAuthorityLevel,
@@ -292,6 +292,19 @@ export async function saveSocialPlatformStatAction(data: Partial<SocialPlatformS
   const payload = await withSaveOwnerScope(session, data);
 
   const result = await pgExt.pgSaveSocialPlatformStat(payload);
+  if (result.success && result.id) {
+    const { syncSocialCapacityFromContent } = await import(
+      "@/lib/db/sync-capacity-from-content"
+    );
+    await syncSocialCapacityFromContent({
+      ownerUserId: payload.ownerUserId,
+      sourceId: result.id,
+      platform: (payload.platform ?? "instagram") as SocialPlatform,
+      title: payload.title,
+      profileUrl: payload.profileUrl,
+      followers: payload.followers,
+    });
+  }
   await auditContentChange({
     isUpdate: Boolean(data.id),
     entityType: "social_platform_stat",
@@ -319,6 +332,8 @@ export async function deleteSocialPlatformStatAction(id: string) {
   }
 
   await pgExt.pgDeleteSocialPlatformStat(id);
+  const { removeSyncedCapacity } = await import("@/lib/db/sync-capacity-from-content");
+  await removeSyncedCapacity("social_platform_stat", id);
   await auditContentDelete({ entityType: "social_platform_stat", entityId: id });
   await revalidateExtended();
   return { success: true };

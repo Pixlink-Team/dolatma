@@ -1,6 +1,18 @@
 {
   "entries": [
     {
+      "hash": "0c1031964e1603a84b7aa026d74f10244a0eed50",
+      "committedAt": "2026-07-25T17:43:05+03:30",
+      "title": "مخفی شدن منوی کاربران و دستگاه‌ها وقتی دسترسی مدیریت زیرشاخه قطع باشد",
+      "subject": "Hide users and devices menus when subtree manage access is revoked"
+    },
+    {
+      "hash": "a06129d7f2b10c4854cac023e45b3db2a805cd5a",
+      "committedAt": "2026-07-25T17:43:01+03:30",
+      "title": "باز شدن پرونده کامل فعالیت با کلیک روی کاربر در رصد کاربران",
+      "subject": "Add clickable user activity detail modal on audit dashboard"
+    },
+    {
       "hash": "a79393b1035269717cbaa5e1816b4a85e09db794",
       "committedAt": "2026-07-25T17:37:44+03:30",
       "title": "امکان ویرایش سطح دسترسی وزارتخانه تا پایین درخت زیرمجموعه‌ها",
