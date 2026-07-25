@@ -9,10 +9,10 @@ import { z } from "zod";
 import {
   ArrowRight,
   Building2,
+  ExternalLink,
   Pencil,
   Plus,
   Trash2,
-  UserMinus,
   Users,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -33,10 +33,8 @@ import {
 import {
   deleteDeviceCapacityAction,
   deleteDeviceStaffAction,
-  endDeviceOfficialAction,
   saveDeviceAction,
   saveDeviceCapacityAction,
-  saveDeviceOfficialAction,
   saveDeviceStaffAction,
 } from "@/lib/actions/device-actions";
 import {
@@ -46,11 +44,11 @@ import {
 import { ProvinceCityFields } from "@/components/admin/province-city-fields";
 import {
   formatCapacityDetailsSummary,
+  getCapacityExternalUrl,
   normalizeCapacityDetails,
 } from "@/lib/capacity-details";
 import {
   DEVICE_CAPACITY_TYPE_LABELS,
-  DEVICE_OFFICIAL_ROLE_LABELS,
   DEVICE_READINESS_LABELS,
   DEVICE_SCOPE_LABELS,
   DEVICE_STAFF_EDUCATION_LABELS,
@@ -58,17 +56,20 @@ import {
   DEVICE_STATUS_LABELS,
   DEVICE_TYPE_LABELS,
 } from "@/lib/device-labels";
-import type {
-  DeviceActivityScope,
-  DeviceCapacityType,
-  DeviceOfficialRole,
-  DevicePassport,
-  DeviceStaff,
-  DeviceStaffEducation,
-  DeviceStaffGender,
-  DeviceStatus,
-  DeviceType,
+import { ORG_ROLES, type OrgRole } from "@/lib/org-roles";
+import {
+  DEVICE_CAPACITY_TYPES,
+  type AdminUser,
+  type DeviceActivityScope,
+  type DeviceCapacityType,
+  type DevicePassport,
+  type DeviceStaff,
+  type DeviceStaffEducation,
+  type DeviceStaffGender,
+  type DeviceStatus,
+  type DeviceType,
 } from "@/lib/types";
+import { getUserRoleDisplayLabel } from "@/lib/user-roles";
 import {
   composeLandline,
   extractLocalLandline,
@@ -77,6 +78,29 @@ import {
 import { adminHref } from "@/lib/utils";
 import { useAdminCampaign } from "@/components/admin/admin-campaign-provider";
 import { PersianDateInput } from "@/components/ui/persian-date-input";
+
+const ORG_ROLE_SORT_ORDER: Record<OrgRole, number> = {
+  primary: 0,
+  supervisor: 1,
+  deputy: 2,
+  pr: 3,
+};
+
+function isUserOnDevice(user: AdminUser, deviceId: string): boolean {
+  const homeId = user.deviceId ?? user.organizationId ?? user.ministryId ?? null;
+  return homeId === deviceId;
+}
+
+function sortContactUsers(users: AdminUser[]): AdminUser[] {
+  return [...users].sort((a, b) => {
+    const aRole = a.orgRole && ORG_ROLES.includes(a.orgRole) ? a.orgRole : null;
+    const bRole = b.orgRole && ORG_ROLES.includes(b.orgRole) ? b.orgRole : null;
+    const aOrder = aRole != null ? ORG_ROLE_SORT_ORDER[aRole] : 99;
+    const bOrder = bRole != null ? ORG_ROLE_SORT_ORDER[bRole] : 99;
+    if (aOrder !== bOrder) return aOrder - bOrder;
+    return a.name.localeCompare(b.name, "fa");
+  });
+}
 
 const profileSchema = z.object({
   name: z.string().min(1),
@@ -97,16 +121,7 @@ const profileSchema = z.object({
   mission: z.string().optional(),
   address: z.string().optional(),
   phones: z.string().optional(),
-  website: z.string().optional(),
   status: z.enum(["active", "inactive", "suspended"]),
-});
-
-const officialSchema = z.object({
-  roleType: z.enum(["primary", "deputy", "pr", "campaign_exec", "supervisor"]),
-  fullName: z.string().min(1),
-  phone: z.string().optional(),
-  email: z.string().optional(),
-  contactNote: z.string().optional(),
 });
 
 const staffSchema = z.object({
@@ -130,21 +145,7 @@ const staffSchema = z.object({
 });
 
 const capacitySchema = z.object({
-  capacityType: z.enum([
-    "branches",
-    "website_app",
-    "social",
-    "sms_panel",
-    "billboards",
-    "urban_tv",
-    "venues",
-    "pr_team",
-    "creative_team",
-    "field_staff",
-    "call_center",
-    "contractors",
-    "other",
-  ]),
+  capacityType: z.enum(DEVICE_CAPACITY_TYPES as [DeviceCapacityType, ...DeviceCapacityType[]]),
   title: z.string().min(1),
   description: z.string().optional(),
   ownerName: z.string().optional(),
@@ -177,7 +178,7 @@ interface DevicePassportViewProps {
   initialPassport: DevicePassport;
   /** Own-device user may manage staff registry. */
   canManageStaff?: boolean;
-  /** Own-device user may manage officials, capacities, and profile. */
+  /** Own-device user may manage capacities and profile. */
   canManageAdminSections?: boolean;
   /** Only full admin may change ministry placement / root ministry type. */
   canChangeMinistry?: boolean;
@@ -192,12 +193,10 @@ export function DevicePassportView({
   const { campaignId } = useAdminCampaign();
   const passport = initialPassport;
   const [profileOpen, setProfileOpen] = useState(false);
-  const [officialOpen, setOfficialOpen] = useState(false);
   const [staffOpen, setStaffOpen] = useState(false);
   const [editingStaffId, setEditingStaffId] = useState<string | null>(null);
   const [capacityOpen, setCapacityOpen] = useState(false);
   const [editingCapacityId, setEditingCapacityId] = useState<string | null>(null);
-  const [showOfficialHistory, setShowOfficialHistory] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   const canEditProfile = canManageStaff || canManageAdminSections;
@@ -224,7 +223,6 @@ export function DevicePassportView({
       mission: device.mission ?? "",
       address: device.address ?? "",
       phones: extractLocalLandline(device.phones[0] ?? "", initialAreaCode),
-      website: device.website ?? "",
       status: device.status,
     },
   });
@@ -232,17 +230,6 @@ export function DevicePassportView({
   const watchedProvince = profileForm.watch("province");
   const watchedCity = profileForm.watch("city");
   const phoneAreaCode = getIranAreaCode(watchedProvince, watchedCity);
-
-  const officialForm = useForm({
-    resolver: zodResolver(officialSchema),
-    defaultValues: {
-      roleType: "primary" as DeviceOfficialRole,
-      fullName: "",
-      phone: "",
-      email: "",
-      contactNote: "",
-    },
-  });
 
   const staffForm = useForm({
     resolver: zodResolver(staffSchema),
@@ -261,7 +248,7 @@ export function DevicePassportView({
   const capacityForm = useForm({
     resolver: zodResolver(capacitySchema),
     defaultValues: {
-      capacityType: "other" as DeviceCapacityType,
+      capacityType: "website" as DeviceCapacityType,
       title: "",
       description: "",
       ownerName: "",
@@ -269,7 +256,7 @@ export function DevicePassportView({
       province: "",
       city: "",
       address: "",
-      details: resetDetailsForType("other") as Record<string, unknown>,
+      details: resetDetailsForType("website") as Record<string, unknown>,
       isActive: true,
     },
   });
@@ -280,13 +267,12 @@ export function DevicePassportView({
   const watchedCapacityCity = capacityForm.watch("city");
   const watchedCapacityAddress = capacityForm.watch("address");
 
-  const activeOfficials = useMemo(
-    () => passport.officials.filter((item) => item.isActive),
-    [passport.officials]
-  );
-  const historyOfficials = useMemo(
-    () => passport.officials.filter((item) => !item.isActive),
-    [passport.officials]
+  const contactUsers = useMemo(
+    () =>
+      sortContactUsers(
+        passport.users.filter((user) => isUserOnDevice(user, device.id))
+      ),
+    [passport.users, device.id]
   );
   const staffMembers = passport.staff ?? [];
 
@@ -342,7 +328,7 @@ export function DevicePassportView({
           );
           return full ? [full] : [];
         })(),
-        website: data.website || null,
+        website: device.website ?? null,
         socialLinks: device.socialLinks,
         status: data.status as DeviceStatus,
       });
@@ -352,26 +338,6 @@ export function DevicePassportView({
       }
       toast.success("اطلاعات دستگاه ذخیره شد");
       setProfileOpen(false);
-      refresh();
-    });
-  });
-
-  const onSaveOfficial = officialForm.handleSubmit((data) => {
-    startTransition(async () => {
-      const result = await saveDeviceOfficialAction({
-        deviceId: device.id,
-        roleType: data.roleType as DeviceOfficialRole,
-        fullName: data.fullName,
-        phone: data.phone || null,
-        email: data.email || null,
-        contactNote: data.contactNote || null,
-      });
-      if (!result.success) {
-        toast.error(result.error);
-        return;
-      }
-      toast.success("مسئول ثبت شد");
-      setOfficialOpen(false);
       refresh();
     });
   });
@@ -425,7 +391,7 @@ export function DevicePassportView({
         toast.error(result.error);
         return;
       }
-      toast.success("ظرفیت ذخیره شد");
+      toast.success("دارایی ذخیره شد");
       setCapacityOpen(false);
       setEditingCapacityId(null);
       refresh();
@@ -515,7 +481,6 @@ export function DevicePassportView({
           <InfoItem label="استان / شهر" value={[device.province, device.city].filter(Boolean).join(" / ") || "—"} />
           <InfoItem label="آدرس" value={device.address || "—"} />
           <InfoItem label="تماس" value={device.phones.join("، ") || "—"} />
-          <InfoItem label="وب‌سایت" value={device.website || "—"} />
           <div className="sm:col-span-2">
             <InfoItem label="حوزه مأموریت" value={device.mission || "—"} />
           </div>
@@ -524,93 +489,42 @@ export function DevicePassportView({
 
       <section className="rounded-xl border bg-card p-5">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-lg font-semibold">مسئولان و راه‌های ارتباطی</h2>
-          <div className="flex gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setShowOfficialHistory((prev) => !prev)}
-            >
-              {showOfficialHistory ? "مخفی کردن سابقه" : "نمایش سابقه"}
-            </Button>
-            {canManageAdminSections ? (
-              <Button
-                size="sm"
-                onClick={() => {
-                  officialForm.reset({
-                    roleType: "primary",
-                    fullName: "",
-                    phone: "",
-                    email: "",
-                    contactNote: "",
-                  });
-                  setOfficialOpen(true);
-                }}
-              >
-                <Plus className="ml-1 h-4 w-4" />
-                تعیین مسئول
-              </Button>
-            ) : null}
-          </div>
+          <h2 className="flex items-center gap-2 text-lg font-semibold">
+            <Users className="h-5 w-5" />
+            مسئولان و راه‌های ارتباطی
+          </h2>
+          <Button size="sm" variant="outline" asChild>
+            <Link href={adminHref("/admin/users", campaignId)}>مدیریت کاربران</Link>
+          </Button>
         </div>
-        {activeOfficials.length === 0 ? (
-          <p className="text-sm text-muted-foreground">مسئول فعالی ثبت نشده است.</p>
+        <p className="mb-3 text-xs text-muted-foreground">
+          کاربران این دستگاه با سمت‌های سازمانی (مدیر، ناظر، معاون، روابط عمومی).
+        </p>
+        {contactUsers.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            کاربری با نقش سازمانی به این دستگاه متصل نیست.
+          </p>
         ) : (
           <div className="space-y-2">
-            {activeOfficials.map((item) => (
+            {contactUsers.map((user) => (
               <div
-                key={item.id}
+                key={user.id}
                 className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3"
               >
-                <div>
-                  <p className="font-medium">{item.fullName}</p>
+                <div className="min-w-0 space-y-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-medium">{user.name}</p>
+                    <Badge variant="secondary">{getUserRoleDisplayLabel(user)}</Badge>
+                  </div>
                   <p className="text-xs text-muted-foreground">
-                    {DEVICE_OFFICIAL_ROLE_LABELS[item.roleType]}
-                    {item.phone ? ` · ${item.phone}` : ""}
-                    {item.email ? ` · ${item.email}` : ""}
+                    {[user.phone, user.email, user.province].filter(Boolean).join(" · ") || "—"}
                   </p>
+                  {user.accountManagerName ? (
+                    <p className="text-xs text-muted-foreground">
+                      مسئول اکانت: {user.accountManagerName}
+                    </p>
+                  ) : null}
                 </div>
-                {canManageAdminSections ? (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    disabled={isPending}
-                    onClick={() => {
-                      startTransition(async () => {
-                        const result = await endDeviceOfficialAction(item.id, device.id);
-                        if (!result.success) {
-                          toast.error(result.error);
-                          return;
-                        }
-                        toast.success("مسئولیت پایان یافت (سابقه حفظ شد)");
-                        refresh();
-                      });
-                    }}
-                  >
-                    <UserMinus className="ml-1 h-4 w-4" />
-                    پایان مسئولیت
-                  </Button>
-                ) : null}
-              </div>
-            ))}
-          </div>
-        )}
-        {showOfficialHistory && historyOfficials.length > 0 && (
-          <div className="mt-4 space-y-2 border-t pt-4">
-            <p className="text-sm font-medium text-muted-foreground">سوابق قبلی</p>
-            {historyOfficials.map((item) => (
-              <div key={item.id} className="rounded-lg border border-dashed p-3 text-sm">
-                <span className="font-medium">{item.fullName}</span>
-                {" — "}
-                {DEVICE_OFFICIAL_ROLE_LABELS[item.roleType]}
-                <span className="text-muted-foreground">
-                  {" · "}
-                  {new Date(item.startedAt).toLocaleDateString("fa-IR")}
-                  {" تا "}
-                  {item.endedAt
-                    ? new Date(item.endedAt).toLocaleDateString("fa-IR")
-                    : "—"}
-                </span>
               </div>
             ))}
           </div>
@@ -698,44 +612,6 @@ export function DevicePassportView({
                         "—"
                       )}
                     </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
-
-      <section className="rounded-xl border bg-card p-5">
-        <div className="mb-3 flex items-center justify-between gap-2">
-          <h2 className="flex items-center gap-2 text-lg font-semibold">
-            <Users className="h-5 w-5" />
-            کاربران دستگاه
-          </h2>
-          <Button size="sm" variant="outline" asChild>
-            <Link href={adminHref("/admin/users", campaignId)}>مدیریت کاربران</Link>
-          </Button>
-        </div>
-        {passport.users.length === 0 ? (
-          <p className="text-sm text-muted-foreground">کاربری به این دستگاه متصل نیست.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[640px] text-sm">
-              <thead>
-                <tr className="border-b text-muted-foreground">
-                  <th className="p-2 text-right font-medium">نام</th>
-                  <th className="p-2 text-right font-medium">نقش</th>
-                  <th className="p-2 text-right font-medium">تماس</th>
-                  <th className="p-2 text-right font-medium">استان</th>
-                </tr>
-              </thead>
-              <tbody>
-                {passport.users.map((user) => (
-                  <tr key={user.id} className="border-b last:border-0">
-                    <td className="p-2">{user.name}</td>
-                    <td className="p-2">{user.role}</td>
-                    <td className="p-2">{user.phone || "—"}</td>
-                    <td className="p-2">{user.province || "—"}</td>
                   </tr>
                 ))}
               </tbody>
@@ -857,16 +733,21 @@ export function DevicePassportView({
         </div>
       </section>
 
-      <section className="rounded-xl border bg-card p-5">
-        <div className="mb-3 flex items-center justify-between gap-2">
-          <h2 className="text-lg font-semibold">ظرفیت‌ها و دارایی‌ها</h2>
+      <section className="rounded-xl border-2 border-primary/20 bg-card p-5 shadow-sm">
+        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold">دارایی‌ها و ظرفیت‌ها</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              وب‌سایت، اپلیکیشن، شبکه‌های اجتماعی، شبکه‌های تبلیغاتی و خبری و سایر دارایی‌های رسانه‌ای را اینجا ثبت کنید.
+            </p>
+          </div>
           {canManageAdminSections ? (
             <Button
               size="sm"
               onClick={() => {
                 setEditingCapacityId(null);
                 capacityForm.reset({
-                  capacityType: "other",
+                  capacityType: "website",
                   title: "",
                   description: "",
                   ownerName: "",
@@ -874,47 +755,75 @@ export function DevicePassportView({
                   province: "",
                   city: "",
                   address: "",
-                  details: resetDetailsForType("other") as Record<string, unknown>,
+                  details: resetDetailsForType("website") as Record<string, unknown>,
                   isActive: true,
                 });
                 setCapacityOpen(true);
               }}
             >
               <Plus className="ml-1 h-4 w-4" />
-              ثبت ظرفیت
+              ثبت دارایی
             </Button>
           ) : null}
         </div>
         {passport.capacities.length === 0 ? (
-          <p className="text-sm text-muted-foreground">ظرفیتی ثبت نشده است.</p>
+          <div className="rounded-lg border border-dashed bg-muted/30 px-4 py-8 text-center">
+            <p className="text-sm font-medium">هنوز دارایی‌ای ثبت نشده است</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              سایت، اپ، کانال‌های شبکه اجتماعی و شبکه‌های تبلیغ/خبر را به‌صورت جداگانه ثبت کنید.
+            </p>
+          </div>
         ) : (
-          <div className="space-y-2">
+          <div className="grid gap-2 sm:grid-cols-2">
             {passport.capacities.map((item) => {
+              const details = normalizeCapacityDetails(item.capacityType, item.details);
               const summary = formatCapacityDetailsSummary(
                 item.capacityType,
-                normalizeCapacityDetails(item.capacityType, item.details),
+                details,
                 {
                   province: item.province,
                   city: item.city,
                   address: item.address,
                 }
               );
+              const externalUrl = getCapacityExternalUrl(item.capacityType, details);
               return (
               <div
                 key={item.id}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3"
+                className="flex flex-wrap items-start justify-between gap-2 rounded-lg border bg-background p-3"
               >
-                <div>
-                  <p className="font-medium">{item.title}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {DEVICE_CAPACITY_TYPE_LABELS[item.capacityType]}
-                    {item.ownerName ? ` · مسئول: ${item.ownerName}` : ""}
-                    {item.coverageScope ? ` · پوشش: ${item.coverageScope}` : ""}
-                    {" · "}
-                    {item.isActive ? "فعال" : "غیرفعال"}
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-medium">{item.title}</p>
+                    <Badge variant="secondary" className="text-[10px]">
+                      {DEVICE_CAPACITY_TYPE_LABELS[item.capacityType]}
+                    </Badge>
+                    <Badge
+                      variant={item.isActive ? "default" : "outline"}
+                      className="text-[10px]"
+                    >
+                      {item.isActive ? "فعال" : "غیرفعال"}
+                    </Badge>
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {item.ownerName ? `مسئول: ${item.ownerName}` : ""}
+                    {item.ownerName && item.coverageScope ? " · " : ""}
+                    {item.coverageScope ? `پوشش: ${item.coverageScope}` : ""}
                   </p>
                   {summary ? (
                     <p className="mt-1 text-xs text-foreground/80">{summary}</p>
+                  ) : null}
+                  {externalUrl ? (
+                    <a
+                      href={externalUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                      dir="ltr"
+                    >
+                      <ExternalLink className="h-3 w-3" />
+                      {externalUrl}
+                    </a>
                   ) : null}
                 </div>
                 {canManageAdminSections ? (
@@ -933,10 +842,7 @@ export function DevicePassportView({
                           province: item.province ?? "",
                           city: item.city ?? "",
                           address: item.address ?? "",
-                          details: normalizeCapacityDetails(
-                            item.capacityType,
-                            item.details
-                          ) as Record<string, unknown>,
+                          details: details as Record<string, unknown>,
                           isActive: item.isActive,
                         });
                         setCapacityOpen(true);
@@ -955,7 +861,7 @@ export function DevicePassportView({
                             toast.error(result.error);
                             return;
                           }
-                          toast.success("ظرفیت حذف شد");
+                          toast.success("دارایی حذف شد");
                           refresh();
                         });
                       }}
@@ -1142,46 +1048,8 @@ export function DevicePassportView({
                 />
               </div>
             </Field>
-            <Field label="وب‌سایت"><Input {...profileForm.register("website")} /></Field>
             <Field label="مأموریت"><Textarea rows={3} {...profileForm.register("mission")} /></Field>
             <Button type="submit" disabled={isPending} className="w-full">ذخیره</Button>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={officialOpen} onOpenChange={setOfficialOpen}>
-        <DialogContent dir="rtl">
-          <DialogHeader>
-            <DialogTitle>تعیین مسئول</DialogTitle>
-          </DialogHeader>
-          <form className="space-y-3" onSubmit={onSaveOfficial}>
-            <Field label="نقش">
-              <Select
-                value={officialForm.watch("roleType")}
-                onValueChange={(value) =>
-                  officialForm.setValue("roleType", value as DeviceOfficialRole)
-                }
-              >
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {(Object.keys(DEVICE_OFFICIAL_ROLE_LABELS) as DeviceOfficialRole[]).map((key) => (
-                    <SelectItem key={key} value={key}>
-                      {DEVICE_OFFICIAL_ROLE_LABELS[key]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
-            <Field label="نام"><Input {...officialForm.register("fullName")} /></Field>
-            <Field label="تلفن"><Input {...officialForm.register("phone")} /></Field>
-            <Field label="ایمیل"><Input {...officialForm.register("email")} /></Field>
-            <Field label="یادداشت ارتباطی">
-              <Textarea rows={2} {...officialForm.register("contactNote")} />
-            </Field>
-            <p className="text-xs text-muted-foreground">
-              با ثبت مسئول جدید برای همان نقش، مسئول قبلی به‌صورت خودکار در سوابق آرشیو می‌شود.
-            </p>
-            <Button type="submit" disabled={isPending} className="w-full">ثبت</Button>
           </form>
         </DialogContent>
       </Dialog>
@@ -1276,7 +1144,7 @@ export function DevicePassportView({
       <Dialog open={capacityOpen} onOpenChange={setCapacityOpen}>
         <DialogContent dir="rtl" className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>{editingCapacityId ? "ویرایش ظرفیت" : "ثبت ظرفیت"}</DialogTitle>
+            <DialogTitle>{editingCapacityId ? "ویرایش دارایی" : "ثبت دارایی"}</DialogTitle>
           </DialogHeader>
           <form className="space-y-3" onSubmit={onSaveCapacity}>
             <Field label="نوع">
@@ -1293,7 +1161,7 @@ export function DevicePassportView({
               >
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {(Object.keys(DEVICE_CAPACITY_TYPE_LABELS) as DeviceCapacityType[]).map((key) => (
+                  {(DEVICE_CAPACITY_TYPES as DeviceCapacityType[]).map((key) => (
                     <SelectItem key={key} value={key}>
                       {DEVICE_CAPACITY_TYPE_LABELS[key]}
                     </SelectItem>

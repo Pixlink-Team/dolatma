@@ -57,14 +57,15 @@ export const DEVICE_STAFF_EDUCATION_LABELS: Record<DeviceStaffEducation, string>
 };
 
 export const DEVICE_CAPACITY_TYPE_LABELS: Record<DeviceCapacityType, string> = {
-  branches: "شعب و واحدهای زیرمجموعه",
-  website_app: "سایت و اپلیکیشن",
-  social: "صفحات شبکه‌های اجتماعی",
+  website: "وب‌سایت",
+  app: "اپلیکیشن",
+  social: "صفحه شبکه اجتماعی",
+  ad_network: "شبکه تبلیغاتی",
+  news_network: "شبکه خبری",
   sms_panel: "پنل پیامک",
   billboards: "بیلبورد و سازه‌های تبلیغاتی",
   urban_tv: "تلویزیون شهری / نمایشگر",
   venues: "سالن، مدرسه یا فضای عمومی",
-  pr_team: "تیم روابط عمومی",
   creative_team: "تیم طراحی، عکاسی و فیلم‌برداری",
   field_staff: "نیروی اجرایی و استانی",
   call_center: "مرکز تماس",

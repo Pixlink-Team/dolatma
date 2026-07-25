@@ -95,19 +95,38 @@ export type DeviceStaffEducation =
   | "other";
 
 export type DeviceCapacityType =
-  | "branches"
-  | "website_app"
+  | "website"
+  | "app"
   | "social"
+  | "ad_network"
+  | "news_network"
   | "sms_panel"
   | "billboards"
   | "urban_tv"
   | "venues"
-  | "pr_team"
   | "creative_team"
   | "field_staff"
   | "call_center"
   | "contractors"
   | "other";
+
+/** Ordered list used by forms, maps, and DB guards. */
+export const DEVICE_CAPACITY_TYPES: DeviceCapacityType[] = [
+  "website",
+  "app",
+  "social",
+  "ad_network",
+  "news_network",
+  "sms_panel",
+  "billboards",
+  "urban_tv",
+  "venues",
+  "creative_team",
+  "field_staff",
+  "call_center",
+  "contractors",
+  "other",
+];
 
 export type DeviceReadinessStatus =
   | "ready"

@@ -2,8 +2,9 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { ExternalLink, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -32,11 +33,16 @@ import {
 } from "@/lib/actions/capacity-actions";
 import {
   formatCapacityDetailsSummary,
+  getCapacityExternalUrl,
   normalizeCapacityDetails,
   type CapacityDetails,
 } from "@/lib/capacity-details";
 import { DEVICE_CAPACITY_TYPE_LABELS } from "@/lib/device-labels";
-import type { DeviceCapacityType, UserCapacity } from "@/lib/types";
+import {
+  DEVICE_CAPACITY_TYPES,
+  type DeviceCapacityType,
+  type UserCapacity,
+} from "@/lib/types";
 
 interface UserPassportCapacitiesProps {
   initialCapacities: UserCapacity[];
@@ -56,7 +62,7 @@ type CapacityForm = {
 };
 
 function defaultFormValues(
-  capacityType: DeviceCapacityType = "other"
+  capacityType: DeviceCapacityType = "website"
 ): CapacityForm {
   return {
     capacityType,
@@ -82,10 +88,7 @@ export function UserPassportCapacities({ initialCapacities }: UserPassportCapaci
     defaultValues: defaultFormValues(),
   });
 
-  const typeOptions = useMemo(
-    () => Object.keys(DEVICE_CAPACITY_TYPE_LABELS) as DeviceCapacityType[],
-    []
-  );
+  const typeOptions = useMemo(() => DEVICE_CAPACITY_TYPES, []);
 
   const watchedType = form.watch("capacityType");
   const watchedDetails = form.watch("details");
@@ -119,7 +122,7 @@ export function UserPassportCapacities({ initialCapacities }: UserPassportCapaci
         toast.error(result.error);
         return;
       }
-      toast.success(editingId ? "ظرفیت به‌روز شد" : "ظرفیت ثبت شد");
+      toast.success(editingId ? "دارایی به‌روز شد" : "دارایی ثبت شد");
       setOpen(false);
       const nextFields = {
         capacityType: data.capacityType,
@@ -164,46 +167,63 @@ export function UserPassportCapacities({ initialCapacities }: UserPassportCapaci
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-2">
         <div>
-          <h2 className="text-base font-semibold">شناسنامه ظرفیت من</h2>
+          <h2 className="text-base font-semibold">دارایی‌ها و ظرفیت من</h2>
           <p className="text-xs text-muted-foreground">
-            ظرفیت‌ها را با فیلدهای دقیق ثبت کنید تا در نقشه ملی و گزارش‌ها قابل تجمیع باشند.
+            وب‌سایت، اپ، کانال‌های شبکه اجتماعی، شبکه‌های تبلیغاتی و خبری را جداگانه ثبت کنید.
           </p>
         </div>
         <Button size="sm" onClick={openCreate}>
           <Plus className="ml-1 h-4 w-4" />
-          ثبت ظرفیت
+          ثبت دارایی
         </Button>
       </div>
 
       {capacities.length === 0 ? (
-        <p className="text-sm text-muted-foreground">هنوز ظرفیتی ثبت نکرده‌اید.</p>
+        <p className="text-sm text-muted-foreground">هنوز دارایی‌ای ثبت نکرده‌اید.</p>
       ) : (
-        <div className="space-y-2">
+        <div className="grid gap-2 sm:grid-cols-2">
           {capacities.map((item) => {
+            const details = normalizeCapacityDetails(item.capacityType, item.details);
             const summary = formatCapacityDetailsSummary(
               item.capacityType,
-              normalizeCapacityDetails(item.capacityType, item.details),
+              details,
               {
                 province: item.province,
                 city: item.city,
                 address: item.address,
               }
             );
+            const externalUrl = getCapacityExternalUrl(item.capacityType, details);
             return (
               <div
                 key={item.id}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3"
+                className="flex flex-wrap items-start justify-between gap-2 rounded-lg border p-3"
               >
-                <div>
-                  <p className="font-medium">{item.title}</p>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-medium">{item.title}</p>
+                    <Badge variant="secondary" className="text-[10px]">
+                      {DEVICE_CAPACITY_TYPE_LABELS[item.capacityType]}
+                    </Badge>
+                  </div>
                   <p className="text-xs text-muted-foreground">
-                    {DEVICE_CAPACITY_TYPE_LABELS[item.capacityType]}
-                    {item.coverageScope ? ` · پوشش: ${item.coverageScope}` : ""}
-                    {" · "}
+                    {item.coverageScope ? `پوشش: ${item.coverageScope} · ` : ""}
                     {item.isActive ? "فعال" : "غیرفعال"}
                   </p>
                   {summary ? (
                     <p className="mt-1 text-xs text-foreground/80">{summary}</p>
+                  ) : null}
+                  {externalUrl ? (
+                    <a
+                      href={externalUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                      dir="ltr"
+                    >
+                      <ExternalLink className="h-3 w-3" />
+                      {externalUrl}
+                    </a>
                   ) : null}
                 </div>
                 <div className="flex gap-1">
@@ -221,10 +241,7 @@ export function UserPassportCapacities({ initialCapacities }: UserPassportCapaci
                         province: item.province ?? "",
                         city: item.city ?? "",
                         address: item.address ?? "",
-                        details: normalizeCapacityDetails(
-                          item.capacityType,
-                          item.details
-                        ),
+                        details,
                         isActive: item.isActive,
                       });
                       setOpen(true);
@@ -243,7 +260,7 @@ export function UserPassportCapacities({ initialCapacities }: UserPassportCapaci
                           toast.error(result.error);
                           return;
                         }
-                        toast.success("ظرفیت حذف شد");
+                        toast.success("دارایی حذف شد");
                         setCapacities((prev) => prev.filter((c) => c.id !== item.id));
                       });
                     }}
@@ -260,7 +277,7 @@ export function UserPassportCapacities({ initialCapacities }: UserPassportCapaci
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent dir="rtl" className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>{editingId ? "ویرایش ظرفیت" : "ثبت ظرفیت"}</DialogTitle>
+            <DialogTitle>{editingId ? "ویرایش دارایی" : "ثبت دارایی"}</DialogTitle>
           </DialogHeader>
           <form className="space-y-3" onSubmit={onSave}>
             <div className="space-y-1.5">

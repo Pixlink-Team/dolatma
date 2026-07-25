@@ -20,7 +20,7 @@ import {
 } from "@/lib/capacity-details";
 import { DEVICE_CAPACITY_TYPE_LABELS } from "@/lib/device-labels";
 import { getLocationCenter, MAP_DEFAULT_CENTER } from "@/lib/iran-location-center";
-import type { CapacityMapItem, DeviceCapacityType } from "@/lib/types";
+import { DEVICE_CAPACITY_TYPES, type CapacityMapItem, type DeviceCapacityType } from "@/lib/types";
 import { formatPersianNumber } from "@/lib/utils";
 import dynamic from "next/dynamic";
 
@@ -43,10 +43,7 @@ export function CapacityMapAdmin({ initialItems, devices }: CapacityMapAdminProp
   const [capacityType, setCapacityType] = useState<string>("all");
   const [isPending, startTransition] = useTransition();
 
-  const typeOptions = useMemo(
-    () => Object.keys(DEVICE_CAPACITY_TYPE_LABELS) as DeviceCapacityType[],
-    []
-  );
+  const typeOptions = useMemo(() => DEVICE_CAPACITY_TYPES, []);
 
   const summary = useMemo(() => {
     const byType = new Map<string, number>();

@@ -3,30 +3,18 @@ import {
   normalizeCapacityDetails,
   type CapacityDetails,
 } from "@/lib/capacity-details";
-import type {
-  CapacityDetailsPayload,
-  DeviceCapacityType,
-  UserCapacity,
+import {
+  DEVICE_CAPACITY_TYPES,
+  type CapacityDetailsPayload,
+  type DeviceCapacityType,
+  type UserCapacity,
 } from "@/lib/types";
 import { generateId } from "@/lib/utils";
 
 function asCapacityType(value: unknown): DeviceCapacityType {
-  const allowed: DeviceCapacityType[] = [
-    "branches",
-    "website_app",
-    "social",
-    "sms_panel",
-    "billboards",
-    "urban_tv",
-    "venues",
-    "pr_team",
-    "creative_team",
-    "field_staff",
-    "call_center",
-    "contractors",
-    "other",
-  ];
-  return allowed.includes(value as DeviceCapacityType)
+  if (value === "website_app") return "website";
+  if (value === "branches" || value === "pr_team") return "other";
+  return DEVICE_CAPACITY_TYPES.includes(value as DeviceCapacityType)
     ? (value as DeviceCapacityType)
     : "other";
 }
@@ -108,6 +96,28 @@ export async function ensureUserCapacitySchema(): Promise<void> {
   await sql`
     CREATE INDEX IF NOT EXISTS idx_user_capacities_location
       ON user_capacities(province, city)
+  `;
+  await sql`
+    UPDATE user_capacities
+    SET capacity_type = CASE
+      WHEN details->>'kind' = 'app' THEN 'app'
+      ELSE 'website'
+    END
+    WHERE capacity_type = 'website_app'
+  `;
+  await sql`
+    UPDATE user_capacities
+    SET capacity_type = 'other'
+    WHERE capacity_type IN ('branches', 'pr_team')
+  `;
+  await sql`ALTER TABLE user_capacities DROP CONSTRAINT IF EXISTS user_capacities_type_check`;
+  await sql`
+    ALTER TABLE user_capacities ADD CONSTRAINT user_capacities_type_check
+      CHECK (capacity_type IN (
+        'website', 'app', 'social', 'ad_network', 'news_network', 'sms_panel',
+        'billboards', 'urban_tv', 'venues', 'creative_team', 'field_staff',
+        'call_center', 'contractors', 'other'
+      ))
   `;
 }
 

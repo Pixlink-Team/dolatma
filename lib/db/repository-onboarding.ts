@@ -358,8 +358,13 @@ export async function pgGetDeviceOnboardingFacts(input: {
       d.website,
       (SELECT COUNT(*)::int FROM devices c WHERE c.parent_id = d.id) AS children_count,
       EXISTS(
-        SELECT 1 FROM device_officials o
-        WHERE o.device_id = d.id AND o.is_active = true AND o.role_type = 'primary'
+        SELECT 1 FROM users u
+        WHERE u.org_role = 'primary'
+          AND (
+            u.device_id = d.id
+            OR u.organization_id = d.id
+            OR (u.ministry_id = d.id AND u.organization_id IS NULL)
+          )
       ) AS has_primary_official,
       EXISTS(
         SELECT 1 FROM device_staff s WHERE s.device_id = d.id
@@ -392,7 +397,7 @@ export async function pgGetDeviceOnboardingFacts(input: {
   const profileComplete = Boolean(
     device.name &&
       device.type &&
-      (device.mission || device.address || phones.length > 0 || device.website)
+      (device.mission || device.address || phones.length > 0)
   );
 
   let userIds = input.ownerUserIds?.filter(Boolean) ?? [];

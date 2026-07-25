@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "854cb86c5bf57d89fc23fe190b91930f2f6f667b",
+      "committedAt": "2026-07-25T14:05:28+03:30",
+      "title": "قفل کردن تغییر وزارتخانه در تکمیل شناسنامه دستگاه",
+      "subject": "Lock ministry placement on own passport edit"
+    },
+    {
       "hash": "de9708938291f662e1c175bb07f2e2fa2e323329",
       "committedAt": "2026-07-25T14:04:14+03:30",
       "title": "به‌روزرسانی فهرست آپدیت‌های سایت",

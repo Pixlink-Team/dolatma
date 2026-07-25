@@ -6,26 +6,27 @@ import {
 } from "@/lib/capacity-details";
 import { DEFAULT_MINISTRIES } from "@/lib/ministry-seed";
 import { generateId } from "@/lib/utils";
-import type {
-  AdminUser,
-  CapacityDetailsPayload,
-  Device,
-  DeviceActivityScope,
-  DeviceCampaignHistoryItem,
-  DeviceCapacity,
-  DeviceCapacityType,
-  DeviceContentStats,
-  DeviceDirectiveStats,
-  DeviceOfficial,
-  DeviceOfficialRole,
-  DevicePassport,
-  DeviceReadiness,
-  DeviceSocialLinks,
-  DeviceStaff,
-  DeviceStaffEducation,
-  DeviceStaffGender,
-  DeviceStatus,
-  DeviceType,
+import {
+  DEVICE_CAPACITY_TYPES,
+  type AdminUser,
+  type CapacityDetailsPayload,
+  type Device,
+  type DeviceActivityScope,
+  type DeviceCampaignHistoryItem,
+  type DeviceCapacity,
+  type DeviceCapacityType,
+  type DeviceContentStats,
+  type DeviceDirectiveStats,
+  type DeviceOfficial,
+  type DeviceOfficialRole,
+  type DevicePassport,
+  type DeviceReadiness,
+  type DeviceSocialLinks,
+  type DeviceStaff,
+  type DeviceStaffEducation,
+  type DeviceStaffGender,
+  type DeviceStatus,
+  type DeviceType,
 } from "@/lib/types";
 
 function toIso(value: unknown): string {
@@ -98,22 +99,10 @@ function asOfficialRole(value: unknown): DeviceOfficialRole {
 }
 
 function asCapacityType(value: unknown): DeviceCapacityType {
-  const allowed: DeviceCapacityType[] = [
-    "branches",
-    "website_app",
-    "social",
-    "sms_panel",
-    "billboards",
-    "urban_tv",
-    "venues",
-    "pr_team",
-    "creative_team",
-    "field_staff",
-    "call_center",
-    "contractors",
-    "other",
-  ];
-  return allowed.includes(value as DeviceCapacityType)
+  // Legacy rows may still appear before migrate; map them to current types.
+  if (value === "website_app") return "website";
+  if (value === "branches" || value === "pr_team") return "other";
+  return DEVICE_CAPACITY_TYPES.includes(value as DeviceCapacityType)
     ? (value as DeviceCapacityType)
     : "other";
 }
@@ -367,6 +356,29 @@ async function ensureDeviceSchemaOnce(): Promise<void> {
   await sql`
     CREATE INDEX IF NOT EXISTS idx_device_capacities_location
       ON device_capacities(province, city)
+  `;
+  // Migrate legacy capacity types, then refresh allowed-values check.
+  await sql`
+    UPDATE device_capacities
+    SET capacity_type = CASE
+      WHEN details->>'kind' = 'app' THEN 'app'
+      ELSE 'website'
+    END
+    WHERE capacity_type = 'website_app'
+  `;
+  await sql`
+    UPDATE device_capacities
+    SET capacity_type = 'other'
+    WHERE capacity_type IN ('branches', 'pr_team')
+  `;
+  await sql`ALTER TABLE device_capacities DROP CONSTRAINT IF EXISTS device_capacities_type_check`;
+  await sql`
+    ALTER TABLE device_capacities ADD CONSTRAINT device_capacities_type_check
+      CHECK (capacity_type IN (
+        'website', 'app', 'social', 'ad_network', 'news_network', 'sms_panel',
+        'billboards', 'urban_tv', 'venues', 'creative_team', 'field_staff',
+        'call_center', 'contractors', 'other'
+      ))
   `;
   await sql`
     ALTER TABLE users
@@ -1156,7 +1168,7 @@ function computeReadiness(input: {
   users: AdminUser[];
   directiveStats: DeviceDirectiveStats;
 }): DeviceReadiness {
-  const { device, officials, capacities, users, directiveStats } = input;
+  const { device, capacities, users, directiveStats } = input;
 
   if (device.status !== "active" || !device.isActive) {
     return {
@@ -1175,15 +1187,14 @@ function computeReadiness(input: {
     };
   }
 
-  const activeOfficials = officials.filter((item) => item.isActive);
-  const hasPrimaryOfficial = activeOfficials.some((item) => item.roleType === "primary");
-  const hasDeputyOfficial = activeOfficials.some((item) => item.roleType === "deputy");
+  const hasPrimaryOfficial = users.some((user) => user.orgRole === "primary");
+  const hasDeputyOfficial = users.some((user) => user.orgRole === "deputy");
   const hasActiveUsers = users.length > 0;
   const hasCapacity = capacities.some((item) => item.isActive);
   const profileComplete = Boolean(
     device.name &&
       device.type &&
-      (device.mission || device.address || device.phones.length > 0 || device.website)
+      (device.mission || device.address || device.phones.length > 0)
   );
 
   const seenRate =
@@ -1207,8 +1218,8 @@ function computeReadiness(input: {
   if (actionPlanOk) score += 10;
 
   const gaps: string[] = [];
-  if (!hasPrimaryOfficial) gaps.push("مسئول اصلی فعال ندارد");
-  if (!hasDeputyOfficial) gaps.push("جانشین مسئول تعیین نشده");
+  if (!hasPrimaryOfficial) gaps.push("کاربر با سمت مدیر ندارد");
+  if (!hasDeputyOfficial) gaps.push("کاربر با سمت معاون ندارد");
   if (!hasActiveUsers) gaps.push("کاربر فعالی ندارد");
   if (!profileComplete) gaps.push("اطلاعات پروفایل ناقص است");
   if (!hasCapacity) gaps.push("ظرفیتی ثبت نشده");
@@ -1221,7 +1232,7 @@ function computeReadiness(input: {
 
   const reason =
     status === "ready"
-      ? "آمادگی مناسب است؛ مسئول فعال، کاربران و اطلاعات پایه در وضعیت قابل قبول قرار دارند."
+      ? "آمادگی مناسب است؛ مدیر، کاربران و اطلاعات پایه در وضعیت قابل قبول قرار دارند."
       : `آمادگی ${status === "high_risk" ? "پرریسک" : "متوسط"} است؛ ${gaps.slice(0, 3).join("، ")}.`;
 
   return {

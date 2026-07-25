@@ -66,7 +66,7 @@ function evaluateStep(
     case "passport": {
       const gaps: string[] = [];
       if (!facts.profileComplete) gaps.push("پروفایل");
-      if (!facts.hasPrimaryOfficial) gaps.push("مسئول اصلی");
+      if (!facts.hasPrimaryOfficial) gaps.push("مدیر");
       if (!facts.hasStaff) gaps.push("کارکنان");
       if (!facts.hasCapacity) gaps.push("ظرفیت");
       done = gaps.length === 0;

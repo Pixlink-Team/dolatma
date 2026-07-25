@@ -1051,11 +1051,23 @@ CREATE TABLE IF NOT EXISTS device_capacities (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- Migrate legacy capacity types before tightening the check constraint.
+UPDATE device_capacities
+SET capacity_type = CASE
+  WHEN details->>'kind' = 'app' THEN 'app'
+  ELSE 'website'
+END
+WHERE capacity_type = 'website_app';
+
+UPDATE device_capacities
+SET capacity_type = 'other'
+WHERE capacity_type IN ('branches', 'pr_team');
+
 ALTER TABLE device_capacities DROP CONSTRAINT IF EXISTS device_capacities_type_check;
 ALTER TABLE device_capacities ADD CONSTRAINT device_capacities_type_check
   CHECK (capacity_type IN (
-    'branches', 'website_app', 'social', 'sms_panel', 'billboards',
-    'urban_tv', 'venues', 'pr_team', 'creative_team', 'field_staff',
+    'website', 'app', 'social', 'ad_network', 'news_network', 'sms_panel',
+    'billboards', 'urban_tv', 'venues', 'creative_team', 'field_staff',
     'call_center', 'contractors', 'other'
   ));
 
@@ -1417,11 +1429,23 @@ CREATE TABLE IF NOT EXISTS user_capacities (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- Migrate legacy capacity types before tightening the check constraint.
+UPDATE user_capacities
+SET capacity_type = CASE
+  WHEN details->>'kind' = 'app' THEN 'app'
+  ELSE 'website'
+END
+WHERE capacity_type = 'website_app';
+
+UPDATE user_capacities
+SET capacity_type = 'other'
+WHERE capacity_type IN ('branches', 'pr_team');
+
 ALTER TABLE user_capacities DROP CONSTRAINT IF EXISTS user_capacities_type_check;
 ALTER TABLE user_capacities ADD CONSTRAINT user_capacities_type_check
   CHECK (capacity_type IN (
-    'branches', 'website_app', 'social', 'sms_panel', 'billboards',
-    'urban_tv', 'venues', 'pr_team', 'creative_team', 'field_staff',
+    'website', 'app', 'social', 'ad_network', 'news_network', 'sms_panel',
+    'billboards', 'urban_tv', 'venues', 'creative_team', 'field_staff',
     'call_center', 'contractors', 'other'
   ));
 

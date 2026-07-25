@@ -199,30 +199,56 @@ export function SocialAnalyticsAdmin({
       />
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        {filteredRows.map((item) => (
-          <Card key={item.id} className="overflow-hidden">
+        {filteredRows.map((item) => {
+          const profileUrl = item.profileUrl?.trim() || "";
+          const openChannel = () => {
+            if (profileUrl) window.open(profileUrl, "_blank", "noopener,noreferrer");
+            else openEdit(item);
+          };
+          return (
+          <Card
+            key={item.id}
+            className="cursor-pointer overflow-hidden transition hover:border-primary/40 hover:shadow-sm"
+            onClick={openChannel}
+            role="link"
+            tabIndex={0}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                openChannel();
+              }
+            }}
+          >
             <CardContent className="space-y-4 p-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex min-w-0 items-center gap-3">
                   <SocialPlatformIcon platform={item.platform} size="lg" />
                   <div className="min-w-0">
-                    <p className="truncate font-semibold">{getSocialPlatformLabel(item.platform)}</p>
-                    {item.title?.trim() && (
-                      <p className="truncate text-xs text-muted-foreground">{item.title}</p>
-                    )}
+                    <p className="truncate font-semibold">
+                      {item.title?.trim() || getSocialPlatformLabel(item.platform)}
+                    </p>
+                    {item.title?.trim() ? (
+                      <p className="truncate text-xs text-muted-foreground">
+                        {getSocialPlatformLabel(item.platform)}
+                      </p>
+                    ) : null}
                     {isFullAdmin && item.ownerName ? (
                       <p className="truncate text-xs text-muted-foreground">{item.ownerName}</p>
                     ) : null}
+                    {profileUrl ? (
+                      <p className="mt-1 truncate text-[11px] text-primary" dir="ltr">
+                        {profileUrl}
+                      </p>
+                    ) : null}
                   </div>
                 </div>
-                <AdminItemActions
-                  onView={() => {
-                    if (item.profileUrl?.trim()) window.open(item.profileUrl, "_blank");
-                    else openEdit(item);
-                  }}
-                  onEdit={() => openEdit(item)}
-                  onDelete={() => handleDelete(item)}
-                />
+                <div onClick={(event) => event.stopPropagation()}>
+                  <AdminItemActions
+                    onView={openChannel}
+                    onEdit={() => openEdit(item)}
+                    onDelete={() => handleDelete(item)}
+                  />
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -237,7 +263,8 @@ export function SocialAnalyticsAdmin({
               </div>
             </CardContent>
           </Card>
-        ))}
+          );
+        })}
       </div>
 
       {filteredRows.length === 0 && (

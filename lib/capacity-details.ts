@@ -1,4 +1,4 @@
-import type { DeviceCapacityType, SocialPlatform } from "@/lib/types";
+import type { DeviceCapacityType } from "@/lib/types";
 import { formatPersianNumber } from "@/lib/utils";
 
 /** Physical venue / hall / public space. */
@@ -12,7 +12,6 @@ export type VenueKind =
   | "outdoor"
   | "other";
 
-export type WebsiteAppKind = "website" | "app" | "both";
 export type OwnershipKind = "owned" | "rented" | "shared" | "municipal" | "other";
 export type ContractorStatus = "active" | "standby" | "expired";
 
@@ -22,21 +21,28 @@ export interface CapacityLocationFields {
   address?: string | null;
 }
 
-export interface BranchesCapacityDetails {
-  branchCount?: number | null;
-  staffCount?: number | null;
-}
-
-export interface WebsiteAppCapacityDetails {
-  kind?: WebsiteAppKind | null;
+export interface WebsiteCapacityDetails {
   url?: string | null;
   monthlyVisitors?: number | null;
 }
 
+export interface AppCapacityDetails {
+  url?: string | null;
+  monthlyUsers?: number | null;
+  storeName?: string | null;
+}
+
 export interface SocialCapacityDetails {
-  platform?: SocialPlatform | null;
   handleOrUrl?: string | null;
   followers?: number | null;
+}
+
+/** Shared shape for ad_network and news_network. */
+export interface MediaNetworkCapacityDetails {
+  url?: string | null;
+  monthlyReach?: number | null;
+  operatedByPol?: boolean | null;
+  contactNote?: string | null;
 }
 
 export interface SmsPanelCapacityDetails {
@@ -89,14 +95,15 @@ export interface OtherCapacityDetails {
 }
 
 export type CapacityDetailsByType = {
-  branches: BranchesCapacityDetails;
-  website_app: WebsiteAppCapacityDetails;
+  website: WebsiteCapacityDetails;
+  app: AppCapacityDetails;
   social: SocialCapacityDetails;
+  ad_network: MediaNetworkCapacityDetails;
+  news_network: MediaNetworkCapacityDetails;
   sms_panel: SmsPanelCapacityDetails;
   billboards: BillboardsCapacityDetails;
   urban_tv: UrbanTvCapacityDetails;
   venues: VenuesCapacityDetails;
-  pr_team: TeamCapacityDetails;
   creative_team: TeamCapacityDetails;
   field_staff: TeamCapacityDetails;
   call_center: CallCenterCapacityDetails;
@@ -117,12 +124,6 @@ export const VENUE_KIND_LABELS: Record<VenueKind, string> = {
   other: "سایر",
 };
 
-export const WEBSITE_APP_KIND_LABELS: Record<WebsiteAppKind, string> = {
-  website: "وب‌سایت",
-  app: "اپلیکیشن",
-  both: "وب‌سایت و اپلیکیشن",
-};
-
 export const OWNERSHIP_KIND_LABELS: Record<OwnershipKind, string> = {
   owned: "ملکی",
   rented: "اجاره‌ای",
@@ -137,25 +138,9 @@ export const CONTRACTOR_STATUS_LABELS: Record<ContractorStatus, string> = {
   expired: "منقضی",
 };
 
-export const SOCIAL_PLATFORM_CAPACITY_LABELS: Record<SocialPlatform, string> = {
-  instagram: "اینستاگرام",
-  x: "ایکس (توییتر)",
-  telegram: "تلگرام",
-  linkedin: "لینکدین",
-  youtube: "یوتیوب",
-  aparat: "آپارات",
-  rubika: "روبیکا",
-  eitaa: "ایتا",
-  soroush: "سروش",
-  bale: "بله",
-  other: "سایر",
-};
-
 const VENUE_KINDS = Object.keys(VENUE_KIND_LABELS) as VenueKind[];
-const WEBSITE_KINDS = Object.keys(WEBSITE_APP_KIND_LABELS) as WebsiteAppKind[];
 const OWNERSHIP_KINDS = Object.keys(OWNERSHIP_KIND_LABELS) as OwnershipKind[];
 const CONTRACTOR_STATUSES = Object.keys(CONTRACTOR_STATUS_LABELS) as ContractorStatus[];
-const SOCIAL_PLATFORMS = Object.keys(SOCIAL_PLATFORM_CAPACITY_LABELS) as SocialPlatform[];
 
 function asOptionalString(value: unknown): string | null {
   if (typeof value !== "string") return null;
@@ -182,15 +167,40 @@ function asEnum<T extends string>(value: unknown, allowed: readonly T[]): T | nu
   return allowed.includes(value as T) ? (value as T) : null;
 }
 
+/**
+ * Normalize a raw url / handleOrUrl into an absolute http(s) URL.
+ * Bare domains become https://…; handles like @user return null.
+ */
+function toHttpUrl(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+
+  // Protocol-relative URL
+  if (trimmed.startsWith("//")) return `https:${trimmed}`;
+
+  // Bare domain or path under a domain (not a social @handle)
+  if (/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+(\/.*)?$/i.test(trimmed)) {
+    return `https://${trimmed}`;
+  }
+
+  return null;
+}
+
 /** Empty details object for a given capacity type. */
 export function emptyCapacityDetails(type: DeviceCapacityType): CapacityDetails {
   switch (type) {
-    case "branches":
-      return { branchCount: null, staffCount: null };
-    case "website_app":
-      return { kind: null, url: null, monthlyVisitors: null };
+    case "website":
+      return { url: null, monthlyVisitors: null };
+    case "app":
+      return { url: null, monthlyUsers: null, storeName: null };
     case "social":
-      return { platform: null, handleOrUrl: null, followers: null };
+      return { handleOrUrl: null, followers: null };
+    case "ad_network":
+    case "news_network":
+      return { url: null, monthlyReach: null, operatedByPol: true, contactNote: null };
     case "sms_panel":
       return { providerName: null, dailySmsCapacity: null, monthlySmsCapacity: null };
     case "billboards":
@@ -207,7 +217,6 @@ export function emptyCapacityDetails(type: DeviceCapacityType): CapacityDetails 
         hasSoundSystem: null,
         indoor: true,
       };
-    case "pr_team":
     case "creative_team":
     case "field_staff":
       return { headcount: null, specialtyNote: null };
@@ -231,22 +240,29 @@ export function normalizeCapacityDetails(
       : {};
 
   switch (type) {
-    case "branches":
+    case "website":
       return {
-        branchCount: asOptionalNumber(source.branchCount),
-        staffCount: asOptionalNumber(source.staffCount),
-      };
-    case "website_app":
-      return {
-        kind: asEnum(source.kind, WEBSITE_KINDS),
         url: asOptionalString(source.url),
         monthlyVisitors: asOptionalNumber(source.monthlyVisitors),
       };
+    case "app":
+      return {
+        url: asOptionalString(source.url),
+        monthlyUsers: asOptionalNumber(source.monthlyUsers),
+        storeName: asOptionalString(source.storeName),
+      };
     case "social":
       return {
-        platform: asEnum(source.platform, SOCIAL_PLATFORMS),
         handleOrUrl: asOptionalString(source.handleOrUrl),
         followers: asOptionalNumber(source.followers),
+      };
+    case "ad_network":
+    case "news_network":
+      return {
+        url: asOptionalString(source.url),
+        monthlyReach: asOptionalNumber(source.monthlyReach),
+        operatedByPol: asOptionalBoolean(source.operatedByPol) ?? true,
+        contactNote: asOptionalString(source.contactNote),
       };
     case "sms_panel":
       return {
@@ -275,7 +291,6 @@ export function normalizeCapacityDetails(
         hasSoundSystem: asOptionalBoolean(source.hasSoundSystem),
         indoor: asOptionalBoolean(source.indoor) ?? true,
       };
-    case "pr_team":
     case "creative_team":
     case "field_staff":
       return {
@@ -311,21 +326,31 @@ export function getCapacityPrimaryMetric(
   details: CapacityDetails
 ): { value: number; unitLabel: string } | null {
   switch (type) {
-    case "branches": {
-      const d = details as BranchesCapacityDetails;
-      if (d.branchCount != null) return { value: d.branchCount, unitLabel: "شعبه" };
-      return null;
-    }
-    case "website_app": {
-      const d = details as WebsiteAppCapacityDetails;
+    case "website": {
+      const d = details as WebsiteCapacityDetails;
       if (d.monthlyVisitors != null) {
         return { value: d.monthlyVisitors, unitLabel: "بازدید ماهانه" };
+      }
+      return null;
+    }
+    case "app": {
+      const d = details as AppCapacityDetails;
+      if (d.monthlyUsers != null) {
+        return { value: d.monthlyUsers, unitLabel: "کاربر ماهانه" };
       }
       return null;
     }
     case "social": {
       const d = details as SocialCapacityDetails;
       if (d.followers != null) return { value: d.followers, unitLabel: "دنبال‌کننده" };
+      return null;
+    }
+    case "ad_network":
+    case "news_network": {
+      const d = details as MediaNetworkCapacityDetails;
+      if (d.monthlyReach != null) {
+        return { value: d.monthlyReach, unitLabel: "بازدید ماهانه" };
+      }
       return null;
     }
     case "sms_panel": {
@@ -353,7 +378,6 @@ export function getCapacityPrimaryMetric(
       if (d.seatCapacity != null) return { value: d.seatCapacity, unitLabel: "نفر ظرفیت" };
       return null;
     }
-    case "pr_team":
     case "creative_team":
     case "field_staff": {
       const d = details as TeamCapacityDetails;
@@ -372,6 +396,29 @@ export function getCapacityPrimaryMetric(
       }
       return null;
     }
+    default:
+      return null;
+  }
+}
+
+/**
+ * Extract an absolute http(s) URL from capacity details when a url / handleOrUrl
+ * field is present. Bare domains are normalized to https://…
+ */
+export function getCapacityExternalUrl(
+  type: DeviceCapacityType,
+  details: CapacityDetails
+): string | null {
+  switch (type) {
+    case "website":
+      return toHttpUrl((details as WebsiteCapacityDetails).url);
+    case "app":
+      return toHttpUrl((details as AppCapacityDetails).url);
+    case "social":
+      return toHttpUrl((details as SocialCapacityDetails).handleOrUrl);
+    case "ad_network":
+    case "news_network":
+      return toHttpUrl((details as MediaNetworkCapacityDetails).url);
     default:
       return null;
   }
@@ -422,24 +469,34 @@ export function formatCapacityDetailsSummary(
     }
     case "social": {
       const d = details as SocialCapacityDetails;
-      if (d.platform) parts.push(SOCIAL_PLATFORM_CAPACITY_LABELS[d.platform]);
       if (d.followers != null) {
         parts.push(`${formatPersianNumber(d.followers)} دنبال‌کننده`);
       }
       break;
     }
-    case "branches": {
-      const d = details as BranchesCapacityDetails;
-      if (d.branchCount != null) parts.push(`${formatPersianNumber(d.branchCount)} شعبه`);
-      if (d.staffCount != null) parts.push(`${formatPersianNumber(d.staffCount)} نیرو`);
-      break;
-    }
-    case "website_app": {
-      const d = details as WebsiteAppCapacityDetails;
-      if (d.kind) parts.push(WEBSITE_APP_KIND_LABELS[d.kind]);
+    case "website": {
+      const d = details as WebsiteCapacityDetails;
       if (d.monthlyVisitors != null) {
         parts.push(`${formatPersianNumber(d.monthlyVisitors)} بازدید ماهانه`);
       }
+      break;
+    }
+    case "app": {
+      const d = details as AppCapacityDetails;
+      if (d.storeName) parts.push(d.storeName);
+      if (d.monthlyUsers != null) {
+        parts.push(`${formatPersianNumber(d.monthlyUsers)} کاربر ماهانه`);
+      }
+      break;
+    }
+    case "ad_network":
+    case "news_network": {
+      const d = details as MediaNetworkCapacityDetails;
+      if (d.monthlyReach != null) {
+        parts.push(`${formatPersianNumber(d.monthlyReach)} بازدید ماهانه`);
+      }
+      if (d.operatedByPol) parts.push("عملیات توسط پل");
+      if (d.contactNote) parts.push(d.contactNote);
       break;
     }
     case "sms_panel": {
@@ -450,7 +507,6 @@ export function formatCapacityDetailsSummary(
       }
       break;
     }
-    case "pr_team":
     case "creative_team":
     case "field_staff": {
       const d = details as TeamCapacityDetails;

@@ -13,7 +13,7 @@ export const DEFAULT_ONBOARDING_STEPS: DefaultOnboardingStepSeed[] = [
   {
     stepKey: "passport",
     title: "تکمیل شناسنامه",
-    description: "اطلاعات پروفایل، مسئول اصلی، کارکنان و ظرفیت‌های دستگاه را کامل کنید.",
+    description: "اطلاعات پروفایل، کاربر مدیر، کارکنان و ظرفیت‌های دستگاه را کامل کنید.",
     href: "/admin/ministries",
     evaluator: "passport",
     sortOrder: 1,

@@ -14,18 +14,15 @@ import { ProvinceCityFields } from "@/components/admin/province-city-fields";
 import {
   CONTRACTOR_STATUS_LABELS,
   OWNERSHIP_KIND_LABELS,
-  SOCIAL_PLATFORM_CAPACITY_LABELS,
   VENUE_KIND_LABELS,
-  WEBSITE_APP_KIND_LABELS,
   emptyCapacityDetails,
   normalizeCapacityDetails,
   type CapacityDetails,
   type ContractorStatus,
   type OwnershipKind,
   type VenueKind,
-  type WebsiteAppKind,
 } from "@/lib/capacity-details";
-import type { DeviceCapacityType, SocialPlatform } from "@/lib/types";
+import type { DeviceCapacityType } from "@/lib/types";
 
 const NONE = "__none__";
 
@@ -80,11 +77,13 @@ function TextField({
   value,
   onChange,
   placeholder,
+  dir,
 }: {
   label: string;
   value: string | null | undefined;
   onChange: (value: string) => void;
   placeholder?: string;
+  dir?: "ltr" | "rtl";
 }) {
   return (
     <div className="space-y-1.5">
@@ -92,6 +91,7 @@ function TextField({
       <Input
         value={value ?? ""}
         placeholder={placeholder}
+        dir={dir}
         onChange={(event) => onChange(event.target.value)}
       />
     </div>
@@ -138,7 +138,6 @@ export function CapacityDetailsFields({
     capacityType === "venues" ||
     capacityType === "billboards" ||
     capacityType === "urban_tv" ||
-    capacityType === "branches" ||
     capacityType === "call_center" ||
     capacityType === "other";
 
@@ -147,6 +146,103 @@ export function CapacityDetailsFields({
       <p className="text-xs font-medium text-muted-foreground">
         مشخصات قابل گزارش‌گیری
       </p>
+
+      {capacityType === "website" && (
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="sm:col-span-2">
+            <TextField
+              label="آدرس"
+              value={(typed as { url?: string | null }).url}
+              onChange={(value) => patch({ url: value })}
+              placeholder="https://"
+              dir="ltr"
+            />
+          </div>
+          <NumberField
+            label="بازدید ماهانه تقریبی"
+            value={(typed as { monthlyVisitors?: number | null }).monthlyVisitors}
+            onChange={(value) => patch({ monthlyVisitors: value })}
+          />
+        </div>
+      )}
+
+      {capacityType === "app" && (
+        <div className="grid gap-3 sm:grid-cols-2">
+          <TextField
+            label="نام فروشگاه / استور"
+            value={(typed as { storeName?: string | null }).storeName}
+            onChange={(value) => patch({ storeName: value })}
+            placeholder="مثلاً کافه‌بازار، مایکت، گوگل‌پلی"
+          />
+          <NumberField
+            label="کاربران ماهانه تقریبی"
+            value={(typed as { monthlyUsers?: number | null }).monthlyUsers}
+            onChange={(value) => patch({ monthlyUsers: value })}
+          />
+          <div className="sm:col-span-2">
+            <TextField
+              label="آدرس"
+              value={(typed as { url?: string | null }).url}
+              onChange={(value) => patch({ url: value })}
+              placeholder="https://"
+              dir="ltr"
+            />
+          </div>
+        </div>
+      )}
+
+      {capacityType === "social" && (
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="sm:col-span-2">
+            <TextField
+              label="آدرس / آیدی صفحه"
+              value={(typed as { handleOrUrl?: string | null }).handleOrUrl}
+              onChange={(value) => patch({ handleOrUrl: value })}
+              placeholder="@example یا لینک"
+              dir="ltr"
+            />
+          </div>
+          <NumberField
+            label="تعداد دنبال‌کننده"
+            value={(typed as { followers?: number | null }).followers}
+            onChange={(value) => patch({ followers: value })}
+          />
+        </div>
+      )}
+
+      {(capacityType === "ad_network" || capacityType === "news_network") && (
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="sm:col-span-2">
+            <TextField
+              label="آدرس"
+              value={(typed as { url?: string | null }).url}
+              onChange={(value) => patch({ url: value })}
+              placeholder="https://"
+              dir="ltr"
+            />
+          </div>
+          <NumberField
+            label="دسترسی ماهانه تقریبی"
+            value={(typed as { monthlyReach?: number | null }).monthlyReach}
+            onChange={(value) => patch({ monthlyReach: value })}
+          />
+          <BoolField
+            label="عملیات توسط پل"
+            checked={
+              (typed as { operatedByPol?: boolean | null }).operatedByPol !==
+              false
+            }
+            onChange={(checked) => patch({ operatedByPol: checked })}
+          />
+          <div className="sm:col-span-2">
+            <TextField
+              label="یادداشت تماس"
+              value={(typed as { contactNote?: string | null }).contactNote}
+              onChange={(value) => patch({ contactNote: value })}
+            />
+          </div>
+        </div>
+      )}
 
       {capacityType === "venues" && (
         <>
@@ -296,109 +392,6 @@ export function CapacityDetailsFields({
         </div>
       )}
 
-      {capacityType === "social" && (
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label>پلتفرم</Label>
-            <Select
-              value={
-                (typed as { platform?: SocialPlatform | null }).platform ?? NONE
-              }
-              onValueChange={(value) =>
-                patch({
-                  platform: value === NONE ? null : (value as SocialPlatform),
-                })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="انتخاب کنید" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={NONE}>انتخاب نشده</SelectItem>
-                {(
-                  Object.keys(SOCIAL_PLATFORM_CAPACITY_LABELS) as SocialPlatform[]
-                ).map((key) => (
-                  <SelectItem key={key} value={key}>
-                    {SOCIAL_PLATFORM_CAPACITY_LABELS[key]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <NumberField
-            label="تعداد دنبال‌کننده"
-            value={(typed as { followers?: number | null }).followers}
-            onChange={(value) => patch({ followers: value })}
-          />
-          <div className="sm:col-span-2">
-            <TextField
-              label="آدرس / آیدی صفحه"
-              value={(typed as { handleOrUrl?: string | null }).handleOrUrl}
-              onChange={(value) => patch({ handleOrUrl: value })}
-              placeholder="@example یا لینک"
-            />
-          </div>
-        </div>
-      )}
-
-      {capacityType === "branches" && (
-        <div className="grid gap-3 sm:grid-cols-2">
-          <NumberField
-            label="تعداد شعبه"
-            value={(typed as { branchCount?: number | null }).branchCount}
-            onChange={(value) => patch({ branchCount: value })}
-          />
-          <NumberField
-            label="تعداد نیرو"
-            value={(typed as { staffCount?: number | null }).staffCount}
-            onChange={(value) => patch({ staffCount: value })}
-          />
-        </div>
-      )}
-
-      {capacityType === "website_app" && (
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label>نوع</Label>
-            <Select
-              value={(typed as { kind?: WebsiteAppKind | null }).kind ?? NONE}
-              onValueChange={(value) =>
-                patch({
-                  kind: value === NONE ? null : (value as WebsiteAppKind),
-                })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="انتخاب کنید" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={NONE}>انتخاب نشده</SelectItem>
-                {(Object.keys(WEBSITE_APP_KIND_LABELS) as WebsiteAppKind[]).map(
-                  (key) => (
-                    <SelectItem key={key} value={key}>
-                      {WEBSITE_APP_KIND_LABELS[key]}
-                    </SelectItem>
-                  )
-                )}
-              </SelectContent>
-            </Select>
-          </div>
-          <NumberField
-            label="بازدید ماهانه تقریبی"
-            value={(typed as { monthlyVisitors?: number | null }).monthlyVisitors}
-            onChange={(value) => patch({ monthlyVisitors: value })}
-          />
-          <div className="sm:col-span-2">
-            <TextField
-              label="آدرس"
-              value={(typed as { url?: string | null }).url}
-              onChange={(value) => patch({ url: value })}
-              placeholder="https://"
-            />
-          </div>
-        </div>
-      )}
-
       {capacityType === "sms_panel" && (
         <div className="grid gap-3 sm:grid-cols-2">
           <TextField
@@ -421,9 +414,7 @@ export function CapacityDetailsFields({
         </div>
       )}
 
-      {(capacityType === "pr_team" ||
-        capacityType === "creative_team" ||
-        capacityType === "field_staff") && (
+      {(capacityType === "creative_team" || capacityType === "field_staff") && (
         <div className="grid gap-3 sm:grid-cols-2">
           <NumberField
             label="تعداد نفرات"
