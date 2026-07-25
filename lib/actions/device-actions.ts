@@ -277,9 +277,17 @@ export async function deleteDeviceAction(id: string) {
     }
   }
 
-  const result = await pgDeleteDevice(id);
-  if (result.success) await revalidateDevicePages();
-  return result;
+  try {
+    const result = await pgDeleteDevice(id);
+    if (result.success) await revalidateDevicePages();
+    return result;
+  } catch (error) {
+    console.error("[devices] deleteDeviceAction failed", error);
+    return {
+      success: false as const,
+      error: error instanceof Error ? error.message : "حذف دستگاه ناموفق بود",
+    };
+  }
 }
 
 export async function saveDeviceOfficialAction(data: {

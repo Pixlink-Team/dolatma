@@ -132,7 +132,7 @@ export function DevicesAdmin({
   const childrenByParent = useMemo(() => {
     const map = new Map<string, Device[]>();
     for (const item of rows) {
-      if (!item.parentId) continue;
+      if (!item.parentId || item.parentId === item.id) continue;
       const list = map.get(item.parentId) ?? [];
       list.push(item);
       map.set(item.parentId, list);
@@ -148,7 +148,12 @@ export function DevicesAdmin({
       const home = rows.find((row) => row.id === homeDeviceId);
       if (home) return [home];
     }
-    return rows.filter((item) => !item.parentId || !rowIds.has(item.parentId));
+    return rows.filter(
+      (item) =>
+        !item.parentId ||
+        item.parentId === item.id ||
+        !rowIds.has(item.parentId)
+    );
   }, [homeDeviceId, rowIds, rows]);
 
   const form = useForm<DeviceFormValues>({
@@ -440,8 +445,18 @@ export function DevicesAdmin({
     });
   };
 
-  const renderAccessNode = (node: AccessEditNode, depth: number): ReactNode => {
-    const children = accessChildrenByParent.get(node.deviceId) ?? [];
+  const renderAccessNode = (
+    node: AccessEditNode,
+    depth: number,
+    ancestors: Set<string> = new Set()
+  ): ReactNode => {
+    if (ancestors.has(node.deviceId)) return null;
+    const nextAncestors = new Set(ancestors);
+    nextAncestors.add(node.deviceId);
+
+    const children = (accessChildrenByParent.get(node.deviceId) ?? []).filter(
+      (child) => !nextAncestors.has(child.deviceId)
+    );
     const expanded = accessExpandedIds.has(node.deviceId);
     const ceiling = liveCeilingFor(node.deviceId);
     const label = node.shortName || node.name;
@@ -525,7 +540,7 @@ export function DevicesAdmin({
 
         {expanded && children.length > 0 ? (
           <div className="space-y-3">
-            {children.map((child) => renderAccessNode(child, depth + 1))}
+            {children.map((child) => renderAccessNode(child, depth + 1, nextAncestors))}
           </div>
         ) : null}
       </div>
@@ -584,18 +599,34 @@ export function DevicesAdmin({
     }
     if (!confirm(`حذف «${device.shortName || device.name}»؟`)) return;
     startTransition(async () => {
-      const result = await deleteDeviceAction(device.id);
-      if (!result.success) {
-        toast.error(result.error);
-        return;
+      try {
+        const result = await deleteDeviceAction(device.id);
+        if (!result.success) {
+          toast.error(result.error);
+          return;
+        }
+        toast.success("حذف شد");
+        window.location.reload();
+      } catch (error) {
+        console.error("[devices] delete failed", error);
+        toast.error("حذف دستگاه ناموفق بود");
       }
-      toast.success("حذف شد");
-      window.location.reload();
     });
   };
 
-  const renderNode = (device: Device, depth: number) => {
-    const children = childrenByParent.get(device.id) ?? [];
+  const renderNode = (
+    device: Device,
+    depth: number,
+    ancestors: Set<string> = new Set()
+  ) => {
+    // Guard against cyclic parent links that would overflow the call stack.
+    if (ancestors.has(device.id)) return null;
+    const nextAncestors = new Set(ancestors);
+    nextAncestors.add(device.id);
+
+    const children = (childrenByParent.get(device.id) ?? []).filter(
+      (child) => !nextAncestors.has(child.id)
+    );
     const expanded = expandedIds.has(device.id);
     const isHome = homeDeviceId === device.id;
     const paddingRight = 16 + depth * 20;
@@ -701,7 +732,7 @@ export function DevicesAdmin({
 
         {expanded && children.length > 0 ? (
           <div className={depth === 0 ? "border-t bg-muted/30" : "bg-muted/20"}>
-            {children.map((child) => renderNode(child, depth + 1))}
+            {children.map((child) => renderNode(child, depth + 1, nextAncestors))}
           </div>
         ) : null}
       </div>

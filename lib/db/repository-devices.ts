@@ -505,11 +505,12 @@ async function pgResolveRootDeviceId(deviceId: string): Promise<string | null> {
   const sql = getSql();
   const rows = await sql`
     WITH RECURSIVE chain AS (
-      SELECT id, parent_id FROM devices WHERE id = ${deviceId}
+      SELECT id, parent_id, ARRAY[id] AS path FROM devices WHERE id = ${deviceId}
       UNION ALL
-      SELECT d.id, d.parent_id
+      SELECT d.id, d.parent_id, c.path || d.id
       FROM devices d
       INNER JOIN chain c ON d.id = c.parent_id
+      WHERE NOT (d.id = ANY (c.path))
     )
     SELECT id FROM chain WHERE parent_id IS NULL LIMIT 1
   `;
@@ -638,10 +639,11 @@ export async function pgListDeviceSubtree(rootId: string): Promise<Device[]> {
   await ensureDeviceSchema();
   const rows = await sql`
     WITH RECURSIVE subtree AS (
-      SELECT d.id FROM devices d WHERE d.id = ${rootId}
+      SELECT d.id, ARRAY[d.id] AS path FROM devices d WHERE d.id = ${rootId}
       UNION ALL
-      SELECT c.id FROM devices c
+      SELECT c.id, s.path || c.id FROM devices c
       INNER JOIN subtree s ON c.parent_id = s.id
+      WHERE NOT (c.id = ANY (s.path))
     )
     SELECT
       d.*,
@@ -672,10 +674,11 @@ export async function pgIsDeviceInSubtree(
   await ensureDeviceSchema();
   const rows = await sql`
     WITH RECURSIVE subtree AS (
-      SELECT id FROM devices WHERE id = ${rootId}
+      SELECT id, ARRAY[id] AS path FROM devices WHERE id = ${rootId}
       UNION ALL
-      SELECT c.id FROM devices c
+      SELECT c.id, s.path || c.id FROM devices c
       INNER JOIN subtree s ON c.parent_id = s.id
+      WHERE NOT (c.id = ANY (s.path))
     )
     SELECT 1 AS ok FROM subtree WHERE id = ${deviceId} LIMIT 1
   `;
@@ -702,13 +705,14 @@ export async function pgListDeviceAncestors(deviceId: string): Promise<Device[]>
   await ensureDeviceSchema();
   const rows = await sql`
     WITH RECURSIVE chain AS (
-      SELECT d.*, 0 AS depth
+      SELECT d.*, 0 AS depth, ARRAY[d.id] AS path
       FROM devices d
       WHERE d.id = ${deviceId}
       UNION ALL
-      SELECT p.*, c.depth + 1
+      SELECT p.*, c.depth + 1, c.path || p.id
       FROM devices p
       INNER JOIN chain c ON p.id = c.parent_id
+      WHERE NOT (p.id = ANY (c.path))
     )
     SELECT *
     FROM chain
@@ -763,6 +767,29 @@ export async function pgSaveDevice(data: {
   }
 
   try {
+    // Reject cycles (A→B→A): walking ancestors of the new parent must not hit this id.
+    if (parentId) {
+      const cycleRows = await sql`
+        WITH RECURSIVE chain AS (
+          SELECT id, parent_id, ARRAY[id] AS path
+          FROM devices
+          WHERE id = ${parentId}
+          UNION ALL
+          SELECT d.id, d.parent_id, c.path || d.id
+          FROM devices d
+          INNER JOIN chain c ON d.id = c.parent_id
+          WHERE NOT (d.id = ANY (c.path))
+        )
+        SELECT 1 AS ok FROM chain WHERE id = ${id} LIMIT 1
+      `;
+      if (cycleRows[0]) {
+        return {
+          success: false,
+          error: "این والد باعث حلقه در درخت دستگاه‌ها می‌شود",
+        };
+      }
+    }
+
     if (data.id) {
       await sql`
         UPDATE devices SET
@@ -826,33 +853,62 @@ export async function pgDeleteDevice(
   const sql = getSql();
   await ensureDeviceSchema();
 
-  const linked = await sql`
-    SELECT COUNT(*)::int AS count FROM users
-    WHERE device_id = ${id}
-       OR ministry_id = ${id}
-       OR organization_id = ${id}
-  `;
-  if (Number(linked[0]?.count ?? 0) > 0) {
-    return {
-      success: false,
-      error: "ابتدا کاربران متصل به این دستگاه را حذف یا جابه‌جا کنید",
-    };
-  }
+  try {
+    const linked = await sql`
+      SELECT COUNT(*)::int AS count FROM users
+      WHERE device_id = ${id}
+         OR ministry_id = ${id}
+         OR organization_id = ${id}
+    `;
+    if (Number(linked[0]?.count ?? 0) > 0) {
+      return {
+        success: false,
+        error: "ابتدا کاربران متصل به این دستگاه را حذف یا جابه‌جا کنید",
+      };
+    }
 
-  const children = await sql`
-    SELECT COUNT(*)::int AS count FROM devices WHERE parent_id = ${id}
-  `;
-  if (Number(children[0]?.count ?? 0) > 0) {
-    return {
-      success: false,
-      error: "ابتدا زیرمجموعه‌های این دستگاه را حذف یا جابه‌جا کنید",
-    };
-  }
+    const children = await sql`
+      SELECT COUNT(*)::int AS count FROM devices WHERE parent_id = ${id}
+    `;
+    if (Number(children[0]?.count ?? 0) > 0) {
+      return {
+        success: false,
+        error: "ابتدا زیرمجموعه‌های این دستگاه را حذف یا جابه‌جا کنید",
+      };
+    }
 
-  await sql`DELETE FROM devices WHERE id = ${id}`;
-  await sql`DELETE FROM ministry_organizations WHERE id = ${id}`;
-  await sql`DELETE FROM ministries WHERE id = ${id}`;
-  return { success: true };
+    // Legacy orgs under a ministry root can block DELETE FROM ministries.
+    const legacyChildren = await sql`
+      SELECT COUNT(*)::int AS count
+      FROM ministry_organizations
+      WHERE ministry_id = ${id} AND id <> ${id}
+    `;
+    if (Number(legacyChildren[0]?.count ?? 0) > 0) {
+      return {
+        success: false,
+        error: "ابتدا زیرمجموعه‌های این دستگاه را حذف یا جابه‌جا کنید",
+      };
+    }
+
+    await sql`DELETE FROM devices WHERE id = ${id}`;
+    await sql`DELETE FROM ministry_organizations WHERE id = ${id}`;
+    await sql`DELETE FROM ministries WHERE id = ${id}`;
+    return { success: true };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    console.error("[devices] delete failed", error);
+    if (
+      message.includes("foreign key") ||
+      message.includes("violates") ||
+      message.includes("Foreign key")
+    ) {
+      return {
+        success: false,
+        error: "حذف ممکن نیست؛ ابتدا وابستگی‌های این دستگاه را برطرف کنید",
+      };
+    }
+    return { success: false, error: message || "حذف دستگاه ناموفق بود" };
+  }
 }
 
 export async function pgListDeviceOfficials(

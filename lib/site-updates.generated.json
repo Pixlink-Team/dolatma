@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "a64c939f10e014eeea68bb311b39b7141ebe3ce3",
+      "committedAt": "2026-07-25T20:11:13+03:30",
+      "title": "امکان فعال و غیرفعال کردن آموزش هر بخش به‌صورت جداگانه",
+      "subject": "Enable per-section tutorial toggles"
+    },
+    {
       "hash": "01ad7af21c0ac6fe4df43992663d355afff891f0",
       "committedAt": "2026-07-25T20:06:48+03:30",
       "title": "امکان مشاهده و حذف پشتیبان‌ها از سرور",

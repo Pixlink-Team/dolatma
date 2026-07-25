@@ -87,13 +87,14 @@ export async function pgGetEffectiveDeviceCeiling(
   const sql = getSql();
   const rows = await sql`
     WITH RECURSIVE chain AS (
-      SELECT d.id, d.parent_id, 0 AS depth
+      SELECT d.id, d.parent_id, 0 AS depth, ARRAY[d.id] AS path
       FROM devices d
       WHERE d.id = ${deviceId}
       UNION ALL
-      SELECT p.id, p.parent_id, c.depth + 1
+      SELECT p.id, p.parent_id, c.depth + 1, c.path || p.id
       FROM devices p
       INNER JOIN chain c ON p.id = c.parent_id
+      WHERE NOT (p.id = ANY (c.path))
     )
     SELECT a.permissions, c.depth
     FROM chain c
@@ -132,10 +133,11 @@ async function listSubtreeDeviceIds(rootId: string): Promise<string[]> {
   const sql = getSql();
   const rows = await sql`
     WITH RECURSIVE subtree AS (
-      SELECT id FROM devices WHERE id = ${rootId}
+      SELECT id, ARRAY[id] AS path FROM devices WHERE id = ${rootId}
       UNION ALL
-      SELECT c.id FROM devices c
+      SELECT c.id, s.path || c.id FROM devices c
       INNER JOIN subtree s ON c.parent_id = s.id
+      WHERE NOT (c.id = ANY (s.path))
     )
     SELECT id FROM subtree
   `;
@@ -146,10 +148,11 @@ async function listUserIdsInDeviceSubtree(rootId: string): Promise<string[]> {
   const sql = getSql();
   const rows = await sql`
     WITH RECURSIVE subtree AS (
-      SELECT id FROM devices WHERE id = ${rootId}
+      SELECT id, ARRAY[id] AS path FROM devices WHERE id = ${rootId}
       UNION ALL
-      SELECT c.id FROM devices c
+      SELECT c.id, s.path || c.id FROM devices c
       INNER JOIN subtree s ON c.parent_id = s.id
+      WHERE NOT (c.id = ANY (s.path))
     )
     SELECT DISTINCT u.id
     FROM users u
@@ -395,13 +398,14 @@ export async function pgGetDeviceSubtreeAccess(
   const sql = getSql();
   const rows = await sql`
     WITH RECURSIVE subtree AS (
-      SELECT d.id, d.name, d.short_name, d.parent_id, 0 AS depth
+      SELECT d.id, d.name, d.short_name, d.parent_id, 0 AS depth, ARRAY[d.id] AS path
       FROM devices d
       WHERE d.id = ${rootDeviceId}
       UNION ALL
-      SELECT c.id, c.name, c.short_name, c.parent_id, s.depth + 1
+      SELECT c.id, c.name, c.short_name, c.parent_id, s.depth + 1, s.path || c.id
       FROM devices c
       INNER JOIN subtree s ON c.parent_id = s.id
+      WHERE NOT (c.id = ANY (s.path))
     )
     SELECT
       s.id,
