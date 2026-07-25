@@ -84,26 +84,31 @@ function compareUsersByName(a: AdminUser, b: AdminUser): number {
 /** Flatten org tree for selects, preserving device-tree order with visual depth. */
 function flattenOrganizationsForSelect(
   orgs: MinistryOrganization[],
-  ministryId: string
+  rootId: string
 ): { id: string; name: string; depth: number; label: string }[] {
   const byParent = new Map<string, MinistryOrganization[]>();
-  const ids = new Set(orgs.map((org) => org.id));
+  const ids = new Set(orgs.map((org) => org.id).filter(Boolean));
 
   for (const org of orgs) {
-    if (!org.id) continue;
-    const rawParent = org.parentId?.trim() || ministryId;
-    // Treat self-parent / unknown parent as ministry root so traversal cannot loop.
+    // Walk root is the visit origin only — never nest it under itself.
+    // Scoped managers pass parentOrganizationId as rootId; including that node
+    // in byParent[rootId] caused infinite recursion on /admin/users.
+    if (!org.id || org.id === rootId) continue;
+    const rawParent = org.parentId?.trim() || rootId;
+    // Treat self-parent / unknown parent / outside-scope parent as under rootId.
     const parentKey =
-      rawParent !== ministryId && rawParent !== org.id && ids.has(rawParent)
+      rawParent !== rootId && rawParent !== org.id && ids.has(rawParent)
         ? rawParent
-        : ministryId;
+        : rootId;
     const list = byParent.get(parentKey) ?? [];
     list.push(org);
     byParent.set(parentKey, list);
   }
 
   for (const list of byParent.values()) {
-    list.sort((a, b) => a.name.localeCompare(b.name, "fa"));
+    list.sort((a, b) =>
+      (a.name ?? "").localeCompare(b.name ?? "", "fa")
+    );
   }
 
   const result: { id: string; name: string; depth: number; label: string }[] = [];
@@ -112,17 +117,18 @@ function flattenOrganizationsForSelect(
     for (const org of byParent.get(parentKey) ?? []) {
       if (visited.has(org.id)) continue;
       visited.add(org.id);
+      const name = org.name?.trim() || "زیرمجموعه";
       const indent = depth > 0 ? `${"— ".repeat(depth)}` : "";
       result.push({
         id: org.id,
-        name: org.name,
+        name,
         depth,
-        label: `${indent}${org.name}`,
+        label: `${indent}${name}`,
       });
       visit(org.id, depth + 1);
     }
   };
-  visit(ministryId, 0);
+  visit(rootId, 0);
   return result;
 }
 

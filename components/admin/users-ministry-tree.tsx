@@ -72,7 +72,7 @@ function sortByName(a: AdminUser, b: AdminUser) {
 }
 
 function sortOrgNodes(a: OrgNode, b: OrgNode) {
-  return a.name.localeCompare(b.name, "fa");
+  return (a.name ?? "").localeCompare(b.name ?? "", "fa");
 }
 
 function wouldCreateOrgCycle(
@@ -103,7 +103,7 @@ function buildOrgForest(
     if (!org.id) continue;
     nodes.set(org.id, {
       id: org.id,
-      name: org.name,
+      name: org.name?.trim() || "زیرمجموعه",
       parentId: org.parentId === org.id ? ministryId : (org.parentId ?? ministryId),
       users: [...(usersByOrg.get(org.id) ?? [])].sort(sortByName),
       children: [],
@@ -364,10 +364,14 @@ export function UsersMinistryTree({
   onEdit,
   onDelete,
 }: UsersMinistryTreeProps) {
-  const groups = useMemo(
-    () => buildMinistryGroups(users, ministries),
-    [users, ministries]
-  );
+  const groups = useMemo(() => {
+    try {
+      return buildMinistryGroups(users, ministries);
+    } catch (error) {
+      console.error("UsersMinistryTree: failed to build org groups", error);
+      return [] as MinistryGroup[];
+    }
+  }, [users, ministries]);
 
   // Cards start collapsed; expand on demand via the chevron.
   const [expandedMinistryIds, setExpandedMinistryIds] = useState<Set<string>>(

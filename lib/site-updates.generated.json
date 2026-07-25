@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "4172943aaab8b1f6a099d74f598701c05b261b28",
+      "committedAt": "2026-07-25T19:59:14+03:30",
+      "title": "مخفی‌سازی مرحله دستورکار در راه‌اندازی برای کاربران بدون دسترسی یا بدون زیرمجموعه",
+      "subject": "Hide directives onboarding without access or subordinates"
+    },
+    {
       "hash": "ba5aad387513c97057cb764b123da2eff6a992f2",
       "committedAt": "2026-07-25T18:46:55+03:30",
       "title": "رفع خطای باز شدن بخش کاربران برای مدیران زیرمجموعه",

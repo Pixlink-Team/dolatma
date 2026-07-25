@@ -480,13 +480,14 @@ export async function pgGetSubUsersForParent(parentUserId: string): Promise<Admi
   await ensureOrgUserSchema();
   const rows = await sql`
     WITH RECURSIVE descendants AS (
-      SELECT id FROM users
+      SELECT id, ARRAY[id] AS path FROM users
       WHERE parent_user_id = ${parentUserId}
         AND role = 'org_user'
       UNION ALL
-      SELECT u.id FROM users u
+      SELECT u.id, d.path || u.id FROM users u
       INNER JOIN descendants d ON u.parent_user_id = d.id
       WHERE u.role = 'org_user'
+        AND NOT (u.id = ANY (d.path))
     )
     SELECT
       u.*,
