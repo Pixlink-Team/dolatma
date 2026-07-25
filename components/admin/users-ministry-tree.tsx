@@ -75,9 +75,19 @@ function buildMinistryGroups(
       list.sort(sortByName);
     }
 
+    // Nest by parent_user_id even when manageSubtreeUsers was revoked — hierarchy
+    // visibility must not depend on the management permission flag.
+    const parentIdsWithChildren = new Set(childrenByParent.keys());
     const parents: ParentBranch[] = groupUsers
-      .filter((user) => isSubtreeParentUser(user))
-      .sort(sortByName)
+      .filter(
+        (user) => parentIdsWithChildren.has(user.id) || isSubtreeParentUser(user)
+      )
+      .sort((a, b) => {
+        const aHasChildren = parentIdsWithChildren.has(a.id) ? 0 : 1;
+        const bHasChildren = parentIdsWithChildren.has(b.id) ? 0 : 1;
+        if (aHasChildren !== bHasChildren) return aHasChildren - bHasChildren;
+        return sortByName(a, b);
+      })
       .map((user) => ({
         user,
         children: childrenByParent.get(user.id) ?? [],
@@ -265,6 +275,11 @@ export function UsersMinistryTree({
                                 بدون زیرمجموعه
                               </Badge>
                             )}
+                            {isSubtreeParentUser(branch.user) ? (
+                              <Badge variant="secondary" className="text-[10px] font-normal">
+                                مدیریت زیرشاخه
+                              </Badge>
+                            ) : null}
                           </div>
                           <UserMeta user={branch.user} />
                         </div>

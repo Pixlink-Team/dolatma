@@ -5,6 +5,7 @@ import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
 import { UsersAdmin } from "@/components/admin/users-admin";
 import { pgGetSubUsersForParent, pgGetUserById } from "@/lib/db/repository-extended";
 import { pgEnsureDefaultMinistries, pgListMinistries } from "@/lib/db/repository-ministries";
+import { isOrgUserRole } from "@/lib/user-roles";
 import { isPostgresConfigured } from "@/lib/utils";
 
 export default async function UsersPage() {
@@ -13,10 +14,12 @@ export default async function UsersPage() {
 
   const isAdmin = isFullAdmin(session);
   const isClient = isClientUser(session);
+  const isOrgUser = isOrgUserRole(session.role);
 
   const canManageSubtree = canManageSubtreeUsers(session);
 
-  if (!isAdmin && !isClient && !canManageSubtree) redirect("/admin");
+  // Org users keep structure visibility even when manageSubtreeUsers is revoked.
+  if (!isAdmin && !isClient && !isOrgUser) redirect("/admin");
 
   if (isPostgresConfigured()) {
     await pgEnsureDefaultMinistries();
@@ -27,7 +30,7 @@ export default async function UsersPage() {
     isPostgresConfigured() ? pgListMinistries({ includeOrganizations: true }) : Promise.resolve([]),
   ]);
 
-  if (canManageSubtree && !isAdmin && session.userId) {
+  if (isOrgUser && !isAdmin && session.userId) {
     const [subUsers, parentUser] = await Promise.all([
       pgGetSubUsersForParent(session.userId),
       pgGetUserById(session.userId),
@@ -37,7 +40,7 @@ export default async function UsersPage() {
         initialUsers={subUsers}
         campaigns={campaigns}
         ministries={ministries}
-        mode="sub_users"
+        mode={canManageSubtree ? "sub_users" : "view_subtree"}
         parentUserId={session.userId}
         parentMinistryId={parentUser?.ministryId ?? null}
       />

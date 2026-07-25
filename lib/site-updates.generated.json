@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "610b2e8696a8833df434de18e57f39e8b500700d",
+      "committedAt": "2026-07-25T16:27:34+03:30",
+      "title": "رفع خطای صفحه هنگام دادن دسترسی پنل به کاربران",
+      "subject": "Fix client crash when granting user panel access"
+    },
+    {
       "hash": "972c0bb41d2014b28aa3c918d07f6806f8fdeb4e",
       "committedAt": "2026-07-25T16:20:46+03:30",
       "title": "امکان ایجاد زیرمجموعه جدید هنگام تعریف کاربر اگر در لیست نبود",

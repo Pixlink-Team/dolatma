@@ -90,8 +90,8 @@ interface UsersAdminProps {
   initialUsers: AdminUser[];
   campaigns: CampaignSettings[];
   ministries?: Ministry[];
-  /** full = admin; ministry = client can only set ministry; sub_users = ministry parent manages children */
-  mode?: "full" | "ministry" | "sub_users";
+  /** full = admin; ministry = client can only set ministry; sub_users = ministry parent manages children; view_subtree = read-only structure */
+  mode?: "full" | "ministry" | "sub_users" | "view_subtree";
   parentUserId?: string;
   parentMinistryId?: string | null;
 }
@@ -106,6 +106,7 @@ export function UsersAdmin({
 }: UsersAdminProps) {
   const isFullMode = mode === "full";
   const isSubUsersMode = mode === "sub_users";
+  const isViewSubtreeMode = mode === "view_subtree";
   const isMinistryOnlyMode = mode === "ministry";
   const canManageUsers = isFullMode || isSubUsersMode;
   const [open, setOpen] = useState(false);
@@ -736,25 +737,29 @@ export function UsersAdmin({
     <div className="space-y-4">
       <div>
         <h1 className="text-2xl font-bold">
-          {isSubUsersMode ? "کاربران زیرمجموعه" : "کاربران"}
+          {isSubUsersMode || isViewSubtreeMode ? "کاربران زیرمجموعه" : "کاربران"}
         </h1>
         <p className="text-sm text-muted-foreground">
           {isFullMode
             ? "سمت‌های سازمانی (مدیر، ناظر، معاون، روابط عمومی) و دسترسی‌های زیرشاخه"
             : isSubUsersMode
               ? "ایجاد و مدیریت کاربران زیرمجموعه با سمت سازمانی"
-              : "تعیین وزارتخانه کاربران و مشاهده توزیع درختی"}
+              : isViewSubtreeMode
+                ? "مشاهده ساختار کاربران زیرمجموعه (بدون دسترسی مدیریت)"
+                : "تعیین وزارتخانه کاربران و مشاهده توزیع درختی"}
         </p>
       </div>
 
-      <Tabs defaultValue={isSubUsersMode ? "list" : "tree"}>
+      <Tabs defaultValue={isSubUsersMode || isViewSubtreeMode ? "list" : "tree"}>
         <TabsList>
-          {!isSubUsersMode && <TabsTrigger value="tree">نمای درختی</TabsTrigger>}
-          <TabsTrigger value="list">{isSubUsersMode ? "لیست کاربران" : "لیست جدول"}</TabsTrigger>
+          {!isSubUsersMode && !isViewSubtreeMode && <TabsTrigger value="tree">نمای درختی</TabsTrigger>}
+          <TabsTrigger value="list">
+            {isSubUsersMode || isViewSubtreeMode ? "لیست کاربران" : "لیست جدول"}
+          </TabsTrigger>
           {isFullMode && <TabsTrigger value="import">ورود از Excel</TabsTrigger>}
         </TabsList>
 
-        {!isSubUsersMode && (
+        {!isSubUsersMode && !isViewSubtreeMode && (
           <TabsContent value="tree" className="mt-4 space-y-4">
             {canManageUsers && (
               <div className="flex justify-end">
@@ -856,7 +861,7 @@ export function UsersAdmin({
             <UsersMinistryTree
               users={filteredRows}
               ministries={ministriesList}
-              onEdit={openEdit}
+              onEdit={canManageUsers || isMinistryOnlyMode ? openEdit : undefined}
               onDelete={
                 canManageUsers
                   ? (user) => {
@@ -1078,7 +1083,7 @@ export function UsersAdmin({
                 ),
               },
             ]}
-            onEdit={openEdit}
+            onEdit={canManageUsers || isMinistryOnlyMode ? openEdit : undefined}
             renderBulkActions={
               isFullMode
                 ? ({ selectedItems, clearSelection }) => (

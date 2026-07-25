@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { DevicesAdmin } from "@/components/admin/devices-admin";
 import {
+  canAccessDevicesPage,
   getSessionHomeDeviceId,
   isDeviceTreeScopedRole,
   listAccessibleDevices,
@@ -15,9 +16,9 @@ export default async function MinistriesPage() {
   if (!session) redirect("/admin/login");
 
   const fullAdmin = isFullAdmin(session);
+  // View stays open for the caller's device subtree; manage is a separate flag.
+  if (!canAccessDevicesPage(session)) redirect("/admin");
   const canManageDevices = canManageSubtreeDevices(session);
-  // Mirror users page: revoke manageSubtreeDevices → no tree menu or page.
-  if (!fullAdmin && !canManageDevices) redirect("/admin");
   let devices: Awaited<ReturnType<typeof listAccessibleDevices>> = [];
   let homeDeviceId: string | null = null;
 

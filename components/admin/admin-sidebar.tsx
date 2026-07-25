@@ -58,6 +58,7 @@ import {
   type ContributorPermissionKey,
   type ContributorPermissions,
 } from "@/lib/contributor-permissions";
+import { isDeviceScopedPanelRole, isOrgUserRole } from "@/lib/user-roles";
 import { MEDIA_COMMAND_NAV } from "@/lib/media-command/labels";
 import { MONITORING_NAV } from "@/lib/monitoring/labels";
 
@@ -67,9 +68,9 @@ const allNavItems: {
   icon: typeof LayoutDashboard;
   adminOnly?: boolean;
   adminOrClientOnly?: boolean;
-  /** Visible to admin, client, and org users with manageSubtreeUsers. */
+  /** Visible to admin, client, and org users (structure view; manage is separate). */
   usersNav?: boolean;
-  /** Visible to admin and org users with manageSubtreeDevices. */
+  /** Visible to admin and device-scoped org users (structure view; manage is separate). */
   devicesNav?: boolean;
   /** Always visible for every panel user (not gated by section permissions). */
   alwaysVisible?: boolean;
@@ -138,8 +139,8 @@ export function AdminSidebar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isFullAdminUser, setIsFullAdminUser] = useState(false);
   const [isClientRole, setIsClientRole] = useState(false);
-  const [isMinistryParent, setIsMinistryParent] = useState(false);
-  const [canManageDevicesNav, setCanManageDevicesNav] = useState(false);
+  const [canViewUsersNav, setCanViewUsersNav] = useState(false);
+  const [canViewDevicesNav, setCanViewDevicesNav] = useState(false);
   const [permissions, setPermissions] = useState<ContributorPermissions | null>(null);
   const [mediaCommandOpen, setMediaCommandOpen] = useState(false);
   const [monitoringOpen, setMonitoringOpen] = useState(false);
@@ -154,14 +155,9 @@ export function AdminSidebar() {
                         if (cancelled || !session) return;
                         setIsFullAdminUser(session.type === "env_admin" || session.role === "admin");
                         setIsClientRole(session.role === "client");
-                        const canManageUsers =
-                          Boolean(session.permissions?.manageSubtreeUsers) ||
-                          (!session.permissions && Boolean(session.manageSubtreeUsers));
-                        const canManageDevices =
-                          Boolean(session.permissions?.manageSubtreeDevices) ||
-                          (!session.permissions && Boolean(session.manageSubtreeDevices));
-                        setIsMinistryParent(canManageUsers && session.role !== "admin" && session.role !== "client");
-                        setCanManageDevicesNav(canManageDevices);
+                        // Structure menus stay visible for org users even if manage flags are off.
+                        setCanViewUsersNav(isOrgUserRole(session.role));
+                        setCanViewDevicesNav(isDeviceScopedPanelRole(session.role));
                         setPermissions(session.permissions ?? null);
                       })
                       .catch((error) => {
@@ -204,10 +200,10 @@ export function AdminSidebar() {
   const navItems = allNavItems.filter((item) => {
     if (item.alwaysVisible) return true;
     if (item.usersNav) {
-      return isFullAdminUser || isClientRole || isMinistryParent;
+      return isFullAdminUser || isClientRole || canViewUsersNav;
     }
     if (item.devicesNav) {
-      return isFullAdminUser || canManageDevicesNav;
+      return isFullAdminUser || canViewDevicesNav;
     }
     // Panel management items: admin/client always, or org_user with explicit grant.
     if (item.adminOrClientOnly) {
