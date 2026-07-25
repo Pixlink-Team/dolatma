@@ -17,10 +17,10 @@ import {
 } from "@/components/ui/select";
 import { MediaUpload } from "@/components/ui/media-upload";
 import {
-  getSectionTutorialsEnabledAction,
+  getSectionTutorialsEnabledMapAction,
   listTutorialsForAdminAction,
   saveSectionTutorialAction,
-  setSectionTutorialsEnabledAction,
+  setSectionTutorialEnabledAction,
 } from "@/lib/actions/tutorial-actions";
 import {
   TUTORIAL_SECTION_KEYS,
@@ -35,6 +35,12 @@ function emptyStep(): TutorialStep {
   return { title: "", body: "", imageUrl: null };
 }
 
+function defaultEnabledMap(): Record<TutorialSectionKey, boolean> {
+  return Object.fromEntries(
+    TUTORIAL_SECTION_KEYS.map((key) => [key, true])
+  ) as Record<TutorialSectionKey, boolean>;
+}
+
 export function TutorialsAdmin({ canEdit = true }: { canEdit?: boolean }) {
   const [tutorials, setTutorials] = useState<SectionTutorial[]>([]);
   const [sectionKey, setSectionKey] = useState<TutorialSectionKey>("posters");
@@ -42,7 +48,8 @@ export function TutorialsAdmin({ canEdit = true }: { canEdit?: boolean }) {
   const [steps, setSteps] = useState<TutorialStep[]>([emptyStep()]);
   const [version, setVersion] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [tutorialsEnabled, setTutorialsEnabled] = useState(true);
+  const [enabledBySection, setEnabledBySection] =
+    useState<Record<TutorialSectionKey, boolean>>(defaultEnabledMap);
   const [enabledLoaded, setEnabledLoaded] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [isTogglingEnabled, startToggleTransition] = useTransition();
@@ -51,11 +58,13 @@ export function TutorialsAdmin({ canEdit = true }: { canEdit?: boolean }) {
     return new Map(tutorials.map((item) => [item.sectionKey, item]));
   }, [tutorials]);
 
+  const sectionEnabled = enabledBySection[sectionKey] !== false;
+
   const loadTutorials = async () => {
     setLoading(true);
     const [listResult, enabledResult] = await Promise.all([
       listTutorialsForAdminAction(),
-      getSectionTutorialsEnabledAction(),
+      getSectionTutorialsEnabledMapAction(),
     ]);
     if (!listResult.success) {
       toast.error(listResult.error ?? "بارگذاری آموزش‌ها ناموفق بود");
@@ -64,7 +73,7 @@ export function TutorialsAdmin({ canEdit = true }: { canEdit?: boolean }) {
     }
     setTutorials(listResult.tutorials);
     if (enabledResult.success) {
-      setTutorialsEnabled(enabledResult.enabled);
+      setEnabledBySection(enabledResult.enabledBySection);
     }
     setEnabledLoaded(true);
     setLoading(false);
@@ -94,19 +103,19 @@ export function TutorialsAdmin({ canEdit = true }: { canEdit?: boolean }) {
   };
 
   const handleToggleEnabled = (nextEnabled: boolean) => {
-    const previous = tutorialsEnabled;
-    setTutorialsEnabled(nextEnabled);
+    const previous = enabledBySection[sectionKey];
+    setEnabledBySection((prev) => ({ ...prev, [sectionKey]: nextEnabled }));
     startToggleTransition(async () => {
-      const result = await setSectionTutorialsEnabledAction(nextEnabled);
+      const result = await setSectionTutorialEnabledAction(sectionKey, nextEnabled);
       if (!result.success) {
-        setTutorialsEnabled(previous);
+        setEnabledBySection((prev) => ({ ...prev, [sectionKey]: previous }));
         toast.error(result.error ?? "ذخیره وضعیت آموزش ناموفق بود");
         return;
       }
       toast.success(
         nextEnabled
-          ? "آموزش بخش‌ها فعال شد"
-          : "آموزش بخش‌ها موقتاً غیرفعال شد — contributor بدون آموزش می‌تواند محتوا اضافه کند"
+          ? `آموزش «${tutorialSectionLabels[sectionKey]}» فعال شد`
+          : `آموزش «${tutorialSectionLabels[sectionKey]}» غیرفعال شد — contributor بدون آموزش می‌تواند در این بخش محتوا اضافه کند`
       );
     });
   };
@@ -133,39 +142,19 @@ export function TutorialsAdmin({ canEdit = true }: { canEdit?: boolean }) {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold">آموزش بخش‌ها</h1>
-          <p className="text-sm text-muted-foreground">
-            {canEdit
-              ? "محتوای مودال آموزشی هر بخش را مدیریت کنید. تا وقتی آموزش نوشته نشود، contributor نمی‌تواند در آن بخش محتوا اضافه کند."
-              : "مشاهده محتوای آموزشی بخش‌های پنل."}
-          </p>
-        </div>
-        {canEdit ? (
-        <div className="flex items-center gap-3 rounded-xl border bg-card px-4 py-3">
-          <div className="min-w-0 text-right">
-            <p className="text-sm font-medium">اجبار آموزش برای contributor</p>
-            <p className="text-xs text-muted-foreground">
-              {tutorialsEnabled
-                ? "فعال — قبل از افزودن محتوا باید آموزش را ببینند"
-                : "غیرفعال — فعلاً بدون آموزش می‌توانند محتوا اضافه کنند"}
-            </p>
-          </div>
-          <Switch
-            checked={tutorialsEnabled}
-            disabled={!enabledLoaded || isTogglingEnabled}
-            onCheckedChange={handleToggleEnabled}
-            aria-label="فعال‌سازی آموزش بخش‌ها"
-          />
-        </div>
-        ) : null}
+      <div>
+        <h1 className="text-2xl font-bold">آموزش بخش‌ها</h1>
+        <p className="text-sm text-muted-foreground">
+          {canEdit
+            ? "محتوای مودال آموزشی هر بخش را مدیریت کنید. می‌توانید آموزش هر بخش را جداگانه فعال یا غیرفعال کنید. تا وقتی آموزش نوشته نشود، contributor نمی‌تواند در آن بخش محتوا اضافه کند."
+            : "مشاهده محتوای آموزشی بخش‌های پنل."}
+        </p>
       </div>
 
-      {!canEdit ? null : !tutorialsEnabled && (
+      {!canEdit ? null : !sectionEnabled && (
         <div className="rounded-xl border border-warning/40 bg-warning/10 px-4 py-3 text-sm text-warning">
-          آموزش‌ها موقتاً غیرفعال هستند. مودال آموزشی نشان داده نمی‌شود و گیت سرور هم رد
-          می‌شود.
+          آموزش «{tutorialSectionLabels[sectionKey]}» موقتاً غیرفعال است. مودال آموزشی
+          این بخش نشان داده نمی‌شود و گیت سرور هم برای همین بخش رد می‌شود.
         </div>
       )}
 
@@ -183,10 +172,12 @@ export function TutorialsAdmin({ canEdit = true }: { canEdit?: boolean }) {
               {TUTORIAL_SECTION_KEYS.map((key) => {
                 const existing = tutorialMap.get(key);
                 const ready = Boolean(existing?.steps.length);
+                const enabled = enabledBySection[key] !== false;
                 return (
                   <SelectItem key={key} value={key}>
                     {tutorialSectionLabels[key]}
                     {ready ? " ✓" : " (خالی)"}
+                    {!enabled ? " — غیرفعال" : ""}
                   </SelectItem>
                 );
               })}
@@ -209,6 +200,25 @@ export function TutorialsAdmin({ canEdit = true }: { canEdit?: boolean }) {
               <p>با هر ذخیره، نسخه افزایش می‌یابد و contributorها باید دوباره ببینند.</p>
             ) : null}
           </div>
+
+          {canEdit ? (
+            <div className="flex items-center justify-between gap-3 rounded-lg border bg-card px-3 py-3">
+              <div className="min-w-0 text-right">
+                <p className="text-sm font-medium">اجبار آموزش این بخش</p>
+                <p className="text-xs text-muted-foreground">
+                  {sectionEnabled
+                    ? "فعال — قبل از افزودن محتوا باید آموزش را ببینند"
+                    : "غیرفعال — فعلاً بدون آموزش می‌توانند محتوا اضافه کنند"}
+                </p>
+              </div>
+              <Switch
+                checked={sectionEnabled}
+                disabled={!enabledLoaded || isTogglingEnabled}
+                onCheckedChange={handleToggleEnabled}
+                aria-label={`فعال‌سازی آموزش ${tutorialSectionLabels[sectionKey]}`}
+              />
+            </div>
+          ) : null}
         </div>
 
         <div className="space-y-4">

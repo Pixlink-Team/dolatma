@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "01ad7af21c0ac6fe4df43992663d355afff891f0",
+      "committedAt": "2026-07-25T20:06:48+03:30",
+      "title": "امکان مشاهده و حذف پشتیبان‌ها از سرور",
+      "subject": "Add backup list and server delete in campaign tools"
+    },
+    {
       "hash": "376e55bed23e4d2e3426baeaec9e23f0a9ddb438",
       "committedAt": "2026-07-25T20:03:51+03:30",
       "title": "رفع خطای بخش کاربران برای مدیران سطح سوم زیرمجموعه",
