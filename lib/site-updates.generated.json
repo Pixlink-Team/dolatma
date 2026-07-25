@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "69c72f45dc63e73fbc5db0f9b90f3d2faa7330d7",
+      "committedAt": "2026-07-25T11:20:32+03:30",
+      "title": "نمایش درست درخت کاربران بدون بریده شدن کنترل‌ها",
+      "subject": "Allow non-truncated cells in admin data table for tree UI"
+    },
+    {
       "hash": "b9c122cb2e797cfdb975cc10ea1567f330ed6cd3",
       "committedAt": "2026-07-25T11:16:08+03:30",
       "title": "نمایش نام کاربری عادی در پروفایل به‌جای آدرس ایمیل داخلی",

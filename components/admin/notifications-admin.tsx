@@ -7,6 +7,7 @@ import { Check, ExternalLink } from "lucide-react";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { AdminContentPreviewDialog } from "@/components/admin/admin-content-preview-dialog";
+import { AdminViewModeToggle } from "@/components/admin/admin-view-mode-toggle";
 import { ContentScoreControl } from "@/components/admin/content-score-control";
 import { VideoModal } from "@/components/media/video-modal";
 import { Badge } from "@/components/ui/badge";
@@ -40,6 +41,7 @@ import {
   type NotificationView,
 } from "@/lib/notification-feed";
 import { resolveDisplayVersion } from "@/lib/media-utils";
+import { useAdminViewMode } from "@/lib/hooks/use-admin-view-mode";
 import type {
   Billboard,
   CampaignActivity,
@@ -213,6 +215,107 @@ function NotificationCard({
   );
 }
 
+function NotificationListRow({
+  item,
+  campaignId,
+  canScore,
+  selected,
+  onToggleSelect,
+  onOpen,
+  showConfirm,
+  confirming,
+  onConfirm,
+  onScoreSaved,
+}: {
+  item: NotificationFeedItem;
+  campaignId: string;
+  canScore: boolean;
+  selected: boolean;
+  onToggleSelect: () => void;
+  onOpen: () => void;
+  showConfirm?: boolean;
+  confirming?: boolean;
+  onConfirm?: () => void;
+  onScoreSaved?: (score: number | null) => void;
+}) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3 last:border-b-0">
+      <div className="flex min-w-0 items-start gap-3">
+        <input
+          type="checkbox"
+          className="mt-1 h-4 w-4 accent-primary"
+          checked={selected}
+          onChange={onToggleSelect}
+          aria-label={`انتخاب ${item.title}`}
+        />
+        <button
+          type="button"
+          onClick={onOpen}
+          className="min-w-0 text-right focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <p className="truncate font-medium">{item.title}</p>
+            <Badge variant="outline" className="shrink-0 text-[10px]">
+              {item.typeLabel}
+            </Badge>
+            {item.score == null ? (
+              <Badge variant="secondary" className="shrink-0 text-[10px]">
+                بدون امتیاز
+              </Badge>
+            ) : (
+              <Badge variant="secondary" className="shrink-0 text-[10px]">
+                امتیاز {formatPersianNumber(item.score)}
+              </Badge>
+            )}
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {item.ownerName ?? "کاربر"}
+            {(item.ownerProvince || item.ownerCity)
+              ? ` · ${[item.ownerProvince, item.ownerCity].filter(Boolean).join(" / ")}`
+              : ""}
+            {item.planLabel ? ` · ${item.planLabel}` : ""}
+            {` · ${formatPersianDateTime(item.eventAt)}`}
+          </p>
+        </button>
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        {canScore && (
+          <ContentScoreControl
+            campaignId={campaignId}
+            contentType={item.contentType}
+            contentId={item.contentId}
+            score={item.score}
+            canScore={canScore}
+            compact
+            onScoreSaved={onScoreSaved}
+          />
+        )}
+        <Button type="button" variant="outline" size="sm" onClick={onOpen}>
+          نمایش
+        </Button>
+        {showConfirm && onConfirm && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+            disabled={confirming}
+            onClick={onConfirm}
+          >
+            <Check className="h-3.5 w-3.5" />
+            تأیید مشاهده
+          </Button>
+        )}
+        <Button type="button" variant="ghost" size="icon" className="shrink-0" asChild>
+          <Link href={item.adminPath} title="ویرایش در پنل">
+            <ExternalLink className="h-4 w-4" />
+          </Link>
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export function NotificationsAdmin({
   campaignId,
   isAdmin,
@@ -226,6 +329,7 @@ export function NotificationsAdmin({
   videoVersions = [],
 }: NotificationsAdminProps) {
   const router = useRouter();
+  const { viewMode, setViewMode } = useAdminViewMode("notifications");
   const [view, setView] = useState<NotificationFilterView>("new");
   const [range, setRange] = useState<NotificationRange>("week");
   const [sort, setSort] = useState<NotificationSort>("upload");
@@ -398,16 +502,19 @@ export function NotificationsAdmin({
         <div>
           <h1 className="text-2xl font-bold">اعلان‌ها</h1>
           <p className="text-sm text-muted-foreground">
-            {isAdmin ? "مدیر و کارفرما" : "کارفرما"} — محتوای آپلودشده با نمایش کارتی
+            {isAdmin ? "مدیر و کارفرما" : "کارفرما"} — محتوای آپلودشده
           </p>
         </div>
-        <Tabs value={view} onValueChange={(value) => setView(value as NotificationFilterView)}>
-          <TabsList>
-            <TabsTrigger value="new">جدید</TabsTrigger>
-            <TabsTrigger value="seen">دیده‌شده‌ها</TabsTrigger>
-            <TabsTrigger value="unscored">امتیاز نداده‌ها</TabsTrigger>
-          </TabsList>
-        </Tabs>
+        <div className="flex flex-wrap items-center gap-2">
+          <AdminViewModeToggle value={viewMode} onChange={setViewMode} />
+          <Tabs value={view} onValueChange={(value) => setView(value as NotificationFilterView)}>
+            <TabsList>
+              <TabsTrigger value="new">جدید</TabsTrigger>
+              <TabsTrigger value="seen">دیده‌شده‌ها</TabsTrigger>
+              <TabsTrigger value="unscored">امتیاز نداده‌ها</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -499,7 +606,7 @@ export function NotificationsAdmin({
               : "امتیاز نداده‌ها"}
           : {formatPersianNumber(filtered.length)}
           {view === "new" && " — موارد فقط با تأیید صریح به‌عنوان دیده‌شده ثبت می‌شوند."}
-          {view === "unscored" && canScore && " — روی هر کارت می‌توانید امتیاز بدهید."}
+          {view === "unscored" && canScore && " — روی هر مورد می‌توانید امتیاز بدهید."}
         </p>
       </div>
 
@@ -518,25 +625,47 @@ export function NotificationsAdmin({
           {grouped.map(([date, items]) => (
             <div key={date} className="space-y-3">
               <h2 className="text-sm font-semibold">{formatPersianDate(date)}</h2>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {items.map((item) => (
-                  <NotificationCard
-                    key={item.key}
-                    item={item}
-                    campaignId={campaignId}
-                    canScore={canScore}
-                    selected={selectedKeys.has(item.key)}
-                    onToggleSelect={() => toggleSelect(item.key)}
-                    onOpen={() => setPreviewItem(item)}
-                    showConfirm={view === "new" || view === "unscored"}
-                    confirming={confirmingKey === item.key}
-                    onConfirm={() => handleConfirmItem(item.key)}
-                    onScoreSaved={(score) => {
-                      setScoreOverrides((prev) => ({ ...prev, [item.key]: score }));
-                    }}
-                  />
-                ))}
-              </div>
+              {viewMode === "grid" ? (
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  {items.map((item) => (
+                    <NotificationCard
+                      key={item.key}
+                      item={item}
+                      campaignId={campaignId}
+                      canScore={canScore}
+                      selected={selectedKeys.has(item.key)}
+                      onToggleSelect={() => toggleSelect(item.key)}
+                      onOpen={() => setPreviewItem(item)}
+                      showConfirm={view === "new" || view === "unscored"}
+                      confirming={confirmingKey === item.key}
+                      onConfirm={() => handleConfirmItem(item.key)}
+                      onScoreSaved={(score) => {
+                        setScoreOverrides((prev) => ({ ...prev, [item.key]: score }));
+                      }}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="overflow-hidden rounded-xl border">
+                  {items.map((item) => (
+                    <NotificationListRow
+                      key={item.key}
+                      item={item}
+                      campaignId={campaignId}
+                      canScore={canScore}
+                      selected={selectedKeys.has(item.key)}
+                      onToggleSelect={() => toggleSelect(item.key)}
+                      onOpen={() => setPreviewItem(item)}
+                      showConfirm={view === "new" || view === "unscored"}
+                      confirming={confirmingKey === item.key}
+                      onConfirm={() => handleConfirmItem(item.key)}
+                      onScoreSaved={(score) => {
+                        setScoreOverrides((prev) => ({ ...prev, [item.key]: score }));
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           ))}
         </div>

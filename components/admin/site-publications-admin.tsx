@@ -23,7 +23,9 @@ import {
 } from "@/components/admin/admin-content-filter-bar";
 import { AdminCompactAddCard } from "@/components/admin/admin-compact-add-card";
 import { AdminContentPreviewDialog } from "@/components/admin/admin-content-preview-dialog";
+import { AdminItemActions } from "@/components/admin/admin-item-actions";
 import { AdminSitePublicationCompactCard } from "@/components/admin/admin-site-publication-compact-card";
+import { AdminViewModeToggle } from "@/components/admin/admin-view-mode-toggle";
 import { PlanLabelSelect } from "@/components/admin/plan-label-select";
 import { ContentScoreControl } from "@/components/admin/content-score-control";
 import {
@@ -38,6 +40,7 @@ import { RefreshCw } from "lucide-react";
 import { normalizePlanLabels, type ContentTopic } from "@/lib/content-topics";
 import { type EditSuggestionMissingField } from "@/lib/edit-suggestions";
 import { useAdminEditDeepLink } from "@/lib/hooks/use-admin-edit-deep-link";
+import { useAdminViewMode } from "@/lib/hooks/use-admin-view-mode";
 import { useSectionCreateGate } from "@/lib/hooks/use-section-create-gate";
 import { useAdminInfiniteScroll } from "@/lib/hooks/use-admin-infinite-scroll";
 import { AdminInfiniteScrollSentinel } from "@/components/admin/admin-infinite-scroll-sentinel";
@@ -77,6 +80,7 @@ export function SitePublicationsAdmin({
   users = [],
 }: SitePublicationsAdminProps) {
   const { requestCreate, tutorialModal } = useSectionCreateGate("sitePublications");
+  const { viewMode, setViewMode } = useAdminViewMode("site-publications");
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [planLabels, setPlanLabels] = useState<string[]>([]);
@@ -90,7 +94,7 @@ export function SitePublicationsAdmin({
     () => rows.filter((item) => matchesAdminContentFilter(item, contentFilter)),
     [rows, contentFilter]
   );
-  const paginationResetKey = `${contentFilter.userKey}:${contentFilter.planLabels.join(",")}`;
+  const paginationResetKey = `${contentFilter.userKey}:${contentFilter.planLabels.join(",")}:${viewMode}`;
   const { visibleCount, hasMore, isLoadingMore, loadMore } = useAdminInfiniteScroll(
     filteredRows.length,
     paginationResetKey
@@ -296,6 +300,9 @@ export function SitePublicationsAdmin({
             ثبت مطالب منتشرشده در سایت با عنوان لینک‌دار، تاریخ و توضیح
           </p>
         </div>
+        <div className="flex items-center gap-2">
+          <AdminViewModeToggle value={viewMode} onChange={setViewMode} />
+        </div>
       </div>
 
       <AdminContentFilterBar
@@ -322,25 +329,70 @@ export function SitePublicationsAdmin({
         users={users}
       />
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-        {!bulk.bulkMode && <AdminCompactAddCard onClick={openCreate} label="انتشار جدید" />}
-        {visibleRows.map((post) => (
-          <BulkItemShell
-            key={post.id}
-            enabled={bulk.bulkMode}
-            selected={bulk.isSelected(post.id)}
-            onToggle={() => bulk.toggle(post.id)}
-          >
-            <AdminSitePublicationCompactCard
-              post={post}
-              onClick={() => openEdit(post)}
-              onView={() => setPreviewPost(post)}
-              onEdit={() => openEdit(post)}
-              onDelete={() => handleDelete(post)}
-            />
-          </BulkItemShell>
-        ))}
-      </div>
+      {viewMode === "grid" ? (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+          {!bulk.bulkMode && <AdminCompactAddCard onClick={openCreate} label="انتشار جدید" />}
+          {visibleRows.map((post) => (
+            <BulkItemShell
+              key={post.id}
+              enabled={bulk.bulkMode}
+              selected={bulk.isSelected(post.id)}
+              onToggle={() => bulk.toggle(post.id)}
+            >
+              <AdminSitePublicationCompactCard
+                post={post}
+                onClick={() => openEdit(post)}
+                onView={() => setPreviewPost(post)}
+                onEdit={() => openEdit(post)}
+                onDelete={() => handleDelete(post)}
+              />
+            </BulkItemShell>
+          ))}
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {!bulk.bulkMode && (
+            <div className="max-w-[10rem]">
+              <AdminCompactAddCard onClick={openCreate} label="انتشار جدید" />
+            </div>
+          )}
+          <div className="overflow-hidden rounded-xl border">
+            {visibleRows.map((post) => (
+              <div
+                key={post.id}
+                className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3 last:border-b-0"
+              >
+                <div className="flex min-w-0 items-start gap-3">
+                  {bulk.bulkMode && (
+                    <input
+                      type="checkbox"
+                      className="mt-1 h-4 w-4"
+                      checked={bulk.isSelected(post.id)}
+                      onChange={() => bulk.toggle(post.id)}
+                    />
+                  )}
+                  <div className="min-w-0">
+                    <p className="truncate font-medium">{post.title}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatPersianDate(post.publishedDate)} · {post.ownerName ?? "—"}
+                    </p>
+                  </div>
+                </div>
+                {!bulk.bulkMode && (
+                  <AdminItemActions
+                    onView={() => setPreviewPost(post)}
+                    onEdit={() => openEdit(post)}
+                    onDelete={() => handleDelete(post)}
+                  />
+                )}
+              </div>
+            ))}
+            {filteredRows.length === 0 && (
+              <div className="px-4 py-8 text-center text-sm text-muted-foreground">موردی یافت نشد.</div>
+            )}
+          </div>
+        </div>
+      )}
 
       <AdminInfiniteScrollSentinel
         hasMore={hasMore}

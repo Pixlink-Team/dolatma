@@ -19,6 +19,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AdminActivityCompactCard } from "@/components/admin/admin-activity-compact-card";
 import { AdminCompactAddCard } from "@/components/admin/admin-compact-add-card";
 import { AdminContentPreviewDialog } from "@/components/admin/admin-content-preview-dialog";
+import { AdminItemActions } from "@/components/admin/admin-item-actions";
+import { AdminViewModeToggle } from "@/components/admin/admin-view-mode-toggle";
 import { PlanLabelSelect } from "@/components/admin/plan-label-select";
 import {
   BulkItemShell,
@@ -35,6 +37,7 @@ import {
   saveCampaignActivityAction,
 } from "@/lib/actions/extended-actions";
 import { normalizePlanLabels, type ContentTopic } from "@/lib/content-topics";
+import { useAdminViewMode } from "@/lib/hooks/use-admin-view-mode";
 import { useSectionCreateGate } from "@/lib/hooks/use-section-create-gate";
 import { useAdminInfiniteScroll } from "@/lib/hooks/use-admin-infinite-scroll";
 import { AdminInfiniteScrollSentinel } from "@/components/admin/admin-infinite-scroll-sentinel";
@@ -81,6 +84,7 @@ export function PressPublicationsAdmin({
   users = [],
 }: PressPublicationsAdminProps) {
   const { requestCreate, tutorialModal } = useSectionCreateGate("pressPublications");
+  const { viewMode, setViewMode } = useAdminViewMode("press-publications");
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [mediaItems, setMediaItems] = useState<ActivityMediaItem[]>([]);
@@ -90,7 +94,7 @@ export function PressPublicationsAdmin({
   );
   const [previewActivity, setPreviewActivity] = useState<CampaignActivity | null>(null);
   const [isPending, startTransition] = useTransition();
-  const paginationResetKey = "press";
+  const paginationResetKey = `press:${viewMode}`;
   const { visibleCount, hasMore, isLoadingMore, loadMore } = useAdminInfiniteScroll(
     rows.length,
     paginationResetKey
@@ -293,6 +297,9 @@ export function PressPublicationsAdmin({
           <h1 className="text-2xl font-bold">مجله و روزنامه</h1>
           <p className="text-sm text-muted-foreground">ثبت آگهی‌های مجله و روزنامه با چند رسانه</p>
         </div>
+        <div className="flex items-center gap-2">
+          <AdminViewModeToggle value={viewMode} onChange={setViewMode} />
+        </div>
       </div>
 
       <SectionBulkEditBar
@@ -311,25 +318,70 @@ export function PressPublicationsAdmin({
         users={users}
       />
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-        {!bulk.bulkMode && <AdminCompactAddCard onClick={openCreate} label="ثبت جدید" />}
-        {visibleRows.map((activity) => (
-          <BulkItemShell
-            key={activity.id}
-            enabled={bulk.bulkMode}
-            selected={bulk.isSelected(activity.id)}
-            onToggle={() => bulk.toggle(activity.id)}
-          >
-            <AdminActivityCompactCard
-              activity={activity}
-              onClick={() => openEdit(activity)}
-              onView={() => setPreviewActivity(activity)}
-              onEdit={() => openEdit(activity)}
-              onDelete={() => handleDelete(activity)}
-            />
-          </BulkItemShell>
-        ))}
-      </div>
+      {viewMode === "grid" ? (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+          {!bulk.bulkMode && <AdminCompactAddCard onClick={openCreate} label="ثبت جدید" />}
+          {visibleRows.map((activity) => (
+            <BulkItemShell
+              key={activity.id}
+              enabled={bulk.bulkMode}
+              selected={bulk.isSelected(activity.id)}
+              onToggle={() => bulk.toggle(activity.id)}
+            >
+              <AdminActivityCompactCard
+                activity={activity}
+                onClick={() => openEdit(activity)}
+                onView={() => setPreviewActivity(activity)}
+                onEdit={() => openEdit(activity)}
+                onDelete={() => handleDelete(activity)}
+              />
+            </BulkItemShell>
+          ))}
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {!bulk.bulkMode && (
+            <div className="max-w-[10rem]">
+              <AdminCompactAddCard onClick={openCreate} label="ثبت جدید" />
+            </div>
+          )}
+          <div className="overflow-hidden rounded-xl border">
+            {visibleRows.map((activity) => (
+              <div
+                key={activity.id}
+                className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3 last:border-b-0"
+              >
+                <div className="flex min-w-0 items-start gap-3">
+                  {bulk.bulkMode && (
+                    <input
+                      type="checkbox"
+                      className="mt-1 h-4 w-4"
+                      checked={bulk.isSelected(activity.id)}
+                      onChange={() => bulk.toggle(activity.id)}
+                    />
+                  )}
+                  <div className="min-w-0">
+                    <p className="truncate font-medium">{activity.title}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {getActivityTypeLabel(activity.activityType)} · {activity.ownerName ?? "—"}
+                    </p>
+                  </div>
+                </div>
+                {!bulk.bulkMode && (
+                  <AdminItemActions
+                    onView={() => setPreviewActivity(activity)}
+                    onEdit={() => openEdit(activity)}
+                    onDelete={() => handleDelete(activity)}
+                  />
+                )}
+              </div>
+            ))}
+            {rows.length === 0 && (
+              <div className="px-4 py-8 text-center text-sm text-muted-foreground">موردی یافت نشد.</div>
+            )}
+          </div>
+        </div>
+      )}
 
       <AdminInfiniteScrollSentinel
         hasMore={hasMore}
