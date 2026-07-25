@@ -90,8 +90,13 @@ function flattenOrganizationsForSelect(
   const ids = new Set(orgs.map((org) => org.id));
 
   for (const org of orgs) {
+    if (!org.id) continue;
     const rawParent = org.parentId?.trim() || ministryId;
-    const parentKey = rawParent !== ministryId && ids.has(rawParent) ? rawParent : ministryId;
+    // Treat self-parent / unknown parent as ministry root so traversal cannot loop.
+    const parentKey =
+      rawParent !== ministryId && rawParent !== org.id && ids.has(rawParent)
+        ? rawParent
+        : ministryId;
     const list = byParent.get(parentKey) ?? [];
     list.push(org);
     byParent.set(parentKey, list);
@@ -102,8 +107,11 @@ function flattenOrganizationsForSelect(
   }
 
   const result: { id: string; name: string; depth: number; label: string }[] = [];
+  const visited = new Set<string>();
   const visit = (parentKey: string, depth: number) => {
     for (const org of byParent.get(parentKey) ?? []) {
+      if (visited.has(org.id)) continue;
+      visited.add(org.id);
       const indent = depth > 0 ? `${"— ".repeat(depth)}` : "";
       result.push({
         id: org.id,

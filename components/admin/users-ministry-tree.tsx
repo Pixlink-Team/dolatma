@@ -52,10 +52,16 @@ type UsersModalTarget =
       subtitle: string;
     };
 
-function findOrgNode(nodes: OrgNode[], orgId: string): OrgNode | null {
+function findOrgNode(
+  nodes: OrgNode[],
+  orgId: string,
+  seen = new Set<string>()
+): OrgNode | null {
   for (const node of nodes) {
+    if (seen.has(node.id)) continue;
+    seen.add(node.id);
     if (node.id === orgId) return node;
-    const nested = findOrgNode(node.children, orgId);
+    const nested = findOrgNode(node.children, orgId, seen);
     if (nested) return nested;
   }
   return null;
@@ -69,6 +75,23 @@ function sortOrgNodes(a: OrgNode, b: OrgNode) {
   return a.name.localeCompare(b.name, "fa");
 }
 
+function wouldCreateOrgCycle(
+  nodes: Map<string, OrgNode>,
+  ministryId: string,
+  parentId: string,
+  childId: string
+): boolean {
+  let current: string | null = parentId;
+  const seen = new Set<string>();
+  while (current && current !== ministryId && nodes.has(current)) {
+    if (current === childId) return true;
+    if (seen.has(current)) return true;
+    seen.add(current);
+    current = nodes.get(current)?.parentId ?? null;
+  }
+  return false;
+}
+
 function buildOrgForest(
   ministryId: string,
   orgs: MinistryOrganization[],
@@ -77,10 +100,11 @@ function buildOrgForest(
   const nodes = new Map<string, OrgNode>();
 
   for (const org of orgs) {
+    if (!org.id) continue;
     nodes.set(org.id, {
       id: org.id,
       name: org.name,
-      parentId: org.parentId ?? ministryId,
+      parentId: org.parentId === org.id ? ministryId : (org.parentId ?? ministryId),
       users: [...(usersByOrg.get(org.id) ?? [])].sort(sortByName),
       children: [],
     });
@@ -104,18 +128,32 @@ function buildOrgForest(
   const roots: OrgNode[] = [];
   for (const node of nodes.values()) {
     const parentId = node.parentId;
-    if (parentId && parentId !== ministryId && nodes.has(parentId)) {
+    if (
+      parentId &&
+      parentId !== node.id &&
+      parentId !== ministryId &&
+      nodes.has(parentId) &&
+      !wouldCreateOrgCycle(nodes, ministryId, parentId, node.id)
+    ) {
       nodes.get(parentId)!.children.push(node);
     } else {
       roots.push(node);
     }
   }
 
-  const sortRecursive = (list: OrgNode[]) => {
+  const sortRecursive = (list: OrgNode[], ancestry: Set<string>) => {
     list.sort(sortOrgNodes);
-    for (const child of list) sortRecursive(child.children);
+    for (const child of list) {
+      if (ancestry.has(child.id)) {
+        child.children = [];
+        continue;
+      }
+      ancestry.add(child.id);
+      sortRecursive(child.children, ancestry);
+      ancestry.delete(child.id);
+    }
   };
-  sortRecursive(roots);
+  sortRecursive(roots, new Set());
   return roots;
 }
 
@@ -172,10 +210,12 @@ function buildMinistryGroups(
   });
 }
 
-function countOrgNodes(nodes: OrgNode[]): number {
+function countOrgNodes(nodes: OrgNode[], seen = new Set<string>()): number {
   let total = 0;
   for (const node of nodes) {
-    total += 1 + countOrgNodes(node.children);
+    if (seen.has(node.id)) continue;
+    seen.add(node.id);
+    total += 1 + countOrgNodes(node.children, seen);
   }
   return total;
 }

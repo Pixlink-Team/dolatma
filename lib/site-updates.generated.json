@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "4ab3558fd44cc7dc691fb8aebacc07b229beadd3",
+      "committedAt": "2026-07-25T18:44:49+03:30",
+      "title": "افزودن تیک اتصال کاربر به خود وزارتخانه به‌جای انتخاب از لیست",
+      "subject": "Add own-ministry checkbox when creating users"
+    },
+    {
       "hash": "548770a333145d38b0625dfab7fa270efe267829",
       "committedAt": "2026-07-25T18:38:13+03:30",
       "title": "افزودن تنظیم دسترسی برای بخش بهترین اقدامات",
