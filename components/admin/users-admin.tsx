@@ -1412,7 +1412,7 @@ export function UsersAdmin({
                         <Select
                           value={selectedMinistryId || NO_MINISTRY}
                           onOpenChange={(nextOpen) => {
-                            if (nextOpen) fieldTutorials.onFieldFocus("ministry");
+                            fieldTutorials.onSelectOpenChange("ministry", nextOpen);
                           }}
                           onValueChange={(value) => {
                             form.setValue("ministryId", value === NO_MINISTRY ? null : value);
@@ -1451,7 +1451,7 @@ export function UsersAdmin({
                               : selectedOrganizationId || NO_ORGANIZATION
                           }
                           onOpenChange={(nextOpen) => {
-                            if (nextOpen) fieldTutorials.onFieldFocus("organization");
+                            fieldTutorials.onSelectOpenChange("organization", nextOpen);
                           }}
                           onValueChange={handleOrganizationSelect}
                           disabled={!selectedMinistryId}
@@ -1558,7 +1558,7 @@ export function UsersAdmin({
                                 : selectedOrganizationId || NO_ORGANIZATION
                             }
                             onOpenChange={(nextOpen) => {
-                              if (nextOpen) fieldTutorials.onFieldFocus("organization");
+                              fieldTutorials.onSelectOpenChange("organization", nextOpen);
                             }}
                             onValueChange={handleOrganizationSelect}
                           >
@@ -1653,7 +1653,7 @@ export function UsersAdmin({
                       <Select
                         value={selectedOrgRole ?? "pr"}
                         onOpenChange={(nextOpen) => {
-                          if (nextOpen) fieldTutorials.onFieldFocus("orgRole");
+                          fieldTutorials.onSelectOpenChange("orgRole", nextOpen);
                         }}
                         onValueChange={(value) => {
                           const orgRole = value as OrgRole;

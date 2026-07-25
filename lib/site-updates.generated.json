@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "2d7bfef41cdbd5f6b19a80b24043b9371348b6dd",
+      "committedAt": "2026-07-25T20:38:50+03:30",
+      "title": "نمایش فقط درصد تکمیل راه‌اندازی دستگاه در رصد کاربران",
+      "subject": "Show onboarding completion only in Rasad"
+    },
+    {
       "hash": "51d1f1d6e2c4e35f8adcc4491ae0c6dba439e169",
       "committedAt": "2026-07-25T20:34:05+03:30",
       "title": "نمایش مودال راهنمای خطا برای کاربر و مشاهده همان خطاها در رصد",

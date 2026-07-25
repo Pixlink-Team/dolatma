@@ -39,6 +39,9 @@ export function useUserCreateFieldTutorials(enabled: boolean) {
     () => new Set()
   );
   const [activeField, setActiveField] = useState<UserCreateFieldKey | null>(null);
+  /** Select dropdown open for this field — tip stays hidden so it is not covered by the portal. */
+  const [openSelectField, setOpenSelectField] =
+    useState<UserCreateFieldKey | null>(null);
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
@@ -49,6 +52,7 @@ export function useUserCreateFieldTutorials(enabled: boolean) {
   useEffect(() => {
     if (!enabled) {
       setActiveField(null);
+      setOpenSelectField(null);
     }
   }, [enabled]);
 
@@ -59,6 +63,16 @@ export function useUserCreateFieldTutorials(enabled: boolean) {
       setActiveField(key);
     },
     [dismissed, enabled, hydrated]
+  );
+
+  const onSelectOpenChange = useCallback(
+    (key: UserCreateFieldKey, nextOpen: boolean) => {
+      setOpenSelectField(nextOpen ? key : null);
+      if (nextOpen) {
+        onFieldFocus(key);
+      }
+    },
+    [onFieldFocus]
   );
 
   const dismiss = useCallback((key: UserCreateFieldKey) => {
@@ -73,12 +87,17 @@ export function useUserCreateFieldTutorials(enabled: boolean) {
 
   const isTipVisible = useCallback(
     (key: UserCreateFieldKey) =>
-      enabled && hydrated && activeField === key && !dismissed.has(key),
-    [activeField, dismissed, enabled, hydrated]
+      enabled &&
+      hydrated &&
+      activeField === key &&
+      !dismissed.has(key) &&
+      openSelectField !== key,
+    [activeField, dismissed, enabled, hydrated, openSelectField]
   );
 
   return {
     onFieldFocus,
+    onSelectOpenChange,
     dismiss,
     isTipVisible,
   };
