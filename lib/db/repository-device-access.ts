@@ -269,6 +269,112 @@ export async function pgSaveDeviceCampaignAccess(input: {
   }
 }
 
+export type DeviceSubtreeAccessNode = {
+  deviceId: string;
+  name: string;
+  shortName: string | null;
+  parentId: string | null;
+  permissions: ContributorPermissions;
+  /** Ceiling from ancestors outside this node (excludes own row). */
+  parentCeiling: ContributorPermissions | null;
+  hasOwnRow: boolean;
+};
+
+/**
+ * Load access state for a device and every descendant so the UI can edit
+ * ceilings at every depth in one pass (not only the clicked node).
+ */
+export async function pgGetDeviceSubtreeAccess(
+  rootDeviceId: string,
+  campaignId: string
+): Promise<DeviceSubtreeAccessNode[]> {
+  await ensureDeviceAccessSchema();
+  const sql = getSql();
+  const rows = await sql`
+    WITH RECURSIVE subtree AS (
+      SELECT d.id, d.name, d.short_name, d.parent_id, 0 AS depth
+      FROM devices d
+      WHERE d.id = ${rootDeviceId}
+      UNION ALL
+      SELECT c.id, c.name, c.short_name, c.parent_id, s.depth + 1
+      FROM devices c
+      INNER JOIN subtree s ON c.parent_id = s.id
+    )
+    SELECT
+      s.id,
+      s.name,
+      s.short_name,
+      s.parent_id,
+      s.depth,
+      a.permissions AS own_permissions
+    FROM subtree s
+    LEFT JOIN device_campaign_access a
+      ON a.device_id = s.id AND a.campaign_id = ${campaignId}
+    ORDER BY s.depth ASC, COALESCE(s.short_name, s.name) ASC
+  `;
+
+  // Ceiling above the dialog root (ancestors outside the loaded subtree).
+  const rootParentCeiling = await pgGetParentDeviceCeiling(rootDeviceId, campaignId);
+
+  const ownById = new Map<string, ContributorPermissions>();
+  const parentById = new Map<string, string | null>();
+  for (const row of rows) {
+    const deviceId = String(row.id);
+    parentById.set(deviceId, row.parent_id ? String(row.parent_id) : null);
+    if (row.own_permissions) {
+      ownById.set(deviceId, normalizeContributorPermissions(row.own_permissions));
+    }
+  }
+
+  /** Effective ceiling along ancestors, excluding the node itself. */
+  const parentCeilingFor = (deviceId: string): ContributorPermissions | null => {
+    if (deviceId === rootDeviceId) return rootParentCeiling;
+
+    let ceiling: ContributorPermissions | null = null;
+    let currentParent = parentById.get(deviceId) ?? null;
+    const seen = new Set<string>();
+
+    while (currentParent && !seen.has(currentParent)) {
+      seen.add(currentParent);
+      const own = ownById.get(currentParent);
+      if (own) {
+        ceiling = ceiling ? intersectContributorPermissions(ceiling, own) : own;
+      }
+      if (currentParent === rootDeviceId) break;
+      currentParent = parentById.get(currentParent) ?? null;
+    }
+
+    if (rootParentCeiling) {
+      ceiling = ceiling
+        ? intersectContributorPermissions(ceiling, rootParentCeiling)
+        : rootParentCeiling;
+    }
+    return ceiling;
+  };
+
+  const nodes: DeviceSubtreeAccessNode[] = [];
+  for (const row of rows) {
+    const deviceId = String(row.id);
+    const own = ownById.get(deviceId) ?? null;
+    const parentCeiling = parentCeilingFor(deviceId);
+    const effective = own
+      ? parentCeiling
+        ? intersectContributorPermissions(own, parentCeiling)
+        : own
+      : parentCeiling;
+    nodes.push({
+      deviceId,
+      name: String(row.name),
+      shortName: row.short_name ? String(row.short_name) : null,
+      parentId: row.parent_id ? String(row.parent_id) : null,
+      permissions: effective ?? defaultContributorPermissions(),
+      parentCeiling,
+      hasOwnRow: Boolean(own),
+    });
+  }
+  return nodes;
+}
+
 /** Clear explicit device permissions (subtree falls back to ancestors / no ceiling). */
 export async function pgClearDeviceCampaignAccess(
   deviceId: string,

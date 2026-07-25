@@ -19,9 +19,11 @@ import {
 import {
   pgClearDeviceCampaignAccess,
   pgGetDevicePermissionsForCampaign,
+  pgGetDeviceSubtreeAccess,
   pgGetEffectiveDeviceCeiling,
   pgGetParentDeviceCeiling,
   pgSaveDeviceCampaignAccess,
+  type DeviceSubtreeAccessNode,
 } from "@/lib/db/repository-device-access";
 import { pgGetUserById } from "@/lib/db/repository-extended";
 import { isOrgUserRole } from "@/lib/user-roles";
@@ -103,6 +105,118 @@ export async function getDeviceAccessAction(deviceId: string, campaignId: string
     permissions,
     parentCeiling,
     hasOwnRow: Boolean(own),
+  };
+}
+
+/** Access ceilings for a device and all descendants (full tree edit). */
+export async function getDeviceSubtreeAccessAction(
+  deviceId: string,
+  campaignId: string
+) {
+  const session = await getAuthSession();
+  if (!session || !canAccessDevicesPage(session) || !canManageDeviceAccess(session)) {
+    return {
+      success: false as const,
+      error: "Unauthorized",
+      nodes: [] as DeviceSubtreeAccessNode[],
+    };
+  }
+  if (!isPostgresConfigured()) {
+    return {
+      success: false as const,
+      error: "Database required",
+      nodes: [] as DeviceSubtreeAccessNode[],
+    };
+  }
+
+  if (!isFullAdmin(session) && isDeviceTreeScopedRole(session)) {
+    const scope = await assertDeviceInScope(session, deviceId);
+    if (scope !== true) {
+      return {
+        success: false as const,
+        error: scope,
+        nodes: [] as DeviceSubtreeAccessNode[],
+      };
+    }
+  }
+
+  const nodes = await pgGetDeviceSubtreeAccess(deviceId, campaignId);
+  return { success: true as const, nodes };
+}
+
+/**
+ * Save access for many devices in parent→child order.
+ * Each node is written explicitly so deep levels can differ from the root ceiling.
+ */
+export async function saveDeviceSubtreeAccessAction(data: {
+  campaignId: string;
+  nodes: Array<{ deviceId: string; permissions: ContributorPermissions }>;
+}) {
+  const session = await getAuthSession();
+  if (!session || !canManageDeviceAccess(session)) {
+    return { success: false as const, error: "Unauthorized" };
+  }
+  if (!isPostgresConfigured()) {
+    return { success: false as const, error: "Database required" };
+  }
+  if (!data.nodes.length) {
+    return { success: false as const, error: "هیچ دستگاهی برای ذخیره ارسال نشده است" };
+  }
+
+  let actorPermissions: Record<string, ContributorPermissions> | null = null;
+  let homeCeiling: ContributorPermissions | null = null;
+  if (!isFullAdmin(session) && !isClientUser(session) && session.userId) {
+    const actor = await pgGetUserById(session.userId);
+    actorPermissions = actor?.campaignPermissions ?? null;
+    const homeId = await getSessionHomeDeviceId(session);
+    if (homeId) {
+      homeCeiling = await pgGetEffectiveDeviceCeiling(homeId, data.campaignId);
+    }
+  }
+
+  let clampedUsers = 0;
+  let savedDevices = 0;
+
+  for (const node of data.nodes) {
+    if (!isFullAdmin(session) && isDeviceTreeScopedRole(session)) {
+      const scope = await assertDeviceInScope(session, node.deviceId);
+      if (scope !== true) {
+        return { success: false as const, error: scope };
+      }
+    }
+
+    let permissions = normalizeContributorPermissions(node.permissions);
+    if (actorPermissions) {
+      const limited = limitCampaignPermissionsToGrantor(
+        { [data.campaignId]: permissions },
+        actorPermissions,
+        [data.campaignId]
+      );
+      permissions = limited[data.campaignId] ?? permissions;
+    }
+    if (homeCeiling) {
+      permissions = intersectContributorPermissions(permissions, homeCeiling);
+    }
+
+    // Parents are saved first by the client; applyToSubtree clamps users under each node.
+    const result = await pgSaveDeviceCampaignAccess({
+      deviceId: node.deviceId,
+      campaignId: data.campaignId,
+      permissions,
+      applyToSubtree: true,
+    });
+    if (!result.success) return result;
+    clampedUsers += result.clampedUsers;
+    savedDevices += 1;
+  }
+
+  const rootId = data.nodes[0]?.deviceId;
+  if (rootId) await revalidateAccessPaths(rootId);
+
+  return {
+    success: true as const,
+    savedDevices,
+    clampedUsers,
   };
 }
 

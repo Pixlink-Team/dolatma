@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useState, useTransition, type ReactNode } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -35,8 +35,8 @@ import {
 } from "@/lib/actions/device-actions";
 import {
   clearDeviceAccessAction,
-  getDeviceAccessAction,
-  saveDeviceAccessAction,
+  getDeviceSubtreeAccessAction,
+  saveDeviceSubtreeAccessAction,
 } from "@/lib/actions/device-access-actions";
 import { ContributorPermissionsEditor } from "@/components/admin/contributor-permissions-editor";
 import {
@@ -45,13 +45,24 @@ import {
 } from "@/lib/device-labels";
 import {
   allContributorPermissionKeys,
-  defaultContributorPermissions,
   deniedContributorPermissions,
+  intersectContributorPermissions,
   type ContributorPermissions,
 } from "@/lib/contributor-permissions";
 import type { Device, DeviceStatus, DeviceType } from "@/lib/types";
 import { adminHref } from "@/lib/utils";
 import { useAdminCampaign } from "@/components/admin/admin-campaign-provider";
+
+type AccessEditNode = {
+  deviceId: string;
+  name: string;
+  shortName: string | null;
+  parentId: string | null;
+  permissions: ContributorPermissions;
+  /** Static ceiling from ancestors above the dialog root (server). */
+  rootExternalCeiling: ContributorPermissions | null;
+  hasOwnRow: boolean;
+};
 
 const deviceSchema = z.object({
   name: z.string().min(1, "نام دستگاه الزامی است"),
@@ -110,12 +121,10 @@ export function DevicesAdmin({
 
   const [accessOpen, setAccessOpen] = useState(false);
   const [accessDevice, setAccessDevice] = useState<Device | null>(null);
-  const [accessPermissions, setAccessPermissions] = useState<ContributorPermissions>(
-    defaultContributorPermissions()
+  const [accessNodes, setAccessNodes] = useState<AccessEditNode[]>([]);
+  const [accessExpandedIds, setAccessExpandedIds] = useState<Set<string>>(
+    () => new Set()
   );
-  const [accessParentCeiling, setAccessParentCeiling] =
-    useState<ContributorPermissions | null>(null);
-  const [accessHasOwnRow, setAccessHasOwnRow] = useState(false);
   const [accessLoading, setAccessLoading] = useState(false);
 
   const childrenByParent = useMemo(() => {
@@ -231,6 +240,50 @@ export function DevicesAdmin({
     setChildOpen(true);
   };
 
+  const accessChildrenByParent = useMemo(() => {
+    const map = new Map<string, AccessEditNode[]>();
+    for (const node of accessNodes) {
+      if (!node.parentId) continue;
+      // Only nest under parents that are part of this dialog tree.
+      if (!accessNodes.some((item) => item.deviceId === node.parentId)) continue;
+      const list = map.get(node.parentId) ?? [];
+      list.push(node);
+      map.set(node.parentId, list);
+    }
+    return map;
+  }, [accessNodes]);
+
+  const accessRootNode = useMemo(() => {
+    if (!accessDevice) return null;
+    return accessNodes.find((node) => node.deviceId === accessDevice.id) ?? null;
+  }, [accessDevice, accessNodes]);
+
+  /** Live ceiling from edited ancestors in this dialog (+ external root ceiling). */
+  const liveCeilingFor = (deviceId: string): ContributorPermissions | null => {
+    const byId = new Map(accessNodes.map((node) => [node.deviceId, node]));
+    const node = byId.get(deviceId);
+    if (!node) return null;
+
+    let ceiling: ContributorPermissions | null = null;
+    let currentParent = node.parentId;
+    const seen = new Set<string>();
+
+    while (currentParent && byId.has(currentParent) && !seen.has(currentParent)) {
+      seen.add(currentParent);
+      const parent = byId.get(currentParent)!;
+      ceiling = ceiling
+        ? intersectContributorPermissions(ceiling, parent.permissions)
+        : parent.permissions;
+      currentParent = parent.parentId;
+    }
+
+    const external = accessRootNode?.rootExternalCeiling ?? null;
+    if (external) {
+      ceiling = ceiling ? intersectContributorPermissions(ceiling, external) : external;
+    }
+    return ceiling;
+  };
+
   const openAccess = (device: Device) => {
     if (!campaignId) {
       toast.error("راستا انتخاب نشده است");
@@ -239,38 +292,53 @@ export function DevicesAdmin({
     setAccessDevice(device);
     setAccessOpen(true);
     setAccessLoading(true);
-    setAccessPermissions(defaultContributorPermissions());
-    setAccessParentCeiling(null);
-    setAccessHasOwnRow(false);
+    setAccessNodes([]);
+    setAccessExpandedIds(new Set([device.id]));
     startTransition(async () => {
-      const result = await getDeviceAccessAction(device.id, campaignId);
+      const result = await getDeviceSubtreeAccessAction(device.id, campaignId);
       setAccessLoading(false);
-      if (!result.success || !result.permissions) {
+      if (!result.success) {
         toast.error(result.error || "بارگذاری دسترسی ناموفق بود");
         setAccessOpen(false);
         return;
       }
-      setAccessPermissions(result.permissions);
-      setAccessParentCeiling(result.parentCeiling);
-      setAccessHasOwnRow(result.hasOwnRow);
+      const rootExternal =
+        result.nodes.find((node) => node.deviceId === device.id)?.parentCeiling ?? null;
+      setAccessNodes(
+        result.nodes.map((node) => ({
+          deviceId: node.deviceId,
+          name: node.name,
+          shortName: node.shortName,
+          parentId: node.parentId,
+          permissions: node.permissions,
+          rootExternalCeiling: rootExternal,
+          hasOwnRow: node.hasOwnRow,
+        }))
+      );
+      // Expand first level of children so deep tree is immediately editable.
+      const firstLevel = result.nodes
+        .filter((node) => node.parentId === device.id)
+        .map((node) => node.deviceId);
+      setAccessExpandedIds(new Set([device.id, ...firstLevel]));
     });
   };
 
   const onSaveAccess = () => {
-    if (!accessDevice || !campaignId) return;
+    if (!accessDevice || !campaignId || accessNodes.length === 0) return;
     startTransition(async () => {
-      const result = await saveDeviceAccessAction({
-        deviceId: accessDevice.id,
+      const result = await saveDeviceSubtreeAccessAction({
         campaignId,
-        permissions: accessPermissions,
-        applyToSubtree: true,
+        nodes: accessNodes.map((node) => ({
+          deviceId: node.deviceId,
+          permissions: node.permissions,
+        })),
       });
       if (!result.success) {
         toast.error(result.error);
         return;
       }
       toast.success(
-        `دسترسی ذخیره شد و روی ${result.clampedUsers} کاربر و ${result.clampedDevices} زیردستگاه اعمال شد`
+        `دسترسی ${result.savedDevices} دستگاه ذخیره شد و روی ${result.clampedUsers} کاربر اعمال شد`
       );
       setAccessOpen(false);
     });
@@ -292,16 +360,126 @@ export function DevicesAdmin({
     });
   };
 
-  const enableAllAccess = () => {
-    const next = deniedContributorPermissions();
-    for (const key of allContributorPermissionKeys) {
-      next[key] = accessParentCeiling ? Boolean(accessParentCeiling[key]) : true;
-    }
-    setAccessPermissions(next);
+  const updateAccessNode = (deviceId: string, permissions: ContributorPermissions) => {
+    setAccessNodes((prev) =>
+      prev.map((node) =>
+        node.deviceId === deviceId ? { ...node, permissions } : node
+      )
+    );
   };
 
-  const disableAllAccess = () => {
-    setAccessPermissions(deniedContributorPermissions());
+  const enableAllAccessFor = (deviceId: string) => {
+    const ceiling = liveCeilingFor(deviceId);
+    const next = deniedContributorPermissions();
+    for (const key of allContributorPermissionKeys) {
+      next[key] = ceiling ? Boolean(ceiling[key]) : true;
+    }
+    updateAccessNode(deviceId, next);
+  };
+
+  const disableAllAccessFor = (deviceId: string) => {
+    updateAccessNode(deviceId, deniedContributorPermissions());
+  };
+
+  const toggleAccessExpanded = (deviceId: string) => {
+    setAccessExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(deviceId)) next.delete(deviceId);
+      else next.add(deviceId);
+      return next;
+    });
+  };
+
+  const renderAccessNode = (node: AccessEditNode, depth: number): ReactNode => {
+    const children = accessChildrenByParent.get(node.deviceId) ?? [];
+    const expanded = accessExpandedIds.has(node.deviceId);
+    const ceiling = liveCeilingFor(node.deviceId);
+    const label = node.shortName || node.name;
+
+    return (
+      <div
+        key={node.deviceId}
+        className={
+          depth === 0
+            ? "space-y-3"
+            : "space-y-3 border-r-2 border-muted pr-3 mr-1"
+        }
+      >
+        <div className="space-y-2 rounded-lg border p-3">
+          <div className="flex flex-wrap items-center gap-2">
+            {children.length > 0 ? (
+              <button
+                type="button"
+                className="rounded p-1 hover:bg-muted"
+                onClick={() => toggleAccessExpanded(node.deviceId)}
+                aria-label="باز و بسته کردن زیرمجموعه"
+              >
+                {expanded ? (
+                  <ChevronDown className="h-4 w-4" />
+                ) : (
+                  <ChevronLeft className="h-4 w-4" />
+                )}
+              </button>
+            ) : (
+              <span className="inline-block h-6 w-6 shrink-0" />
+            )}
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium">{label}</p>
+              {node.shortName && node.shortName !== node.name ? (
+                <p className="text-xs text-muted-foreground">{node.name}</p>
+              ) : null}
+            </div>
+            {depth === 0 ? (
+              <Badge variant="secondary">ریشه</Badge>
+            ) : (
+              <Badge variant="outline">سطح {depth + 1}</Badge>
+            )}
+            {!node.hasOwnRow ? (
+              <Badge variant="outline" className="text-amber-700 dark:text-amber-400">
+                بدون سقف اختصاصی
+              </Badge>
+            ) : null}
+          </div>
+          {ceiling ? (
+            <p className="text-xs text-muted-foreground">
+              محدود به سقف بالادست؛ نمی‌توانید بیشتر از والد بدهید.
+            </p>
+          ) : null}
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => enableAllAccessFor(node.deviceId)}
+              disabled={isPending}
+            >
+              فعال‌سازی همه مجاز
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => disableAllAccessFor(node.deviceId)}
+              disabled={isPending}
+            >
+              خاموش کردن همه
+            </Button>
+          </div>
+          <ContributorPermissionsEditor
+            permissions={node.permissions}
+            onChange={(next) => updateAccessNode(node.deviceId, next)}
+            ceiling={ceiling}
+            disabled={isPending}
+          />
+        </div>
+
+        {expanded && children.length > 0 ? (
+          <div className="space-y-3">
+            {children.map((child) => renderAccessNode(child, depth + 1))}
+          </div>
+        ) : null}
+      </div>
+    );
   };
 
   const onSaveDevice = form.handleSubmit((data) => {
@@ -621,10 +799,13 @@ export function DevicesAdmin({
         open={accessOpen}
         onOpenChange={(next) => {
           setAccessOpen(next);
-          if (!next) setAccessDevice(null);
+          if (!next) {
+            setAccessDevice(null);
+            setAccessNodes([]);
+          }
         }}
       >
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" dir="rtl">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto" dir="rtl">
           <DialogHeader>
             <DialogTitle>
               دسترسی دستگاه
@@ -635,36 +816,20 @@ export function DevicesAdmin({
           </DialogHeader>
           {accessLoading ? (
             <p className="text-sm text-muted-foreground">در حال بارگذاری…</p>
-          ) : (
+          ) : accessRootNode ? (
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground">
-                این دسترسی به‌عنوان سقف برای خود دستگاه، همه زیردستگاه‌ها و کاربران
-                زیرمجموعه اعمال می‌شود. بعداً می‌توانید برای هر کاربر جداگانه محدودتر کنید.
+                سقف دسترسی را برای این دستگاه و همه زیرمجموعه‌ها تا پایین درخت تنظیم
+                کنید. هر سطح می‌تواند محدودتر از والد باشد؛ ذخیره روی کاربران همان
+                شاخه اعمال می‌شود.
               </p>
-              {accessParentCeiling ? (
+              {accessNodes.length > 1 ? (
                 <p className="text-xs text-muted-foreground">
-                  سقف والد فعال است؛ نمی‌توانید بیشتر از دستگاه بالادست بدهید.
+                  {accessNodes.length} دستگاه در این درخت — با فلش زیرشاخه‌ها را باز
+                  کنید و دسترسی هر سطح را جداگانه ویرایش کنید.
                 </p>
               ) : null}
-              {!accessHasOwnRow ? (
-                <p className="text-xs text-amber-700 dark:text-amber-400">
-                  هنوز سقف اختصاصی ثبت نشده؛ با ذخیره برای این دستگاه و زیرمجموعه‌اش اعمال می‌شود.
-                </p>
-              ) : null}
-              <div className="flex flex-wrap gap-2">
-                <Button type="button" variant="outline" size="sm" onClick={enableAllAccess}>
-                  فعال‌سازی همه مجاز
-                </Button>
-                <Button type="button" variant="outline" size="sm" onClick={disableAllAccess}>
-                  خاموش کردن همه
-                </Button>
-              </div>
-              <ContributorPermissionsEditor
-                permissions={accessPermissions}
-                onChange={setAccessPermissions}
-                ceiling={accessParentCeiling}
-                disabled={isPending}
-              />
+              {renderAccessNode(accessRootNode, 0)}
               <div className="flex flex-col gap-2 sm:flex-row">
                 <Button
                   type="button"
@@ -672,20 +837,22 @@ export function DevicesAdmin({
                   disabled={isPending}
                   onClick={onSaveAccess}
                 >
-                  ذخیره و اعمال روی زیرمجموعه
+                  ذخیره کل درخت دسترسی
                 </Button>
-                {canCreateRoot && accessHasOwnRow ? (
+                {canCreateRoot && accessRootNode.hasOwnRow ? (
                   <Button
                     type="button"
                     variant="outline"
                     disabled={isPending}
                     onClick={onClearAccess}
                   >
-                    حذف سقف اختصاصی
+                    حذف سقف اختصاصی ریشه
                   </Button>
                 ) : null}
               </div>
             </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">دستگاهی برای ویرایش یافت نشد.</p>
           )}
         </DialogContent>
       </Dialog>

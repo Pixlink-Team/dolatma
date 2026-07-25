@@ -474,21 +474,30 @@ export async function pgGetAllUsers(): Promise<AdminUser[]> {
   return users;
 }
 
+/** All org_user descendants under parent (any depth), not only direct children. */
 export async function pgGetSubUsersForParent(parentUserId: string): Promise<AdminUser[]> {
   const sql = getSql();
   await ensureOrgUserSchema();
   const rows = await sql`
+    WITH RECURSIVE descendants AS (
+      SELECT id FROM users
+      WHERE parent_user_id = ${parentUserId}
+        AND role = 'org_user'
+      UNION ALL
+      SELECT u.id FROM users u
+      INNER JOIN descendants d ON u.parent_user_id = d.id
+      WHERE u.role = 'org_user'
+    )
     SELECT
       u.*,
       m.name AS ministry_name,
       o.name AS organization_name,
       p.name AS parent_user_name
     FROM users u
+    INNER JOIN descendants d ON d.id = u.id
     LEFT JOIN ministries m ON m.id = u.ministry_id
     LEFT JOIN ministry_organizations o ON o.id = u.organization_id
     LEFT JOIN users p ON p.id = u.parent_user_id
-    WHERE u.parent_user_id = ${parentUserId}
-      AND u.role = 'org_user'
     ORDER BY u.created_at DESC
   `;
   const users: AdminUser[] = [];
