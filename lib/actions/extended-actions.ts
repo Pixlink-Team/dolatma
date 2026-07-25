@@ -16,7 +16,7 @@ import * as pgExt from "@/lib/db/repository-extended";
 import type { MeetingDecisionPayload, MeetingTaskPayload } from "@/lib/db/repository-extended";
 import type { AdminRole, BroadcastReport, CampaignActivity, CampaignMeeting, SocialMediaPost, SocialPlatformStat } from "@/lib/types";
 import {
-  isDirectiveAuthorityLevel,
+  inferDefaultAuthorityLevel,
   type DirectiveAuthorityLevel,
 } from "@/lib/directive-authority";
 import { isMinistryParentRole } from "@/lib/user-roles";
@@ -657,8 +657,6 @@ export async function saveUserAction(data: {
   let parentUserId = data.parentUserId ?? null;
   let campaignIds = data.campaignIds;
   let campaignPermissions = data.campaignPermissions;
-  let authorityLevel: DirectiveAuthorityLevel | null | undefined = data.authorityLevel;
-  let authorityOther = data.authorityOther ?? null;
 
   if (isParent) {
     if (!session.userId) return { success: false, error: "Unauthorized" };
@@ -702,12 +700,12 @@ export async function saveUserAction(data: {
     ministryId = ministryId ?? null;
   }
 
-  if (authorityLevel != null && !isDirectiveAuthorityLevel(authorityLevel)) {
-    return { success: false, error: "سطح بالادستی نامعتبر است" };
-  }
-  if (authorityLevel === "other" && !authorityOther?.trim()) {
-    return { success: false, error: "برای سطح «سایر» توضیح الزامی است" };
-  }
+  // Authority level is computed automatically from ministry/org placement.
+  const authorityLevel = inferDefaultAuthorityLevel({
+    role,
+    organizationId,
+    ministryId,
+  });
 
   let accountManagerName = data.accountManagerName;
   let phone = data.phone;
@@ -720,10 +718,6 @@ export async function saveUserAction(data: {
     if (phone === undefined) {
       phone = existing?.phone ?? null;
     }
-    if (authorityLevel === undefined) {
-      authorityLevel = existing?.authorityLevel ?? null;
-      authorityOther = existing?.authorityOther ?? null;
-    }
   }
 
   const result = await pgExt.pgSaveUser({
@@ -733,7 +727,7 @@ export async function saveUserAction(data: {
     organizationId,
     parentUserId,
     authorityLevel,
-    authorityOther,
+    authorityOther: null,
     campaignIds,
     campaignPermissions,
     accountManagerName,

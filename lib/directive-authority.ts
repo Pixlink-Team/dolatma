@@ -94,13 +94,23 @@ export function compareByAuthority(
   return rankA - rankB;
 }
 
-/** Sensible default when creating/editing a user account. */
+/**
+ * Auto authority for user accounts (not editable in settings).
+ * Hierarchy: organizations report to ministries; ministries report to the presidency.
+ */
 export function inferDefaultAuthorityLevel(user: {
   role: AdminRole | string;
   organizationId?: string | null;
+  ministryId?: string | null;
 }): DirectiveAuthorityLevel {
-  if (user.organizationId?.trim()) return "organization";
-  if (user.role === "ministry_parent") return "ministry";
+  if (user.organizationId?.trim()) return "ministry";
+  if (
+    user.ministryId?.trim() ||
+    user.role === "ministry_parent" ||
+    user.role === "sub_user"
+  ) {
+    return "presidency";
+  }
   return "internal";
 }
 

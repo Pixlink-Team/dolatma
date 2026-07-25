@@ -1417,17 +1417,24 @@ CREATE INDEX IF NOT EXISTS idx_campaign_directives_authority
 CREATE INDEX IF NOT EXISTS idx_users_authority
   ON users(authority_level);
 
--- Backfill user authority from role / organization when still default
+-- Backfill user authority: orgs under ministries, ministries under presidency
 UPDATE users
-SET authority_level = 'organization'
-WHERE authority_level = 'internal'
-  AND organization_id IS NOT NULL;
+SET authority_level = 'ministry', authority_other = NULL
+WHERE organization_id IS NOT NULL;
 
 UPDATE users
-SET authority_level = 'ministry'
-WHERE authority_level = 'internal'
-  AND role = 'ministry_parent'
-  AND organization_id IS NULL;
+SET authority_level = 'presidency', authority_other = NULL
+WHERE organization_id IS NULL
+  AND (
+    ministry_id IS NOT NULL
+    OR role IN ('ministry_parent', 'sub_user')
+  );
+
+UPDATE users
+SET authority_level = 'internal', authority_other = NULL
+WHERE organization_id IS NULL
+  AND ministry_id IS NULL
+  AND role NOT IN ('ministry_parent', 'sub_user');
 
 CREATE TABLE IF NOT EXISTS directive_blockers (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

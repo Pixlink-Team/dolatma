@@ -36,7 +36,6 @@ import {
 } from "@/lib/contributor-permissions";
 import {
   inferDefaultAuthorityLevel,
-  isDirectiveAuthorityLevel,
   type DirectiveAuthorityLevel,
 } from "@/lib/directive-authority";
 import type { ParsedUserImportRow } from "@/lib/services/users-excel-parser";
@@ -287,11 +286,6 @@ export async function pgSaveUser(data: {
   let organizationId = data.organizationId?.trim() || null;
   const parentUserId = data.parentUserId?.trim() || null;
   let deviceId: string | null = organizationId ?? ministryId ?? null;
-  const authorityLevel = isDirectiveAuthorityLevel(data.authorityLevel)
-    ? data.authorityLevel
-    : inferDefaultAuthorityLevel({ role: data.role, organizationId });
-  const authorityOther =
-    authorityLevel === "other" ? data.authorityOther?.trim() || null : null;
 
   if (organizationId) {
     const orgRows = await sql`
@@ -319,6 +313,14 @@ export async function pgSaveUser(data: {
     organizationId = null;
     deviceId = ministryId;
   }
+
+  // Authority is always derived from ministry/org placement — never taken from client input.
+  const authorityLevel = inferDefaultAuthorityLevel({
+    role: data.role,
+    organizationId,
+    ministryId,
+  });
+  const authorityOther = null;
 
   if (
     data.id &&

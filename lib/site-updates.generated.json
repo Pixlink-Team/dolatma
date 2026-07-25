@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "d5576ca70cc2e72cb14ada07349a7c878a708509",
+      "committedAt": "2026-07-25T11:34:14+03:30",
+      "title": "نمایش درختی کاربران بر اساس وزارتخانه، یوزر مادر و زیرمجموعه",
+      "subject": "Add ministry tree view on users admin page"
+    },
+    {
       "hash": "434b10eb568fc3f929b527b44e899a5c0df0638d",
       "committedAt": "2026-07-25T11:31:42+03:30",
       "title": "حفظ موقعیت اسکرول منوی پنل هنگام جابه‌جایی بین صفحات",

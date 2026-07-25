@@ -36,10 +36,8 @@ import {
 } from "@/lib/contributor-permissions";
 import { getRoleLabel } from "@/lib/user-roles";
 import {
-  DIRECTIVE_AUTHORITY_OPTIONS,
   getAuthorityBadgeLabel,
   inferDefaultAuthorityLevel,
-  type DirectiveAuthorityLevel,
 } from "@/lib/directive-authority";
 import { Badge } from "@/components/ui/badge";
 import type { AdminRole, AdminUser, CampaignSettings, Ministry } from "@/lib/types";
@@ -61,17 +59,6 @@ const schema = z.object({
   ministryId: z.string().nullable().optional(),
   organizationId: z.string().nullable().optional(),
   parentUserId: z.string().nullable().optional(),
-  authorityLevel: z.enum([
-    "government",
-    "presidency",
-    "ministry",
-    "organization",
-    "province",
-    "municipality",
-    "internal",
-    "other",
-  ]),
-  authorityOther: z.string().optional(),
   campaignIds: z.array(z.string()),
 });
 
@@ -289,11 +276,6 @@ export function UsersAdmin({
       ministryId: null as string | null,
       organizationId: null as string | null,
       parentUserId: parentUserId ?? null,
-      authorityLevel: inferDefaultAuthorityLevel({
-        role: isSubUsersMode ? "sub_user" : "contributor",
-        organizationId: null,
-      }) as DirectiveAuthorityLevel,
-      authorityOther: "",
       campaignIds: [] as string[],
     },
   });
@@ -305,7 +287,6 @@ export function UsersAdmin({
   const selectedMinistryId = form.watch("ministryId");
   const selectedOrganizationId = form.watch("organizationId");
   const selectedParentUserId = form.watch("parentUserId");
-  const selectedAuthorityLevel = form.watch("authorityLevel");
 
   const organizationOptions = useMemo(() => {
     const ministryId = selectedMinistryId || (isSubUsersMode ? parentMinistryId : null);
@@ -469,10 +450,12 @@ export function UsersAdmin({
       toast.error("برای کاربر زیرمجموعه انتخاب یوزر مادر الزامی است");
       return;
     }
-    if (data.authorityLevel === "other" && !data.authorityOther?.trim()) {
-      toast.error("برای سطح «سایر» توضیح الزامی است");
-      return;
-    }
+
+    const authorityLevel = inferDefaultAuthorityLevel({
+      role,
+      organizationId,
+      ministryId,
+    });
 
     startTransition(async () => {
       const result = await saveUserAction({
@@ -486,8 +469,6 @@ export function UsersAdmin({
         ministryId,
         organizationId,
         parentUserId: nextParentUserId,
-        authorityLevel: data.authorityLevel,
-        authorityOther: data.authorityLevel === "other" ? data.authorityOther?.trim() || null : null,
         campaignPermissions: rolesWithCampaignAccess.includes(role) ? campaignPermissions : undefined,
       });
       if (!result.success) {
@@ -523,8 +504,8 @@ export function UsersAdmin({
         organizationName,
         parentUserId: nextParentUserId,
         parentUserName: parentName,
-        authorityLevel: data.authorityLevel,
-        authorityOther: data.authorityLevel === "other" ? data.authorityOther?.trim() || null : null,
+        authorityLevel,
+        authorityOther: null,
         campaignIds: data.campaignIds,
         campaignPermissions: rolesWithCampaignAccess.includes(role) ? campaignPermissions : {},
         createdAt: existing?.createdAt ?? new Date().toISOString(),
@@ -553,11 +534,6 @@ export function UsersAdmin({
       ministryId: null,
       organizationId: null,
       parentUserId: parentUserId ?? null,
-      authorityLevel: inferDefaultAuthorityLevel({
-        role: isSubUsersMode ? "sub_user" : "contributor",
-        organizationId: null,
-      }),
-      authorityOther: "",
       campaignIds: [],
     });
     setOpen(true);
@@ -590,13 +566,6 @@ export function UsersAdmin({
       ministryId: user.ministryId ?? null,
       organizationId: user.organizationId ?? null,
       parentUserId: user.parentUserId ?? parentUserId ?? null,
-      authorityLevel:
-        user.authorityLevel ??
-        inferDefaultAuthorityLevel({
-          role: user.role,
-          organizationId: user.organizationId,
-        }),
-      authorityOther: user.authorityOther ?? "",
       campaignIds: user.campaignIds ?? [],
     });
     setOpen(true);
@@ -1161,40 +1130,6 @@ export function UsersAdmin({
 
             {canManageUsers && (
               <>
-                <div className="space-y-2">
-                  <Label>سطح بالادستی</Label>
-                  <Select
-                    value={selectedAuthorityLevel}
-                    onValueChange={(value) =>
-                      form.setValue("authorityLevel", value as DirectiveAuthorityLevel)
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="انتخاب سطح بالادستی" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {DIRECTIVE_AUTHORITY_OPTIONS.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                {selectedAuthorityLevel === "other" && (
-                  <div className="space-y-2">
-                    <Label>توضیح منبع (سایر)</Label>
-                    <Input
-                      {...form.register("authorityOther")}
-                      placeholder="مثلاً شورای عالی …"
-                    />
-                  </div>
-                )}
-              </>
-            )}
-
-            {canManageUsers && (
-              <>
                 {editingId && isFullMode && (
                   <div className="space-y-2">
                     <Label>مسئول اکانت</Label>
@@ -1217,16 +1152,7 @@ export function UsersAdmin({
                       <Select
                         value={selectedRole}
                         onValueChange={(value) => {
-                          const role = value as AdminRole;
-                          form.setValue("role", role);
-                          const currentOrg = form.getValues("organizationId");
-                          form.setValue(
-                            "authorityLevel",
-                            inferDefaultAuthorityLevel({
-                              role,
-                              organizationId: currentOrg,
-                            })
-                          );
+                          form.setValue("role", value as AdminRole);
                         }}
                       >
                         <SelectTrigger>
