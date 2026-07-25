@@ -21,7 +21,7 @@ export const DEFAULT_ONBOARDING_STEPS: DefaultOnboardingStepSeed[] = [
   {
     stepKey: "subsidiaries",
     title: "تعریف زیرمجموعه‌ها",
-    description: "حداقل یک کاربر برای زیرمجموعه خود اضافه کنید.",
+    description: "حداقل یک زیرمجموعه تعریف کنید و برای آن کاربر هم اضافه کنید.",
     href: "/admin/users",
     evaluator: "subsidiaries",
     sortOrder: 2,

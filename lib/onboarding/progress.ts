@@ -117,15 +117,23 @@ function evaluateStep(
       break;
     }
     case "subsidiaries": {
-      // Child device nodes alone are not enough — user must add at least one subordinate user.
-      const count =
+      // Both are required: a child device node AND at least one subordinate user.
+      // Pre-built org tree alone (or a user without a subsidiary) must not complete the step.
+      const userCount =
         typeof options.subordinateUsersCount === "number"
           ? options.subordinateUsersCount
           : facts.subordinateUsersCount;
-      done = count >= 1;
-      detail = done
-        ? `${count} کاربر زیرمجموعه ثبت شده`
-        : "هنوز کاربری برای زیرمجموعه اضافه نشده";
+      const hasSubsidiaryDevice = facts.childrenCount >= 1;
+      const hasSubordinateUser = userCount >= 1;
+      done = hasSubsidiaryDevice && hasSubordinateUser;
+      if (done) {
+        detail = `${facts.childrenCount} زیرمجموعه و ${userCount} کاربر ثبت شده`;
+      } else {
+        const gaps: string[] = [];
+        if (!hasSubsidiaryDevice) gaps.push("تعریف زیرمجموعه");
+        if (!hasSubordinateUser) gaps.push("افزودن کاربر");
+        detail = `ناقص: ${gaps.join(" و ")}`;
+      }
       break;
     }
     case "content": {
