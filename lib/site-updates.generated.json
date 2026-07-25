@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "bbf88e8579b89715554d6d6a4870b374a804484a",
+      "committedAt": "2026-07-25T14:53:09+03:30",
+      "title": "رفع خطا هنگام ویرایش دسترسی کاربران در پنل ادمین",
+      "subject": "Fix admin user permission edit save failures"
+    },
+    {
       "hash": "981ba11c906fc5b3b27d51514b330abe120f3c72",
       "committedAt": "2026-07-25T14:46:20+03:30",
       "title": "امکان ویرایش استان و شهر برای مدیر وزارتخانه",
