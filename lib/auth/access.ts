@@ -9,7 +9,7 @@ import {
   pgGetUserById,
   pgGetUserPermissionsForCampaign,
 } from "@/lib/db/repository-extended";
-import { canOrgRoleManageSubtreeUsers, isOrgUserRole } from "@/lib/user-roles";
+import { isOrgUserRole } from "@/lib/user-roles";
 import { isPostgresConfigured } from "@/lib/utils";
 
 export function isClientUser(session: AuthSession): boolean {
@@ -33,26 +33,25 @@ export function canManageDirectivesGlobally(session: AuthSession): boolean {
   return isFullAdmin(session) || isClientUser(session);
 }
 
+/**
+ * Prefer campaign-scoped permissions when provided; otherwise the session OR-flag.
+ * Never fall back to orgRole — presets only apply when saving user permissions.
+ */
 function resolveOrgManagementFlag(
-  session: AuthSession,
   permissions: ContributorPermissions | null | undefined,
   key: "manageSubtreeUsers" | "manageSubtreeDirectives" | "scoreSubtreeContent" | "manageSubtreeDevices",
-  sessionFlag: boolean | undefined,
-  orgRoleFallback: boolean
+  sessionFlag: boolean | undefined
 ): boolean {
   if (permissions) {
     return hasContributorPermission(permissions, key);
   }
-  if (typeof sessionFlag === "boolean") {
-    return sessionFlag;
-  }
-  return orgRoleFallback;
+  return sessionFlag === true;
 }
 
 /**
  * Who can create/edit directives:
  * - admin / client: full campaign
- * - org_user with manageSubtreeDirectives
+ * - org_user with manageSubtreeDirectives on the active campaign (when permissions passed)
  */
 export function canManageDirectives(
   session: AuthSession,
@@ -61,11 +60,9 @@ export function canManageDirectives(
   if (canManageDirectivesGlobally(session)) return true;
   if (!isOrgUserRole(session.role)) return false;
   return resolveOrgManagementFlag(
-    session,
     permissions,
     "manageSubtreeDirectives",
-    session.manageSubtreeDirectives,
-    canOrgRoleManageSubtreeUsers(session.orgRole)
+    session.manageSubtreeDirectives
   );
 }
 
@@ -121,11 +118,9 @@ export function canScoreContent(
   if (isClientUser(session)) return true;
   if (!isOrgUserRole(session.role)) return false;
   return resolveOrgManagementFlag(
-    session,
     permissions,
     "scoreSubtreeContent",
-    session.scoreSubtreeContent,
-    session.orgRole === "primary"
+    session.scoreSubtreeContent
   );
 }
 
@@ -137,11 +132,23 @@ export function canManageSubtreeUsers(
   if (isFullAdmin(session)) return true;
   if (!isOrgUserRole(session.role)) return false;
   return resolveOrgManagementFlag(
-    session,
     permissions,
     "manageSubtreeUsers",
-    session.manageSubtreeUsers,
-    canOrgRoleManageSubtreeUsers(session.orgRole)
+    session.manageSubtreeUsers
+  );
+}
+
+/** Whether an org user may create/edit/delete devices in their subtree. */
+export function canManageSubtreeDevices(
+  session: AuthSession,
+  permissions?: ContributorPermissions | null
+): boolean {
+  if (isFullAdmin(session)) return true;
+  if (!isOrgUserRole(session.role)) return false;
+  return resolveOrgManagementFlag(
+    permissions,
+    "manageSubtreeDevices",
+    session.manageSubtreeDevices
   );
 }
 

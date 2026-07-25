@@ -16,14 +16,14 @@ import * as pgExt from "@/lib/db/repository-extended";
 
 async function assertCampaignMember(campaignId: string) {
   const session = await getAuthSession();
-  if (!session) return { session: null, error: "Unauthorized" as const };
-  if (isFullAdmin(session)) return { session, error: null };
+  if (!session) return { session: null, permissions: null, error: "Unauthorized" as const };
+  if (isFullAdmin(session)) return { session, permissions: null, error: null };
   if (!session.userId || !isPostgresConfigured()) {
-    return { session: null, error: "Unauthorized" as const };
+    return { session: null, permissions: null, error: "Unauthorized" as const };
   }
   const permissions = await pgExt.pgGetUserPermissionsForCampaign(session.userId, campaignId);
-  if (!permissions) return { session: null, error: "دسترسی ندارید" as const };
-  return { session, error: null };
+  if (!permissions) return { session: null, permissions: null, error: "دسترسی ندارید" as const };
+  return { session, permissions, error: null };
 }
 
 export async function listBestPracticesAction(
@@ -38,7 +38,7 @@ export async function listBestPracticesAction(
     return { success: false as const, items: [], error: "Database required" };
   }
   const items = await pgListBestPractices(campaignId, status ?? "approved");
-  return { success: true as const, items, canManage: canManageDirectives(access.session) };
+  return { success: true as const, items, canManage: canManageDirectives(access.session, access.permissions) };
 }
 
 export async function listBestPracticeSuggestionsAction(campaignId: string) {
@@ -46,7 +46,7 @@ export async function listBestPracticeSuggestionsAction(campaignId: string) {
   if (access.error || !access.session) {
     return { success: false as const, items: [], highScore: [], error: access.error };
   }
-  if (!canManageDirectives(access.session)) {
+  if (!canManageDirectives(access.session, access.permissions)) {
     return { success: false as const, items: [], highScore: [], error: "دسترسی ندارید" };
   }
   if (!isPostgresConfigured()) {
@@ -75,7 +75,7 @@ export async function suggestBestPracticeAction(input: {
   if (access.error || !access.session?.userId) {
     return { success: false as const, error: access.error ?? "Unauthorized" };
   }
-  if (!canManageDirectives(access.session)) {
+  if (!canManageDirectives(access.session, access.permissions)) {
     return { success: false as const, error: "فقط مدیر یا کارفرما می‌تواند پیشنهاد دهد" };
   }
   if (!isPostgresConfigured()) {
@@ -100,7 +100,7 @@ export async function setBestPracticeStatusAction(input: {
   if (access.error || !access.session?.userId) {
     return { success: false as const, error: access.error ?? "Unauthorized" };
   }
-  if (!canManageDirectives(access.session)) {
+  if (!canManageDirectives(access.session, access.permissions)) {
     return { success: false as const, error: "دسترسی ندارید" };
   }
   if (!isPostgresConfigured()) {

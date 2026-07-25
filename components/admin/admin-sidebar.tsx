@@ -151,11 +151,8 @@ export function AdminSidebar() {
         setIsFullAdminUser(session.type === "env_admin" || session.role === "admin");
         setIsClientRole(session.role === "client");
         const canManageUsers =
-          Boolean(session.manageSubtreeUsers) ||
           Boolean(session.permissions?.manageSubtreeUsers) ||
-          session.orgRole === "primary" ||
-          session.orgRole === "deputy" ||
-          session.role === "ministry_parent";
+          (!session.permissions && Boolean(session.manageSubtreeUsers));
         setIsMinistryParent(canManageUsers && session.role !== "admin" && session.role !== "client");
         setIsSubUser(
           session.role === "org_user" ||

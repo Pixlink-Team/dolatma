@@ -333,23 +333,6 @@ export async function pgGetSubUsersForParent(parentUserId: string): Promise<Admi
   return users;
 }
 
-/** User IDs attached to any device in the subtree rooted at homeDeviceId. */
-export async function pgListUserIdsInDeviceSubtree(homeDeviceId: string): Promise<string[]> {
-  const sql = getSql();
-  const rows = await sql`
-    WITH RECURSIVE subtree AS (
-      SELECT id FROM devices WHERE id = ${homeDeviceId}
-      UNION ALL
-      SELECT d.id FROM devices d
-      INNER JOIN subtree s ON d.parent_id = s.id
-    )
-    SELECT u.id
-    FROM users u
-    WHERE COALESCE(u.device_id, u.organization_id, u.ministry_id) IN (SELECT id FROM subtree)
-  `;
-  return rows.map((row) => String(row.id));
-}
-
 export async function pgSaveUser(data: {
   id?: string;
   email: string;

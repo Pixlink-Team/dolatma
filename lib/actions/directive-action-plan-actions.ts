@@ -11,22 +11,24 @@ import { isPostgresConfigured } from "@/lib/utils";
 
 async function assertDirectivesAccess(campaignId: string) {
   const session = await getAuthSession();
-  if (!session) return { session: null, error: "Unauthorized" as const };
+  if (!session) {
+    return { session: null, permissions: null, error: "Unauthorized" as const };
+  }
 
   if (isFullAdmin(session)) {
-    return { session, error: null };
+    return { session, permissions: null, error: null };
   }
 
   if (!session.userId || !isPostgresConfigured()) {
-    return { session: null, error: "Unauthorized" as const };
+    return { session: null, permissions: null, error: "Unauthorized" as const };
   }
 
   const permissions = await pgExt.pgGetUserPermissionsForCampaign(session.userId, campaignId);
   if (!permissions) {
-    return { session: null, error: "دسترسی ندارید" as const };
+    return { session: null, permissions: null, error: "دسترسی ندارید" as const };
   }
 
-  return { session, error: null };
+  return { session, permissions, error: null };
 }
 
 function revalidateActionPlanPaths(campaignId: string, directiveId?: string) {
@@ -134,7 +136,7 @@ export async function getDirectiveActionPlanByIdAction(
   }
 
   const isOwner = access.session.userId === plan.userId;
-  const canManage = canManageDirectives(access.session);
+  const canManage = canManageDirectives(access.session, access.permissions);
   if (!isOwner && !canManage) {
     return { success: false, plan: null, error: "دسترسی ندارید" };
   }
@@ -161,7 +163,7 @@ export async function listDirectiveActionPlansAction(
   if (access.error || !access.session) {
     return { success: false, plans: [], error: access.error ?? "Unauthorized" };
   }
-  if (!canManageDirectives(access.session)) {
+  if (!canManageDirectives(access.session, access.permissions)) {
     return { success: false, plans: [], error: "فقط مدیر می‌تواند تعهدها را ببیند" };
   }
   if (!isPostgresConfigured()) {

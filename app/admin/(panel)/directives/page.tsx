@@ -10,7 +10,7 @@ import {
 import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
 import { requireContributorAccess } from "@/lib/auth/require-contributor-access";
 import { mapDirectiveAuthorityLevel } from "@/lib/directive-authority";
-import { pgGetUserById } from "@/lib/db/repository-extended";
+import { pgGetUserById, pgGetUserPermissionsForCampaign } from "@/lib/db/repository-extended";
 import {
   pgListArchivedDirectivesForCampaign,
   pgListCampaignUsersForDirectives,
@@ -34,7 +34,11 @@ export default async function DirectivesPage({ searchParams }: PageProps) {
   if (!session || !canViewDirectives(session)) redirect("/admin/login");
   await requireContributorAccess(campaignId, "directives");
 
-  const canManage = canManageDirectives(session);
+  const campaignPermissions =
+    session.userId && isPostgresConfigured() && !isFullAdmin(session) && session.role !== "client"
+      ? await pgGetUserPermissionsForCampaign(session.userId, campaignId)
+      : null;
+  const canManage = canManageDirectives(session, campaignPermissions);
   const audienceScope = canManageDirectivesGlobally(session)
     ? "global"
     : isScopedDirectiveIssuer(session)

@@ -13,6 +13,7 @@ import {
   isDirectiveUrgency,
   isWorkspaceAssetCategory,
 } from "@/lib/directive-workspace";
+import type { ContributorPermissions } from "@/lib/contributor-permissions";
 import type {
   AuthSession,
   CampaignDirective,
@@ -31,30 +32,31 @@ import { stripFileAccessTokensDeep, withFileAccessTokensDeep } from "@/lib/uploa
 async function assertWorkspaceAccess(campaignId: string) {
   const session = await getAuthSession();
   if (!session || !canViewDirectives(session)) {
-    return { session: null, error: "Unauthorized" as const };
+    return { session: null, permissions: null, error: "Unauthorized" as const };
   }
 
   if (isFullAdmin(session)) {
-    return { session, error: null };
+    return { session, permissions: null, error: null };
   }
 
   if (!session.userId || !isPostgresConfigured()) {
-    return { session: null, error: "Unauthorized" as const };
+    return { session: null, permissions: null, error: "Unauthorized" as const };
   }
 
   const permissions = await pgExt.pgGetUserPermissionsForCampaign(session.userId, campaignId);
   if (!permissions) {
-    return { session: null, error: "دسترسی ندارید" as const };
+    return { session: null, permissions: null, error: "دسترسی ندارید" as const };
   }
 
-  return { session, error: null };
+  return { session, permissions, error: null };
 }
 
 function assertCanManageDirectiveWorkspace(
   session: AuthSession,
-  directive: CampaignDirective
+  directive: CampaignDirective,
+  permissions?: ContributorPermissions | null
 ): string | null {
-  if (!canManageDirectiveRecord(session, directive)) {
+  if (!canManageDirectiveRecord(session, directive, permissions)) {
     return "فقط اتاق عملیات دستورکارهای خودتان را می‌توانید ویرایش کنید";
   }
   return null;
@@ -120,7 +122,7 @@ export async function getDirectiveWorkspaceAction(directiveId: string): Promise<
     };
   }
 
-  const canManage = canManageDirectiveRecord(access.session, directive);
+  const canManage = canManageDirectiveRecord(access.session, directive, access.permissions);
   const bundle = await pgWorkspace.pgGetDirectiveWorkspaceBundle(directiveId, {
     pendingAlertsForUserId: canManage ? null : access.session.userId,
   });
@@ -178,7 +180,7 @@ export async function saveDirectiveWorkspaceMetaAction(input: {
   if (access.error || !access.session) {
     return { success: false as const, error: access.error ?? "Unauthorized" };
   }
-  const manageError = assertCanManageDirectiveWorkspace(access.session, directive);
+  const manageError = assertCanManageDirectiveWorkspace(access.session, directive, access.permissions);
   if (manageError) {
     return { success: false as const, error: manageError };
   }
@@ -248,7 +250,7 @@ export async function createDirectiveWorkspaceAssetAction(input: {
   if (access.error || !access.session) {
     return { success: false as const, error: access.error ?? "Unauthorized" };
   }
-  const manageError = assertCanManageDirectiveWorkspace(access.session, directive);
+  const manageError = assertCanManageDirectiveWorkspace(access.session, directive, access.permissions);
   if (manageError) {
     return { success: false as const, error: manageError };
   }
@@ -303,7 +305,7 @@ export async function addDirectiveWorkspaceAssetVersionAction(input: {
   if (access.error || !access.session) {
     return { success: false as const, error: access.error ?? "Unauthorized" };
   }
-  const manageError = assertCanManageDirectiveWorkspace(access.session, directive);
+  const manageError = assertCanManageDirectiveWorkspace(access.session, directive, access.permissions);
   if (manageError) {
     return { success: false as const, error: manageError };
   }
@@ -344,7 +346,7 @@ export async function deleteDirectiveWorkspaceAssetAction(input: {
   if (access.error || !access.session) {
     return { success: false as const, error: access.error ?? "Unauthorized" };
   }
-  const manageError = assertCanManageDirectiveWorkspace(access.session, directive);
+  const manageError = assertCanManageDirectiveWorkspace(access.session, directive, access.permissions);
   if (manageError) {
     return { success: false as const, error: manageError };
   }

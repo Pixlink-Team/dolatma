@@ -48,23 +48,25 @@ import {
 
 async function assertDirectivesAccess(campaignId: string) {
   const session = await getAuthSession();
-  if (!session) return { session: null, error: "Unauthorized" as const };
+  if (!session) {
+    return { session: null, permissions: null, error: "Unauthorized" as const };
+  }
 
   if (isFullAdmin(session)) {
-    return { session, error: null };
+    return { session, permissions: null, error: null };
   }
 
   if (!session.userId || !isPostgresConfigured()) {
-    return { session: null, error: "Unauthorized" as const };
+    return { session: null, permissions: null, error: "Unauthorized" as const };
   }
 
   // Any campaign membership is enough to view/confirm directives.
   const permissions = await pgExt.pgGetUserPermissionsForCampaign(session.userId, campaignId);
   if (!permissions) {
-    return { session: null, error: "دسترسی ندارید" as const };
+    return { session: null, permissions: null, error: "دسترسی ندارید" as const };
   }
 
-  return { session, error: null };
+  return { session, permissions, error: null };
 }
 
 function revalidateDirectives(campaignId?: string) {
@@ -98,7 +100,7 @@ export async function listDirectivesAction(campaignId: string): Promise<{
     return { success: false, canManage: false, directives: [], error: "Database required" };
   }
 
-  const canManage = canManageDirectives(access.session);
+  const canManage = canManageDirectives(access.session, access.permissions);
 
   if (canManage) {
     const directives = await pgDirectives.pgListDirectivesForCampaign(
@@ -124,7 +126,7 @@ export async function listCampaignDirectiveUsersAction(campaignId: string) {
   if (access.error || !access.session) {
     return { success: false as const, users: [], error: access.error ?? "Unauthorized" };
   }
-  if (!canManageDirectives(access.session)) {
+  if (!canManageDirectives(access.session, access.permissions)) {
     return { success: false as const, users: [], error: "دسترسی ندارید" };
   }
   if (!isPostgresConfigured()) {
@@ -144,10 +146,6 @@ export async function getDirectiveRecipientsAction(directiveId: string): Promise
   recipients: DirectiveRecipient[];
   error?: string;
 }> {
-  const session = await getAuthSession();
-  if (!session || !canManageDirectives(session)) {
-    return { success: false, recipients: [], error: "Unauthorized" };
-  }
   if (!isPostgresConfigured()) {
     return { success: false, recipients: [], error: "Database required" };
   }
@@ -156,13 +154,16 @@ export async function getDirectiveRecipientsAction(directiveId: string): Promise
   if (!directive) {
     return { success: false, recipients: [], error: "یافت نشد" };
   }
-  if (!canManageDirectiveRecord(session, directive)) {
-    return { success: false, recipients: [], error: "دسترسی ندارید" };
-  }
 
   const access = await assertDirectivesAccess(directive.campaignId);
-  if (access.error) {
-    return { success: false, recipients: [], error: access.error };
+  if (access.error || !access.session) {
+    return { success: false, recipients: [], error: access.error ?? "Unauthorized" };
+  }
+  if (!canManageDirectives(access.session, access.permissions)) {
+    return { success: false, recipients: [], error: "Unauthorized" };
+  }
+  if (!canManageDirectiveRecord(access.session, directive, access.permissions)) {
+    return { success: false, recipients: [], error: "دسترسی ندارید" };
   }
 
   const recipients = await pgDirectives.pgListDirectiveRecipients(directiveId);
@@ -242,7 +243,7 @@ export async function saveDirectiveAction(input: {
   if (access.error || !access.session) {
     return { success: false as const, error: access.error ?? "Unauthorized" };
   }
-  if (!canManageDirectives(access.session)) {
+  if (!canManageDirectives(access.session, access.permissions)) {
     return { success: false as const, error: "اجازه ثبت دستورکار ندارید" };
   }
   if (!isPostgresConfigured()) {
@@ -262,7 +263,7 @@ export async function saveDirectiveAction(input: {
     if (existing.archivedAt) {
       return { success: false as const, error: "دستورکار آرشیو شده قابل ویرایش نیست" };
     }
-    if (!canManageDirectiveRecord(access.session, existing)) {
+    if (!canManageDirectiveRecord(access.session, existing, access.permissions)) {
       return { success: false as const, error: "فقط دستورکارهای خودتان را می‌توانید ویرایش کنید" };
     }
   }
@@ -517,7 +518,7 @@ export async function archiveDirectiveAction(id: string, campaignId: string) {
   if (access.error || !access.session) {
     return { success: false as const, error: access.error ?? "Unauthorized" };
   }
-  if (!canManageDirectives(access.session)) {
+  if (!canManageDirectives(access.session, access.permissions)) {
     return { success: false as const, error: "دسترسی ندارید" };
   }
   if (!isPostgresConfigured()) {
@@ -528,7 +529,7 @@ export async function archiveDirectiveAction(id: string, campaignId: string) {
   if (!existing || existing.campaignId !== campaignId) {
     return { success: false as const, error: "دستورکار یافت نشد" };
   }
-  if (!canManageDirectiveRecord(access.session, existing)) {
+  if (!canManageDirectiveRecord(access.session, existing, access.permissions)) {
     return { success: false as const, error: "فقط دستورکارهای خودتان را می‌توانید آرشیو کنید" };
   }
 
@@ -605,7 +606,7 @@ export async function verifyDirectiveExecutionAction(
   if (access.error || !access.session?.userId) {
     return { success: false as const, error: access.error ?? "Unauthorized" };
   }
-  if (!canManageDirectives(access.session)) {
+  if (!canManageDirectives(access.session, access.permissions)) {
     return { success: false as const, error: "فقط مدیر یا کارفرما می‌تواند اجرا را تأیید کند" };
   }
   if (!isPostgresConfigured()) {

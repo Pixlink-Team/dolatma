@@ -6,11 +6,8 @@ import { tryClearAdminSessionCookies } from "@/lib/auth/clear-session-cookies";
 import type { OwnerScope } from "@/lib/auth/owner-scope";
 import { parseSessionTokenSync } from "@/lib/auth/session-node";
 import { isSessionVersionCurrent } from "@/lib/auth/session-versions";
-import {
-  pgGetUserById,
-  pgListUserIdsInDeviceSubtree,
-} from "@/lib/db/repository-extended";
-import { pgListSubUserIds } from "@/lib/db/repository-ministries";
+import { pgGetUserById } from "@/lib/db/repository-extended";
+import { pgListDescendantUserIds } from "@/lib/db/repository-ministries";
 import type { AuthSession } from "@/lib/types";
 import { isOrgUserRole, normalizeAdminRole } from "@/lib/user-roles";
 import { isPostgresConfigured } from "@/lib/utils";
@@ -73,7 +70,7 @@ export function isFullAdmin(session: AuthSession): boolean {
 /**
  * Owner scope for admin panel data.
  * - Admin / client: no filter (see all)
- * - org_user: all users attached to home device subtree (fallback: self + parent children)
+ * - org_user: self + parent_user_id descendants only (never peers on the same device/level)
  */
 export async function getOwnerFilter(session: AuthSession): Promise<OwnerScope> {
   if (isFullAdmin(session)) return undefined;
@@ -81,20 +78,9 @@ export async function getOwnerFilter(session: AuthSession): Promise<OwnerScope> 
   if (!session.userId) return null;
 
   if (isOrgUserRole(session.role) && isPostgresConfigured()) {
-    const user = await pgGetUserById(session.userId);
-    const homeDeviceId = user?.deviceId ?? user?.organizationId ?? user?.ministryId ?? null;
-    if (homeDeviceId) {
-      const subtreeUserIds = await pgListUserIdsInDeviceSubtree(homeDeviceId);
-      if (subtreeUserIds.length > 0) {
-        return subtreeUserIds.includes(session.userId)
-          ? subtreeUserIds
-          : [session.userId, ...subtreeUserIds];
-      }
-    }
-    // Fallback for users without a device assignment: parent → children link.
-    const childIds = await pgListSubUserIds(session.userId);
-    if (childIds.length > 0) {
-      return [session.userId, ...childIds];
+    const descendantIds = await pgListDescendantUserIds(session.userId);
+    if (descendantIds.length > 0) {
+      return [session.userId, ...descendantIds];
     }
   }
 

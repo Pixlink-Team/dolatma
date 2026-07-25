@@ -640,20 +640,136 @@ export function UsersAdmin({
               </div>
             )}
 
+            {isFullMode && (
+              <div className="flex flex-col gap-3 rounded-xl border bg-card/60 p-4">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    <Filter className="h-4 w-4 shrink-0 text-primary" />
+                    فیلتر کاربران
+                  </div>
+                  {usersFilterActive && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={resetUsersFilters}
+                      className="gap-2"
+                    >
+                      <RotateCcw className="h-4 w-4" />
+                      ریست فیلتر
+                    </Button>
+                  )}
+                </div>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                  <SearchableSelect
+                    value={filterMinistryId}
+                    onValueChange={(value) => {
+                      setFilterMinistryId(value);
+                      setFilterOrganizationId(FILTER_ALL);
+                    }}
+                    options={[
+                      { value: FILTER_ALL, label: "همه وزارتخانه‌ها" },
+                      ...filterMinistryOptions.map((ministry) => ({
+                        value: ministry.id,
+                        label: ministry.name,
+                      })),
+                    ]}
+                    placeholder="وزارتخانه"
+                    searchPlaceholder="جستجوی وزارتخانه..."
+                  />
+                  <SearchableSelect
+                    value={filterOrganizationId}
+                    onValueChange={setFilterOrganizationId}
+                    options={[
+                      { value: FILTER_ALL, label: "همه زیرمجموعه‌ها" },
+                      ...filterOrganizationOptions.map((org) => ({
+                        value: org.id,
+                        label: org.name,
+                      })),
+                    ]}
+                    placeholder={
+                      filterMinistryId === FILTER_ALL
+                        ? "ابتدا وزارتخانه را انتخاب کنید"
+                        : "زیرمجموعه"
+                    }
+                    searchPlaceholder="جستجوی زیرمجموعه..."
+                    disabled={filterMinistryId === FILTER_ALL}
+                  />
+                  <SearchableSelect
+                    value={filterProvince}
+                    onValueChange={(value) => {
+                      setFilterProvince(value);
+                      setFilterCity(FILTER_ALL);
+                    }}
+                    options={[
+                      { value: FILTER_ALL, label: "همه استان‌ها" },
+                      ...filterProvinceOptions.map((province) => ({
+                        value: province,
+                        label: province,
+                      })),
+                    ]}
+                    placeholder="استان"
+                    searchPlaceholder="جستجوی استان..."
+                  />
+                  <SearchableSelect
+                    value={filterCity}
+                    onValueChange={setFilterCity}
+                    options={[
+                      { value: FILTER_ALL, label: "همه شهرها" },
+                      ...filterCityOptions.map((city) => ({ value: city, label: city })),
+                    ]}
+                    placeholder={
+                      filterProvince === FILTER_ALL ? "ابتدا استان را انتخاب کنید" : "شهر"
+                    }
+                    searchPlaceholder="جستجوی شهر..."
+                    disabled={filterProvince === FILTER_ALL}
+                  />
+                </div>
+              </div>
+            )}
+
+            <UsersMinistryTree
+              users={filteredRows}
+              ministries={ministries}
+              onEdit={openEdit}
+              onDelete={
+                canManageUsers
+                  ? (user) => {
+                      startTransition(async () => {
+                        const result = await deleteUserAction(user.id);
+                        if (!result.success) {
+                          toast.error("error" in result ? result.error : "حذف نشد");
+                          return;
+                        }
+                        setRows((prev) => prev.filter((row) => row.id !== user.id));
+                        toast.success("حذف شد");
+                      });
+                    }
+                  : undefined
+              }
+            />
+          </TabsContent>
+        )}
+
+        <TabsContent value="list" className="space-y-4 mt-4">
+          {canManageUsers && (
+            <div className="flex justify-end">
+              <Button onClick={openCreate}>
+                <Plus className="h-4 w-4" />
+                {isSubUsersMode ? "کاربر زیرمجموعه جدید" : "کاربر جدید"}
+              </Button>
+            </div>
+          )}
+
+          {isFullMode && (
             <div className="flex flex-col gap-3 rounded-xl border bg-card/60 p-4">
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2 text-sm font-medium">
-                  <Filter className="h-4 w-4 shrink-0 text-primary" />
+                  <Filter className="h-4 w-4 text-primary shrink-0" />
                   فیلتر کاربران
                 </div>
                 {usersFilterActive && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={resetUsersFilters}
-                    className="gap-2"
-                  >
+                  <Button type="button" variant="outline" size="sm" onClick={resetUsersFilters} className="gap-2">
                     <RotateCcw className="h-4 w-4" />
                     ریست فیلتر
                   </Button>
@@ -725,119 +841,7 @@ export function UsersAdmin({
                 />
               </div>
             </div>
-
-            <UsersMinistryTree
-              users={filteredRows}
-              ministries={ministries}
-              onEdit={openEdit}
-              onDelete={
-                canManageUsers
-                  ? (user) => {
-                      startTransition(async () => {
-                        const result = await deleteUserAction(user.id);
-                        if (!result.success) {
-                          toast.error("error" in result ? result.error : "حذف نشد");
-                          return;
-                        }
-                        setRows((prev) => prev.filter((row) => row.id !== user.id));
-                        toast.success("حذف شد");
-                      });
-                    }
-                  : undefined
-              }
-            />
-          </TabsContent>
-        )}
-
-        <TabsContent value="list" className="space-y-4 mt-4">
-          {canManageUsers && (
-            <div className="flex justify-end">
-              <Button onClick={openCreate}>
-                <Plus className="h-4 w-4" />
-                {isSubUsersMode ? "کاربر زیرمجموعه جدید" : "کاربر جدید"}
-              </Button>
-            </div>
           )}
-
-          <div className="flex flex-col gap-3 rounded-xl border bg-card/60 p-4">
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2 text-sm font-medium">
-                <Filter className="h-4 w-4 text-primary shrink-0" />
-                فیلتر کاربران
-              </div>
-              {usersFilterActive && (
-                <Button type="button" variant="outline" size="sm" onClick={resetUsersFilters} className="gap-2">
-                  <RotateCcw className="h-4 w-4" />
-                  ریست فیلتر
-                </Button>
-              )}
-            </div>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              <SearchableSelect
-                value={filterMinistryId}
-                onValueChange={(value) => {
-                  setFilterMinistryId(value);
-                  setFilterOrganizationId(FILTER_ALL);
-                }}
-                options={[
-                  { value: FILTER_ALL, label: "همه وزارتخانه‌ها" },
-                  ...filterMinistryOptions.map((ministry) => ({
-                    value: ministry.id,
-                    label: ministry.name,
-                  })),
-                ]}
-                placeholder="وزارتخانه"
-                searchPlaceholder="جستجوی وزارتخانه..."
-              />
-              <SearchableSelect
-                value={filterOrganizationId}
-                onValueChange={setFilterOrganizationId}
-                options={[
-                  { value: FILTER_ALL, label: "همه زیرمجموعه‌ها" },
-                  ...filterOrganizationOptions.map((org) => ({
-                    value: org.id,
-                    label: org.name,
-                  })),
-                ]}
-                placeholder={
-                  filterMinistryId === FILTER_ALL
-                    ? "ابتدا وزارتخانه را انتخاب کنید"
-                    : "زیرمجموعه"
-                }
-                searchPlaceholder="جستجوی زیرمجموعه..."
-                disabled={filterMinistryId === FILTER_ALL}
-              />
-              <SearchableSelect
-                value={filterProvince}
-                onValueChange={(value) => {
-                  setFilterProvince(value);
-                  setFilterCity(FILTER_ALL);
-                }}
-                options={[
-                  { value: FILTER_ALL, label: "همه استان‌ها" },
-                  ...filterProvinceOptions.map((province) => ({
-                    value: province,
-                    label: province,
-                  })),
-                ]}
-                placeholder="استان"
-                searchPlaceholder="جستجوی استان..."
-              />
-              <SearchableSelect
-                value={filterCity}
-                onValueChange={setFilterCity}
-                options={[
-                  { value: FILTER_ALL, label: "همه شهرها" },
-                  ...filterCityOptions.map((city) => ({ value: city, label: city })),
-                ]}
-                placeholder={
-                  filterProvince === FILTER_ALL ? "ابتدا استان را انتخاب کنید" : "شهر"
-                }
-                searchPlaceholder="جستجوی شهر..."
-                disabled={filterProvince === FILTER_ALL}
-              />
-            </div>
-          </div>
 
           <AdminDataTable
             data={treeRows}

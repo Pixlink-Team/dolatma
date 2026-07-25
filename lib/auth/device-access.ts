@@ -1,6 +1,5 @@
-import type { AuthSession } from "@/lib/types";
+import { canManageSubtreeUsers, isClientUser } from "@/lib/auth/access";
 import { isFullAdmin } from "@/lib/auth/get-session";
-import { canManageSubtreeUsers } from "@/lib/auth/access";
 import {
   hasContributorPermission,
   type ContributorPermissions,
@@ -11,9 +10,10 @@ import {
   pgListDevices,
   pgListDeviceSubtree,
 } from "@/lib/db/repository-devices";
+import { pgListDescendantUserIds } from "@/lib/db/repository-ministries";
 import { isDeviceScopedPanelRole, isOrgUserRole } from "@/lib/user-roles";
 import { isPostgresConfigured } from "@/lib/utils";
-import type { Device } from "@/lib/types";
+import type { AdminUser, AuthSession, Device } from "@/lib/types";
 
 /** Roles that manage their own org subtree (not the full catalog). */
 export function isDeviceTreeScopedRole(session: AuthSession): boolean {
@@ -118,4 +118,21 @@ export async function canCreateDeviceUnder(
   if (!isDeviceTreeScopedRole(session)) return false;
   if (!parentId) return false;
   return canMutateDevice(session, parentId, permissions);
+}
+
+/**
+ * Hide peer-level users: org users only see themselves and parent_user_id descendants.
+ * Admin and client retain full visibility.
+ */
+export async function filterUsersVisibleToSession(
+  session: AuthSession,
+  users: AdminUser[]
+): Promise<AdminUser[]> {
+  if (isFullAdmin(session) || isClientUser(session)) return users;
+  if (!session.userId || !isOrgUserRole(session.role)) return [];
+  if (!isPostgresConfigured()) return users.filter((user) => user.id === session.userId);
+
+  const descendantIds = await pgListDescendantUserIds(session.userId);
+  const allowed = new Set([session.userId, ...descendantIds]);
+  return users.filter((user) => allowed.has(user.id));
 }

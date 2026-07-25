@@ -16,7 +16,10 @@ import {
 } from "@/lib/auth/access";
 import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
 import * as pgDirectives from "@/lib/db/repository-directives";
+import * as pgExt from "@/lib/db/repository-extended";
 import * as pgSmart from "@/lib/db/repository-directive-smart";
+import type { AuthSession } from "@/lib/types";
+import type { ContributorPermissions } from "@/lib/contributor-permissions";
 import {
   DIRECTIVE_MISSION_TYPE_LABELS,
   emptySmartPayload,
@@ -108,22 +111,64 @@ async function requireSession() {
   return { session, error: null };
 }
 
+async function loadCampaignPermissions(
+  session: AuthSession,
+  campaignId: string
+): Promise<ContributorPermissions | null> {
+  if (isFullAdmin(session) || session.role === "client") return null;
+  if (!session.userId) return null;
+  return pgExt.pgGetUserPermissionsForCampaign(session.userId, campaignId);
+}
+
 async function requireManageDirective(directiveId: string) {
   const access = await requireSession();
   if (access.error || !access.session) {
-    return { session: null, directive: null, error: access.error ?? "Unauthorized" };
-  }
-  if (!canManageDirectives(access.session)) {
-    return { session: null, directive: null, error: "دسترسی ندارید" as const };
+    return {
+      session: null,
+      directive: null,
+      permissions: null,
+      error: access.error ?? "Unauthorized",
+    };
   }
   const directive = await pgDirectives.pgGetDirectiveById(directiveId);
   if (!directive) {
-    return { session: null, directive: null, error: "دستورکار یافت نشد" as const };
+    return {
+      session: null,
+      directive: null,
+      permissions: null,
+      error: "دستورکار یافت نشد" as const,
+    };
   }
-  if (!canManageDirectiveRecord(access.session, directive)) {
-    return { session: null, directive: null, error: "دسترسی ندارید" as const };
+  const permissions = await loadCampaignPermissions(access.session, directive.campaignId);
+  if (
+    !isFullAdmin(access.session) &&
+    access.session.role !== "client" &&
+    !permissions
+  ) {
+    return {
+      session: null,
+      directive: null,
+      permissions: null,
+      error: "دسترسی ندارید" as const,
+    };
   }
-  return { session: access.session, directive, error: null };
+  if (!canManageDirectives(access.session, permissions)) {
+    return {
+      session: null,
+      directive: null,
+      permissions: null,
+      error: "دسترسی ندارید" as const,
+    };
+  }
+  if (!canManageDirectiveRecord(access.session, directive, permissions)) {
+    return {
+      session: null,
+      directive: null,
+      permissions: null,
+      error: "دسترسی ندارید" as const,
+    };
+  }
+  return { session: access.session, directive, permissions, error: null };
 }
 
 export async function getAiAvailabilityAction(): Promise<{
@@ -438,12 +483,14 @@ export async function updateAiSuggestionStatusAction(input: {
   }
 
   const isOwner = existing.userId === access.session.userId;
+  const directive = await pgDirectives.pgGetDirectiveById(existing.directiveId);
+  const permissions = directive
+    ? await loadCampaignPermissions(access.session, directive.campaignId)
+    : null;
   const canManage =
-    canManageDirectives(access.session) &&
-    (await (async () => {
-      const directive = await pgDirectives.pgGetDirectiveById(existing.directiveId);
-      return directive ? canManageDirectiveRecord(access.session!, directive) : false;
-    })());
+    Boolean(directive) &&
+    canManageDirectives(access.session, permissions) &&
+    canManageDirectiveRecord(access.session, directive!, permissions);
 
   if (!isOwner && !canManage) {
     return { success: false, error: "دسترسی ندارید" };
@@ -662,11 +709,12 @@ export async function listDirectiveMemoryAction(directiveId: string) {
   }
   const isCreator =
     Boolean(access.session.userId) && directive.createdByUserId === access.session.userId;
+  const permissions = await loadCampaignPermissions(access.session, directive.campaignId);
   const canAccess =
     isCreator ||
     isFullAdmin(access.session) ||
-    (canManageDirectives(access.session) &&
-      canManageDirectiveRecord(access.session, directive));
+    (canManageDirectives(access.session, permissions) &&
+      canManageDirectiveRecord(access.session, directive, permissions));
   if (!canAccess) {
     return { success: false as const, entries: [], error: "دسترسی ندارید" };
   }
@@ -700,11 +748,12 @@ export async function saveDirectiveMemoryAction(input: {
     }
     const isCreator =
       Boolean(access.session.userId) && directive.createdByUserId === access.session.userId;
+    const permissions = await loadCampaignPermissions(access.session, directive.campaignId);
     const canAccess =
       isCreator ||
       isFullAdmin(access.session) ||
-      (canManageDirectives(access.session) &&
-        canManageDirectiveRecord(access.session, directive));
+      (canManageDirectives(access.session, permissions) &&
+        canManageDirectiveRecord(access.session, directive, permissions));
     if (!canAccess) {
       return { success: false as const, error: "دسترسی ندارید" };
     }

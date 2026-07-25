@@ -6,6 +6,7 @@ import {
   isDeviceTreeScopedRole,
   listAccessibleDevices,
 } from "@/lib/auth/device-access";
+import { canManageSubtreeDevices } from "@/lib/auth/access";
 import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
 import { pgEnsureDefaultDevices } from "@/lib/db/repository-devices";
 import { isPostgresConfigured } from "@/lib/utils";
@@ -16,6 +17,7 @@ export default async function MinistriesPage() {
   if (!canAccessDevicesPage(session)) redirect("/admin");
 
   const fullAdmin = isFullAdmin(session);
+  const canManageDevices = canManageSubtreeDevices(session);
   let devices: Awaited<ReturnType<typeof listAccessibleDevices>> = [];
   let homeDeviceId: string | null = null;
 
@@ -33,6 +35,7 @@ export default async function MinistriesPage() {
     <DevicesAdmin
       initialDevices={devices}
       canCreateRoot={fullAdmin}
+      canManageDevices={canManageDevices}
       showPassport
       homeDeviceId={homeDeviceId}
     />

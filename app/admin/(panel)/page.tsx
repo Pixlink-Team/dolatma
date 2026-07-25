@@ -152,7 +152,9 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
     ? `edit-suggestions:${campaignId}:${session.userId}`
     : `edit-suggestions:${campaignId}`;
 
-  const canManageDirectivesForUser = Boolean(session && canManageDirectives(session));
+  const canManageDirectivesForUser = Boolean(
+    session && canManageDirectives(session, contributorPermissions)
+  );
   const inboxDirectives =
     session?.userId && isPostgresConfigured()
       ? withFileAccessTokensDeep(

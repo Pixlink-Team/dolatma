@@ -341,6 +341,24 @@ export async function pgListSubUserIds(parentUserId: string): Promise<string[]> 
   return rows.map((row) => String(row.id));
 }
 
+/** All org_user descendants under parent (any depth). Peers are never included. */
+export async function pgListDescendantUserIds(parentUserId: string): Promise<string[]> {
+  const sql = getSql();
+  const rows = await sql`
+    WITH RECURSIVE descendants AS (
+      SELECT id FROM users
+      WHERE parent_user_id = ${parentUserId}
+        AND role = 'org_user'
+      UNION ALL
+      SELECT u.id FROM users u
+      INNER JOIN descendants d ON u.parent_user_id = d.id
+      WHERE u.role = 'org_user'
+    )
+    SELECT id FROM descendants
+  `;
+  return rows.map((row) => String(row.id));
+}
+
 export async function pgListUsersByParent(parentUserId: string) {
   const sql = getSql();
   return sql`

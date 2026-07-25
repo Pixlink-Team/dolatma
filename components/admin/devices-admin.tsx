@@ -62,6 +62,8 @@ interface DevicesAdminProps {
   initialDevices: Device[];
   /** Full admin can create root ministries. */
   canCreateRoot?: boolean;
+  /** Create / edit / delete devices in the tree (manageSubtreeDevices). */
+  canManageDevices?: boolean;
   /** Passport (360°) is admin-only for now. */
   showPassport?: boolean;
   /** Scoped user's home node — cannot be deleted. */
@@ -75,6 +77,7 @@ const CHILD_TYPES = (Object.keys(DEVICE_TYPE_LABELS) as DeviceType[]).filter(
 export function DevicesAdmin({
   initialDevices,
   canCreateRoot = true,
+  canManageDevices = true,
   showPassport = true,
   homeDeviceId = null,
 }: DevicesAdminProps) {
@@ -325,31 +328,35 @@ export function DevicesAdmin({
               </Link>
             </Button>
           ) : null}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => openCreateChild(device.id)}
-            title="افزودن زیرمجموعه"
-          >
-            <Plus className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => openEdit(device)}
-            title="ویرایش"
-          >
-            <Pencil className="h-4 w-4" />
-          </Button>
-          {!isHome ? (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => onDelete(device)}
-              title="حذف"
-            >
-              <Trash2 className="h-4 w-4 text-destructive" />
-            </Button>
+          {canManageDevices ? (
+            <>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => openCreateChild(device.id)}
+                title="افزودن زیرمجموعه"
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => openEdit(device)}
+                title="ویرایش"
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
+              {!isHome ? (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => onDelete(device)}
+                  title="حذف"
+                >
+                  <Trash2 className="h-4 w-4 text-destructive" />
+                </Button>
+              ) : null}
+            </>
           ) : null}
         </div>
 
@@ -373,7 +380,7 @@ export function DevicesAdmin({
               : "درخت دستگاه خودتان — شناسنامه دستگاه خودتان را تکمیل کنید و شناسنامه زیرمجموعه‌ها را فقط ببینید."}
           </p>
         </div>
-        {canCreateRoot ? (
+        {canCreateRoot && canManageDevices ? (
           <Button onClick={openCreateRoot} disabled={isPending}>
             <Plus className="ml-2 h-4 w-4" />
             دستگاه جدید

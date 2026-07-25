@@ -5,7 +5,6 @@ import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
 import { UsersAdmin } from "@/components/admin/users-admin";
 import { pgGetSubUsersForParent, pgGetUserById } from "@/lib/db/repository-extended";
 import { pgEnsureDefaultMinistries, pgListMinistries } from "@/lib/db/repository-ministries";
-import { isOrgUserRole } from "@/lib/user-roles";
 import { isPostgresConfigured } from "@/lib/utils";
 
 export default async function UsersPage() {
@@ -15,15 +14,7 @@ export default async function UsersPage() {
   const isAdmin = isFullAdmin(session);
   const isClient = isClientUser(session);
 
-  const actor =
-    session.userId && isOrgUserRole(session.role) && isPostgresConfigured()
-      ? await pgGetUserById(session.userId)
-      : null;
-  const actorPermissions =
-    actor?.campaignIds[0] != null
-      ? actor.campaignPermissions[actor.campaignIds[0]]
-      : null;
-  const canManageSubtree = canManageSubtreeUsers(session, actorPermissions);
+  const canManageSubtree = canManageSubtreeUsers(session);
 
   if (!isAdmin && !isClient && !canManageSubtree) redirect("/admin");
 

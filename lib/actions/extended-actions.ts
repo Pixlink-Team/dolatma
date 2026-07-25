@@ -652,11 +652,7 @@ export async function saveUserAction(data: {
     session.userId && isOrgUserRole(session.role)
       ? await pgExt.pgGetUserById(session.userId)
       : null;
-  const actorPermissions =
-    actor?.campaignIds[0] != null
-      ? actor.campaignPermissions[actor.campaignIds[0]]
-      : null;
-  const isSubtreeManager = canManageSubtreeUsers(session, actorPermissions);
+  const isSubtreeManager = canManageSubtreeUsers(session);
 
   if (!isAdmin && !isSubtreeManager) {
     return { success: false, error: "Unauthorized" };
@@ -815,15 +811,7 @@ export async function deleteUserAction(id: string) {
   if (!isPostgresConfigured()) return { success: false, error: "Database required" };
 
   const isAdmin = isFullAdmin(session);
-  const actor =
-    session.userId && isOrgUserRole(session.role)
-      ? await pgExt.pgGetUserById(session.userId)
-      : null;
-  const actorPermissions =
-    actor?.campaignIds[0] != null
-      ? actor.campaignPermissions[actor.campaignIds[0]]
-      : null;
-  const isSubtreeManager = canManageSubtreeUsers(session, actorPermissions);
+  const isSubtreeManager = canManageSubtreeUsers(session);
   if (!isAdmin && !isSubtreeManager) {
     return { success: false, error: "Unauthorized" };
   }

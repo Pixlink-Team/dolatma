@@ -23,10 +23,11 @@ export default async function BestPracticesPage({ searchParams }: PageProps) {
   const session = await getAuthSession();
   if (!session) redirect("/admin/login");
 
-  if (!isFullAdmin(session)) {
+  let campaignPermissions = null;
+  if (!isFullAdmin(session) && session.role !== "client") {
     if (!session.userId || !isPostgresConfigured()) redirect("/admin");
-    const membership = await pgGetUserPermissionsForCampaign(session.userId, campaignId);
-    if (!membership && session.role !== "client") redirect("/admin");
+    campaignPermissions = await pgGetUserPermissionsForCampaign(session.userId, campaignId);
+    if (!campaignPermissions) redirect("/admin");
   }
 
   if (!isPostgresConfigured()) {
@@ -37,7 +38,7 @@ export default async function BestPracticesPage({ searchParams }: PageProps) {
     );
   }
 
-  const canManage = canManageDirectives(session);
+  const canManage = canManageDirectives(session, campaignPermissions);
   const [approved, pending, highScore] = await Promise.all([
     pgListBestPractices(campaignId, "approved"),
     canManage ? pgListBestPractices(campaignId, "pending") : Promise.resolve([]),

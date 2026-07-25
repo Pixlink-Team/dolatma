@@ -7,6 +7,7 @@ import {
   canEditDevicePassport,
   canMutateDevice,
   canViewDevice,
+  filterUsersVisibleToSession,
   getSessionHomeDeviceId,
   isDeviceTreeScopedRole,
   listAccessibleDevices,
@@ -102,7 +103,8 @@ export async function getDevicePassportAction(deviceId: string) {
   }
   const passport = await pgGetDevicePassport(deviceId);
   if (!passport) return { success: false as const, error: "دستگاه یافت نشد", passport: null };
-  return { success: true as const, passport };
+  const users = await filterUsersVisibleToSession(session, passport.users);
+  return { success: true as const, passport: { ...passport, users } };
 }
 
 export async function saveDeviceAction(data: {

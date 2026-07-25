@@ -4,6 +4,7 @@ import {
   canAccessDevicesPage,
   canEditDevicePassport,
   canViewDevice,
+  filterUsersVisibleToSession,
 } from "@/lib/auth/device-access";
 import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
 import { pgGetDevicePassport } from "@/lib/db/repository-devices";
@@ -41,6 +42,9 @@ export default async function DevicePassportPage({ params }: PageProps) {
     );
   }
   if (!passport) notFound();
+
+  const visibleUsers = await filterUsersVisibleToSession(session, passport.users);
+  passport = { ...passport, users: visibleUsers };
 
   const canEdit = isFullAdmin(session)
     ? true
