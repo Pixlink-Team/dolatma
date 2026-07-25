@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "6c07ed79387dd12950659ee6d89db460bb09f8ea",
+      "committedAt": "2026-07-25T12:22:56+03:30",
+      "title": "رفع ری‌استارت شدن مکرر سایت بعد از آپدیت نقش‌ها",
+      "subject": "Fix schema role check that crashed container restarts"
+    },
+    {
       "hash": "74fe699191ee81351d90eacff1e2b4121edcb17d",
       "committedAt": "2026-07-25T12:12:23+03:30",
       "title": "پایدارسازی بارگذاری شناسنامه دستگاه‌ها",

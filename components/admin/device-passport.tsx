@@ -43,6 +43,7 @@ import {
   CapacityDetailsFields,
   resetDetailsForType,
 } from "@/components/admin/capacity-details-fields";
+import { ProvinceCityFields } from "@/components/admin/province-city-fields";
 import {
   formatCapacityDetailsSummary,
   normalizeCapacityDetails,
@@ -57,7 +58,6 @@ import {
   DEVICE_STATUS_LABELS,
   DEVICE_TYPE_LABELS,
 } from "@/lib/device-labels";
-import { IRAN_PROVINCES } from "@/lib/iran-locations";
 import type {
   DeviceActivityScope,
   DeviceCapacityType,
@@ -1046,23 +1046,12 @@ export function DevicePassportView({
                 </SelectContent>
               </Select>
             </Field>
-            <Field label="استان">
-              <Select
-                value={profileForm.watch("province") || "__none__"}
-                onValueChange={(value) =>
-                  profileForm.setValue("province", value === "__none__" ? "" : value)
-                }
-              >
-                <SelectTrigger><SelectValue placeholder="انتخاب استان" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">—</SelectItem>
-                  {IRAN_PROVINCES.map((province) => (
-                    <SelectItem key={province} value={province}>{province}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
-            <Field label="شهر"><Input {...profileForm.register("city")} /></Field>
+            <ProvinceCityFields
+              province={profileForm.watch("province") ?? ""}
+              city={profileForm.watch("city") ?? ""}
+              onProvinceChange={(value) => profileForm.setValue("province", value)}
+              onCityChange={(value) => profileForm.setValue("city", value)}
+            />
             <Field label="آدرس"><Input {...profileForm.register("address")} /></Field>
             <Field label="شماره‌های تماس (با ویرگول)">
               <Input {...profileForm.register("phones")} />
