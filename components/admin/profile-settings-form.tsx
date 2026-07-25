@@ -10,8 +10,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ProvinceCityFields } from "@/components/admin/province-city-fields";
 import { saveProfileAction } from "@/lib/actions/extended-actions";
-import { getUserRegionLabel } from "@/lib/user-regions";
-import type { UserRegion } from "@/lib/user-regions";
 
 const schema = z.object({
   name: z.string().min(1, "نام الزامی است"),
@@ -33,7 +31,6 @@ interface ProfileSettingsFormProps {
   initialPhone?: string | null;
   initialAlternateContactName?: string | null;
   initialAlternateContactPhone?: string | null;
-  initialRegion?: UserRegion | null;
   email: string;
 }
 
@@ -45,7 +42,6 @@ export function ProfileSettingsForm({
   initialPhone,
   initialAlternateContactName,
   initialAlternateContactPhone,
-  initialRegion,
   email,
 }: ProfileSettingsFormProps) {
   const [isPending, startTransition] = useTransition();
@@ -154,14 +150,6 @@ export function ProfileSettingsForm({
         onCityChange={(value) => form.setValue("city", value)}
         hideCity
       />
-
-      <div className="space-y-2">
-        <Label>دسته‌بندی منطقه‌ای</Label>
-        <Input value={getUserRegionLabel(initialRegion)} disabled />
-        <p className="text-xs text-muted-foreground">
-          این دسته را فقط مدیر یا کارفرما برای شما تعیین می‌کند.
-        </p>
-      </div>
 
       <Button type="submit" disabled={isPending}>
         {isPending ? "در حال ذخیره..." : "ذخیره پروفایل"}

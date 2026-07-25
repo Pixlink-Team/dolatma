@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ProfileSettingsForm } from "@/components/admin/profile-settings-form";
 import { UserPassportCapacities } from "@/components/admin/user-passport-capacities";
+import { getLoginUsernameFromEmail } from "@/lib/auth/user-login";
 import { getAuthSession } from "@/lib/auth/get-session";
 import { pgGetUserById } from "@/lib/db/repository-extended";
 import { pgListUserCapacities } from "@/lib/db/repository-user-capacities";
@@ -46,8 +47,7 @@ export default async function ProfilePage() {
             initialPhone={user.phone}
             initialAlternateContactName={user.alternateContactName}
             initialAlternateContactPhone={user.alternateContactPhone}
-            initialRegion={user.region}
-            email={user.email}
+            email={getLoginUsernameFromEmail(user.email)}
           />
         </CardContent>
       </Card>
