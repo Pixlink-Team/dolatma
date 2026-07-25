@@ -145,7 +145,9 @@ export async function saveDeviceAction(data: {
     return { success: false as const, error: "Unauthorized" };
   }
 
-  if (data.type === "ministry" && !parentId) {
+  // Creating a new root ministry is admin-only. Updating an existing root
+  // (e.g. ministry manager editing own province/city) must still be allowed.
+  if (!isUpdate && data.type === "ministry" && !parentId) {
     return {
       success: false as const,
       error: "فقط مدیر می‌تواند وزارتخانه ریشه ایجاد کند",
