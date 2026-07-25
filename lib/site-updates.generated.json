@@ -1,6 +1,18 @@
 {
   "entries": [
     {
+      "hash": "94eecde7e82c87722d07c9e45663a7a9dba4e46d",
+      "committedAt": "2026-07-25T11:00:04+03:30",
+      "title": "محدود کردن بخش فرم‌ها فقط برای مدیر و کارفرما",
+      "subject": "Restrict forms section to admin and client only"
+    },
+    {
+      "hash": "377bec1fcb5d3b7bf97d3088f1581b38a6b8ddcb",
+      "committedAt": "2026-07-25T01:12:27+03:30",
+      "title": "تکمیل رصد دستورکار و منوی رصد و واکنش سریع",
+      "subject": "Wire directive monitoring tab and polish monitoring module"
+    },
+    {
       "hash": "b8a06f893582dd223cc558f19916d4977ca40ac8",
       "committedAt": "2026-07-25T00:53:37+03:30",
       "title": "افزودن بخش رصد و واکنش سریع به نوار کناری پنل مدیریت",
