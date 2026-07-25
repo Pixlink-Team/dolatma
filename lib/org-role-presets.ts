@@ -113,6 +113,33 @@ export function getOrgRolePermissionPreset(orgRole: OrgRole): ContributorPermiss
         scoreSubtreeContent: false,
         manageSubtreeDevices: false,
       };
+    default:
+      return {
+        billboards: true,
+        posters: true,
+        videos: true,
+        files: true,
+        rawMedia: true,
+        analytics: false,
+        socialPosts: true,
+        sitePublications: true,
+        broadcast: true,
+        meetings: false,
+        activities: true,
+        submissions: true,
+        directives: true,
+        forms: false,
+        mediaCommand: true,
+        monitoring: true,
+        campaignSettings: false,
+        siteUpdates: false,
+        sectionTutorials: false,
+        nationalCalendar: true,
+        manageSubtreeUsers: false,
+        manageSubtreeDirectives: false,
+        scoreSubtreeContent: false,
+        manageSubtreeDevices: false,
+      };
   }
 }
 
@@ -125,6 +152,8 @@ export function getMonitoringRoleForOrgRole(orgRole: OrgRole): MonitoringRole {
     case "supervisor":
       return "monitoring_manager";
     case "pr":
+      return "public_relations_manager";
+    default:
       return "public_relations_manager";
   }
 }

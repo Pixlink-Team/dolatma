@@ -40,8 +40,9 @@ export function buildLoginEmailCandidates(identifier: string): string[] {
   return [trimmed, `${trimmed}@${DEFAULT_USER_EMAIL_DOMAIN}`];
 }
 
-export function getLoginUsernameFromEmail(email: string): string {
-  const atIndex = email.indexOf("@");
-  if (atIndex <= 0) return email;
-  return email.slice(0, atIndex);
+export function getLoginUsernameFromEmail(email: string | null | undefined): string {
+  const value = typeof email === "string" ? email : "";
+  const atIndex = value.indexOf("@");
+  if (atIndex <= 0) return value;
+  return value.slice(0, atIndex);
 }

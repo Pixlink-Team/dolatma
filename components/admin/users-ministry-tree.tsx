@@ -18,9 +18,9 @@ const NO_MINISTRY = "__none__";
 function isSubtreeParentUser(user: AdminUser): boolean {
   if (!isOrgUserRole(user.role)) return false;
   if (canOrgRoleManageSubtreeUsers(user.orgRole)) return true;
-  return Boolean(
-    user.campaignIds.some((id) => user.campaignPermissions[id]?.manageSubtreeUsers)
-  );
+  const campaignIds = user.campaignIds ?? [];
+  const permissions = user.campaignPermissions ?? {};
+  return campaignIds.some((id) => Boolean(permissions[id]?.manageSubtreeUsers));
 }
 
 interface UsersMinistryTreeProps {
@@ -44,7 +44,7 @@ type MinistryGroup = {
 };
 
 function sortByName(a: AdminUser, b: AdminUser) {
-  return a.name.localeCompare(b.name, "fa");
+  return (a.name ?? "").localeCompare(b.name ?? "", "fa");
 }
 
 function buildMinistryGroups(
@@ -116,7 +116,7 @@ function buildMinistryGroups(
 
 function UserMeta({ user }: { user: AdminUser }) {
   const parts = [
-    getLoginUsernameFromEmail(user.email),
+    getLoginUsernameFromEmail(user.email ?? ""),
     user.organizationName?.trim() || null,
     [user.province, user.city].filter(Boolean).join(" / ") || null,
   ].filter(Boolean);

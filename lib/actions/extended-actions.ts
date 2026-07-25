@@ -646,6 +646,7 @@ export async function saveUserAction(data: {
   campaignIds?: string[];
   campaignPermissions?: Record<string, ContributorPermissions>;
 }) {
+  try {
   const session = await getAuthSession();
   if (!session) {
     return { success: false, error: "Unauthorized" };
@@ -755,24 +756,37 @@ export async function saveUserAction(data: {
     accountManagerName,
     phone,
   });
-  await logAuditForSession(session, {
-    category: "admin",
-    action: data.id ? "user.update" : "user.create",
-    entityType: "user",
-    entityId: data.id,
-    label: data.name,
-    metadata: {
-      role,
-      orgRole,
-      email: data.email,
-      ministryId,
-      organizationId,
-      parentUserId,
-      authorityLevel,
-    },
-  });
-  await revalidateExtended();
+  if (!result.success) return result;
+
+  try {
+    await logAuditForSession(session, {
+      category: "admin",
+      action: data.id ? "user.update" : "user.create",
+      entityType: "user",
+      entityId: data.id,
+      label: data.name,
+      metadata: {
+        role,
+        orgRole,
+        email: data.email,
+        ministryId,
+        organizationId,
+        parentUserId,
+        authorityLevel,
+      },
+    });
+    await revalidateExtended();
+  } catch (error) {
+    console.error("[saveUserAction] post-save side effects failed", error);
+  }
   return result;
+  } catch (error) {
+    console.error("[saveUserAction] failed", error);
+    return {
+      success: false as const,
+      error: error instanceof Error ? error.message : "ذخیره کاربر ناموفق بود",
+    };
+  }
 }
 
 export async function saveUserRegionAction(data: {
@@ -932,36 +946,41 @@ export async function bulkUpdateUsersAccessAction(input: {
 }
 
 export async function getSessionContextAction(campaignId?: string) {
-  const session = await getAuthSession();
-  if (!session) return null;
+  try {
+    const session = await getAuthSession();
+    if (!session) return null;
 
-  if (session.type === "db_user" && session.userId) {
-    const user = await pgExt.pgGetUserById(session.userId);
-    // Missing campaign membership must deny sections — do not fall back to all-true defaults.
-    const permissions =
-      session.role === "admin" || !campaignId
-        ? null
-        : (user?.campaignPermissions[campaignId] ?? null);
+    if (session.type === "db_user" && session.userId) {
+      const user = await pgExt.pgGetUserById(session.userId);
+      // Missing campaign membership must deny sections — do not fall back to all-true defaults.
+      const permissions =
+        session.role === "admin" || !campaignId
+          ? null
+          : (user?.campaignPermissions?.[campaignId] ?? null);
+
+      return {
+        ...session,
+        email: user?.email,
+        name: user?.name,
+        orgRole: user?.orgRole ?? null,
+        campaignIds: user?.campaignIds ?? [],
+        campaignPermissions: user?.campaignPermissions ?? {},
+        permissions,
+      };
+    }
 
     return {
       ...session,
-      email: user?.email,
-      name: user?.name,
-      orgRole: user?.orgRole ?? null,
-      campaignIds: user?.campaignIds ?? [],
-      campaignPermissions: user?.campaignPermissions ?? {},
-      permissions,
+      email: process.env.ADMIN_EMAIL ?? "admin",
+      name: "مدیر سیستم",
+      campaignIds: [] as string[],
+      campaignPermissions: {} as Record<string, ContributorPermissions>,
+      permissions: null,
     };
+  } catch (error) {
+    console.error("[getSessionContextAction] failed", error);
+    return null;
   }
-
-  return {
-    ...session,
-    email: process.env.ADMIN_EMAIL ?? "admin",
-    name: "مدیر سیستم",
-    campaignIds: [] as string[],
-    campaignPermissions: {} as Record<string, ContributorPermissions>,
-    permissions: null,
-  };
 }
 
 export { getOwnerFilter, isFullAdmin };

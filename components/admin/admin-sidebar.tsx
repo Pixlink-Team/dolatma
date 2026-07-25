@@ -149,20 +149,24 @@ export function AdminSidebar() {
   useEffect(() => {
     let cancelled = false;
     const loadSession = () => {
-      getSessionContextAction(campaignId).then((session) => {
-        if (cancelled || !session) return;
-        setIsFullAdminUser(session.type === "env_admin" || session.role === "admin");
-        setIsClientRole(session.role === "client");
-        const canManageUsers =
-          Boolean(session.permissions?.manageSubtreeUsers) ||
-          (!session.permissions && Boolean(session.manageSubtreeUsers));
-        const canManageDevices =
-          Boolean(session.permissions?.manageSubtreeDevices) ||
-          (!session.permissions && Boolean(session.manageSubtreeDevices));
-        setIsMinistryParent(canManageUsers && session.role !== "admin" && session.role !== "client");
-        setCanManageDevicesNav(canManageDevices);
-        setPermissions(session.permissions ?? null);
-      });
+                    getSessionContextAction(campaignId)
+                      .then((session) => {
+                        if (cancelled || !session) return;
+                        setIsFullAdminUser(session.type === "env_admin" || session.role === "admin");
+                        setIsClientRole(session.role === "client");
+                        const canManageUsers =
+                          Boolean(session.permissions?.manageSubtreeUsers) ||
+                          (!session.permissions && Boolean(session.manageSubtreeUsers));
+                        const canManageDevices =
+                          Boolean(session.permissions?.manageSubtreeDevices) ||
+                          (!session.permissions && Boolean(session.manageSubtreeDevices));
+                        setIsMinistryParent(canManageUsers && session.role !== "admin" && session.role !== "client");
+                        setCanManageDevicesNav(canManageDevices);
+                        setPermissions(session.permissions ?? null);
+                      })
+                      .catch((error) => {
+                        console.error("[admin-sidebar] failed to load session context", error);
+                      });
     };
     loadSession();
     const onFocus = () => loadSession();

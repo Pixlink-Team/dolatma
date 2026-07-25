@@ -18,7 +18,7 @@ import { AdminDataTable } from "@/components/admin/admin-data-table";
 import { UsersMinistryTree } from "@/components/admin/users-ministry-tree";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UsersImportPanel } from "@/components/admin/users-import-panel";
-import { getLoginUsernameFromEmail, normalizeStoredUserEmail } from "@/lib/auth/user-login";
+import { getLoginUsernameFromEmail, resolveStoredUserEmail } from "@/lib/auth/user-login";
 import { normalizeImportedCity, normalizeImportedProvince } from "@/lib/iran-locations";
 import {
   bulkUpdateUsersAccessAction,
@@ -76,11 +76,14 @@ const rolesWithCampaignAccess: AdminRole[] = ["org_user", "client"];
 
 function isSubtreeParentUser(user: AdminUser): boolean {
   if (!isOrgUserRole(user.role)) return false;
-  return (
-    user.orgRole === "primary" ||
-    user.orgRole === "deputy" ||
-    Boolean(user.campaignIds.some((id) => user.campaignPermissions[id]?.manageSubtreeUsers))
-  );
+  if (user.orgRole === "primary" || user.orgRole === "deputy") return true;
+  const campaignIds = user.campaignIds ?? [];
+  const permissions = user.campaignPermissions ?? {};
+  return campaignIds.some((id) => Boolean(permissions[id]?.manageSubtreeUsers));
+}
+
+function compareUsersByName(a: AdminUser, b: AdminUser): number {
+  return (a.name ?? "").localeCompare(b.name ?? "", "fa");
 }
 
 interface UsersAdminProps {
@@ -216,7 +219,7 @@ export function UsersAdmin({
       map.set(user.parentUserId, list);
     }
     for (const list of map.values()) {
-      list.sort((a, b) => a.name.localeCompare(b.name, "fa"));
+      list.sort(compareUsersByName);
     }
     return map;
   }, [filteredRows, filteredIds]);
@@ -238,7 +241,7 @@ export function UsersAdmin({
       .sort((a, b) => {
         const byRole = roleRank(a) - roleRank(b);
         if (byRole !== 0) return byRole;
-        return a.name.localeCompare(b.name, "fa");
+        return compareUsersByName(a, b);
       });
 
     const ordered: AdminUser[] = [];
@@ -590,11 +593,13 @@ export function UsersAdmin({
       const nextCampaignPermissions = rolesWithCampaignAccess.includes(role)
         ? campaignPermissions
         : {};
+      const existing = rows.find((row) => row.id === editingId);
+      const resolvedEmail = resolveStoredUserEmail(data.email, existing?.email);
       const result = await saveUserAction({
         ...data,
         role,
         orgRole,
-        email: normalizeStoredUserEmail(data.email),
+        email: resolvedEmail,
         id: editingId ?? undefined,
         province: data.province?.trim() || null,
         city: data.city?.trim() || null,
@@ -613,7 +618,6 @@ export function UsersAdmin({
       }
 
       const savedId = "id" in result ? result.id : (editingId ?? crypto.randomUUID());
-      const existing = rows.find((row) => row.id === editingId);
       const ministry = ministriesList.find((item) => item.id === ministryId);
       const ministryName = ministry?.name ?? existing?.ministryName ?? null;
       const organizationName =
@@ -627,7 +631,7 @@ export function UsersAdmin({
 
       const nextUser: AdminUser = {
         id: savedId!,
-        email: normalizeStoredUserEmail(data.email),
+        email: resolvedEmail,
         name: data.name,
         role,
         orgRole,
@@ -1040,7 +1044,7 @@ export function UsersAdmin({
               {
                 key: "email",
                 label: "نام کاربری",
-                render: (item) => getLoginUsernameFromEmail(item.email),
+                render: (item) => getLoginUsernameFromEmail(item.email ?? ""),
               },
               {
                 key: "ministryName",
@@ -1191,7 +1195,7 @@ export function UsersAdmin({
                 <div className="space-y-2">
                   <Label>وزارتخانه</Label>
                   <Select
-                    value={selectedMinistryId ?? NO_MINISTRY}
+                    value={selectedMinistryId || NO_MINISTRY}
                     onValueChange={(value) => {
                       form.setValue("ministryId", value === NO_MINISTRY ? null : value);
                       form.setValue("organizationId", null);
@@ -1203,7 +1207,9 @@ export function UsersAdmin({
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value={NO_MINISTRY}>بدون وزارتخانه</SelectItem>
-                      {ministriesList.map((ministry) => (
+                      {ministriesList
+                        .filter((ministry) => Boolean(ministry.id))
+                        .map((ministry) => (
                         <SelectItem key={ministry.id} value={ministry.id}>
                           {ministry.name}
                           {ministry.fullName ? ` — ${ministry.fullName}` : ""}
@@ -1219,7 +1225,7 @@ export function UsersAdmin({
                     value={
                       creatingOrganization
                         ? CREATE_ORGANIZATION
-                        : (selectedOrganizationId ?? NO_ORGANIZATION)
+                        : selectedOrganizationId || NO_ORGANIZATION
                     }
                     onValueChange={handleOrganizationSelect}
                     disabled={!selectedMinistryId}
@@ -1229,7 +1235,9 @@ export function UsersAdmin({
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value={NO_ORGANIZATION}>خود وزارتخانه</SelectItem>
-                      {organizationOptions.map((org) => (
+                      {organizationOptions
+                        .filter((org) => Boolean(org.id))
+                        .map((org) => (
                         <SelectItem key={org.id} value={org.id}>
                           {org.name}
                         </SelectItem>
@@ -1276,7 +1284,7 @@ export function UsersAdmin({
                   value={
                     creatingOrganization
                       ? CREATE_ORGANIZATION
-                      : (selectedOrganizationId ?? NO_ORGANIZATION)
+                      : selectedOrganizationId || NO_ORGANIZATION
                   }
                   onValueChange={handleOrganizationSelect}
                 >
@@ -1285,7 +1293,9 @@ export function UsersAdmin({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value={NO_ORGANIZATION}>خود وزارتخانه</SelectItem>
-                    {organizationOptions.map((org) => (
+                    {organizationOptions
+                      .filter((org) => Boolean(org.id))
+                      .map((org) => (
                       <SelectItem key={org.id} value={org.id}>
                         {org.name}
                       </SelectItem>

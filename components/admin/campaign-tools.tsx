@@ -98,13 +98,13 @@ export function CampaignTools({ isFullAdmin }: CampaignToolsProps) {
           error?: string;
         };
         if (!response.ok || !result.success || !result.backup) {
-          toast.error(result.error ?? "خطا در ساخت پشتیبان");
+          toast.error(result.error ?? "ساخت پشتیبان ناموفق بود");
           return;
         }
         setLatestBackup(result.backup);
         toast.success("پشتیبان ساخته و روی سایت ذخیره شد");
       } catch {
-        toast.error("خطا در ساخت پشتیبان");
+        toast.error("ساخت پشتیبان ناموفق بود");
       } finally {
         setIsCreating(false);
       }

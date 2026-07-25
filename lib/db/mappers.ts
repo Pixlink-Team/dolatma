@@ -577,8 +577,8 @@ export function mapUserFromDb(
 
   return {
     id: row.id,
-    email: row.email,
-    name: row.name,
+    email: row.email ?? "",
+    name: row.name ?? "",
     role,
     orgRole,
     province: row.province ?? null,
