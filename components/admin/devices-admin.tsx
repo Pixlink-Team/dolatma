@@ -149,9 +149,11 @@ export function DevicesAdmin({
     if (canCreateRoot && !editingParentId) {
       return Object.keys(DEVICE_TYPE_LABELS) as DeviceType[];
     }
-    // Home/root ministry node for scoped users must keep ministry in the type list.
+    // Home/root ministry node: scoped users may not change ministry type.
     if (editing && !editing.parentId && editing.type === "ministry") {
-      return Object.keys(DEVICE_TYPE_LABELS) as DeviceType[];
+      return canCreateRoot
+        ? (Object.keys(DEVICE_TYPE_LABELS) as DeviceType[])
+        : (["ministry"] as DeviceType[]);
     }
     return CHILD_TYPES;
   }, [canCreateRoot, editingId, editingParentId, rows]);
@@ -419,6 +421,7 @@ export function DevicesAdmin({
               <Select
                 value={form.watch("type")}
                 onValueChange={(value) => form.setValue("type", value as DeviceType)}
+                disabled={editTypeOptions.length === 1 && editTypeOptions[0] === "ministry"}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -431,6 +434,11 @@ export function DevicesAdmin({
                   ))}
                 </SelectContent>
               </Select>
+              {editTypeOptions.length === 1 && editTypeOptions[0] === "ministry" ? (
+                <p className="text-xs text-muted-foreground">
+                  نوع وزارتخانه ریشه قابل تغییر نیست.
+                </p>
+              ) : null}
             </div>
             <div className="space-y-2">
               <Label>وضعیت</Label>

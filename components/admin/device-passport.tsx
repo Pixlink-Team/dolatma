@@ -169,18 +169,25 @@ function readinessBadgeClass(status: DevicePassport["readiness"]["status"]) {
   }
 }
 
+const CHILD_DEVICE_TYPES = (Object.keys(DEVICE_TYPE_LABELS) as DeviceType[]).filter(
+  (key) => key !== "ministry"
+);
+
 interface DevicePassportViewProps {
   initialPassport: DevicePassport;
   /** Own-device user may manage staff registry. */
   canManageStaff?: boolean;
   /** Own-device user may manage officials, capacities, and profile. */
   canManageAdminSections?: boolean;
+  /** Only full admin may change ministry placement / root ministry type. */
+  canChangeMinistry?: boolean;
 }
 
 export function DevicePassportView({
   initialPassport,
   canManageStaff = true,
   canManageAdminSections = true,
+  canChangeMinistry = false,
 }: DevicePassportViewProps) {
   const { campaignId } = useAdminCampaign();
   const passport = initialPassport;
@@ -195,6 +202,13 @@ export function DevicePassportView({
 
   const canEditProfile = canManageStaff || canManageAdminSections;
   const device = passport.device;
+  const isRootMinistry = !device.parentId;
+  const lockTypeField = !canChangeMinistry && isRootMinistry;
+  const profileTypeOptions = canChangeMinistry
+    ? (Object.keys(DEVICE_TYPE_LABELS) as DeviceType[])
+    : isRootMinistry
+      ? (["ministry"] as DeviceType[])
+      : CHILD_DEVICE_TYPES;
   const initialAreaCode = getIranAreaCode(device.province, device.city);
 
   const profileForm = useForm({
@@ -1018,18 +1032,40 @@ export function DevicePassportView({
             <Field label="نام کامل"><Input {...profileForm.register("name")} /></Field>
             <Field label="نام کوتاه"><Input {...profileForm.register("shortName")} /></Field>
             <Field label="آدرس لوگو"><Input {...profileForm.register("logoUrl")} /></Field>
+            {!canChangeMinistry ? (
+              <Field label="وزارتخانه / محل قرارگیری">
+                <Input
+                  value={
+                    passport.parent
+                      ? `زیرمجموعهٔ ${passport.parent.shortName || passport.parent.name}`
+                      : DEVICE_TYPE_LABELS.ministry
+                  }
+                  disabled
+                  readOnly
+                />
+                <p className="mt-1 text-xs text-muted-foreground">
+                  وزارتخانه توسط مدیر سامانه تعیین می‌شود و قابل تغییر نیست.
+                </p>
+              </Field>
+            ) : null}
             <Field label="نوع">
               <Select
                 value={profileForm.watch("type")}
                 onValueChange={(value) => profileForm.setValue("type", value as DeviceType)}
+                disabled={lockTypeField}
               >
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {(Object.keys(DEVICE_TYPE_LABELS) as DeviceType[]).map((key) => (
+                  {profileTypeOptions.map((key) => (
                     <SelectItem key={key} value={key}>{DEVICE_TYPE_LABELS[key]}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+              {lockTypeField ? (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  نوع وزارتخانه ریشه قابل تغییر نیست.
+                </p>
+              ) : null}
             </Field>
             <Field label="محدوده فعالیت">
               <Select

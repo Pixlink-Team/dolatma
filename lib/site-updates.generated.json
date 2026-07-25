@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "de9708938291f662e1c175bb07f2e2fa2e323329",
+      "committedAt": "2026-07-25T14:04:14+03:30",
+      "title": "به‌روزرسانی فهرست آپدیت‌های سایت",
+      "subject": "Regenerate site updates"
+    },
+    {
       "hash": "babb705537600eb3bf64cba9a8b40bc53168da08",
       "committedAt": "2026-07-25T14:04:05+03:30",
       "title": "قطع دسترسی دستگاه‌ها منوی دستگاه‌ها را هم مخفی می‌کند",

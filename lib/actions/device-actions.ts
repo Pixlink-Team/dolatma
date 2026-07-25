@@ -164,8 +164,23 @@ export async function saveDeviceAction(data: {
       return { success: false as const, error: "دستگاه یافت نشد" };
     }
 
+    // Own-device passport owners may edit all content but never reparent (ministry placement).
+    const lockMinistryPlacement = canEditPassport;
+    if (
+      lockMinistryPlacement &&
+      parentId !== null &&
+      parentId !== existing.parentId
+    ) {
+      return {
+        success: false as const,
+        error: "نمی‌توانید وزارتخانه یا محل قرارگیری دستگاه خود را تغییر دهید",
+      };
+    }
+
     // Keep placement inside the caller's tree; do not allow orphaning to root.
-    const nextParentId = parentId ?? existing.parentId;
+    const nextParentId = lockMinistryPlacement
+      ? existing.parentId
+      : parentId ?? existing.parentId;
     if (!nextParentId) {
       // Editing the home/root node of their tree is OK (ministry_parent on ministry).
       const homeId = await getSessionHomeDeviceId(session);
@@ -175,35 +190,32 @@ export async function saveDeviceAction(data: {
           error: "نمی‌توانید این دستگاه را به ریشه منتقل کنید",
         };
       }
-    } else {
+    } else if (!lockMinistryPlacement) {
       const parentAllowed = await canMutateDevice(session, nextParentId);
-      // Home-device owner editing own passport may keep current parent without tree-manage flag.
-      if (!parentAllowed && !(canEditPassport && nextParentId === existing.parentId)) {
+      if (!parentAllowed) {
         return { success: false as const, error: "والد خارج از محدوده دسترسی شماست" };
       }
     }
 
     // Upstream managers may only change tree metadata, not passport content.
+    // Root/ministry nodes keep type locked; child nodes may change type except to ministry.
+    const nextType = nextParentId
+      ? data.type === "ministry"
+        ? "organization"
+        : data.type
+      : existing.type;
     const result = await pgSaveDevice(
       canEditPassport
         ? {
             ...data,
             parentId: nextParentId,
-            type: nextParentId
-              ? data.type === "ministry"
-                ? "organization"
-                : data.type
-              : existing.type,
+            type: nextType,
           }
         : {
             id: data.id,
             name: data.name,
             shortName: data.shortName,
-            type: nextParentId
-              ? data.type === "ministry"
-                ? "organization"
-                : data.type
-              : existing.type,
+            type: nextType,
             parentId: nextParentId,
             status: data.status ?? existing.status,
             logoUrl: existing.logoUrl,

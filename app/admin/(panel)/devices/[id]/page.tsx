@@ -46,15 +46,15 @@ export default async function DevicePassportPage({ params }: PageProps) {
   const visibleUsers = await filterUsersVisibleToSession(session, passport.users);
   passport = { ...passport, users: visibleUsers };
 
-  const canEdit = isFullAdmin(session)
-    ? true
-    : await canEditDevicePassport(session, id);
+  const fullAdmin = isFullAdmin(session);
+  const canEdit = fullAdmin ? true : await canEditDevicePassport(session, id);
 
   return (
     <DevicePassportView
       initialPassport={passport}
       canManageStaff={canEdit}
       canManageAdminSections={canEdit}
+      canChangeMinistry={fullAdmin}
     />
   );
 }
