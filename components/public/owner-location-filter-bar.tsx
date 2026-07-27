@@ -1,8 +1,18 @@
 "use client";
 
-import { ArrowUpDown, Building2, CalendarRange, Landmark, MapPin, RotateCcw, X } from "lucide-react";
+import {
+  ArrowUpDown,
+  Building2,
+  CalendarRange,
+  Landmark,
+  MapPin,
+  RotateCcw,
+  Search,
+  X,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { PersianDateInput } from "@/components/ui/persian-date-input";
 import {
   Select,
@@ -39,6 +49,7 @@ export function OwnerLocationFilterBar() {
     setSortOrder,
     setPlanLabels,
     togglePlanLabel,
+    setSearchQuery,
     resetFilters,
     provinces,
     cities,
@@ -117,6 +128,26 @@ export function OwnerLocationFilterBar() {
         )}
       </div>
 
+      <div className="relative">
+        <Search className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          value={filter.searchQuery}
+          onChange={(event) => setSearchQuery(event.target.value)}
+          placeholder="جستجو در عنوان، توضیح، شهر و..."
+          className="pr-9 pl-9"
+        />
+        {filter.searchQuery && (
+          <button
+            type="button"
+            onClick={() => setSearchQuery("")}
+            className="absolute left-3 top-1/2 -translate-y-1/2 rounded-sm p-0.5 text-muted-foreground hover:bg-muted"
+            aria-label="پاک کردن جستجو"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
+      </div>
+
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 xl:grid-cols-3">
         {ministries.length > 0 && (
           <SearchableSelect
@@ -188,6 +219,7 @@ export function OwnerLocationFilterBar() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value={OWNER_DATE_ALL}>همه زمان‌ها</SelectItem>
+            <SelectItem value="today">امروز</SelectItem>
             <SelectItem value="this_week">۷ روز اخیر</SelectItem>
             <SelectItem value="this_month">۳۰ روز اخیر</SelectItem>
             <SelectItem value="custom">تاریخ دستی</SelectItem>

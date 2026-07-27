@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "c3e92409b6bb414bf964b061a9780075cc6c89cd",
+      "committedAt": "2026-07-27T14:05:00+03:30",
+      "title": "افزودن فیلتر دسته‌بندی تبلیغات محیطی، رتبه‌بندی دستگاه‌ها، قوانین امتیازدهی خودکار و بخش مشارکت‌های ردشده",
+      "subject": "Port billboard category filters, device leaderboard, scoring rules, and rejected submissions from Dashboard-info"
+    },
+    {
       "hash": "353c2518298d64a96cb25f765aa4229d49227132",
       "committedAt": "2026-07-27T11:46:08+03:30",
       "title": "نمایش پیام واضح وقتی ورود به‌خاطر تلاش زیاد موقتاً قفل می‌شود",

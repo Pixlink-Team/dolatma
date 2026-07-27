@@ -12,6 +12,7 @@ import { formatPersianDate } from "@/lib/utils";
 import { formatPlanLabelDisplay } from "@/lib/content-topics";
 
 const DATE_PRESET_LABELS: Record<string, string> = {
+  today: "امروز",
   this_week: "۷ روز اخیر",
   this_month: "۳۰ روز اخیر",
   custom: "بازه دستی",
@@ -22,6 +23,10 @@ export function getOwnerFilterLabel(
   users: OwnerFilterOption[] = []
 ): string | null {
   const parts: string[] = [];
+
+  if (filter.searchQuery.trim()) {
+    parts.push(`جستجو: «${filter.searchQuery.trim()}»`);
+  }
 
   if (filter.userKey !== OWNER_USER_ALL) {
     parts.push(users.find((user) => user.key === filter.userKey)?.label ?? "شرکت");
