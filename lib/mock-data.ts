@@ -28,6 +28,7 @@ const fullFeatures = {
   files: true,
   rawMedia: true,
   forms: true,
+  smsReports: true,
 };
 
 const defaultAnalyticsConfig = {
@@ -80,6 +81,7 @@ export const mockCampaigns: CampaignSettings[] = [
       files: false,
       rawMedia: false,
       forms: false,
+      smsReports: false,
     },
     analyticsConfig: defaultAnalyticsConfig,
     billboardConfig: {},
@@ -111,6 +113,7 @@ export const mockCampaigns: CampaignSettings[] = [
       files: false,
       rawMedia: false,
       forms: false,
+      smsReports: false,
     },
     analyticsConfig: defaultAnalyticsConfig,
     billboardConfig: {},
@@ -289,6 +292,7 @@ let mockStore = {
   broadcastReports: [] as import("./types").BroadcastReport[],
   meetings: [] as import("./types").MeetingWithTasks[],
   activities: [] as import("./types").CampaignActivity[],
+  smsReports: [] as import("./types").SmsSendReport[],
 };
 
 export function getMockStore() {
@@ -319,6 +323,7 @@ export function getMockStoreForCampaign(campaignId: string) {
     socialPlatformStats: store.socialPlatformStats.filter((stat) => stat.campaignId === campaignId),
     meetings: store.meetings.filter((meeting) => meeting.campaignId === campaignId),
     activities: store.activities.filter((activity) => activity.campaignId === campaignId),
+    smsReports: store.smsReports.filter((report) => report.campaignId === campaignId),
   };
 }
 
@@ -340,6 +345,7 @@ export function resetMockStore() {
     meetings: [],
     activities: [],
     socialPlatformStats: [...mockSocialPlatformStats],
+    smsReports: [],
   };
 }
 

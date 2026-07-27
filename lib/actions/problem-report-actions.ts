@@ -5,19 +5,39 @@ import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
 import { logAuditForSession } from "@/lib/audit/log-event";
 import type {
   CreateProblemReportInput,
+  MyProblemReport,
+  ProblemReportAttachment,
   ProblemReportCategory,
   ProblemReportStatus,
 } from "@/lib/audit/problem-types";
-import { PROBLEM_REPORT_CATEGORY_LABELS, PROBLEM_REPORT_STATUS_LABELS } from "@/lib/audit/problem-types";
-import { pgGetUserById } from "@/lib/db/repository-extended";
-import type { ProblemReport } from "@/lib/audit/problem-types";
 import {
+  PROBLEM_REPORT_CATEGORY_LABELS,
+  PROBLEM_REPORT_MAX_ATTACHMENTS,
+  PROBLEM_REPORT_STATUS_LABELS,
+} from "@/lib/audit/problem-types";
+import { pgGetUserById } from "@/lib/db/repository-extended";
+import {
+  pgCountMyUnreadProblemReplies,
   pgInsertProblemReport,
   pgListProblemReportsByReporter,
+  pgMarkMyProblemReportsSeen,
   pgUpdateProblemReportAdminNote,
   pgUpdateProblemReportStatus,
 } from "@/lib/db/problem-reports-repository";
 import { isPostgresConfigured } from "@/lib/utils";
+
+function sanitizeAttachments(attachments?: ProblemReportAttachment[]): ProblemReportAttachment[] {
+  if (!Array.isArray(attachments)) return [];
+  return attachments
+    .filter(
+      (item) =>
+        item &&
+        typeof item.url === "string" &&
+        item.url.trim() &&
+        (item.kind === "image" || item.kind === "video")
+    )
+    .slice(0, PROBLEM_REPORT_MAX_ATTACHMENTS);
+}
 
 const VALID_CATEGORIES = new Set<ProblemReportCategory>([
   "ui_bug",
@@ -74,6 +94,8 @@ export async function submitProblemReportAction(
     reporterName = reporterName ?? user?.name ?? null;
   }
 
+  const attachments = sanitizeAttachments(input.attachments);
+
   const report = await pgInsertProblemReport({
     reporterUserId: session.userId,
     reporterType,
@@ -85,6 +107,7 @@ export async function submitProblemReportAction(
     description: description.slice(0, 4000),
     path: input.path?.trim().slice(0, 500) || null,
     campaignId: input.campaignId?.trim() || null,
+    metadata: attachments.length > 0 ? { attachments } : undefined,
   });
 
   if (!report) {
@@ -103,12 +126,14 @@ export async function submitProblemReportAction(
   });
 
   revalidatePath("/admin/audit");
+  revalidatePath("/admin/reported-problems");
+  revalidatePath("/admin/problem-reports");
   return { success: true };
 }
 
 export async function listMyProblemReportsAction(): Promise<{
   success: boolean;
-  reports?: ProblemReport[];
+  reports?: MyProblemReport[];
   error?: string;
 }> {
   const session = await getAuthSession();
@@ -126,6 +151,35 @@ export async function listMyProblemReportsAction(): Promise<{
   });
 
   return { success: true, reports };
+}
+
+export async function markMyProblemReportsSeenAction(): Promise<{ success: boolean; error?: string }> {
+  const session = await getAuthSession();
+  if (!session) return { success: false, error: "وارد نشده‌اید" };
+  if (!isPostgresConfigured()) return { success: false, error: "دیتابیس فعال نیست" };
+
+  const result = await pgMarkMyProblemReportsSeen({
+    reporterUserId: session.userId,
+    reporterType: session.type === "env_admin" ? "env_admin" : null,
+  });
+  revalidatePath("/admin/problem-reports");
+  return result;
+}
+
+export async function getMyUnreadProblemReplyCountAction(): Promise<{
+  success: boolean;
+  count?: number;
+  error?: string;
+}> {
+  const session = await getAuthSession();
+  if (!session) return { success: false, error: "وارد نشده‌اید" };
+  if (!isPostgresConfigured()) return { success: true, count: 0 };
+
+  const count = await pgCountMyUnreadProblemReplies({
+    reporterUserId: session.userId,
+    reporterType: session.type === "env_admin" ? "env_admin" : null,
+  });
+  return { success: true, count };
 }
 
 export async function updateProblemReportStatusAction(input: {
@@ -172,6 +226,8 @@ export async function updateProblemReportStatusAction(input: {
     });
 
     revalidatePath("/admin/audit");
+    revalidatePath("/admin/reported-problems");
+    revalidatePath("/admin/problem-reports");
     return { success: true };
   } catch (error) {
     console.error("updateProblemReportStatusAction failed:", error);
@@ -220,6 +276,8 @@ export async function replyToProblemReportAction(input: {
     });
 
     revalidatePath("/admin/audit");
+    revalidatePath("/admin/reported-problems");
+    revalidatePath("/admin/problem-reports");
     return { success: true };
   } catch (error) {
     console.error("replyToProblemReportAction failed:", error);

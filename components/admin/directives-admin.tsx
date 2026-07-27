@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -23,6 +23,7 @@ import { DirectiveCtaButton } from "@/components/admin/directive-cta-button";
 import { DirectiveGlobalMemoryAdmin } from "@/components/admin/directive-global-memory-admin";
 import { DirectivePlaybooksAdmin } from "@/components/admin/directive-playbooks-admin";
 import { DirectiveSmartWizard } from "@/components/admin/directive-smart-wizard";
+import { RejectedSubmissionsInbox } from "@/components/admin/rejected-submissions-inbox";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -72,6 +73,7 @@ import {
 } from "@/lib/directive-smart";
 import type {
   CampaignDirective,
+  CampaignSubmission,
   DirectiveAudienceType,
   DirectiveRecipient,
   DirectiveUrgency,
@@ -119,7 +121,7 @@ function listToLines(values: string[] | undefined): string {
 
 type FormValues = z.infer<typeof schema>;
 
-type InboxTab = "new" | "seen" | "all";
+type InboxTab = "new" | "seen" | "all" | "rejected";
 type ManagerView = "manage" | "inbox";
 type ManageListTab = "active" | "archive" | "patterns";
 
@@ -194,6 +196,8 @@ interface DirectivesAdminProps {
   archivedDirectives?: CampaignDirective[];
   /** Directives addressed to the current user (kartabl). */
   inboxDirectives: CampaignDirective[];
+  /** Rejected campaign submissions owned by the current user. */
+  rejectedSubmissions?: CampaignSubmission[];
   campaignUsers: CampaignUserOption[];
   ministries?: Ministry[];
 }
@@ -330,12 +334,14 @@ export function DirectivesAdmin({
   initialDirectives,
   archivedDirectives: initialArchived = [],
   inboxDirectives: initialInbox,
+  rejectedSubmissions: initialRejected = [],
   campaignUsers,
   ministries = [],
 }: DirectivesAdminProps) {
   const [rows, setRows] = useState(initialDirectives);
   const [archivedRows, setArchivedRows] = useState(initialArchived);
   const [inboxRowsState, setInboxRowsState] = useState(initialInbox);
+  const [rejectedCount, setRejectedCount] = useState(initialRejected.length);
   const [managerView, setManagerView] = useState<ManagerView>("manage");
   const [manageListTab, setManageListTab] = useState<ManageListTab>("active");
   const [inboxTab, setInboxTab] = useState<InboxTab>("new");
@@ -404,6 +410,10 @@ export function DirectivesAdmin({
     },
   });
 
+  useEffect(() => {
+    setRejectedCount(initialRejected.length);
+  }, [initialRejected]);
+
   const audienceType = form.watch("audienceType");
   const audienceMinistryId = form.watch("audienceMinistryId");
   const audienceOrganizationId = form.watch("audienceOrganizationId");
@@ -431,9 +441,10 @@ export function DirectivesAdmin({
   const showingInbox = !canManage || managerView === "inbox";
   const showingArchive = !showingInbox && manageListTab === "archive";
   const showingPatterns = !showingInbox && manageListTab === "patterns";
+  const showingRejected = showingInbox && inboxTab === "rejected";
 
   const listRows = useMemo(() => {
-    if (showingPatterns) return [] as CampaignDirective[];
+    if (showingPatterns || showingRejected) return [] as CampaignDirective[];
     let base: CampaignDirective[];
     if (!showingInbox) {
       base = manageListTab === "archive" ? archivedRows : rows;
@@ -448,6 +459,7 @@ export function DirectivesAdmin({
   }, [
     showingInbox,
     showingPatterns,
+    showingRejected,
     manageListTab,
     archivedRows,
     rows,
@@ -901,11 +913,19 @@ export function DirectivesAdmin({
             <TabsTrigger value="all">
               همه ({formatPersianNumber(inboxRowsState.length)})
             </TabsTrigger>
+            <TabsTrigger value="rejected">
+              ردشده ({formatPersianNumber(rejectedCount)})
+            </TabsTrigger>
           </TabsList>
         </Tabs>
       )}
 
-      {showingPatterns && isFullAdmin ? (
+      {showingRejected ? (
+        <RejectedSubmissionsInbox
+          initialItems={initialRejected}
+          onCountChange={setRejectedCount}
+        />
+      ) : showingPatterns && isFullAdmin ? (
         <div className="space-y-8">
           <DirectivePlaybooksAdmin />
           <DirectiveGlobalMemoryAdmin campaignId={campaignId} />

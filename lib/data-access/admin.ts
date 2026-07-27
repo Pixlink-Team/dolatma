@@ -86,6 +86,9 @@ export async function getAdminData(campaignId: string, sections?: AdminDataSecti
       rawMedia: filterByOwner([...((store as { rawMedia?: RawMediaUpload[] }).rawMedia ?? [])]).sort(
         (a, b) => a.sortOrder - b.sortOrder || b.createdAt.localeCompare(a.createdAt)
       ),
+      smsReports: filterByOwner([...(store.smsReports ?? [])]).sort(
+        (a, b) => a.sortOrder - b.sortOrder || b.sendDate.localeCompare(a.sendDate)
+      ),
     });
   }
 
@@ -127,6 +130,7 @@ export async function getAdminData(campaignId: string, sections?: AdminDataSecti
       meetings: [],
       activities: [],
       rawMedia: [],
+      smsReports: [],
     });
   } catch {
     const mock = getAdminDataMock(campaignId);
@@ -145,6 +149,7 @@ export async function getAdminData(campaignId: string, sections?: AdminDataSecti
       meetings: filterByOwner(mock.meetings ?? []),
       activities: filterByOwner(mock.activities ?? []),
       rawMedia: filterByOwner(mock.rawMedia ?? []),
+      smsReports: filterByOwner(mock.smsReports ?? []),
     });
   }
 }
@@ -175,6 +180,9 @@ function getAdminDataMock(campaignId: string) {
     ),
     rawMedia: [...((store as { rawMedia?: RawMediaUpload[] }).rawMedia ?? [])].sort(
       (a, b) => a.sortOrder - b.sortOrder || b.createdAt.localeCompare(a.createdAt)
+    ),
+    smsReports: [...(store.smsReports ?? [])].sort(
+      (a, b) => a.sortOrder - b.sortOrder || b.sendDate.localeCompare(a.sendDate)
     ),
   };
 }
@@ -219,6 +227,7 @@ export async function saveCampaign(data: Partial<CampaignSettings> & { id?: stri
           files: false,
           rawMedia: false,
           forms: false,
+          smsReports: false,
         },
         analyticsConfig: data.analyticsConfig ?? {
           site: { source: "manual", metabase: null },
@@ -628,15 +637,78 @@ export async function updateSubmission(
   if (isPostgresConfigured()) return pg.pgUpdateSubmission(id, data);
   const now = new Date().toISOString();
   if (!isSupabaseConfigured()) {
+    const nextReason =
+      data.status === "approved"
+        ? null
+        : data.rejectionReason !== undefined
+          ? data.rejectionReason
+          : undefined;
     updateMockStore((store) => ({
       ...store,
       submissions: store.submissions.map((s) =>
-        s.id === id ? { ...s, ...data, updatedAt: now } as CampaignSubmission : s
+        s.id === id
+          ? ({
+              ...s,
+              ...data,
+              ...(nextReason !== undefined ? { rejectionReason: nextReason } : {}),
+              updatedAt: now,
+            } as CampaignSubmission)
+          : s
       ),
     }));
     return { success: true };
   }
   return { success: true };
+}
+
+/** Owner edits a rejected submission and resends it for review. */
+export async function resubmitSubmission(
+  id: string,
+  data: { title: string; text: string; mediaUrl?: string | null }
+) {
+  if (isPostgresConfigured()) return pg.pgResubmitSubmission(id, data);
+  const now = new Date().toISOString();
+  if (!isSupabaseConfigured()) {
+    let found = false;
+    updateMockStore((store) => ({
+      ...store,
+      submissions: store.submissions.map((s) => {
+        if (s.id !== id || s.status !== "rejected") return s;
+        found = true;
+        return {
+          ...s,
+          title: data.title,
+          text: data.text,
+          mediaUrl: data.mediaUrl ?? null,
+          status: "pending",
+          published: false,
+          updatedAt: now,
+        };
+      }),
+    }));
+    if (!found) return { success: false as const, error: "ارسال ردشده یافت نشد" };
+    return { success: true as const };
+  }
+  return { success: false as const, error: "Database required" };
+}
+
+export async function listRejectedSubmissionsForOwner(
+  campaignId: string,
+  ownerUserId: string
+) {
+  if (isPostgresConfigured()) {
+    return pg.pgListRejectedSubmissionsForOwner(campaignId, ownerUserId);
+  }
+  if (!isSupabaseConfigured()) {
+    const store = getMockStoreForCampaign(campaignId);
+    return store.submissions.filter(
+      (s) =>
+        s.campaignId === campaignId &&
+        s.ownerUserId === ownerUserId &&
+        s.status === "rejected"
+    );
+  }
+  return [];
 }
 
 export async function deleteSubmission(id: string) {

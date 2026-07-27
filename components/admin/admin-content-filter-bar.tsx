@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { Filter, Landmark, RotateCcw, UserRound, X } from "lucide-react";
+import { ArrowUpDown, Filter, Landmark, RotateCcw, UserRound, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SearchableSelect } from "@/components/ui/searchable-select";
@@ -11,6 +11,9 @@ import { formatPlanLabelDisplay, matchesAnyPlanLabelFilter } from "@/lib/content
 export const ADMIN_FILTER_ALL = "all";
 
 export type AdminCreativeFilter = "all" | "creative" | "non_creative";
+
+/** Display order for admin list/grid items: newest first, oldest first, alphabetical, or manual sortOrder. */
+export type AdminContentSort = "newest" | "oldest" | "title" | "default";
 
 export interface AdminContentFilterState {
   userKey: string;
@@ -22,6 +25,7 @@ export interface AdminContentFilterState {
   planLabels: string[];
   /** Activities-only: filter by creative flag. Defaults to all. */
   creativeFilter: AdminCreativeFilter;
+  sortOrder: AdminContentSort;
 }
 
 export const DEFAULT_ADMIN_CONTENT_FILTER: AdminContentFilterState = {
@@ -32,7 +36,42 @@ export const DEFAULT_ADMIN_CONTENT_FILTER: AdminContentFilterState = {
   city: ADMIN_FILTER_ALL,
   planLabels: [],
   creativeFilter: "all",
+  sortOrder: "newest",
 };
+
+type SortableAdminItem = {
+  title?: string | null;
+  sortOrder?: number;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+/** Sorts admin list/grid items by the selected AdminContentSort. `getDate` lets callers pick a
+ * more relevant date field (e.g. a report's sendDate) before falling back to updatedAt/createdAt. */
+export function sortAdminContentItems<T extends SortableAdminItem>(
+  items: T[],
+  sort: AdminContentSort,
+  getDate?: (item: T) => string | undefined,
+  getTitle?: (item: T) => string
+): T[] {
+  const copy = [...items];
+  const resolveDate = (item: T) => getDate?.(item) ?? item.updatedAt ?? item.createdAt ?? "";
+  const resolveTitle = (item: T) => getTitle?.(item) ?? item.title ?? "";
+
+  if (sort === "title") {
+    return copy.sort((a, b) => resolveTitle(a).localeCompare(resolveTitle(b), "fa"));
+  }
+
+  if (sort === "oldest") {
+    return copy.sort((a, b) => resolveDate(a).localeCompare(resolveDate(b)));
+  }
+
+  if (sort === "default") {
+    return copy.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+  }
+
+  return copy.sort((a, b) => resolveDate(b).localeCompare(resolveDate(a)));
+}
 
 export interface AdminFilterUserOption {
   key: string;
@@ -159,6 +198,13 @@ function collectFromItems(items: Ownable[]) {
   };
 }
 
+const SORT_OPTIONS: { value: AdminContentSort; label: string }[] = [
+  { value: "newest", label: "جدیدترین" },
+  { value: "oldest", label: "قدیمی‌ترین" },
+  { value: "title", label: "عنوان" },
+  { value: "default", label: "ترتیب پیش‌فرض" },
+];
+
 export function AdminContentFilterBar({
   filter,
   onChange,
@@ -168,6 +214,7 @@ export function AdminContentFilterBar({
   showCreativeFilter = false,
 }: AdminContentFilterBarProps) {
   const meta = useMemo(() => collectFromItems(items), [items]);
+  const showSort = items.length > 0;
 
   const visibleUsers = useMemo(
     () =>
@@ -209,13 +256,15 @@ export function AdminContentFilterBar({
     filter.province !== ADMIN_FILTER_ALL ||
     filter.city !== ADMIN_FILTER_ALL ||
     filter.planLabels.length > 0 ||
+    filter.sortOrder !== DEFAULT_ADMIN_CONTENT_FILTER.sortOrder ||
     (showCreativeFilter && creativeFilter !== "all");
 
   if (
     users.length === 0 &&
     plans.length === 0 &&
     meta.ministries.length === 0 &&
-    !showCreativeFilter
+    !showCreativeFilter &&
+    !showSort
   ) {
     return null;
   }
@@ -384,6 +433,20 @@ export function AdminContentFilterBar({
             placeholder="اقدام خلاقانه"
             searchPlaceholder="جستجو..."
             className="w-full sm:w-48"
+          />
+        )}
+
+        {showSort && (
+          <SearchableSelect
+            value={filter.sortOrder}
+            onValueChange={(sortOrder) =>
+              onChange({ ...filter, sortOrder: sortOrder as AdminContentSort })
+            }
+            options={SORT_OPTIONS}
+            placeholder="ترتیب نمایش"
+            searchPlaceholder="جستجوی ترتیب..."
+            className="w-full sm:w-48"
+            leadingIcon={<ArrowUpDown className="h-4 w-4 shrink-0 text-muted-foreground" />}
           />
         )}
 

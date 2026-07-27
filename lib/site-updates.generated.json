@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "353c2518298d64a96cb25f765aa4229d49227132",
+      "committedAt": "2026-07-27T11:46:08+03:30",
+      "title": "نمایش پیام واضح وقتی ورود به‌خاطر تلاش زیاد موقتاً قفل می‌شود",
+      "subject": "Show clear lockout error after too many login attempts"
+    },
+    {
       "hash": "cdd50e2e71e1e836d1c56fac6fed293c2a35e096",
       "committedAt": "2026-07-27T11:40:28+03:30",
       "title": "افزودن صفحه عمومی با لینک و رمز جدا برای هر دستگاه و زیرمجموعه",

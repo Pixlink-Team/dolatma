@@ -141,6 +141,11 @@ CREATE TABLE IF NOT EXISTS campaign_submissions (
 ALTER TABLE campaign_submissions
   ADD COLUMN IF NOT EXISTS external_uuid TEXT;
 
+-- Admin-provided reason shown to the owner when a submission is rejected;
+-- cleared automatically once the submission is approved.
+ALTER TABLE campaign_submissions
+  ADD COLUMN IF NOT EXISTS rejection_reason TEXT;
+
 CREATE UNIQUE INDEX IF NOT EXISTS idx_submissions_campaign_external_uuid
   ON campaign_submissions(campaign_id, external_uuid)
   WHERE external_uuid IS NOT NULL;
@@ -296,6 +301,30 @@ CREATE TABLE IF NOT EXISTS broadcast_reports (
 );
 
 CREATE INDEX IF NOT EXISTS idx_broadcast_reports_campaign ON broadcast_reports(campaign_id, published, sort_order);
+
+-- Manual SMS / message send reports (documentation of bulk messaging)
+CREATE TABLE IF NOT EXISTS sms_send_reports (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  campaign_id UUID NOT NULL REFERENCES campaign_settings(id) ON DELETE CASCADE,
+  owner_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  title TEXT NOT NULL,
+  send_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  recipient_count INT NOT NULL DEFAULT 0,
+  message_body TEXT NOT NULL DEFAULT '',
+  evidence_file_url TEXT,
+  evidence_file_name TEXT,
+  evidence_mime_type TEXT,
+  evidence_file_size BIGINT NOT NULL DEFAULT 0,
+  published BOOLEAN NOT NULL DEFAULT true,
+  sort_order INT NOT NULL DEFAULT 0,
+  plan_label TEXT,
+  plan_labels JSONB NOT NULL DEFAULT '[]'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_sms_send_reports_campaign
+  ON sms_send_reports(campaign_id, published, sort_order);
 
 CREATE TABLE IF NOT EXISTS campaign_meetings (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -489,6 +518,29 @@ ALTER TABLE campaign_meetings ADD COLUMN IF NOT EXISTS score DOUBLE PRECISION;
 ALTER TABLE campaign_files ADD COLUMN IF NOT EXISTS score DOUBLE PRECISION;
 ALTER TABLE raw_media_uploads ADD COLUMN IF NOT EXISTS score DOUBLE PRECISION;
 
+-- Score = autoScore (computed from campaign scoring rules) + manualScore (admin/client bonus).
+ALTER TABLE billboards ADD COLUMN IF NOT EXISTS auto_score DOUBLE PRECISION;
+ALTER TABLE billboards ADD COLUMN IF NOT EXISTS manual_score DOUBLE PRECISION;
+ALTER TABLE posters ADD COLUMN IF NOT EXISTS auto_score DOUBLE PRECISION;
+ALTER TABLE posters ADD COLUMN IF NOT EXISTS manual_score DOUBLE PRECISION;
+ALTER TABLE videos ADD COLUMN IF NOT EXISTS auto_score DOUBLE PRECISION;
+ALTER TABLE videos ADD COLUMN IF NOT EXISTS manual_score DOUBLE PRECISION;
+ALTER TABLE social_media_posts ADD COLUMN IF NOT EXISTS auto_score DOUBLE PRECISION;
+ALTER TABLE social_media_posts ADD COLUMN IF NOT EXISTS manual_score DOUBLE PRECISION;
+ALTER TABLE campaign_activities ADD COLUMN IF NOT EXISTS auto_score DOUBLE PRECISION;
+ALTER TABLE campaign_activities ADD COLUMN IF NOT EXISTS manual_score DOUBLE PRECISION;
+ALTER TABLE broadcast_reports ADD COLUMN IF NOT EXISTS auto_score DOUBLE PRECISION;
+ALTER TABLE broadcast_reports ADD COLUMN IF NOT EXISTS manual_score DOUBLE PRECISION;
+ALTER TABLE campaign_meetings ADD COLUMN IF NOT EXISTS auto_score DOUBLE PRECISION;
+ALTER TABLE campaign_meetings ADD COLUMN IF NOT EXISTS manual_score DOUBLE PRECISION;
+ALTER TABLE campaign_files ADD COLUMN IF NOT EXISTS auto_score DOUBLE PRECISION;
+ALTER TABLE campaign_files ADD COLUMN IF NOT EXISTS manual_score DOUBLE PRECISION;
+ALTER TABLE raw_media_uploads ADD COLUMN IF NOT EXISTS auto_score DOUBLE PRECISION;
+ALTER TABLE raw_media_uploads ADD COLUMN IF NOT EXISTS manual_score DOUBLE PRECISION;
+
+-- Field-based auto scoring rules per content type (JSON keyed by ScoreableContentType).
+ALTER TABLE campaign_settings ADD COLUMN IF NOT EXISTS scoring_rules JSONB NOT NULL DEFAULT '{}'::jsonb;
+
 ALTER TABLE social_media_posts DROP CONSTRAINT IF EXISTS social_media_posts_content_type_check;
 ALTER TABLE social_media_posts ADD CONSTRAINT social_media_posts_content_type_check
   CHECK (content_type IN ('image', 'text', 'video', 'carousel', 'story', 'reel', 'audio'));
@@ -670,6 +722,9 @@ CREATE TABLE IF NOT EXISTS user_problem_reports (
 
 -- Existing deployments: add reply timestamp when missing
 ALTER TABLE user_problem_reports ADD COLUMN IF NOT EXISTS replied_at TIMESTAMPTZ;
+
+-- Last time the reporter viewed their own reports list (drives the sidebar unread dot).
+ALTER TABLE user_problem_reports ADD COLUMN IF NOT EXISTS reporter_seen_at TIMESTAMPTZ;
 
 -- Backfill first-reply time for already-answered tickets
 UPDATE user_problem_reports

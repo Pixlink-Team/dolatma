@@ -338,6 +338,96 @@ export async function deleteStoredCampaignBackup(
   return { deleted: true, filename: basename(filename) };
 }
 
+export interface StoredCampaignBackupWithTitle extends StoredCampaignBackup {
+  campaignTitle: string;
+}
+
+/** Lists stored backups across every campaign, newest first — used by the dedicated backups admin page. */
+export async function listAllStoredCampaignBackups(): Promise<StoredCampaignBackupWithTitle[]> {
+  const campaigns = await pg.pgGetAllCampaigns();
+  const all: StoredCampaignBackupWithTitle[] = [];
+
+  for (const campaign of campaigns) {
+    const backups = await listStoredCampaignBackups(campaign.id);
+    for (const backup of backups) {
+      all.push({ ...backup, campaignTitle: campaign.title });
+    }
+  }
+
+  return all.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+export interface CleanupBackupsOptions {
+  /** Explicit list of backups to delete regardless of age. */
+  targets?: Array<{ campaignId: string; filename: string }>;
+  /** Delete stored backups older than this many days. */
+  olderThanDays?: number;
+  /** Keep only the newest N backups per campaign, delete the rest. */
+  keepPerCampaign?: number;
+}
+
+export interface CleanupBackupsResult {
+  deletedCount: number;
+  failedCount: number;
+}
+
+/** Bulk-deletes stored backup ZIPs by explicit selection, age, or a per-campaign retention count. */
+export async function cleanupCampaignBackups(
+  options: CleanupBackupsOptions
+): Promise<CleanupBackupsResult> {
+  const toDelete = new Map<string, { campaignId: string; filename: string }>();
+  const key = (campaignId: string, filename: string) => `${campaignId}::${filename}`;
+
+  for (const target of options.targets ?? []) {
+    if (target.campaignId && target.filename) {
+      toDelete.set(key(target.campaignId, target.filename), target);
+    }
+  }
+
+  if (options.olderThanDays !== undefined || options.keepPerCampaign !== undefined) {
+    const all = await listAllStoredCampaignBackups();
+    const byCampaign = new Map<string, StoredCampaignBackupWithTitle[]>();
+    for (const backup of all) {
+      const list = byCampaign.get(backup.campaignId) ?? [];
+      list.push(backup);
+      byCampaign.set(backup.campaignId, list);
+    }
+
+    if (options.olderThanDays !== undefined) {
+      const cutoff = Date.now() - options.olderThanDays * 24 * 60 * 60 * 1000;
+      for (const backup of all) {
+        if (new Date(backup.createdAt).getTime() < cutoff) {
+          toDelete.set(key(backup.campaignId, backup.filename), backup);
+        }
+      }
+    }
+
+    if (options.keepPerCampaign !== undefined) {
+      const keep = Math.max(0, options.keepPerCampaign);
+      for (const [campaignId, list] of byCampaign) {
+        const sorted = [...list].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+        for (const backup of sorted.slice(keep)) {
+          toDelete.set(key(campaignId, backup.filename), backup);
+        }
+      }
+    }
+  }
+
+  let deletedCount = 0;
+  let failedCount = 0;
+  for (const target of toDelete.values()) {
+    try {
+      const result = await deleteStoredCampaignBackup(target.campaignId, target.filename);
+      if (result) deletedCount += 1;
+      else failedCount += 1;
+    } catch {
+      failedCount += 1;
+    }
+  }
+
+  return { deletedCount, failedCount };
+}
+
 export async function runDailyCampaignBackups(): Promise<{
   created: StoredCampaignBackup[];
   failed: Array<{ campaignId: string; slug: string; error: string }>;

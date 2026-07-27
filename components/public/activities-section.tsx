@@ -141,6 +141,8 @@ function ActivityCard({
             contentType="activity"
             contentId={activity.id}
             score={activity.score}
+            autoScore={activity.autoScore}
+            manualScore={activity.manualScore}
             canScore={canScore}
             compact
           />
@@ -269,7 +271,7 @@ export function ActivitiesSection({
       title={title}
       description={description}
     >
-      <SectionTopCompaniesBox groups={filteredGroups} />
+      <SectionTopCompaniesBox groups={filteredGroups} contentKind="activity" />
       {hasAnyCreative && (
         <div className="mb-4 flex flex-wrap items-center gap-2" dir="rtl">
           <Button

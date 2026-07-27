@@ -1,3 +1,4 @@
+import { normalizeScoringRules } from "@/lib/scoring/normalize-scoring-rules";
 import type {
   AnalyticsMetric,
   AdminUser,
@@ -19,6 +20,7 @@ import type {
   PosterVersion,
   RawMediaKind,
   RawMediaUpload,
+  SmsSendReport,
   SocialMediaPost,
   SocialPlatformStat,
   Video,
@@ -36,6 +38,7 @@ import {
 } from "@/lib/content-topics";
 import { truncateMeetingSummary } from "@/lib/meeting-preview";
 import { mapOrgRole } from "@/lib/org-roles";
+import { parseSocialPostLinkEntries } from "@/lib/social-posts";
 import { normalizeAdminRole } from "@/lib/user-roles";
 
 function toDateString(value: unknown): string {
@@ -68,13 +71,16 @@ function mapOwnerFromDb(row: any): Ownable {
     parsePlanLabelsColumn(row.plan_labels),
     row.plan_label ?? null
   );
-  const scoreRaw = row.score;
-  const score =
-    scoreRaw == null || scoreRaw === ""
+  const toNullableNumber = (value: unknown): number | null =>
+    value == null || value === ""
       ? null
-      : Number.isFinite(Number(scoreRaw))
-        ? Number(scoreRaw)
+      : Number.isFinite(Number(value))
+        ? Number(value)
         : null;
+
+  const score = toNullableNumber(row.score);
+  const autoScore = toNullableNumber(row.auto_score);
+  const manualScore = toNullableNumber(row.manual_score);
 
   return {
     ownerUserId: row.owner_user_id ?? null,
@@ -88,6 +94,8 @@ function mapOwnerFromDb(row: any): Ownable {
     planLabel: planLabels[0] ?? row.plan_label ?? null,
     planLabels,
     score,
+    autoScore,
+    manualScore,
   };
 }
 
@@ -123,6 +131,7 @@ export function mapSettingsFromDb(row: any): CampaignSettings {
             files: true,
             rawMedia: true,
             forms: true,
+            smsReports: true,
             ...JSON.parse(row.features),
           }
         : {
@@ -141,6 +150,7 @@ export function mapSettingsFromDb(row: any): CampaignSettings {
             files: true,
             rawMedia: true,
             forms: true,
+            smsReports: true,
             ...(row.features ?? {}),
           },
     analyticsConfig: normalizeAnalyticsConfig(
@@ -153,6 +163,7 @@ export function mapSettingsFromDb(row: any): CampaignSettings {
         ? JSON.parse(row.billboard_config)
         : (row.billboard_config ?? {}),
     adminOwnerLabel: row.admin_owner_label ?? "توانیر",
+    scoringRules: normalizeScoringRules(row.scoring_rules),
     contentTopics: normalizeContentTopics(row.content_plans),
     contentPlans: contentPlansFromTopics(normalizeContentTopics(row.content_plans)),
     meetingsViewPasswordHash: row.meetings_view_password_hash ?? null,
@@ -347,6 +358,7 @@ export function mapSubmissionFromDb(row: any): CampaignSubmission {
     mediaUrl: row.media_url,
     status: row.status,
     published: row.published,
+    rejectionReason: row.rejection_reason ?? null,
     ...mapOwnerFromDb(row),
     createdAt: toIsoString(row.created_at),
     updatedAt: toIsoString(row.updated_at),
@@ -355,6 +367,7 @@ export function mapSubmissionFromDb(row: any): CampaignSubmission {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function mapSocialPostFromDb(row: any): SocialMediaPost {
+  const linkEntries = parseSocialPostLinkEntries(row.link_entries);
   return {
     id: row.id,
     campaignId: row.campaign_id,
@@ -367,6 +380,7 @@ export function mapSocialPostFromDb(row: any): SocialMediaPost {
     comments: Number(row.comments ?? 0),
     shares: Number(row.shares ?? 0),
     link: row.link ?? "",
+    linkEntries: linkEntries.length > 0 ? linkEntries : undefined,
     contentType: row.content_type,
     mediaUrl: row.media_url,
     description: row.description,
@@ -412,6 +426,27 @@ export function mapBroadcastReportFromDb(row: any): BroadcastReport {
     fileName: row.file_name,
     summaryData: summary,
     published: row.published ?? false,
+    sortOrder: row.sort_order ?? 0,
+    createdAt: toIsoString(row.created_at),
+    updatedAt: toIsoString(row.updated_at),
+  };
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function mapSmsSendReportFromDb(row: any): SmsSendReport {
+  return {
+    id: row.id,
+    campaignId: row.campaign_id,
+    ...mapOwnerFromDb(row),
+    title: row.title,
+    sendDate: toDateString(row.send_date),
+    recipientCount: Number(row.recipient_count ?? 0),
+    messageBody: row.message_body ?? "",
+    evidenceFileUrl: row.evidence_file_url ?? null,
+    evidenceFileName: row.evidence_file_name ?? null,
+    evidenceMimeType: row.evidence_mime_type ?? null,
+    evidenceFileSize: Number(row.evidence_file_size ?? 0),
+    published: row.published ?? true,
     sortOrder: row.sort_order ?? 0,
     createdAt: toIsoString(row.created_at),
     updatedAt: toIsoString(row.updated_at),

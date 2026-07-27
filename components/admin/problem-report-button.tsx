@@ -24,21 +24,29 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  ProblemReportAttachmentsField,
+  ProblemReportAttachmentsView,
+} from "@/components/admin/problem-report-attachments";
+import {
+  getMyUnreadProblemReplyCountAction,
   listMyProblemReportsAction,
+  markMyProblemReportsSeenAction,
   submitProblemReportAction,
 } from "@/lib/actions/problem-report-actions";
 import {
   PROBLEM_REPORT_CATEGORY_LABELS,
   PROBLEM_REPORT_STATUS_LABELS,
-  type ProblemReport,
+  type MyProblemReport,
+  type ProblemReportAttachment,
   type ProblemReportCategory,
 } from "@/lib/audit/problem-types";
 import { formatPersianDateTime } from "@/lib/utils";
+import { emitProblemReportsUnreadChanged } from "@/lib/problem-reports-unread";
 
 const CATEGORIES = Object.keys(PROBLEM_REPORT_CATEGORY_LABELS) as ProblemReportCategory[];
 
 const STATUS_BADGE: Record<
-  ProblemReport["status"],
+  MyProblemReport["status"],
   "warning" | "default" | "success" | "outline"
 > = {
   pending: "warning",
@@ -55,19 +63,41 @@ export function ProblemReportButton() {
   const [category, setCategory] = useState<ProblemReportCategory>("other");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [attachments, setAttachments] = useState<ProblemReportAttachment[]>([]);
   const [submitting, setSubmitting] = useState(false);
-  const [myReports, setMyReports] = useState<ProblemReport[]>([]);
+  const [myReports, setMyReports] = useState<MyProblemReport[]>([]);
   const [loadingMine, setLoadingMine] = useState(false);
   const [mineLoaded, setMineLoaded] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const reset = () => {
     setCategory("other");
     setTitle("");
     setDescription("");
+    setAttachments([]);
     setTab("new");
   };
 
-  const loadMyReports = useCallback(async () => {
+  const refreshUnreadBadge = useCallback(async () => {
+    try {
+      const result = await getMyUnreadProblemReplyCountAction();
+      const count = result.success ? (result.count ?? 0) : 0;
+      setUnreadCount(count);
+      emitProblemReportsUnreadChanged(count);
+    } catch {
+      setUnreadCount(0);
+    }
+  }, []);
+
+  useEffect(() => {
+    void refreshUnreadBadge();
+    const timer = window.setInterval(() => {
+      void refreshUnreadBadge();
+    }, 60_000);
+    return () => window.clearInterval(timer);
+  }, [refreshUnreadBadge]);
+
+  const loadMyReports = useCallback(async (options?: { markSeen?: boolean }) => {
     setLoadingMine(true);
     try {
       const result = await listMyProblemReportsAction();
@@ -75,8 +105,17 @@ export function ProblemReportButton() {
         toast.error(result.error ?? "بارگذاری گزارش‌ها ناموفق بود");
         return;
       }
-      setMyReports(result.reports ?? []);
+      const reports = result.reports ?? [];
+      setMyReports(reports);
       setMineLoaded(true);
+
+      if (options?.markSeen && reports.some((report) => report.hasUnreadReply)) {
+        const seenResult = await markMyProblemReportsSeenAction();
+        if (seenResult.success) {
+          setUnreadCount(0);
+          emitProblemReportsUnreadChanged(0);
+        }
+      }
     } catch {
       toast.error("بارگذاری گزارش‌ها با خطا مواجه شد");
     } finally {
@@ -86,7 +125,7 @@ export function ProblemReportButton() {
 
   useEffect(() => {
     if (!open || tab !== "mine" || mineLoaded || loadingMine) return;
-    void loadMyReports();
+    void loadMyReports({ markSeen: true });
   }, [open, tab, mineLoaded, loadingMine, loadMyReports]);
 
   useEffect(() => {
@@ -112,6 +151,7 @@ export function ProblemReportButton() {
         description,
         path,
         campaignId,
+        attachments,
       });
 
       if (!result.success) {
@@ -123,9 +163,10 @@ export function ProblemReportButton() {
       setCategory("other");
       setTitle("");
       setDescription("");
+      setAttachments([]);
       setMineLoaded(false);
       setTab("mine");
-      void loadMyReports();
+      void loadMyReports({ markSeen: true });
     } catch {
       toast.error("ارسال گزارش با خطا مواجه شد");
     } finally {
@@ -143,7 +184,15 @@ export function ProblemReportButton() {
         data-audit-label="گزارش مشکل"
         onClick={() => setOpen(true)}
       >
-        <AlertTriangle className="h-4 w-4 text-amber-500" />
+        <span className="relative">
+          <AlertTriangle className="h-4 w-4 text-amber-500" />
+          {unreadCount > 0 && (
+            <span
+              className="absolute -top-1 -start-1 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-background"
+              aria-label="پاسخ خوانده‌نشده"
+            />
+          )}
+        </span>
         گزارش مشکل
       </Button>
 
@@ -173,7 +222,19 @@ export function ProblemReportButton() {
           >
             <TabsList className="w-full grid grid-cols-2">
               <TabsTrigger value="new">گزارش جدید</TabsTrigger>
-              <TabsTrigger value="mine">گزارش‌های من</TabsTrigger>
+              <TabsTrigger value="mine" className="gap-1.5">
+                گزارش‌های من
+                {myReports.some((report) => report.hasUnreadReply) ? (
+                  <span className="relative flex h-2 w-2">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-red-500" />
+                  </span>
+                ) : myReports.length > 0 ? (
+                  <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">
+                    {myReports.length}
+                  </Badge>
+                ) : null}
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="new" className="space-y-4 py-2">
@@ -216,6 +277,12 @@ export function ProblemReportButton() {
                   maxLength={4000}
                 />
               </div>
+
+              <ProblemReportAttachmentsField
+                value={attachments}
+                onChange={setAttachments}
+                disabled={submitting}
+              />
 
               <p className="text-xs text-muted-foreground" dir="ltr">
                 صفحه فعلی: {pathname}
@@ -262,7 +329,12 @@ export function ProblemReportButton() {
               ) : (
                 <div className="space-y-3">
                   {myReports.map((report) => (
-                    <div key={report.id} className="rounded-lg border p-3 space-y-2">
+                    <div
+                      key={report.id}
+                      className={`rounded-lg border p-3 space-y-2 ${
+                        report.hasUnreadReply ? "border-red-400/60 bg-red-500/[0.03]" : ""
+                      }`}
+                    >
                       <div className="flex flex-wrap items-center gap-2">
                         <Badge variant={STATUS_BADGE[report.status]}>
                           {PROBLEM_REPORT_STATUS_LABELS[report.status]}
@@ -270,6 +342,11 @@ export function ProblemReportButton() {
                         <Badge variant="outline">
                           {PROBLEM_REPORT_CATEGORY_LABELS[report.category]}
                         </Badge>
+                        {report.hasUnreadReply && (
+                          <Badge variant="destructive" className="gap-1">
+                            پاسخ جدید
+                          </Badge>
+                        )}
                         <span className="text-xs text-muted-foreground ms-auto">
                           {formatPersianDateTime(report.createdAt)}
                         </span>
@@ -278,6 +355,7 @@ export function ProblemReportButton() {
                       <p className="text-sm text-muted-foreground whitespace-pre-wrap line-clamp-4">
                         {report.description}
                       </p>
+                      <ProblemReportAttachmentsView attachments={report.attachments} />
                       {report.adminNote ? (
                         <div className="rounded-md bg-primary/5 border border-primary/10 px-3 py-2 text-sm space-y-1">
                           <div className="flex items-center gap-1.5 font-medium text-primary">
@@ -302,7 +380,7 @@ export function ProblemReportButton() {
                   disabled={loadingMine}
                   onClick={() => {
                     setMineLoaded(false);
-                    void loadMyReports();
+                    void loadMyReports({ markSeen: true });
                   }}
                 >
                   بروزرسانی

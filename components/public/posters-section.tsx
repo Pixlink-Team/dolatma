@@ -134,7 +134,7 @@ export function PostersSection({ categories: _categories, posters, groups }: Pos
       description="گالری پوسترهای راستا"
       controls={controls}
     >
-      <SectionTopCompaniesBox groups={filteredGroups} />
+      <SectionTopCompaniesBox groups={filteredGroups} contentKind="poster" />
       <div className="space-y-4">
           <OwnerGroupedSection
             groups={visibleGroups}
@@ -151,6 +151,8 @@ export function PostersSection({ categories: _categories, posters, groups }: Pos
                     description={poster.description}
                     versions={poster.versions}
                     score={poster.score}
+                    autoScore={poster.autoScore}
+                    manualScore={poster.manualScore}
                     ownerUserId={poster.ownerUserId}
                     ownerName={poster.ownerName}
                     category={poster.category?.title}

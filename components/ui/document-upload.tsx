@@ -34,7 +34,10 @@ const LETTER_ACCEPT =
   ".pdf,image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.gif,application/pdf";
 
 const DOCUMENT_ACCEPT =
-  ".pdf,.doc,.docx,.xls,.xlsx,.txt,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/plain";
+  ".pdf,.doc,.docx,.xls,.xlsx,.txt,.rar,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/plain,application/vnd.rar,application/x-rar-compressed,application/x-rar";
+
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+const MAX_DOCUMENT_BYTES = 25 * 1024 * 1024;
 
 export function DocumentUpload({
   value,
@@ -61,12 +64,23 @@ export function DocumentUpload({
       }
     }
 
+    const kind: "image" | "document" =
+      isLetter && file.type.startsWith("image/") ? "image" : "document";
+    const maxBytes = kind === "image" ? MAX_IMAGE_BYTES : MAX_DOCUMENT_BYTES;
+    if (file.size > maxBytes) {
+      toast.error(
+        kind === "image"
+          ? `حجم تصویر بیشتر از ${formatPersianNumber(10)} مگابایت است`
+          : `حجم فایل بیشتر از ${formatPersianNumber(25)} مگابایت است`
+      );
+      if (inputRef.current) inputRef.current.value = "";
+      return;
+    }
+
     setUploading(true);
     try {
       const formData = new FormData();
       formData.append("file", file);
-      const kind =
-        isLetter && file.type.startsWith("image/") ? "image" : "document";
       formData.append("kind", kind);
 
       const response = await fetch("/api/upload", {
@@ -127,8 +141,8 @@ export function DocumentUpload({
           <FileText className="h-8 w-8 text-muted-foreground" />
           <p className="text-sm text-muted-foreground">
             {isLetter
-              ? "PDF یا تصویر نامه رسمی — حداکثر ۲۵ مگابایت"
-              : "PDF، Word، Excel یا فایل متنی — حداکثر ۲۵ مگابایت"}
+              ? "PDF یا تصویر نامه رسمی — تصویر تا ۱۰، PDF تا ۲۵ مگابایت"
+              : "PDF، Word، Excel، RAR یا فایل متنی — حداکثر ۲۵ مگابایت"}
           </p>
           <Button
             type="button"

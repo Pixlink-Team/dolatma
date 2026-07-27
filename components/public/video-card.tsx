@@ -19,6 +19,8 @@ interface VideoCardProps {
   description?: string | null;
   versions: VideoVersion[];
   score?: number | null;
+  autoScore?: number | null;
+  manualScore?: number | null;
   ownerUserId?: string | null;
   ownerName?: string | null;
   category?: string | null;
@@ -32,6 +34,8 @@ export function VideoCard({
   description,
   versions,
   score,
+  autoScore,
+  manualScore,
   ownerUserId,
   ownerName,
   category,
@@ -81,6 +85,8 @@ export function VideoCard({
               contentType="video"
               contentId={id}
               score={score}
+              autoScore={autoScore}
+              manualScore={manualScore}
               canScore={canScore}
               compact
             />

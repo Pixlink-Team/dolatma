@@ -16,7 +16,8 @@ export type OwnedContentTable =
   | "social_platform_stats"
   | "broadcast_reports"
   | "campaign_activities"
-  | "campaign_meetings";
+  | "campaign_meetings"
+  | "sms_send_reports";
 
 const OWNED_TABLES = new Set<OwnedContentTable>([
   "billboards",
@@ -32,6 +33,7 @@ const OWNED_TABLES = new Set<OwnedContentTable>([
   "broadcast_reports",
   "campaign_activities",
   "campaign_meetings",
+  "sms_send_reports",
 ]);
 
 type OwnershipRow = {

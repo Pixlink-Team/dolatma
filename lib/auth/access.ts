@@ -125,6 +125,14 @@ export function canScoreContent(
 }
 
 /**
+ * Manage automatic scoring rules (the `/admin/scoring` page): admin/client only.
+ * Org users may score content via `canScoreContent`, but never edit the rules themselves.
+ */
+export function canManageScoringRules(session: AuthSession): boolean {
+  return isFullAdmin(session) || isClientUser(session);
+}
+
+/**
  * Whether an org user may manage users under their device subtree.
  * Honors `manageSubtreeUsers` on campaign permissions (or the session OR-flag).
  * Section grants for new users are still capped to the actor's own grants.

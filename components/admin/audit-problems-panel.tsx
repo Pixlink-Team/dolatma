@@ -29,6 +29,7 @@ import {
   type ProblemReportStats,
   type ProblemReportStatus,
 } from "@/lib/audit/problem-types";
+import { ProblemReportAttachmentsView } from "@/components/admin/problem-report-attachments";
 import { getAuditRoleLabel } from "@/lib/audit/labels";
 import {
   formatPersianDateTime,
@@ -248,6 +249,8 @@ export function AuditProblemsPanel({
                 </div>
 
                 <p className="text-sm whitespace-pre-wrap">{report.description}</p>
+
+                <ProblemReportAttachmentsView attachments={report.attachments} />
 
                 {report.path && (
                   <p className="text-xs text-muted-foreground font-mono" dir="ltr">

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
+  Archive,
   Award,
   Bell,
   Building2,
@@ -24,15 +25,18 @@ import {
   ListChecks,
   LogOut,
   Map,
+  Medal,
   Menu,
   Megaphone,
   Radar,
   Radio,
   Rocket,
   ScrollText,
+  Send,
   Settings,
   Share2,
   Sparkles,
+  TriangleAlert,
   Users,
   UserCircle,
   Video,
@@ -51,6 +55,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { cn, adminHref, isSupabaseConfigured } from "@/lib/utils";
 import { logoutAdminAction } from "@/lib/actions/auth-actions";
 import { getSessionContextAction } from "@/lib/actions/extended-actions";
+import { getMyUnreadProblemReplyCountAction } from "@/lib/actions/problem-report-actions";
 import { createClient } from "@/lib/supabase/client";
 import { useAdminCampaign } from "@/components/admin/admin-campaign-provider";
 import {
@@ -61,6 +66,12 @@ import {
 import { isDeviceScopedPanelRole, isOrgUserRole } from "@/lib/user-roles";
 import { MEDIA_COMMAND_NAV } from "@/lib/media-command/labels";
 import { MONITORING_NAV } from "@/lib/monitoring/labels";
+import {
+  PROBLEM_REPORTS_UNREAD_EVENT,
+  readUnreadCountFromEvent,
+} from "@/lib/problem-reports-unread";
+
+const PROBLEM_REPORTS_HREF = "/admin/problem-reports";
 
 const allNavItems: {
   href: string;
@@ -81,6 +92,8 @@ const allNavItems: {
   { href: "/admin/settings", label: "تنظیمات راستا", icon: Settings, permissionKey: "campaignSettings", adminOrClientOnly: true },
   { href: "/admin/capacity-map", label: "نقشه ملی ظرفیت", icon: Map, adminOrClientOnly: true },
   { href: "/admin/calendar", label: "تقویم ملی", icon: CalendarDays, permissionKey: "nationalCalendar", adminOrClientOnly: true },
+  { href: "/admin/performance", label: "مشاهده عملکرد", icon: Medal, adminOrClientOnly: true },
+  { href: "/admin/scoring", label: "قوانین امتیازدهی", icon: Award, adminOrClientOnly: true },
   { href: "/admin/tutorials", label: "آموزش بخش‌ها", icon: GraduationCap, permissionKey: "sectionTutorials", adminOnly: true },
   { href: "/admin/onboarding-steps", label: "مراحل راه‌اندازی", icon: ListChecks, adminOnly: true },
   { href: "/admin/ministries", label: "دستگاه‌ها", icon: Building2, devicesNav: true },
@@ -98,13 +111,17 @@ const allNavItems: {
   { href: "/admin/activities", label: "اقدامات", icon: Sparkles, permissionKey: "activities" },
   { href: "/admin/elanha", label: "اعلان‌ها", icon: Bell, adminOrClientOnly: true },
   { href: "/admin/directives", label: "دستورکارها", icon: ClipboardCheck, permissionKey: "directives" },
+  { href: PROBLEM_REPORTS_HREF, label: "گزارش مشکل", icon: TriangleAlert, alwaysVisible: true },
   { href: "/admin/broadcast", label: "پخش صدا و سیما", icon: Radio, permissionKey: "broadcast" },
+  { href: "/admin/sms-reports", label: "ارسال پیام", icon: Send, permissionKey: "smsReports" },
   { href: "/admin/meetings", label: "جلسات و مصوبات", icon: ClipboardList, permissionKey: "meetings" },
   { href: "/admin/submissions", label: "مشارکت‌ها", icon: FileText, permissionKey: "submissions" },
   { href: "/admin/forms", label: "فرم‌ها", icon: FormInput, permissionKey: "forms", adminOrClientOnly: true },
   { href: "/admin/users", label: "کاربران", icon: Users, usersNav: true },
   { href: "/admin/best-practices", label: "بهترین اقدامات", icon: Award, permissionKey: "bestPractices" },
   { href: "/admin/updates", label: "آپدیت‌های سایت", icon: Rocket, permissionKey: "siteUpdates", adminOrClientOnly: true },
+  { href: "/admin/backups", label: "پشتیبان‌گیری", icon: Archive, adminOnly: true },
+  { href: "/admin/reported-problems", label: "مشکلات ثبت‌شده", icon: TriangleAlert, adminOnly: true },
   { href: "/admin/audit", label: "رصد کاربران", icon: ScrollText, adminOnly: true },
 ];
 
@@ -120,12 +137,16 @@ const managementNavHrefs = new Set([
   "/admin/settings",
   "/admin/capacity-map",
   "/admin/calendar",
+  "/admin/performance",
+  "/admin/scoring",
   "/admin/tutorials",
   "/admin/onboarding-steps",
   "/admin/elanha",
   "/admin/updates",
   "/admin/forms",
   "/admin/best-practices",
+  "/admin/backups",
+  "/admin/reported-problems",
 ]);
 
 const DIRECTIVES_HREF = "/admin/directives";
@@ -144,8 +165,32 @@ export function AdminSidebar() {
   const [permissions, setPermissions] = useState<ContributorPermissions | null>(null);
   const [mediaCommandOpen, setMediaCommandOpen] = useState(false);
   const [monitoringOpen, setMonitoringOpen] = useState(false);
+  const [problemReportsUnread, setProblemReportsUnread] = useState(0);
   const desktopNavRef = useRef<HTMLElement>(null);
   const { campaignId, campaigns, currentCampaign, setCampaignId } = useAdminCampaign();
+
+  useEffect(() => {
+    let cancelled = false;
+    const refresh = () => {
+      getMyUnreadProblemReplyCountAction()
+        .then((result) => {
+          if (!cancelled && result.success) setProblemReportsUnread(result.count ?? 0);
+        })
+        .catch(() => {});
+    };
+    refresh();
+    const timer = window.setInterval(refresh, 60_000);
+    const onUnreadEvent = (event: Event) => {
+      const count = readUnreadCountFromEvent(event);
+      if (count !== null) setProblemReportsUnread(count);
+    };
+    window.addEventListener(PROBLEM_REPORTS_UNREAD_EVENT, onUnreadEvent);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+      window.removeEventListener(PROBLEM_REPORTS_UNREAD_EVENT, onUnreadEvent);
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -337,7 +382,14 @@ export function AdminSidebar() {
                 )}
               >
                 <Icon className="h-4 w-4 shrink-0" />
-                <span className="truncate">{item.label}</span>
+                <span className="truncate flex-1">{item.label}</span>
+                {item.href === PROBLEM_REPORTS_HREF && problemReportsUnread > 0 && (
+                  <span
+                    className="ms-auto h-2.5 w-2.5 shrink-0 rounded-full bg-red-500"
+                    title="پاسخ خوانده‌نشده"
+                    aria-label="پاسخ خوانده‌نشده"
+                  />
+                )}
               </Link>
             );
           })}

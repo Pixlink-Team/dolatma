@@ -12,6 +12,8 @@ export interface ContributorPermissions {
   activities: boolean;
   submissions: boolean;
   directives: boolean;
+  /** Manual logs of SMS / bulk messages sent to audiences. */
+  smsReports: boolean;
   forms: boolean;
   mediaCommand: boolean;
   monitoring: boolean;
@@ -51,6 +53,7 @@ export const defaultContributorPermissions = (): ContributorPermissions => ({
   activities: true,
   submissions: true,
   directives: true,
+  smsReports: true,
   // Panel management sections stay off unless admin grants them.
   forms: false,
   mediaCommand: true,
@@ -84,6 +87,7 @@ export const contributorPermissionLabels: Partial<
   activities: "اقدامات",
   submissions: "مشارکت‌ها",
   directives: "دستورکارها",
+  smsReports: "ارسال پیام",
   mediaCommand: "میز فرمان رسانه‌ای",
   monitoring: "رصد و واکنش سریع",
   bestPractices: "بهترین اقدامات",
@@ -136,6 +140,7 @@ export function normalizeContributorPermissions(
     activities: record.activities ?? defaults.activities,
     submissions: record.submissions ?? defaults.submissions,
     directives: record.directives ?? defaults.directives,
+    smsReports: record.smsReports ?? defaults.smsReports,
     forms: record.forms ?? defaults.forms,
     mediaCommand: record.mediaCommand ?? defaults.mediaCommand,
     monitoring: record.monitoring ?? defaults.monitoring,
@@ -176,6 +181,7 @@ export const deniedContributorPermissions = (): ContributorPermissions => ({
   activities: false,
   submissions: false,
   directives: false,
+  smsReports: false,
   forms: false,
   mediaCommand: false,
   monitoring: false,

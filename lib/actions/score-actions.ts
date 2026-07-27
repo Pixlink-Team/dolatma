@@ -1,80 +1,52 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { canScoreContent } from "@/lib/auth/access";
+import { canManageScoringRules, canScoreContent } from "@/lib/auth/access";
 import { getAuthSession } from "@/lib/auth/get-session";
-import { normalizeScoreValue } from "@/lib/content-score";
 import { logAuditForSession } from "@/lib/audit/log-event";
-import { getSql } from "@/lib/db/client";
-import type { ScoreableContentType } from "@/lib/types";
-import { isPostgresConfigured } from "@/lib/utils";
+import {
+  recalculateCampaignScores,
+  saveCampaignScoringRules,
+  setManualScore,
+} from "@/lib/scoring/persist-content-score";
+import { normalizeScoringRules } from "@/lib/scoring/normalize-scoring-rules";
+import type { CampaignScoringRules, ScoreableContentType } from "@/lib/types";
 
-const TABLE_BY_TYPE: Record<ScoreableContentType, string> = {
-  billboard: "billboards",
-  poster: "posters",
-  video: "videos",
-  file: "campaign_files",
-  raw_media: "raw_media_uploads",
-  social_post: "social_media_posts",
-  site_publication: "social_media_posts",
-  activity: "campaign_activities",
-  broadcast: "broadcast_reports",
-  meeting: "campaign_meetings",
-};
+async function resolveScorePermissions(campaignId: string) {
+  const session = await getAuthSession();
+  let permissions = null;
+  if (session?.userId && session.role === "org_user") {
+    const { pgGetUserById } = await import("@/lib/db/repository-extended");
+    const user = await pgGetUserById(session.userId);
+    permissions = user?.campaignPermissions[campaignId] ?? null;
+  }
+  return { session, permissions };
+}
 
 export async function saveContentScoreAction(input: {
   campaignId: string;
   contentType: ScoreableContentType;
   contentId: string;
   score: number | null;
-}): Promise<{ success: boolean; error?: string }> {
-  const session = await getAuthSession();
-  let permissions = null;
-  if (session?.userId && session.role === "org_user") {
-    const { pgGetUserById } = await import("@/lib/db/repository-extended");
-    const user = await pgGetUserById(session.userId);
-    permissions = user?.campaignPermissions[input.campaignId] ?? null;
-  }
+}): Promise<{
+  success: boolean;
+  autoScore?: number;
+  manualScore?: number;
+  score?: number;
+  error?: string;
+}> {
+  const { session, permissions } = await resolveScorePermissions(input.campaignId);
   if (!session || !canScoreContent(session, permissions)) {
     return { success: false, error: "دسترسی امتیازدهی ندارید" };
   }
 
-  if (!isPostgresConfigured()) {
-    return { success: false, error: "ذخیره امتیاز فقط روی دیتابیس فعال است" };
-  }
-
-  const table = TABLE_BY_TYPE[input.contentType];
-  if (!table) return { success: false, error: "نوع محتوا نامعتبر است" };
-
-  const normalized = normalizeScoreValue(input.score);
-  if (!normalized.ok) {
-    return { success: false, error: normalized.error };
-  }
-  const score = normalized.value;
-
-  const sql = getSql();
-  const now = new Date().toISOString();
-
-  // Parameterized table name is fixed from allowlist above.
-  if (table === "billboards") {
-    await sql`UPDATE billboards SET score = ${score}, updated_at = ${now} WHERE id = ${input.contentId} AND campaign_id = ${input.campaignId}`;
-  } else if (table === "posters") {
-    await sql`UPDATE posters SET score = ${score}, updated_at = ${now} WHERE id = ${input.contentId} AND campaign_id = ${input.campaignId}`;
-  } else if (table === "videos") {
-    await sql`UPDATE videos SET score = ${score}, updated_at = ${now} WHERE id = ${input.contentId} AND campaign_id = ${input.campaignId}`;
-  } else if (table === "campaign_files") {
-    await sql`UPDATE campaign_files SET score = ${score}, updated_at = ${now} WHERE id = ${input.contentId} AND campaign_id = ${input.campaignId}`;
-  } else if (table === "raw_media_uploads") {
-    await sql`UPDATE raw_media_uploads SET score = ${score}, updated_at = ${now} WHERE id = ${input.contentId} AND campaign_id = ${input.campaignId}`;
-  } else if (table === "social_media_posts") {
-    await sql`UPDATE social_media_posts SET score = ${score}, updated_at = ${now} WHERE id = ${input.contentId} AND campaign_id = ${input.campaignId}`;
-  } else if (table === "campaign_activities") {
-    await sql`UPDATE campaign_activities SET score = ${score}, updated_at = ${now} WHERE id = ${input.contentId} AND campaign_id = ${input.campaignId}`;
-  } else if (table === "broadcast_reports") {
-    await sql`UPDATE broadcast_reports SET score = ${score}, updated_at = ${now} WHERE id = ${input.contentId} AND campaign_id = ${input.campaignId}`;
-  } else if (table === "campaign_meetings") {
-    await sql`UPDATE campaign_meetings SET score = ${score}, updated_at = ${now} WHERE id = ${input.contentId} AND campaign_id = ${input.campaignId}`;
-  }
+  const result = await setManualScore({
+    campaignId: input.campaignId,
+    contentType: input.contentType,
+    contentId: input.contentId,
+    manualScore: input.score,
+  });
+  if (!result.success) return result;
 
   await logAuditForSession(session, {
     category: "content",
@@ -82,11 +54,53 @@ export async function saveContentScoreAction(input: {
     entityType: input.contentType,
     entityId: input.contentId,
     campaignId: input.campaignId,
-    label: `امتیازدهی (${score ?? "حذف امتیاز"})`,
-    metadata: { score },
+    label: `امتیازدهی (${result.score ?? "حذف امتیاز"})`,
+    metadata: { autoScore: result.autoScore, manualScore: result.manualScore, score: result.score },
   });
 
   revalidatePath(`/admin`);
   revalidatePath(`/campaign`);
-  return { success: true };
+  return result;
+}
+
+/** Admin + client only: manage automatic scoring rules for a campaign. */
+export async function saveScoringRulesAction(input: {
+  campaignId: string;
+  scoringRules: CampaignScoringRules;
+  /** Recalculate all content scores with the new rules (resets manual bonuses). */
+  recalculate?: boolean;
+}): Promise<{ success: boolean; updated?: number; error?: string }> {
+  const session = await getAuthSession();
+  if (!session || !canManageScoringRules(session)) {
+    return { success: false, error: "دسترسی مدیریت قوانین امتیازدهی ندارید" };
+  }
+
+  const normalized = normalizeScoringRules(input.scoringRules);
+  const saveResult = await saveCampaignScoringRules(input.campaignId, normalized);
+  if (!saveResult.success) return saveResult;
+
+  let updated = 0;
+  if (input.recalculate) {
+    const recalcResult = await recalculateCampaignScores({
+      campaignId: input.campaignId,
+      scoringRules: normalized,
+      resetManual: true,
+    });
+    if (!recalcResult.success) return recalcResult;
+    updated = recalcResult.updated;
+  }
+
+  await logAuditForSession(session, {
+    category: "content",
+    action: "scoring_rules.save",
+    entityType: "campaign",
+    entityId: input.campaignId,
+    campaignId: input.campaignId,
+    label: "بروزرسانی قوانین امتیازدهی خودکار",
+  });
+
+  revalidatePath(`/admin`);
+  revalidatePath(`/admin/scoring`);
+  revalidatePath(`/campaign`);
+  return { success: true, updated };
 }

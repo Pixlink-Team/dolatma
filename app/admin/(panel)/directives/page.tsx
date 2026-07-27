@@ -9,6 +9,7 @@ import {
 } from "@/lib/auth/access";
 import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
 import { requireContributorAccess } from "@/lib/auth/require-contributor-access";
+import { listRejectedSubmissionsForOwner } from "@/lib/data-access/admin";
 import { pgGetUserPermissionsForCampaign } from "@/lib/db/repository-extended";
 import {
   pgListArchivedDirectivesForCampaign,
@@ -57,33 +58,43 @@ export default async function DirectivesPage({ searchParams }: PageProps) {
         initialDirectives={[]}
         archivedDirectives={[]}
         inboxDirectives={[]}
+        rejectedSubmissions={[]}
         campaignUsers={[]}
         ministries={[]}
       />
     );
   }
 
-  const [manageDirectives, archivedDirectives, inboxDirectives, campaignUsers, ministries] =
-    await Promise.all([
-      canManage
-        ? pgListDirectivesForCampaign(campaignId, createdByFilter)
-        : Promise.resolve([]),
-      canManage
-        ? pgListArchivedDirectivesForCampaign(campaignId, createdByFilter)
-        : Promise.resolve([]),
-      session.userId
-        ? pgListDirectivesForUserInbox(campaignId, session.userId)
-        : Promise.resolve([]),
-      canManage
-        ? pgListCampaignUsersForDirectives(campaignId, {
-            parentUserId:
-              audienceScope === "subordinates" ? session.userId ?? undefined : undefined,
-          })
-        : Promise.resolve([]),
-      canManage && audienceScope === "global"
-        ? pgListMinistries({ includeOrganizations: true })
-        : Promise.resolve([]),
-    ]);
+  const [
+    manageDirectives,
+    archivedDirectives,
+    inboxDirectives,
+    rejectedSubmissions,
+    campaignUsers,
+    ministries,
+  ] = await Promise.all([
+    canManage
+      ? pgListDirectivesForCampaign(campaignId, createdByFilter)
+      : Promise.resolve([]),
+    canManage
+      ? pgListArchivedDirectivesForCampaign(campaignId, createdByFilter)
+      : Promise.resolve([]),
+    session.userId
+      ? pgListDirectivesForUserInbox(campaignId, session.userId)
+      : Promise.resolve([]),
+    session.userId
+      ? listRejectedSubmissionsForOwner(campaignId, session.userId)
+      : Promise.resolve([]),
+    canManage
+      ? pgListCampaignUsersForDirectives(campaignId, {
+          parentUserId:
+            audienceScope === "subordinates" ? session.userId ?? undefined : undefined,
+        })
+      : Promise.resolve([]),
+    canManage && audienceScope === "global"
+      ? pgListMinistries({ includeOrganizations: true })
+      : Promise.resolve([]),
+  ]);
 
   const initialDirectives = canManage ? manageDirectives : inboxDirectives;
 
@@ -96,6 +107,7 @@ export default async function DirectivesPage({ searchParams }: PageProps) {
       initialDirectives={withFileAccessTokensDeep(initialDirectives)}
       archivedDirectives={withFileAccessTokensDeep(archivedDirectives)}
       inboxDirectives={withFileAccessTokensDeep(inboxDirectives)}
+      rejectedSubmissions={rejectedSubmissions}
       campaignUsers={campaignUsers}
       ministries={ministries}
     />

@@ -75,6 +75,8 @@ export function AdminVideoCompactCard({
             contentType="video"
             contentId={video.id}
             score={video.score}
+            autoScore={video.autoScore}
+            manualScore={video.manualScore}
             canScore={canScore}
             compact
             onScoreSaved={onScoreSaved}

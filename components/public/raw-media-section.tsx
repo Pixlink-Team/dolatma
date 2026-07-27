@@ -77,6 +77,8 @@ function RawMediaList({ items }: { items: RawMediaUpload[] }) {
                   contentType="raw_media"
                   contentId={item.id}
                   score={item.score}
+                  autoScore={item.autoScore}
+                  manualScore={item.manualScore}
                   canScore={canScore}
                   compact
                 />
@@ -218,7 +220,7 @@ export function RawMediaSection({ items, groups, storage, campaignId }: RawMedia
       title="راش تصویر"
       description="عکس و فیلم خام با حجم بالا — قابل دانلود توسط مدیر و کارفرما"
     >
-      <SectionTopCompaniesBox groups={filteredGroups} />
+      <SectionTopCompaniesBox groups={filteredGroups} contentKind="raw_media" />
       <StorageMeter storage={storage} />
       {filteredItems.length === 0 ? (
         <div className="rounded-xl border bg-card py-12 text-center text-muted-foreground">

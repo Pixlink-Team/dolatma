@@ -606,6 +606,7 @@ export async function getPublicCampaignData(slug: string): Promise<PublicCampaig
       meetings: [],
       activities: [],
       socialPlatformStats: [],
+      smsReports: [],
     };
 
     return assemblePublicData(

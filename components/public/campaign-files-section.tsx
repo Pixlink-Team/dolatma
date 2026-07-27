@@ -59,6 +59,8 @@ function FileList({ files }: { files: CampaignFile[] }) {
                   contentType="file"
                   contentId={file.id}
                   score={file.score}
+                  autoScore={file.autoScore}
+                  manualScore={file.manualScore}
                   canScore={canScore}
                   compact
                 />
@@ -137,7 +139,7 @@ export function CampaignFilesSection({ files, groups }: CampaignFilesSectionProp
       title="فایل‌های راستا"
       description="دانلود PDF، Word، Excel و سایر فایل‌های مرتبط با راستا"
     >
-      <SectionTopCompaniesBox groups={filteredGroups} />
+      <SectionTopCompaniesBox groups={filteredGroups} contentKind="file" />
       {filteredFiles.length === 0 ? (
         <div className="rounded-xl border bg-card py-12 text-center text-muted-foreground">
           فایلی با فیلتر انتخاب‌شده یافت نشد.

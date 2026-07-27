@@ -26,7 +26,11 @@ import {
   useSectionBulkEdit,
 } from "@/components/admin/section-bulk-edit";
 import { deleteBillboardAction } from "@/lib/actions/admin-actions";
-import { resolveBillboardCategoryLabel } from "@/lib/billboard-categories";
+import { BillboardCategoryChart } from "@/components/charts/billboard-category-chart";
+import {
+  buildBillboardCategoryStats,
+  resolveBillboardCategoryLabel,
+} from "@/lib/billboard-categories";
 import { getBillboardDisplayImage } from "@/lib/billboard-media";
 import type { ContentTopic } from "@/lib/content-topics";
 import { type EditSuggestionMissingField } from "@/lib/edit-suggestions";
@@ -74,6 +78,7 @@ export function BillboardsAdmin({
   const [editingBillboard, setEditingBillboard] = useState<Billboard | null>(null);
   const [previewBillboard, setPreviewBillboard] = useState<Billboard | null>(null);
   const [contentFilter, setContentFilter] = useState<AdminContentFilterState>(DEFAULT_ADMIN_CONTENT_FILTER);
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const { viewMode, setViewMode } = useAdminViewMode("billboards");
   const [, startTransition] = useTransition();
 
@@ -93,12 +98,22 @@ export function BillboardsAdmin({
   }, [initialBillboards]);
 
   const filterUsers = useMemo(() => collectAdminFilterUsers(billboards), [billboards]);
-  const filteredBillboards = useMemo(
+  const contentFiltered = useMemo(
     () => billboards.filter((item) => matchesAdminContentFilter(item, contentFilter)),
     [billboards, contentFilter]
   );
+  const categoryStats = useMemo(
+    () => buildBillboardCategoryStats(contentFiltered),
+    [contentFiltered]
+  );
+  const filteredBillboards = useMemo(() => {
+    if (categoryFilter === "all") return contentFiltered;
+    return contentFiltered.filter(
+      (item) => resolveBillboardCategoryLabel(item) === categoryFilter
+    );
+  }, [contentFiltered, categoryFilter]);
 
-  const paginationResetKey = `${contentFilter.userKey}:${contentFilter.planLabels.join(",")}:${viewMode}`;
+  const paginationResetKey = `${contentFilter.userKey}:${contentFilter.planLabels.join(",")}:${categoryFilter}:${viewMode}`;
   const { visibleCount, hasMore, isLoadingMore, loadMore } = useAdminInfiniteScroll(
     filteredBillboards.length,
     paginationResetKey
@@ -164,6 +179,18 @@ export function BillboardsAdmin({
         plans={contentPlans}
         items={billboards}
       />
+
+      {categoryStats.length > 0 && (
+        <div className="mb-4">
+          <BillboardCategoryChart
+            data={categoryStats}
+            selectedLabel={categoryFilter === "all" ? null : categoryFilter}
+            onSelect={(label) =>
+              setCategoryFilter((prev) => (prev === label ? "all" : label))
+            }
+          />
+        </div>
+      )}
 
       <SectionBulkEditBar
         campaignId={campaignId}

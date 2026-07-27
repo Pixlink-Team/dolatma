@@ -80,6 +80,8 @@ export function AdminSocialPostCompactCard({
             contentType="social_post"
             contentId={post.id}
             score={post.score}
+            autoScore={post.autoScore}
+            manualScore={post.manualScore}
             canScore={canScore}
             compact
             onScoreSaved={onScoreSaved}

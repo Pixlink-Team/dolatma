@@ -184,6 +184,8 @@ function NotificationCard({
             contentType={item.contentType}
             contentId={item.contentId}
             score={item.score}
+            autoScore={item.autoScore}
+            manualScore={item.manualScore}
             canScore={canScore}
             compact
             onScoreSaved={onScoreSaved}
@@ -285,6 +287,8 @@ function NotificationListRow({
             contentType={item.contentType}
             contentId={item.contentId}
             score={item.score}
+            autoScore={item.autoScore}
+            manualScore={item.manualScore}
             canScore={canScore}
             compact
             onScoreSaved={onScoreSaved}

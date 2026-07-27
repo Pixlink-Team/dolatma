@@ -54,6 +54,8 @@ function BroadcastReportCard({ report }: { report: BroadcastReport }) {
             contentType="broadcast"
             contentId={report.id}
             score={report.score}
+            autoScore={report.autoScore}
+            manualScore={report.manualScore}
             canScore={canScore}
             compact
           />
@@ -122,7 +124,7 @@ export function BroadcastSection({ reports, groups }: BroadcastSectionProps) {
       title="گزارش پخش صدا و سیما"
       description="گزارش‌های PDF روزانه"
     >
-      <SectionTopCompaniesBox groups={filteredGroups} />
+      <SectionTopCompaniesBox groups={filteredGroups} contentKind="broadcast" />
       {filteredReports.length === 0 ? (
         <div className="rounded-xl border bg-card py-12 text-center text-muted-foreground">
           گزارشی با فیلتر انتخاب‌شده یافت نشد.

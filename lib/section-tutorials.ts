@@ -14,6 +14,7 @@ export const TUTORIAL_SECTION_KEYS = [
   "meetings",
   "submissions",
   "subsidiaries",
+  "smsReports",
 ] as const;
 
 export type TutorialSectionKey = (typeof TUTORIAL_SECTION_KEYS)[number];
@@ -34,6 +35,7 @@ export const tutorialSectionLabels: Record<TutorialSectionKey, string> = {
   meetings: "جلسات و مصوبات",
   submissions: "مشارکت‌ها",
   subsidiaries: "زیرمجموعه‌ها",
+  smsReports: "ارسال پیام",
 };
 
 export interface TutorialStep {

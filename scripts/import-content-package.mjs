@@ -62,6 +62,7 @@ const defaultPermissions = {
   activities: true,
   submissions: true,
   directives: true,
+  smsReports: true,
 };
 
 function normalizeEmail(usernameOrEmail) {

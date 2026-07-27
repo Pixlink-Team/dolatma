@@ -18,7 +18,7 @@ import {
 import { hashPassword } from "@/lib/auth/password";
 import * as pgExt from "@/lib/db/repository-extended";
 import type { MeetingDecisionPayload, MeetingTaskPayload } from "@/lib/db/repository-extended";
-import type { AdminRole, BroadcastReport, CampaignActivity, CampaignMeeting, SocialMediaPost, SocialPlatform, SocialPlatformStat } from "@/lib/types";
+import type { AdminRole, BroadcastReport, CampaignActivity, CampaignMeeting, SmsSendReport, SocialMediaPost, SocialPlatform, SocialPlatformStat } from "@/lib/types";
 import {
   inferDefaultAuthorityLevel,
   type DirectiveAuthorityLevel,
@@ -59,6 +59,7 @@ async function revalidateExtended(slug?: string) {
   revalidatePath("/admin/activities");
   revalidatePath("/admin/broadcast");
   revalidatePath("/admin/meetings");
+  revalidatePath("/admin/sms-reports");
   revalidatePath("/admin/users");
   revalidatePath("/admin/profile");
   revalidatePath("/admin/analytics");
@@ -385,6 +386,61 @@ export async function deleteBroadcastReportAction(id: string) {
   if (denied) return denied;
   await pgExt.pgDeleteBroadcastReport(id);
   await auditContentDelete({ entityType: "broadcast_report", entityId: id });
+  await revalidateExtended();
+  return { success: true };
+}
+
+export async function saveSmsSendReportAction(data: Partial<SmsSendReport> & { id?: string }) {
+  const validationError = validateTitlePayload(data);
+  if (validationError) return validationError;
+  const session = await getAuthSession();
+  if (!session) return { success: false, error: "Unauthorized" };
+
+  if (!isFullAdmin(session) && data.campaignId) {
+    const permissions = await pgExt.pgGetUserPermissionsForCampaign(session.userId!, data.campaignId);
+    if (!hasContributorPermission(permissions, "smsReports")) {
+      return { success: false, error: "دسترسی ندارید" };
+    }
+  }
+
+  const payload = await withSaveOwnerScope(session, data);
+
+  if (!isPostgresConfigured()) {
+    return { success: false, error: "Database required" };
+  }
+
+  const tutorialDenied = await assertTutorialForPossibleCreate(
+    "smsReports",
+    "sms_send_reports",
+    data.id
+  );
+  if (tutorialDenied) return tutorialDenied;
+
+  if (data.id) {
+    const denied = await assertCanMutateOwnedContent(session, "sms_send_reports", data.id);
+    if (denied) return denied;
+  }
+
+  const result = await pgExt.pgSaveSmsSendReport(payload);
+  await auditContentChange({
+    isUpdate: Boolean(data.id),
+    entityType: "sms_send_report",
+    entityId: data.id,
+    campaignId: data.campaignId,
+    label: data.title,
+  });
+  await revalidateExtended();
+  return result;
+}
+
+export async function deleteSmsSendReportAction(id: string) {
+  const session = await getAuthSession();
+  if (!session) return { success: false, error: "Unauthorized" };
+  if (!isPostgresConfigured()) return { success: false, error: "Database required" };
+  const denied = await assertCanMutateOwnedContent(session, "sms_send_reports", id);
+  if (denied) return denied;
+  await pgExt.pgDeleteSmsSendReport(id);
+  await auditContentDelete({ entityType: "sms_send_report", entityId: id });
   await revalidateExtended();
   return { success: true };
 }

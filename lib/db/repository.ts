@@ -1,5 +1,5 @@
 import { getSql } from "@/lib/db/client";
-import { pgGetCampaignActivities, pgGetMeetingsWithTasks, pgGetPublicMeetingPreviews } from "@/lib/db/repository-extended";
+import { pgGetCampaignActivities, pgGetMeetingsWithTasks, pgGetPublicMeetingPreviews, pgGetSmsSendReports } from "@/lib/db/repository-extended";
 import {
   mapBillboardFromDb,
   mapBillboardDisplayPeriodFromDb,
@@ -17,6 +17,7 @@ import {
   mapVideoFromDb,
   mapVideoVersionFromDb,
 } from "@/lib/db/mappers";
+import { recalculateScoreAfterSave } from "@/lib/scoring/persist-content-score";
 import type { OwnerScope } from "@/lib/auth/owner-scope";
 import { normalizeOwnerIds } from "@/lib/auth/owner-scope";
 import type {
@@ -78,6 +79,7 @@ const defaultFeatures = {
   files: true,
   rawMedia: true,
   forms: true,
+  smsReports: true,
 };
 
 export async function pgGetAllCampaigns(): Promise<CampaignSettings[]> {
@@ -112,7 +114,8 @@ export type AdminDataSection =
   | "socialPlatformStats"
   | "meetings"
   | "activities"
-  | "rawMedia";
+  | "rawMedia"
+  | "smsReports";
 
 const ALL_ADMIN_DATA_SECTIONS: AdminDataSection[] = [
   "settings",
@@ -133,6 +136,7 @@ const ALL_ADMIN_DATA_SECTIONS: AdminDataSection[] = [
   "meetings",
   "activities",
   "rawMedia",
+  "smsReports",
 ];
 
 export async function pgGetAdminData(
@@ -187,6 +191,7 @@ export async function pgGetAdminData(
   const emptyRows = Promise.resolve([] as Record<string, unknown>[]);
   const emptyMeetings = Promise.resolve([] as Awaited<ReturnType<typeof pgGetMeetingsWithTasks>>);
   const emptyActivities = Promise.resolve([] as Awaited<ReturnType<typeof pgGetCampaignActivities>>);
+  const emptySmsReports = Promise.resolve([] as Awaited<ReturnType<typeof pgGetSmsSendReports>>);
 
   const [
     campaigns,
@@ -207,6 +212,7 @@ export async function pgGetAdminData(
     meetings,
     activities,
     rawMedia,
+    smsReports,
   ] = await Promise.all([
     want.has("campaigns")
       ? sql`SELECT * FROM campaign_settings ORDER BY updated_at DESC`
@@ -403,6 +409,7 @@ export async function pgGetAdminData(
       ORDER BY r.sort_order, r.created_at DESC
     `
       : emptyRows,
+    want.has("smsReports") ? pgGetSmsSendReports(campaignId, ownerUserId) : emptySmsReports,
   ]);
 
   return {
@@ -424,6 +431,7 @@ export async function pgGetAdminData(
     meetings,
     activities,
     rawMedia: rawMedia.map(mapRawMediaUploadFromDb),
+    smsReports,
   };
 }
 
@@ -614,6 +622,12 @@ export async function pgSaveBillboard(data: Partial<Billboard> & { id?: string }
       updated_at = EXCLUDED.updated_at
   `;
 
+  await recalculateScoreAfterSave({
+    campaignId: data.campaignId ?? "",
+    contentType: "billboard",
+    contentId: id,
+  });
+
   return { success: true };
 }
 
@@ -797,6 +811,12 @@ export async function pgSavePoster(data: Partial<Poster> & { id?: string }) {
       updated_at = EXCLUDED.updated_at
   `;
 
+  await recalculateScoreAfterSave({
+    campaignId: data.campaignId ?? "",
+    contentType: "poster",
+    contentId: id,
+  });
+
   return { success: true };
 }
 
@@ -902,6 +922,12 @@ export async function pgSaveVideo(data: Partial<Video> & { id?: string }) {
       score = COALESCE(EXCLUDED.score, videos.score),
       updated_at = EXCLUDED.updated_at
   `;
+
+  await recalculateScoreAfterSave({
+    campaignId: data.campaignId ?? "",
+    contentType: "video",
+    contentId: id,
+  });
 
   return { success: true };
 }
@@ -1063,19 +1089,96 @@ export async function pgDeleteCompanyWebsite(id: string) {
   return { success: true };
 }
 
+let submissionsRejectionReasonReady = false;
+
+async function ensureSubmissionsRejectionReasonColumn() {
+  if (submissionsRejectionReasonReady) return;
+  const sql = getSql();
+  await sql`
+    ALTER TABLE campaign_submissions
+      ADD COLUMN IF NOT EXISTS rejection_reason TEXT
+  `;
+  submissionsRejectionReasonReady = true;
+}
+
 export async function pgUpdateSubmission(id: string, data: Partial<CampaignSubmission>) {
   const sql = getSql();
   const now = new Date().toISOString();
+  await ensureSubmissionsRejectionReasonColumn();
 
-  await sql`
-    UPDATE campaign_submissions SET
-      status = COALESCE(${data.status ?? null}, status),
-      published = COALESCE(${data.published ?? null}, published),
-      updated_at = ${now}
-    WHERE id = ${id}
-  `;
+  const shouldUpdateReason =
+    data.rejectionReason !== undefined || data.status === "approved";
+  const nextReason = data.status === "approved" ? null : (data.rejectionReason ?? null);
+
+  if (shouldUpdateReason) {
+    await sql`
+      UPDATE campaign_submissions SET
+        status = COALESCE(${data.status ?? null}, status),
+        published = COALESCE(${data.published ?? null}, published),
+        rejection_reason = ${nextReason},
+        updated_at = ${now}
+      WHERE id = ${id}
+    `;
+  } else {
+    await sql`
+      UPDATE campaign_submissions SET
+        status = COALESCE(${data.status ?? null}, status),
+        published = COALESCE(${data.published ?? null}, published),
+        updated_at = ${now}
+      WHERE id = ${id}
+    `;
+  }
 
   return { success: true };
+}
+
+/** Owner edits a rejected submission and resends it for review. */
+export async function pgResubmitSubmission(
+  id: string,
+  data: { title: string; text: string; mediaUrl?: string | null }
+) {
+  const sql = getSql();
+  const now = new Date().toISOString();
+  await ensureSubmissionsRejectionReasonColumn();
+
+  const result = await sql`
+    UPDATE campaign_submissions SET
+      title = ${data.title},
+      text = ${data.text},
+      media_url = ${data.mediaUrl ?? null},
+      status = 'pending',
+      published = false,
+      updated_at = ${now}
+    WHERE id = ${id}
+      AND status = 'rejected'
+    RETURNING id
+  `;
+
+  if (!result[0]?.id) {
+    return { success: false as const, error: "ارسال ردشده یافت نشد" };
+  }
+
+  return { success: true as const };
+}
+
+export async function pgListRejectedSubmissionsForOwner(
+  campaignId: string,
+  ownerUserId: string
+) {
+  const sql = getSql();
+  await ensureSubmissionsRejectionReasonColumn();
+
+  const rows = await sql`
+    SELECT s.*, u.name AS owner_name, u.province AS owner_province, u.city AS owner_city
+    FROM campaign_submissions s
+    LEFT JOIN users u ON u.id = s.owner_user_id
+    WHERE s.campaign_id = ${campaignId}
+      AND s.owner_user_id = ${ownerUserId}
+      AND s.status = 'rejected'
+    ORDER BY s.updated_at DESC
+  `;
+
+  return rows.map(mapSubmissionFromDb);
 }
 
 export async function pgDeleteSubmission(id: string) {
@@ -1416,6 +1519,12 @@ export async function pgSaveCampaignFile(data: Partial<CampaignFile> & { id?: st
       updated_at = EXCLUDED.updated_at
   `;
 
+  await recalculateScoreAfterSave({
+    campaignId: data.campaignId ?? "",
+    contentType: "file",
+    contentId: id,
+  });
+
   return { success: true, id };
 }
 
@@ -1470,6 +1579,12 @@ export async function pgSaveRawMediaUpload(data: Partial<RawMediaUpload> & { id?
       score = COALESCE(EXCLUDED.score, raw_media_uploads.score),
       updated_at = EXCLUDED.updated_at
   `;
+
+  await recalculateScoreAfterSave({
+    campaignId: data.campaignId ?? "",
+    contentType: "raw_media",
+    contentId: id,
+  });
 
   return { success: true, id };
 }

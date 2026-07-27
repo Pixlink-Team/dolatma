@@ -41,6 +41,19 @@ const DOCUMENT_TYPES = new Set([
   "application/vnd.ms-excel",
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   "text/plain",
+  "application/vnd.rar",
+  "application/x-rar-compressed",
+  "application/x-rar",
+]);
+
+const DOCUMENT_EXTENSIONS = new Set([
+  ".pdf",
+  ".doc",
+  ".docx",
+  ".xls",
+  ".xlsx",
+  ".txt",
+  ".rar",
 ]);
 
 const AUDIO_TYPES = new Set([
@@ -154,6 +167,10 @@ function extensionForMime(mime: string): string {
       return ".xlsx";
     case "text/plain":
       return ".txt";
+    case "application/vnd.rar":
+    case "application/x-rar-compressed":
+    case "application/x-rar":
+      return ".rar";
     case "audio/mpeg":
     case "audio/mp3":
       return ".mp3";
@@ -191,6 +208,13 @@ function isAllowedRawVideo(file: File): boolean {
   if (file.type.startsWith("video/")) return true;
   const ext = extensionFromFileName(file.name);
   return RAW_VIDEO_EXTENSIONS.has(ext);
+}
+
+function isAllowedDocument(file: File): boolean {
+  if (DOCUMENT_TYPES.has(file.type)) return true;
+  // Browsers often send empty or octet-stream MIME for .rar archives.
+  if (file.type && file.type !== "application/octet-stream") return false;
+  return DOCUMENT_EXTENSIONS.has(extensionFromFileName(file.name));
 }
 
 export async function POST(request: Request) {
@@ -250,7 +274,7 @@ export async function POST(request: Request) {
           : kind === "audio"
             ? AUDIO_TYPES.has(file.type)
             : kind === "document"
-              ? DOCUMENT_TYPES.has(file.type)
+              ? isAllowedDocument(file)
               : IMAGE_TYPES.has(file.type);
 
   if (!allowed) {
@@ -267,7 +291,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: magic.error }, { status: 400 });
   }
 
-  const extension = isRawKind ? resolveUploadExtension(file) : extensionForMime(file.type);
+  const extension = isRawKind
+    ? resolveUploadExtension(file)
+    : extensionForMime(file.type) || extensionFromFileName(file.name);
   if (extension === ".svg") {
     return NextResponse.json({ error: "آپلود فایل SVG مجاز نیست" }, { status: 400 });
   }

@@ -314,6 +314,8 @@ export interface CampaignFeatures {
   files: boolean;
   rawMedia: boolean;
   forms: boolean;
+  /** Manual logs of SMS / bulk messages sent to audiences. */
+  smsReports: boolean;
 }
 
 export type FormFieldType =
@@ -509,6 +511,8 @@ export interface CampaignSettings {
   features: CampaignFeatures;
   analyticsConfig: AnalyticsConfig;
   billboardConfig: BillboardConfig;
+  /** Field-based auto scoring rules per content type. */
+  scoringRules?: CampaignScoringRules;
   /** Campaign content plan names configured by admin (e.g. مهتاب، سامان). Legacy flat list. */
   contentPlans?: string[];
   /** Hierarchical topics with optional subtopics (موضوع / زیرموضوع). */
@@ -546,8 +550,12 @@ export interface Ownable {
   planLabel?: string | null;
   /** Multiple topic/subtopic tokens (e.g. "مهتاب" or "مهتاب|هفته اول"). */
   planLabels?: string[];
-  /** Numeric score set by admin/client. */
+  /** Final score = autoScore + manualScore (public / sort / leaderboard). */
   score?: number | null;
+  /** Score computed from campaign scoring rules. */
+  autoScore?: number | null;
+  /** Manual bonus set by admin/client. */
+  manualScore?: number | null;
 }
 
 export type ScoreableContentType =
@@ -561,6 +569,31 @@ export type ScoreableContentType =
   | "activity"
   | "broadcast"
   | "meeting";
+
+export type ScoringRuleKind = "filled" | "equals" | "range";
+
+export interface ScoringRule {
+  id: string;
+  field: string;
+  kind: ScoringRuleKind;
+  points: number;
+  /** Target value for `equals` rules. */
+  value?: string;
+  /** Inclusive lower bound for `range` (number or ISO date string). */
+  min?: number | string;
+  /** Inclusive upper bound for `range` (number or ISO date string). */
+  max?: number | string;
+}
+
+/** Per content-type scoring rules stored on the campaign. */
+export type CampaignScoringRules = Partial<Record<ScoreableContentType, ScoringRule[]>>;
+
+export interface ScoreBreakdownEntry {
+  ruleId: string;
+  field: string;
+  points: number;
+  matched: boolean;
+}
 
 export interface BillboardDisplayPeriod {
   id: string;
@@ -719,6 +752,8 @@ export interface CampaignSubmission extends Ownable {
   mediaUrl?: string | null;
   status: SubmissionStatus;
   published: boolean;
+  /** Admin-provided reason shown to the owner when status is "rejected". */
+  rejectionReason?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -1227,6 +1262,15 @@ export interface SocialAnalyticsSummary {
   hasData: boolean;
 }
 
+/** One published link + views row inside a group social distribution. */
+export interface SocialPostLinkEntry {
+  id: string;
+  link: string;
+  views: number;
+  /** Optional per-link platform when the same content is posted to multiple networks. */
+  platform?: SocialPlatform;
+}
+
 export interface SocialMediaPost extends Ownable {
   id: string;
   campaignId: string;
@@ -1238,6 +1282,8 @@ export interface SocialMediaPost extends Ownable {
   comments: number;
   shares: number;
   link: string;
+  /** When set (group distribution), each entry is a separate published link; `views` is the sum. */
+  linkEntries?: SocialPostLinkEntry[];
   contentType: SocialContentType;
   mediaUrl?: string | null;
   description?: string | null;
@@ -1289,6 +1335,24 @@ export interface BroadcastReport extends Ownable {
   pdfUrl: string;
   fileName: string;
   summaryData: BroadcastReportSummary;
+  published: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Manual documentation of an SMS / bulk message send action. */
+export interface SmsSendReport extends Ownable {
+  id: string;
+  campaignId: string;
+  title: string;
+  sendDate: string;
+  recipientCount: number;
+  messageBody: string;
+  evidenceFileUrl?: string | null;
+  evidenceFileName?: string | null;
+  evidenceMimeType?: string | null;
+  evidenceFileSize?: number;
   published: boolean;
   sortOrder: number;
   createdAt: string;

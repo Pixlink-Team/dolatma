@@ -7,6 +7,24 @@ import {
 } from "@/lib/safe-dates";
 import type { Billboard, Ownable, PublicCampaignData } from "@/lib/types";
 
+/**
+ * Minimal shape the leaderboard builders actually read. `PublicCampaignData`
+ * satisfies this structurally, but admin-only views (e.g. the performance
+ * page) can build a lean object without settings/kpis/etc.
+ */
+export type LeaderboardSourceData = Pick<
+  PublicCampaignData,
+  | "sections"
+  | "billboards"
+  | "posters"
+  | "videos"
+  | "socialPosts"
+  | "sitePublications"
+  | "activities"
+  | "pressPublications"
+  | "files"
+>;
+
 export interface ProvinceLeaderboardMetrics {
   billboards: number;
   posters: number;
@@ -331,7 +349,7 @@ function addUserItem<T extends Ownable & { createdAt?: string | null; province?:
 }
 
 function collectLeaderboardItems(
-  data: PublicCampaignData,
+  data: LeaderboardSourceData,
   add: <T extends Ownable & { createdAt?: string | null; province?: string | null }>(
     items: T[],
     field: MetricField
@@ -349,7 +367,7 @@ function collectLeaderboardItems(
   if (data.sections.files) add(data.files, "files");
 }
 
-export function buildProvinceLeaderboard(data: PublicCampaignData): ProvinceLeaderboardEntry[] {
+export function buildProvinceLeaderboard(data: LeaderboardSourceData): ProvinceLeaderboardEntry[] {
   const map = new Map<string, ProvinceLeaderboardMetrics & { province: string }>();
 
   collectLeaderboardItems(data, (items, field) => {
@@ -378,7 +396,7 @@ export function buildProvinceLeaderboard(data: PublicCampaignData): ProvinceLead
     .map((entry, index) => ({ ...entry, rank: index + 1 }));
 }
 
-export function buildMinistryLeaderboard(data: PublicCampaignData): MinistryLeaderboardEntry[] {
+export function buildMinistryLeaderboard(data: LeaderboardSourceData): MinistryLeaderboardEntry[] {
   const map = new Map<string, ProvinceLeaderboardMetrics & { ministry: string }>();
 
   collectLeaderboardItems(data, (items, field) => {
@@ -408,7 +426,7 @@ export function buildMinistryLeaderboard(data: PublicCampaignData): MinistryLead
 }
 
 export function buildOrganizationLeaderboard(
-  data: PublicCampaignData
+  data: LeaderboardSourceData
 ): OrganizationLeaderboardEntry[] {
   const map = new Map<
     string,
@@ -442,7 +460,7 @@ export function buildOrganizationLeaderboard(
     .map((entry, index) => ({ ...entry, rank: index + 1 }));
 }
 
-export function buildUserLeaderboard(data: PublicCampaignData): UserLeaderboardEntry[] {
+export function buildUserLeaderboard(data: LeaderboardSourceData): UserLeaderboardEntry[] {
   const map = new Map<string, UserAccumulator>();
 
   collectLeaderboardItems(data, (items, field) => {
@@ -473,7 +491,7 @@ export function buildUserLeaderboard(data: PublicCampaignData): UserLeaderboardE
     .map((entry, index) => ({ ...entry, rank: index + 1 }));
 }
 
-export function buildUserRatingLeaderboard(data: PublicCampaignData): UserLeaderboardEntry[] {
+export function buildUserRatingLeaderboard(data: LeaderboardSourceData): UserLeaderboardEntry[] {
   return buildUserLeaderboard(data)
     .slice()
     .sort((a, b) => b.ratingScore - a.ratingScore || b.totalUploads - a.totalUploads)
@@ -497,7 +515,7 @@ function resolveUserKeyMatch(item: Ownable, userKey: string): boolean {
 }
 
 export function collectUserContentItems(
-  data: PublicCampaignData,
+  data: LeaderboardSourceData,
   userKey: string
 ): UserContentScoreItem[] {
   const items: UserContentScoreItem[] = [];
@@ -548,7 +566,7 @@ export function collectUserContentItems(
 }
 
 export function collectLeaderboardBillboards(
-  data: PublicCampaignData,
+  data: LeaderboardSourceData,
   filter: {
     provinceKey?: string;
     ministryKey?: string;
@@ -575,7 +593,7 @@ export function collectLeaderboardBillboards(
 }
 
 export function buildProvinceContributorLeaderboard(
-  data: PublicCampaignData
+  data: LeaderboardSourceData
 ): ProvinceContributorEntry[] {
   const map = new Map<string, ProvinceContributorEntry>();
 
@@ -594,7 +612,7 @@ export function buildProvinceContributorLeaderboard(
 }
 
 export function buildMinistryContributorLeaderboard(
-  data: PublicCampaignData
+  data: LeaderboardSourceData
 ): MinistryContributorEntry[] {
   const map = new Map<string, MinistryContributorEntry>();
 

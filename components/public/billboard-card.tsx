@@ -80,6 +80,8 @@ export function BillboardCard({ billboard, onView }: BillboardCardProps) {
             contentType="billboard"
             contentId={billboard.id}
             score={billboard.score}
+            autoScore={billboard.autoScore}
+            manualScore={billboard.manualScore}
             canScore={canScore}
             compact
           />

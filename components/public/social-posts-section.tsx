@@ -141,6 +141,8 @@ function SocialPostCard({ post }: { post: SocialMediaPost }) {
               contentType={post.platform === "site" ? "site_publication" : "social_post"}
               contentId={post.id}
               score={post.score}
+              autoScore={post.autoScore}
+              manualScore={post.manualScore}
               canScore={canScore}
               compact
             />
@@ -232,7 +234,7 @@ export function SocialPostsSection({ posts, groups }: SocialPostsSectionProps) {
       title="شبکه‌های اجتماعی"
       description={`${formatPersianNumber(filteredPosts.length)} پست — اینستاگرام، تلگرام و سایر شبکه‌ها`}
     >
-      <SectionTopCompaniesBox groups={filteredGroups} />
+      <SectionTopCompaniesBox groups={filteredGroups} contentKind="social_post" />
       <div className="space-y-4">
         <OwnerGroupedSection
           groups={visibleGroups}

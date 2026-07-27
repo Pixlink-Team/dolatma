@@ -21,6 +21,7 @@ import {
   BillboardMapExpandButton,
 } from "@/components/public/billboard-map-dialog";
 import { BillboardModal } from "@/components/public/billboard-modal";
+import { BillboardCategoryChart } from "@/components/charts/billboard-category-chart";
 import {
   billboardHasDisplayContent,
   PUBLIC_MEDIA_GRID_CLASS,
@@ -36,7 +37,11 @@ import { groupByOwnerPreservingOrder, shouldRenderChronologically } from "@/lib/
 import { hasBillboardCoordinates } from "@/lib/billboards";
 import type { Billboard } from "@/lib/types";
 import { formatPersianNumber, getStatusLabel } from "@/lib/utils";
-import { resolveBillboardCategoryDisplay } from "@/lib/billboard-categories";
+import {
+  buildBillboardCategoryStats,
+  resolveBillboardCategoryDisplay,
+  resolveBillboardCategoryLabel,
+} from "@/lib/billboard-categories";
 
 function getBillboardUploadDate(billboard: Billboard): string {
   return billboard.updatedAt || billboard.createdAt;
@@ -49,7 +54,7 @@ function matchesBillboardStatusFilter(billboard: Billboard, statusFilter: string
 
 function matchesBillboardCategoryFilter(billboard: Billboard, categoryFilter: string): boolean {
   if (categoryFilter === "all") return true;
-  return resolveBillboardCategoryDisplay(billboard) === categoryFilter;
+  return resolveBillboardCategoryLabel(billboard) === categoryFilter;
 }
 
 interface BillboardSectionProps {
@@ -82,6 +87,23 @@ export function BillboardSection({ billboards, adminOwnerLabel }: BillboardSecti
   }, [locationFilteredBillboards]);
 
   const effectiveSort = resolvePublicMediaSort(filter.sortOrder, sort);
+
+  // Category counts should reflect all other active filters, but not the category filter itself,
+  // so every category card stays clickable even after one is selected.
+  const preCategoryFiltered = useMemo(() => {
+    return locationFilteredBillboards.filter((billboard) => {
+      if (!billboardHasDisplayContent(billboard)) return false;
+      if (cityFilter !== "all" && billboard.city !== cityFilter) return false;
+      if (!matchesBillboardStatusFilter(billboard, statusFilter)) return false;
+      if (search && !billboard.title.includes(search) && !billboard.city.includes(search)) return false;
+      return true;
+    });
+  }, [locationFilteredBillboards, cityFilter, statusFilter, search]);
+
+  const categoryStats = useMemo(
+    () => buildBillboardCategoryStats(preCategoryFiltered),
+    [preCategoryFiltered]
+  );
 
   const filtered = useMemo(() => {
     const items = locationFilteredBillboards.filter((billboard) => {
@@ -192,7 +214,18 @@ export function BillboardSection({ billboards, adminOwnerLabel }: BillboardSecti
         description={`${formatPersianNumber(filtered.length)} مورد — نمایش روی نقشه و کارت‌ها`}
         controls={controls}
       >
-        <SectionTopCompaniesBox groups={rankingGroups} />
+        <SectionTopCompaniesBox groups={rankingGroups} contentKind="billboard" />
+        {categoryStats.length > 0 && (
+          <div className="mb-4">
+            <BillboardCategoryChart
+              data={categoryStats}
+              selectedLabel={categoryFilter === "all" ? null : categoryFilter}
+              onSelect={(label) =>
+                setCategoryFilter((prev) => (prev === label ? "all" : label))
+              }
+            />
+          </div>
+        )}
         <div className="mb-6 space-y-3">
           <div className="flex justify-end">
             <BillboardMapExpandButton

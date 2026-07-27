@@ -9,10 +9,15 @@ import {
   mapMeetingPreviewFromDb,
   mapMeetingPublicDetailFromDb,
   mapMeetingTaskFromDb,
+  mapSmsSendReportFromDb,
   mapSocialPlatformStatFromDb,
   mapSocialPostFromDb,
   mapUserFromDb,
 } from "@/lib/db/mappers";
+import {
+  recalculateScoreAfterSave,
+  socialPostScoreableType,
+} from "@/lib/scoring/persist-content-score";
 import type {
   AdminUser,
   BroadcastReport,
@@ -24,6 +29,7 @@ import type {
   MeetingTask,
   MeetingWithTasks,
   Ownable,
+  SmsSendReport,
   SocialMediaPost,
   SocialPlatformStat,
 } from "@/lib/types";
@@ -46,6 +52,7 @@ import type { OrgRole } from "@/lib/org-roles";
 import { isOrgRole } from "@/lib/org-roles";
 import type { ParsedUserImportRow } from "@/lib/services/users-excel-parser";
 import { normalizePlanLabels } from "@/lib/content-topics";
+import { normalizeSocialPostLinkEntries } from "@/lib/social-posts";
 import { generateId } from "@/lib/utils";
 import { hashPassword } from "@/lib/auth/password";
 import { isOrgUserRole, normalizeAdminRole } from "@/lib/user-roles";
@@ -167,7 +174,13 @@ function resolvePlanFields(data: Partial<Ownable>) {
 function sqlOwnerIn(
   sql: ReturnType<typeof getSql>,
   scope: OwnerScope,
-  column: "sp.owner_user_id" | "br.owner_user_id" | "sps.owner_user_id" | "ca.owner_user_id" | "m.owner_user_id"
+  column:
+    | "sp.owner_user_id"
+    | "br.owner_user_id"
+    | "sps.owner_user_id"
+    | "ca.owner_user_id"
+    | "m.owner_user_id"
+    | "sr.owner_user_id"
 ) {
   const ids = normalizeOwnerIds(scope);
   if (ids === undefined) return sql``;
@@ -176,6 +189,7 @@ function sqlOwnerIn(
   if (column === "br.owner_user_id") return sql`AND br.owner_user_id IN ${sql(ids)}`;
   if (column === "sps.owner_user_id") return sql`AND sps.owner_user_id IN ${sql(ids)}`;
   if (column === "ca.owner_user_id") return sql`AND ca.owner_user_id IN ${sql(ids)}`;
+  if (column === "sr.owner_user_id") return sql`AND sr.owner_user_id IN ${sql(ids)}`;
   return sql`AND m.owner_user_id IN ${sql(ids)}`;
 }
 
@@ -1106,6 +1120,13 @@ export async function pgSaveSocialPost(data: Partial<SocialMediaPost> & { id?: s
   const now = new Date().toISOString();
   const id = data.id ?? generateId();
   const { planLabel, planLabels } = resolvePlanFields(data);
+  const linkEntries = normalizeSocialPostLinkEntries(data.linkEntries);
+
+  // Ensure column exists on older deployments that have not run db:migrate yet.
+  await sql`
+    ALTER TABLE social_media_posts
+    ADD COLUMN IF NOT EXISTS link_entries JSONB NOT NULL DEFAULT '[]'::jsonb
+  `;
 
   const countRows = await sql`
     SELECT COUNT(*)::int AS count FROM social_media_posts WHERE campaign_id = ${data.campaignId ?? ""}
@@ -1115,7 +1136,7 @@ export async function pgSaveSocialPost(data: Partial<SocialMediaPost> & { id?: s
   await sql`
     INSERT INTO social_media_posts (
       id, campaign_id, owner_user_id, platform, title, cover_image_url,
-      views, likes, comments, shares, link, content_type, media_url, description,
+      views, likes, comments, shares, link, link_entries, content_type, media_url, description,
       published_date, published, sort_order, plan_label, plan_labels, created_at, updated_at
     ) VALUES (
       ${id},
@@ -1129,6 +1150,7 @@ export async function pgSaveSocialPost(data: Partial<SocialMediaPost> & { id?: s
       ${data.comments ?? 0},
       ${data.shares ?? 0},
       ${data.link ?? ""},
+      ${sql.json(JSON.parse(JSON.stringify(linkEntries)))},
       ${data.contentType ?? "image"},
       ${data.mediaUrl ?? null},
       ${data.description ?? null},
@@ -1149,6 +1171,7 @@ export async function pgSaveSocialPost(data: Partial<SocialMediaPost> & { id?: s
       comments = EXCLUDED.comments,
       shares = EXCLUDED.shares,
       link = EXCLUDED.link,
+      link_entries = EXCLUDED.link_entries,
       content_type = EXCLUDED.content_type,
       media_url = EXCLUDED.media_url,
       description = EXCLUDED.description,
@@ -1160,6 +1183,12 @@ export async function pgSaveSocialPost(data: Partial<SocialMediaPost> & { id?: s
       plan_labels = EXCLUDED.plan_labels,
       updated_at = EXCLUDED.updated_at
   `;
+
+  await recalculateScoreAfterSave({
+    campaignId: data.campaignId ?? "",
+    contentType: socialPostScoreableType(data.platform ?? "instagram"),
+    contentId: id,
+  });
 
   return { success: true, id };
 }
@@ -1342,12 +1371,117 @@ export async function pgSaveBroadcastReport(data: Partial<BroadcastReport> & { i
       updated_at = EXCLUDED.updated_at
   `;
 
+  await recalculateScoreAfterSave({
+    campaignId: data.campaignId ?? "",
+    contentType: "broadcast",
+    contentId: id,
+  });
+
   return { success: true, id };
 }
 
 export async function pgDeleteBroadcastReport(id: string) {
   const sql = getSql();
   await sql`DELETE FROM broadcast_reports WHERE id = ${id}`;
+  return { success: true };
+}
+
+export async function pgGetSmsSendReportById(id: string): Promise<SmsSendReport | null> {
+  const sql = getSql();
+  const rows = await sql`
+    SELECT sr.*, u.name AS owner_name, u.province AS owner_province, u.city AS owner_city, u.ministry_id AS owner_ministry_id, om.name AS owner_ministry_name, u.organization_id AS owner_organization_id, oo.name AS owner_organization_name
+    FROM sms_send_reports sr
+    LEFT JOIN users u ON u.id = sr.owner_user_id
+
+    LEFT JOIN ministries om ON om.id = u.ministry_id
+
+    LEFT JOIN ministry_organizations oo ON oo.id = u.organization_id
+    WHERE sr.id = ${id}
+    LIMIT 1
+  `;
+  return rows[0] ? mapSmsSendReportFromDb(rows[0]) : null;
+}
+
+export async function pgGetSmsSendReports(
+  campaignId: string,
+  ownerUserId?: OwnerScope
+): Promise<SmsSendReport[]> {
+  const sql = getSql();
+  const ownerFilter = sqlOwnerIn(sql, ownerUserId, "sr.owner_user_id");
+  const rows = await sql`
+    SELECT sr.*, u.name AS owner_name, u.province AS owner_province, u.city AS owner_city, u.ministry_id AS owner_ministry_id, om.name AS owner_ministry_name, u.organization_id AS owner_organization_id, oo.name AS owner_organization_name
+    FROM sms_send_reports sr
+    LEFT JOIN users u ON u.id = sr.owner_user_id
+
+    LEFT JOIN ministries om ON om.id = u.ministry_id
+
+    LEFT JOIN ministry_organizations oo ON oo.id = u.organization_id
+    WHERE sr.campaign_id = ${campaignId}
+    ${ownerFilter}
+    ORDER BY sr.sort_order, sr.send_date DESC
+  `;
+
+  return rows.map(mapSmsSendReportFromDb);
+}
+
+export async function pgSaveSmsSendReport(data: Partial<SmsSendReport> & { id?: string }) {
+  const sql = getSql();
+  const now = new Date().toISOString();
+  const id = data.id ?? generateId();
+  const { planLabel, planLabels } = resolvePlanFields(data);
+
+  const countRows = await sql`
+    SELECT COUNT(*)::int AS count FROM sms_send_reports WHERE campaign_id = ${data.campaignId ?? ""}
+  `;
+  const sortOrder = data.sortOrder ?? (Number(countRows[0]?.count) || 0) + 1;
+
+  await sql`
+    INSERT INTO sms_send_reports (
+      id, campaign_id, owner_user_id, title, send_date, recipient_count, message_body,
+      evidence_file_url, evidence_file_name, evidence_mime_type, evidence_file_size,
+      published, sort_order, plan_label, plan_labels, created_at, updated_at
+    ) VALUES (
+      ${id},
+      ${data.campaignId ?? ""},
+      ${data.ownerUserId ?? null},
+      ${data.title ?? ""},
+      ${data.sendDate ?? now.split("T")[0]},
+      ${data.recipientCount ?? 0},
+      ${data.messageBody ?? ""},
+      ${data.evidenceFileUrl ?? null},
+      ${data.evidenceFileName ?? null},
+      ${data.evidenceMimeType ?? null},
+      ${data.evidenceFileSize ?? 0},
+      ${data.published ?? true},
+      ${sortOrder},
+      ${planLabel},
+      ${sql.json(planLabels)},
+      ${now},
+      ${now}
+    )
+    ON CONFLICT (id) DO UPDATE SET
+      title = EXCLUDED.title,
+      send_date = EXCLUDED.send_date,
+      recipient_count = EXCLUDED.recipient_count,
+      message_body = EXCLUDED.message_body,
+      evidence_file_url = EXCLUDED.evidence_file_url,
+      evidence_file_name = EXCLUDED.evidence_file_name,
+      evidence_mime_type = EXCLUDED.evidence_mime_type,
+      evidence_file_size = EXCLUDED.evidence_file_size,
+      published = EXCLUDED.published,
+      sort_order = EXCLUDED.sort_order,
+      owner_user_id = COALESCE(EXCLUDED.owner_user_id, sms_send_reports.owner_user_id),
+      plan_label = EXCLUDED.plan_label,
+      plan_labels = EXCLUDED.plan_labels,
+      updated_at = EXCLUDED.updated_at
+  `;
+
+  return { success: true, id };
+}
+
+export async function pgDeleteSmsSendReport(id: string) {
+  const sql = getSql();
+  await sql`DELETE FROM sms_send_reports WHERE id = ${id}`;
   return { success: true };
 }
 
@@ -1427,6 +1561,12 @@ export async function pgSaveCampaignActivity(data: Partial<CampaignActivity> & {
       plan_labels = EXCLUDED.plan_labels,
       updated_at = EXCLUDED.updated_at
   `;
+
+  await recalculateScoreAfterSave({
+    campaignId: data.campaignId ?? "",
+    contentType: "activity",
+    contentId: id,
+  });
 
   return { success: true, id };
 }
@@ -1915,6 +2055,12 @@ export async function pgSaveMeetingWithTasks(
       AND id NOT IN ${sql(keptDecisionIds)}
     `;
   }
+
+  await recalculateScoreAfterSave({
+    campaignId: data.campaignId ?? "",
+    contentType: "meeting",
+    contentId: id,
+  });
 
   return { success: true, id };
 }

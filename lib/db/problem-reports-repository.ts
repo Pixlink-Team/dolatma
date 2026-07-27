@@ -2,10 +2,12 @@ import { getSql } from "@/lib/db/client";
 import { isPostgresConfigured } from "@/lib/utils";
 import type {
   CreateProblemReportInput,
+  MyProblemReport,
   ProblemReport,
   ProblemReportStats,
   ProblemReportStatus,
 } from "@/lib/audit/problem-types";
+import { parseProblemReportAttachments } from "@/lib/audit/problem-types";
 
 function mapReportRow(row: Record<string, unknown>): ProblemReport {
   const metadata =
@@ -28,12 +30,21 @@ function mapReportRow(row: Record<string, unknown>): ProblemReport {
     status: row.status as ProblemReportStatus,
     adminNote: row.admin_note ? String(row.admin_note) : null,
     repliedAt: row.replied_at ? new Date(String(row.replied_at)).toISOString() : null,
+    reporterSeenAt: row.reporter_seen_at ? new Date(String(row.reporter_seen_at)).toISOString() : null,
     resolvedByUserId: row.resolved_by_user_id ? String(row.resolved_by_user_id) : null,
     resolvedAt: row.resolved_at ? new Date(String(row.resolved_at)).toISOString() : null,
     metadata,
+    attachments: parseProblemReportAttachments(metadata),
     createdAt: new Date(String(row.created_at)).toISOString(),
     updatedAt: new Date(String(row.updated_at)).toISOString(),
   };
+}
+
+function withUnreadFlag(report: ProblemReport): MyProblemReport {
+  const hasUnreadReply = Boolean(
+    report.repliedAt && (!report.reporterSeenAt || report.repliedAt > report.reporterSeenAt)
+  );
+  return { ...report, hasUnreadReply };
 }
 
 export async function pgInsertProblemReport(input: {
@@ -177,7 +188,7 @@ export async function pgListProblemReportsByReporter(options: {
   reporterUserId?: string | null;
   reporterType?: ProblemReport["reporterType"] | null;
   limit?: number;
-}): Promise<ProblemReport[]> {
+}): Promise<MyProblemReport[]> {
   if (!isPostgresConfigured()) return [];
 
   const reporterUserId = options.reporterUserId?.trim() || null;
@@ -205,7 +216,71 @@ export async function pgListProblemReportsByReporter(options: {
     LIMIT ${limit}
   `;
 
-  return rows.map((row) => mapReportRow(row as Record<string, unknown>));
+  return rows.map((row) => withUnreadFlag(mapReportRow(row as Record<string, unknown>)));
+}
+
+/** Marks all of the reporter's own reports as seen (clears the sidebar unread dot). */
+export async function pgMarkMyProblemReportsSeen(options: {
+  reporterUserId?: string | null;
+  reporterType?: ProblemReport["reporterType"] | null;
+}): Promise<{ success: boolean }> {
+  if (!isPostgresConfigured()) return { success: false };
+
+  const reporterUserId = options.reporterUserId?.trim() || null;
+  const reporterType = options.reporterType ?? null;
+  if (!reporterUserId && !reporterType) return { success: false };
+
+  const sql = getSql();
+  await sql`
+    UPDATE user_problem_reports
+    SET reporter_seen_at = now()
+    WHERE
+      (
+        ${reporterUserId}::uuid IS NOT NULL
+        AND reporter_user_id = ${reporterUserId}::uuid
+      )
+      OR (
+        ${reporterUserId}::uuid IS NULL
+        AND ${reporterType}::text IS NOT NULL
+        AND reporter_type = ${reporterType}
+        AND reporter_user_id IS NULL
+      )
+  `;
+  return { success: true };
+}
+
+/** Counts the reporter's own reports that have an unread admin reply. */
+export async function pgCountMyUnreadProblemReplies(options: {
+  reporterUserId?: string | null;
+  reporterType?: ProblemReport["reporterType"] | null;
+}): Promise<number> {
+  if (!isPostgresConfigured()) return 0;
+
+  const reporterUserId = options.reporterUserId?.trim() || null;
+  const reporterType = options.reporterType ?? null;
+  if (!reporterUserId && !reporterType) return 0;
+
+  const sql = getSql();
+  const rows = await sql`
+    SELECT COUNT(*)::int AS count
+    FROM user_problem_reports
+    WHERE
+      (
+        (
+          ${reporterUserId}::uuid IS NOT NULL
+          AND reporter_user_id = ${reporterUserId}::uuid
+        )
+        OR (
+          ${reporterUserId}::uuid IS NULL
+          AND ${reporterType}::text IS NOT NULL
+          AND reporter_type = ${reporterType}
+          AND reporter_user_id IS NULL
+        )
+      )
+      AND replied_at IS NOT NULL
+      AND (reporter_seen_at IS NULL OR replied_at > reporter_seen_at)
+  `;
+  return Number(rows[0]?.count ?? 0);
 }
 
 export async function pgUpdateProblemReportStatus(input: {

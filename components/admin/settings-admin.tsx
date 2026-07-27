@@ -48,6 +48,7 @@ const featuresSchema = z.object({
   files: z.boolean(),
   rawMedia: z.boolean(),
   forms: z.boolean(),
+  smsReports: z.boolean(),
 });
 
 const metabaseSchema = z.object({
@@ -96,6 +97,7 @@ const featureLabels: { key: keyof CampaignFeatures; label: string }[] = [
   { key: "socialPosts", label: "پست‌های شبکه اجتماعی" },
   { key: "sitePublications", label: "انتشار در سایت" },
   { key: "broadcastReports", label: "گزارش پخش صدا و سیما" },
+  { key: "smsReports", label: "ارسال پیام" },
   { key: "meetings", label: "جلسات و مصوبات" },
   { key: "activities", label: "اقدامات" },
   { key: "pressPublications", label: "مجله و روزنامه" },

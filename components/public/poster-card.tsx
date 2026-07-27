@@ -19,6 +19,8 @@ interface PosterCardProps {
   description?: string | null;
   versions: PosterVersion[];
   score?: number | null;
+  autoScore?: number | null;
+  manualScore?: number | null;
   ownerUserId?: string | null;
   ownerName?: string | null;
   category?: string | null;
@@ -32,6 +34,8 @@ export function PosterCard({
   description,
   versions,
   score,
+  autoScore,
+  manualScore,
   ownerUserId,
   ownerName,
   category,
@@ -78,6 +82,8 @@ export function PosterCard({
               contentType="poster"
               contentId={id}
               score={score}
+              autoScore={autoScore}
+              manualScore={manualScore}
               canScore={canScore}
               compact
             />

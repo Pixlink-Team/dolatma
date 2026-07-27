@@ -48,6 +48,7 @@ const ENTITY_LABELS: Record<string, string> = {
   broadcast_report: "گزارش پخش",
   activity: "اقدام",
   meeting: "جلسه",
+  sms_send_report: "گزارش ارسال پیام",
   user: "کاربر",
 };
 
