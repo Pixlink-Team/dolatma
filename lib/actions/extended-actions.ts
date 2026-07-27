@@ -26,7 +26,7 @@ import {
 import type { OrgRole } from "@/lib/org-roles";
 import { isOrgRole } from "@/lib/org-roles";
 import { isOrgUserRole, normalizeAdminRole } from "@/lib/user-roles";
-import { isSitePublication } from "@/lib/social-posts";
+import { isGroupSocialPost, isSitePublication } from "@/lib/social-posts";
 import { isPostgresConfigured } from "@/lib/utils";
 import { resolveSaveOwnerUserId } from "@/lib/admin-content-owner";
 import { stripFileAccessTokensDeep } from "@/lib/uploads";
@@ -192,6 +192,13 @@ export async function refreshSocialPostMetricsAction(postId: string) {
 
   const existing = await pgExt.pgGetSocialPostById(postId);
   if (!existing) return { success: false as const, error: "پست یافت نشد" };
+
+  if (isGroupSocialPost(existing)) {
+    return {
+      success: false as const,
+      error: "برای پخش گروهی، بازدید هر لینک را دستی وارد کنید",
+    };
+  }
 
   if (!isFullAdmin(session) && existing.campaignId) {
     const permissions = await pgExt.pgGetUserPermissionsForCampaign(session.userId!, existing.campaignId);

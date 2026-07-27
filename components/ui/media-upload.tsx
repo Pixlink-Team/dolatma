@@ -27,6 +27,31 @@ import { Loader2, Trash2, Upload } from "lucide-react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
+type UploadKind = "image" | "video" | "audio" | "activity-video" | "raw-image" | "raw-video";
+
+/** Keep in sync with app/api/upload/route.ts */
+const DEFAULT_MAX_BYTES: Record<UploadKind, number> = {
+  image: 10 * 1024 * 1024,
+  video: 100 * 1024 * 1024,
+  audio: 50 * 1024 * 1024,
+  "activity-video": 50 * 1024 * 1024,
+  "raw-image": 100 * 1024 * 1024,
+  "raw-video": 2 * 1024 * 1024 * 1024,
+};
+
+function formatMaxSizeLabel(bytes: number): string {
+  if (bytes >= 1024 * 1024 * 1024) {
+    const gb = Math.round((bytes / (1024 * 1024 * 1024)) * 10) / 10;
+    return `${gb} گیگابایت`;
+  }
+  const mb = Math.round(bytes / (1024 * 1024));
+  return `${mb} مگابایت`;
+}
+
+function sizeLimitErrorMessage(bytes: number): string {
+  return `حجم فایل نباید بیشتر از ${formatMaxSizeLabel(bytes)} باشد`;
+}
+
 interface MediaUploadProps {
   value: string;
   onChange: (url: string) => void;
@@ -49,7 +74,7 @@ interface MediaUploadProps {
   optimizeBeforeUpload?: boolean | OptimizeImageOptions;
   label?: string;
   kind?: "image" | "video" | "audio";
-  uploadKind?: "image" | "video" | "audio" | "activity-video" | "raw-image" | "raw-video";
+  uploadKind?: UploadKind;
   accept?: string;
   dropzone?: boolean;
   fileOnly?: boolean;
@@ -155,22 +180,50 @@ export function MediaUpload({
     onCoverImageUrlChange,
   ]);
 
+  const resolveUploadKind = (file: File): UploadKind => {
+    if (uploadKind) return uploadKind;
+
+    const acceptLower = (accept ?? "").toLowerCase();
+    const acceptAllowsVideo = acceptLower.includes("video") || kind === "video";
+    const acceptAllowsAudio = acceptLower.includes("audio") || kind === "audio";
+    const acceptAllowsImage = acceptLower.includes("image") || kind === "image" || !accept;
+
+    if (file.type.startsWith("video/") && acceptAllowsVideo) return "video";
+    if (file.type.startsWith("audio/") && acceptAllowsAudio) return "audio";
+    if (file.type.startsWith("image/") && acceptAllowsImage) return "image";
+
+    // Extension fallback when browser leaves MIME empty (common for some .mov/.mp4 files)
+    if (acceptAllowsVideo && /\.(mp4|webm|mov|m4v)$/i.test(file.name)) return "video";
+    if (acceptAllowsAudio && /\.(mp3|wav|ogg|m4a|aac|webm)$/i.test(file.name)) return "audio";
+    if (acceptAllowsImage && /\.(jpe?g|png|webp|gif)$/i.test(file.name)) return "image";
+
+    return kind;
+  };
+
+  const resolveMaxBytesForKind = (resolvedKind: UploadKind): number => {
+    if (typeof maxFileSizeBytes === "number" && maxFileSizeBytes > 0) {
+      return maxFileSizeBytes;
+    }
+    return DEFAULT_MAX_BYTES[resolvedKind];
+  };
+
   const handleUpload = async (file: File) => {
-    if (maxFileSizeBytes && file.size > maxFileSizeBytes) {
-      const maxMb = Math.round(maxFileSizeBytes / (1024 * 1024));
-      const maxGb = Math.round((maxFileSizeBytes / (1024 * 1024 * 1024)) * 10) / 10;
-      toast.error(
-        maxFileSizeBytes >= 1024 * 1024 * 1024
-          ? `حجم فایل نباید بیشتر از ${maxGb} گیگابایت باشد`
-          : `حجم فایل نباید بیشتر از ${maxMb} مگابایت باشد`
-      );
+    const resolvedKind = resolveUploadKind(file);
+    const effectiveMaxBytes = resolveMaxBytesForKind(resolvedKind);
+    if (file.size > effectiveMaxBytes) {
+      toast.error(sizeLimitErrorMessage(effectiveMaxBytes));
+      if (inputRef.current) inputRef.current.value = "";
       return;
     }
 
     setUploading(true);
     try {
       let uploadFile = file;
-      if (optimizeBeforeUpload && kind === "image" && file.type.startsWith("image/")) {
+      if (
+        optimizeBeforeUpload &&
+        resolvedKind === "image" &&
+        file.type.startsWith("image/")
+      ) {
         const optimizeOptions =
           typeof optimizeBeforeUpload === "object" ? optimizeBeforeUpload : undefined;
         try {
@@ -182,7 +235,7 @@ export function MediaUpload({
 
       const formData = new FormData();
       formData.append("file", uploadFile);
-      formData.append("kind", uploadKind ?? kind);
+      formData.append("kind", resolvedKind);
 
       const response = await fetch("/api/upload", {
         method: "POST",
@@ -221,7 +274,10 @@ export function MediaUpload({
           : "فایل با موفقیت آپلود شد"
       );
 
-      if (kind === "video" && file.type.startsWith("video/")) {
+      if (
+        (resolvedKind === "video" || kind === "video") &&
+        (file.type.startsWith("video/") || /\.(mp4|webm|mov|m4v)$/i.test(file.name))
+      ) {
         await tryGenerateCoverFromFile(file, data.url);
       }
     } catch (error) {

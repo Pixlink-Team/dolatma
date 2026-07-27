@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "f590e58fbb14374978d5ae744349c37f07bc2c32",
+      "committedAt": "2026-07-27T14:48:09+03:30",
+      "title": "پیام روی کارت‌ها، پخش گروهی شبکه‌های اجتماعی و آپلود تصویر/صوت در پخش صدا و سیما",
+      "subject": "Finish DI ports: content messages, group social, broadcast media"
+    },
+    {
       "hash": "6d48ec64631cdb5cc5003087c7ddbd1824026803",
       "committedAt": "2026-07-27T14:26:15+03:30",
       "title": "افزودن جستجوی متنی، فیلتر تاریخ امروز و کلیک روی شاخص امروز در صفحه کمپین",
