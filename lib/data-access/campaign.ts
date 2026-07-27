@@ -6,8 +6,10 @@ import type {
   CampaignKPIs,
   CampaignListItem,
   CampaignSettings,
+  Device,
   MeetingPublicPreview,
   MeetingWithTasks,
+  Ownable,
   PublicCampaignData,
   SectionVisibility,
   SocialAnalyticsSummary,
@@ -26,6 +28,12 @@ import { sanitizePublicCampaignSettings } from "@/lib/campaign-page-unlock";
 import { withFileAccessTokensDeep } from "@/lib/uploads";
 import { isPostgresConfigured, isSupabaseConfigured } from "@/lib/utils";
 import * as pg from "@/lib/db/repository";
+import {
+  pgGetDeviceBySlug,
+  pgListDevicePublicChildLinks,
+  pgListUserIdsForDeviceSubtree,
+} from "@/lib/db/repository-devices";
+import { ownerMatchesScope, type OwnerScope } from "@/lib/auth/owner-scope";
 import {
   mapBillboardFromDb,
   mapCategoryFromDb,
@@ -608,6 +616,90 @@ export async function getPublicCampaignData(slug: string): Promise<PublicCampaig
   } catch {
     return getMockPublicDataBySlug(slug);
   }
+}
+
+function filterOwnableItems<T extends Ownable>(items: T[], scope: OwnerScope): T[] {
+  return items.filter((item) => ownerMatchesScope(item.ownerUserId, scope));
+}
+
+async function getPublicCampaignDataForOwners(
+  campaignSlug: string,
+  ownerScope: OwnerScope
+): Promise<PublicCampaignData | null> {
+  if (!isPostgresConfigured()) return null;
+
+  const settings = await pg.pgGetPublishedCampaignBySlug(campaignSlug);
+  if (!settings) return null;
+  await pg.pgPublishContributorUploads(settings.id);
+  const campaignStore = await pg.pgGetPublicCampaignData(settings.id);
+
+  const filteredStore = {
+    campaigns: [settings],
+    settings,
+    billboards: filterOwnableItems(campaignStore.billboards, ownerScope),
+    posterCategories: campaignStore.posterCategories,
+    posters: filterOwnableItems(campaignStore.posters, ownerScope),
+    posterVersions: campaignStore.posterVersions,
+    videoCategories: campaignStore.videoCategories,
+    videos: filterOwnableItems(campaignStore.videos, ownerScope),
+    videoVersions: campaignStore.videoVersions,
+    companyWebsites: filterOwnableItems(campaignStore.companyWebsites ?? [], ownerScope),
+    socialPosts: filterOwnableItems(campaignStore.socialPosts ?? [], ownerScope),
+    socialPlatformStats: filterOwnableItems(
+      campaignStore.socialPlatformStats ?? [],
+      ownerScope
+    ),
+    broadcastReports: filterOwnableItems(campaignStore.broadcastReports ?? [], ownerScope),
+    meetings: filterOwnableItems(campaignStore.meetings ?? [], ownerScope),
+    activities: filterOwnableItems(campaignStore.activities ?? [], ownerScope),
+    submissions: filterOwnableItems(campaignStore.submissions, ownerScope),
+    files: filterOwnableItems(campaignStore.files ?? [], ownerScope),
+    rawMedia: filterOwnableItems(campaignStore.rawMedia ?? [], ownerScope),
+  } as CampaignPublicStore;
+
+  const billboards = await resolvePublicBillboards(settings, filteredStore.billboards ?? []);
+  return assemblePublicData(settings, filteredStore, billboards);
+}
+
+export interface PublicDeviceCampaignPayload {
+  device: Device;
+  childLinks: Array<{ slug: string; name: string }>;
+  campaignSlug: string;
+  data: PublicCampaignData;
+}
+
+/** Public campaign dashboard scoped to one device subtree. */
+export async function getPublicDeviceCampaignData(
+  deviceSlug: string,
+  campaignSlug?: string | null
+): Promise<PublicDeviceCampaignPayload | null> {
+  if (!isPostgresConfigured()) return null;
+
+  const device = await pgGetDeviceBySlug(deviceSlug);
+  if (!device) return null;
+
+  const ownerIds = await pgListUserIdsForDeviceSubtree(device.id);
+  // Empty subtree still yields an empty dashboard (never leak other devices).
+  const ownerScope: OwnerScope = ownerIds;
+
+  let resolvedCampaignSlug = campaignSlug?.trim() || null;
+  if (!resolvedCampaignSlug) {
+    const list = await pg.pgGetCampaignList();
+    resolvedCampaignSlug = list[0]?.slug ?? null;
+  }
+  if (!resolvedCampaignSlug) return null;
+
+  const data = await getPublicCampaignDataForOwners(resolvedCampaignSlug, ownerScope);
+  if (!data) return null;
+
+  const childLinks = await pgListDevicePublicChildLinks(device.id);
+
+  return {
+    device,
+    childLinks,
+    campaignSlug: resolvedCampaignSlug,
+    data,
+  };
 }
 
 export { buildAnalyticsSummary, buildSubmissionSummary, buildSectionVisibility };

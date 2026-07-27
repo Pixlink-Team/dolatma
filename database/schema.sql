@@ -954,9 +954,16 @@ CREATE TABLE IF NOT EXISTS devices (
   social_links JSONB NOT NULL DEFAULT '{}'::jsonb,
   status TEXT NOT NULL DEFAULT 'active',
   is_active BOOLEAN NOT NULL DEFAULT true,
+  public_slug TEXT,
+  page_view_password_hash TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+ALTER TABLE devices ADD COLUMN IF NOT EXISTS public_slug TEXT;
+ALTER TABLE devices ADD COLUMN IF NOT EXISTS page_view_password_hash TEXT;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_devices_public_slug_unique
+  ON devices (public_slug) WHERE public_slug IS NOT NULL;
 
 ALTER TABLE devices DROP CONSTRAINT IF EXISTS devices_type_check;
 ALTER TABLE devices ADD CONSTRAINT devices_type_check

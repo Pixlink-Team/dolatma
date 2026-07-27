@@ -28,7 +28,9 @@ import {
   pgSaveDeviceCapacity,
   pgSaveDeviceOfficial,
   pgSaveDeviceStaff,
+  pgUpdateDevicePublicPage,
 } from "@/lib/db/repository-devices";
+import { hashPassword } from "@/lib/auth/password";
 import { isPostgresConfigured } from "@/lib/utils";
 import type {
   DeviceActivityScope,
@@ -41,12 +43,13 @@ import type {
   DeviceType,
 } from "@/lib/types";
 
-async function revalidateDevicePages(deviceId?: string) {
+async function revalidateDevicePages(deviceId?: string, publicSlug?: string | null) {
   revalidatePath("/admin/ministries");
   revalidatePath("/admin/devices");
   revalidatePath("/admin/users");
   revalidatePath("/admin/directives");
   if (deviceId) revalidatePath(`/admin/devices/${deviceId}`);
+  if (publicSlug) revalidatePath(`/device/${publicSlug}`);
 }
 
 /** Only the device's own user (or full admin) may edit passport content. */
@@ -278,8 +281,11 @@ export async function deleteDeviceAction(id: string) {
   }
 
   try {
+    const existing = await pgGetDeviceById(id);
     const result = await pgDeleteDevice(id);
-    if (result.success) await revalidateDevicePages();
+    if (result.success) {
+      await revalidateDevicePages(undefined, existing?.publicSlug);
+    }
     return result;
   } catch (error) {
     console.error("[devices] deleteDeviceAction failed", error);
@@ -288,6 +294,69 @@ export async function deleteDeviceAction(id: string) {
       error: error instanceof Error ? error.message : "حذف دستگاه ناموفق بود",
     };
   }
+}
+
+/** Save public slug and/or page password for a device. */
+export async function saveDevicePublicPageAction(input: {
+  deviceId: string;
+  publicSlug?: string | null;
+  password?: string;
+  removePassword?: boolean;
+}) {
+  const session = await getAuthSession();
+  if (!session || !canAccessDevicesPage(session)) {
+    return { success: false as const, error: "Unauthorized" };
+  }
+  if (!isPostgresConfigured()) {
+    return { success: false as const, error: "Database required" };
+  }
+
+  if (!isFullAdmin(session)) {
+    const canEdit =
+      (await canEditDevicePassport(session, input.deviceId)) ||
+      (await canMutateDevice(session, input.deviceId));
+    if (!canEdit) {
+      return { success: false as const, error: "دسترسی به این دستگاه ندارید" };
+    }
+  }
+
+  const existing = await pgGetDeviceById(input.deviceId);
+  if (!existing) {
+    return { success: false as const, error: "دستگاه یافت نشد" };
+  }
+
+  let passwordHash: string | undefined;
+  if (input.removePassword) {
+    passwordHash = undefined;
+  } else if (input.password !== undefined) {
+    const password = input.password.trim();
+    if (!password) {
+      return { success: false as const, error: "رمز الزامی است" };
+    }
+    if (password.length < 4) {
+      return { success: false as const, error: "رمز باید حداقل ۴ کاراکتر باشد" };
+    }
+    passwordHash = await hashPassword(password);
+  }
+
+  const result = await pgUpdateDevicePublicPage({
+    id: input.deviceId,
+    publicSlug: input.publicSlug,
+    passwordHash,
+    removePassword: input.removePassword,
+  });
+
+  if (!result.success) return result;
+
+  const nextSlug =
+    input.publicSlug !== undefined
+      ? (input.publicSlug?.trim().toLowerCase() || null)
+      : existing.publicSlug;
+  await revalidateDevicePages(input.deviceId, nextSlug);
+  if (existing.publicSlug && existing.publicSlug !== nextSlug) {
+    revalidatePath(`/device/${existing.publicSlug}`);
+  }
+  return { success: true as const };
 }
 
 export async function saveDeviceOfficialAction(data: {

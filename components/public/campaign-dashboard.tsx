@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { ArrowRight, RefreshCw, Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -44,6 +44,14 @@ interface CampaignDashboardProps {
   exportMode?: boolean;
   canScore?: boolean;
   authViewer?: CampaignAuthViewer | null;
+  /** When set, refresh fetches this URL instead of /api/campaign?slug= */
+  dataUrl?: string;
+  /** Auth chip / return path override */
+  returnPath?: string;
+  /** Hide campaign-wide cities leaderboard link */
+  hideCitiesLink?: boolean;
+  /** Optional banner above the campaign title (e.g. device name + child links) */
+  banner?: ReactNode;
 }
 
 function collectAllOwnerGroups(data: PublicCampaignData): DataOwnerGroup<Ownable>[] {
@@ -70,6 +78,9 @@ function CampaignDashboardBody({
   isRefreshing,
   onRefresh,
   authViewer,
+  returnPath,
+  hideCitiesLink,
+  banner,
 }: {
   data: PublicCampaignData;
   slug: string;
@@ -78,6 +89,9 @@ function CampaignDashboardBody({
   isRefreshing: boolean;
   onRefresh: () => void;
   authViewer: CampaignAuthViewer | null;
+  returnPath: string;
+  hideCitiesLink: boolean;
+  banner?: ReactNode;
 }) {
   const { settings, sections } = data;
   const { filter } = useOwnerLocationFilter();
@@ -111,19 +125,26 @@ function CampaignDashboardBody({
             <span data-export-hide>
               <ThemeToggle />
             </span>
-            <CampaignAuthChip viewer={authViewer} returnPath={`/campaign/${slug}`} />
-            <Button variant="outline" size="sm" asChild data-export-hide>
-              <Link href={`/campaign/${slug}/cities`}>
-                <Trophy className="h-4 w-4" />
-                رتبه‌بندی وزارتخانه‌ها
-              </Link>
-            </Button>
+            <CampaignAuthChip viewer={authViewer} returnPath={returnPath} />
+            {!hideCitiesLink ? (
+              <Button variant="outline" size="sm" asChild data-export-hide>
+                <Link href={`/campaign/${slug}/cities`}>
+                  <Trophy className="h-4 w-4" />
+                  رتبه‌بندی وزارتخانه‌ها
+                </Link>
+              </Button>
+            ) : null}
             <Button variant="outline" size="sm" onClick={onRefresh} disabled={isRefreshing} data-export-hide>
               <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
               بروزرسانی
             </Button>
           </div>
         </div>
+        {banner ? (
+          <div className="border-t bg-muted/30" data-export-hide>
+            <div className="container mx-auto px-4 py-3">{banner}</div>
+          </div>
+        ) : null}
       </header>
 
       <main className="container mx-auto max-w-[1280px] space-y-8 overflow-x-hidden px-4 py-8">
@@ -298,18 +319,28 @@ export function CampaignDashboard({
   exportMode = false,
   canScore = false,
   authViewer = null,
+  dataUrl,
+  returnPath,
+  hideCitiesLink = false,
+  banner,
 }: CampaignDashboardProps) {
   const [data, setData] = useState(initialData);
   const [lastRefresh, setLastRefresh] = useState(() => new Date(initialData.lastUpdated));
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const resolvedReturnPath = returnPath ?? `/campaign/${slug}`;
 
   const refreshData = useCallback(async () => {
     if (exportMode) return;
     setIsRefreshing(true);
     try {
-      const res = await fetch(`/api/campaign?slug=${encodeURIComponent(slug)}`, { cache: "no-store" });
+      const url = dataUrl ?? `/api/campaign?slug=${encodeURIComponent(slug)}`;
+      const res = await fetch(url, { cache: "no-store" });
       if (res.ok) {
-        const newData: PublicCampaignData = await res.json();
+        const payload = (await res.json()) as
+          | PublicCampaignData
+          | { data: PublicCampaignData };
+        const newData =
+          "data" in payload && payload.data ? payload.data : (payload as PublicCampaignData);
         setData(newData);
         setLastRefresh(new Date());
       }
@@ -318,7 +349,7 @@ export function CampaignDashboard({
     } finally {
       setIsRefreshing(false);
     }
-  }, [slug, exportMode]);
+  }, [slug, exportMode, dataUrl]);
 
   useEffect(() => {
     if (exportMode) return;
@@ -349,6 +380,9 @@ export function CampaignDashboard({
               isRefreshing={isRefreshing}
               onRefresh={refreshData}
               authViewer={authViewer}
+              returnPath={resolvedReturnPath}
+              hideCitiesLink={hideCitiesLink}
+              banner={banner}
             />
           </OwnerLocationFilterProvider>
         </ContentScoreProvider>

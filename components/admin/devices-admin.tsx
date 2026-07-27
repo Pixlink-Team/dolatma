@@ -9,6 +9,8 @@ import {
   Building2,
   ChevronDown,
   ChevronLeft,
+  Copy,
+  ExternalLink,
   IdCard,
   Pencil,
   Plus,
@@ -32,6 +34,7 @@ import {
 import {
   deleteDeviceAction,
   saveDeviceAction,
+  saveDevicePublicPageAction,
 } from "@/lib/actions/device-actions";
 import {
   clearDeviceAccessAction,
@@ -79,6 +82,15 @@ const deviceSchema = z.object({
   ]),
   mission: z.string().optional(),
   status: z.enum(["active", "inactive", "suspended"]),
+  publicSlug: z
+    .string()
+    .optional()
+    .refine(
+      (value) => !value || /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value),
+      "اسلاگ فقط حروف انگلیسی کوچک، عدد و خط تیره"
+    ),
+  pagePassword: z.string().optional(),
+  removePagePassword: z.boolean().optional(),
 });
 
 type DeviceFormValues = z.infer<typeof deviceSchema>;
@@ -128,6 +140,7 @@ export function DevicesAdmin({
     () => new Set()
   );
   const [accessLoading, setAccessLoading] = useState(false);
+  const [editingHasPagePassword, setEditingHasPagePassword] = useState(false);
 
   const childrenByParent = useMemo(() => {
     const map = new Map<string, Device[]>();
@@ -164,6 +177,9 @@ export function DevicesAdmin({
       type: "ministry",
       mission: "",
       status: "active",
+      publicSlug: "",
+      pagePassword: "",
+      removePagePassword: false,
     },
   });
 
@@ -175,6 +191,9 @@ export function DevicesAdmin({
       type: "organization",
       mission: "",
       status: "active",
+      publicSlug: "",
+      pagePassword: "",
+      removePagePassword: false,
     },
   });
 
@@ -212,12 +231,16 @@ export function DevicesAdmin({
   const openCreateRoot = () => {
     setEditingId(null);
     setEditingParentId(null);
+    setEditingHasPagePassword(false);
     form.reset({
       name: "",
       shortName: "",
       type: "ministry",
       mission: "",
       status: "active",
+      publicSlug: "",
+      pagePassword: "",
+      removePagePassword: false,
     });
     setOpen(true);
   };
@@ -225,12 +248,16 @@ export function DevicesAdmin({
   const openEdit = (device: Device) => {
     setEditingId(device.id);
     setEditingParentId(device.parentId ?? null);
+    setEditingHasPagePassword(Boolean(device.hasPagePassword));
     form.reset({
       name: device.name,
       shortName: device.shortName ?? "",
       type: device.type,
       mission: device.mission ?? "",
       status: device.status,
+      publicSlug: device.publicSlug ?? "",
+      pagePassword: "",
+      removePagePassword: false,
     });
     setOpen(true);
   };
@@ -244,9 +271,44 @@ export function DevicesAdmin({
         type: "organization",
         mission: "",
         status: "active",
+        publicSlug: "",
+        pagePassword: "",
+        removePagePassword: false,
       });
       setChildOpen(true);
     });
+  };
+
+  const savePublicPageForDevice = async (
+    deviceId: string,
+    data: DeviceFormValues
+  ): Promise<boolean> => {
+    const slug = data.publicSlug?.trim().toLowerCase() || null;
+    const wantsPassword = Boolean(data.pagePassword?.trim());
+    const wantsRemove = Boolean(data.removePagePassword);
+
+    // Always persist slug (including clearing); password only when changed.
+    const result = await saveDevicePublicPageAction({
+      deviceId,
+      publicSlug: slug,
+      password: wantsPassword ? data.pagePassword : undefined,
+      removePassword: wantsRemove && !wantsPassword,
+    });
+    if (!result.success) {
+      toast.error(result.error);
+      return false;
+    }
+    return true;
+  };
+
+  const copyPublicLink = async (slug: string) => {
+    const url = `${window.location.origin}/device/${slug}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success("لینک کپی شد");
+    } catch {
+      toast.error("کپی لینک ناموفق بود");
+    }
   };
 
   const accessChildrenByParent = useMemo(() => {
@@ -563,6 +625,8 @@ export function DevicesAdmin({
         toast.error(result.error);
         return;
       }
+      const publicOk = await savePublicPageForDevice(result.id, data);
+      if (!publicOk) return;
       toast.success(editingId ? "دستگاه به‌روزرسانی شد" : "دستگاه ایجاد شد");
       setOpen(false);
       window.location.reload();
@@ -585,6 +649,8 @@ export function DevicesAdmin({
         toast.error(result.error);
         return;
       }
+      const publicOk = await savePublicPageForDevice(result.id, data);
+      if (!publicOk) return;
       toast.success("زیرمجموعه ایجاد شد");
       setChildOpen(false);
       setExpandedIds((prev) => new Set(prev).add(parentIdForChild));
@@ -678,8 +744,26 @@ export function DevicesAdmin({
                   ? ` · ${children.length} زیرمجموعه`
                   : ""}
               {typeof device.usersCount === "number" ? ` · ${device.usersCount} کاربر` : ""}
+              {device.publicSlug ? ` · /device/${device.publicSlug}` : ""}
             </p>
           </div>
+          {device.publicSlug ? (
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                title="کپی لینک عمومی"
+                onClick={() => void copyPublicLink(device.publicSlug!)}
+              >
+                <Copy className="h-4 w-4" />
+              </Button>
+              <Button variant="ghost" size="icon" asChild title="باز کردن صفحه عمومی">
+                <a href={`/device/${device.publicSlug}`} target="_blank" rel="noreferrer">
+                  <ExternalLink className="h-4 w-4" />
+                </a>
+              </Button>
+            </div>
+          ) : null}
           {showPassport ? (
             <Button variant="outline" size="sm" asChild>
               <Link href={adminHref(`/admin/devices/${device.id}`, campaignId)}>
@@ -831,6 +915,61 @@ export function DevicesAdmin({
               <Label>حوزه مأموریت</Label>
               <Textarea rows={3} {...form.register("mission")} />
             </div>
+            <div className="space-y-2">
+              <Label>اسلاگ صفحه عمومی (اختیاری)</Label>
+              <Input
+                {...form.register("publicSlug")}
+                dir="ltr"
+                className="text-left"
+                placeholder="vezerat-jahad"
+              />
+              <p className="text-xs text-muted-foreground">
+                لینک: /device/اسلاگ — فقط حروف انگلیسی کوچک، عدد و خط تیره
+              </p>
+              {form.watch("publicSlug")?.trim() ? (
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => void copyPublicLink(form.getValues("publicSlug")!.trim())}
+                  >
+                    <Copy className="ml-1 h-3.5 w-3.5" />
+                    کپی لینک
+                  </Button>
+                  <Button type="button" variant="outline" size="sm" asChild>
+                    <a
+                      href={`/device/${form.getValues("publicSlug")!.trim()}`}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      <ExternalLink className="ml-1 h-3.5 w-3.5" />
+                      باز کردن
+                    </a>
+                  </Button>
+                </div>
+              ) : null}
+            </div>
+            <div className="space-y-2">
+              <Label>رمز صفحه عمومی (اختیاری)</Label>
+              <Input
+                type="password"
+                {...form.register("pagePassword")}
+                dir="ltr"
+                className="text-left"
+                placeholder={
+                  editingHasPagePassword
+                    ? "رمز جدید (خالی = بدون تغییر)"
+                    : "حداقل ۴ کاراکتر"
+                }
+              />
+              {editingHasPagePassword ? (
+                <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <input type="checkbox" {...form.register("removePagePassword")} />
+                  حذف رمز فعلی
+                </label>
+              ) : null}
+            </div>
             <Button type="submit" disabled={isPending} className="w-full">
               ذخیره
             </Button>
@@ -869,6 +1008,25 @@ export function DevicesAdmin({
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>اسلاگ صفحه عمومی (اختیاری)</Label>
+              <Input
+                {...childForm.register("publicSlug")}
+                dir="ltr"
+                className="text-left"
+                placeholder="sazman-foo"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>رمز صفحه عمومی (اختیاری)</Label>
+              <Input
+                type="password"
+                {...childForm.register("pagePassword")}
+                dir="ltr"
+                className="text-left"
+                placeholder="حداقل ۴ کاراکتر"
+              />
             </div>
             <Button type="submit" disabled={isPending} className="w-full">
               ایجاد زیرمجموعه

@@ -1,6 +1,18 @@
 {
   "entries": [
     {
+      "hash": "9680f584d2d480ee731081388880ec7facd4c26b",
+      "committedAt": "2026-07-25T21:23:26+03:30",
+      "title": "بهبود نمایش مأموریت‌ها و دستورکارها در موبایل و تبلت",
+      "subject": "Improve work UI responsive layouts for phone and tablet"
+    },
+    {
+      "hash": "867f2e090ca053d537fe85e6a8a58620252eb69a",
+      "committedAt": "2026-07-25T21:23:26+03:30",
+      "title": "تکمیل مرحله زیرمجموعه‌ها فقط با تعریف زیرمجموعه و کاربر",
+      "subject": "Require subsidiary device and user for onboarding step"
+    },
+    {
       "hash": "b6adf95da115d0d85b97dca88d22c2edf43d4fd1",
       "committedAt": "2026-07-25T21:12:09+03:30",
       "title": "اصلاح تکمیل مأموریت زیرمجموعه‌ها تا قبل از افزودن کاربر",

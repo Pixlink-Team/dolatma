@@ -167,6 +167,10 @@ export interface Device {
   socialLinks: DeviceSocialLinks;
   status: DeviceStatus;
   isActive: boolean;
+  /** Public page URL segment; null means no public page. */
+  publicSlug?: string | null;
+  /** Whether a page-view password is set (hash never sent to clients). */
+  hasPagePassword?: boolean;
   createdAt: string;
   updatedAt: string;
   childrenCount?: number;

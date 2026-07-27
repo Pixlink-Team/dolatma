@@ -137,6 +137,14 @@ function mapDevice(row: Record<string, unknown>): Device {
     socialLinks: parseSocialLinks(row.social_links),
     status: asStatus(row.status),
     isActive: row.is_active !== false && asStatus(row.status) === "active",
+    publicSlug:
+      typeof row.public_slug === "string" && row.public_slug.trim()
+        ? row.public_slug.trim()
+        : null,
+    hasPagePassword: Boolean(
+      typeof row.page_view_password_hash === "string" &&
+        row.page_view_password_hash.trim()
+    ),
     createdAt: toIso(row.created_at),
     updatedAt: toIso(row.updated_at),
     childrenCount:
@@ -405,6 +413,12 @@ async function ensureDeviceSchemaOnce(): Promise<void> {
   await sql`
     ALTER TABLE campaign_directives
       ADD COLUMN IF NOT EXISTS audience_device_id UUID REFERENCES devices(id) ON DELETE SET NULL
+  `;
+  await sql`ALTER TABLE devices ADD COLUMN IF NOT EXISTS public_slug TEXT`;
+  await sql`ALTER TABLE devices ADD COLUMN IF NOT EXISTS page_view_password_hash TEXT`;
+  await sql`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_devices_public_slug_unique
+      ON devices (public_slug) WHERE public_slug IS NOT NULL
   `;
   await sql`CREATE INDEX IF NOT EXISTS idx_devices_parent ON devices(parent_id)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_users_device ON users(device_id)`;
@@ -697,6 +711,210 @@ export async function pgGetDeviceById(id: string): Promise<Device | null> {
   `;
   if (!rows[0]) return null;
   return mapDevice(rows[0] as Record<string, unknown>);
+}
+
+const DEVICE_PUBLIC_SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+export function normalizeDevicePublicSlug(raw: string | null | undefined): string | null {
+  const slug = (raw ?? "").trim().toLowerCase();
+  if (!slug) return null;
+  return slug;
+}
+
+export function isValidDevicePublicSlug(slug: string): boolean {
+  return DEVICE_PUBLIC_SLUG_RE.test(slug) && slug.length >= 2 && slug.length <= 80;
+}
+
+/** Active device by public slug (for public pages). */
+export async function pgGetDeviceBySlug(slug: string): Promise<Device | null> {
+  const normalized = normalizeDevicePublicSlug(slug);
+  if (!normalized) return null;
+  const sql = getSql();
+  await ensureDeviceSchema();
+  const rows = await sql`
+    SELECT d.*, p.name AS parent_name
+    FROM devices d
+    LEFT JOIN devices p ON p.id = d.parent_id
+    WHERE d.public_slug = ${normalized}
+      AND d.is_active = true
+    LIMIT 1
+  `;
+  if (!rows[0]) return null;
+  return mapDevice(rows[0] as Record<string, unknown>);
+}
+
+/** Password hash for unlock verification (not exposed via mapDevice). */
+export async function pgGetDevicePagePasswordHash(
+  slug: string
+): Promise<{ deviceId: string; name: string; passwordHash: string | null } | null> {
+  const normalized = normalizeDevicePublicSlug(slug);
+  if (!normalized) return null;
+  const sql = getSql();
+  await ensureDeviceSchema();
+  const rows = await sql`
+    SELECT id, name, page_view_password_hash
+    FROM devices
+    WHERE public_slug = ${normalized}
+      AND is_active = true
+    LIMIT 1
+  `;
+  if (!rows[0]) return null;
+  const hash = rows[0].page_view_password_hash;
+  return {
+    deviceId: String(rows[0].id),
+    name: String(rows[0].name ?? ""),
+    passwordHash:
+      typeof hash === "string" && hash.trim() ? hash.trim() : null,
+  };
+}
+
+export async function pgUpdateDevicePublicPage(input: {
+  id: string;
+  publicSlug?: string | null;
+  passwordHash?: string | null;
+  removePassword?: boolean;
+}): Promise<{ success: true } | { success: false; error: string }> {
+  const sql = getSql();
+  await ensureDeviceSchema();
+  const now = new Date().toISOString();
+
+  let nextSlug: string | null | undefined = undefined;
+  if (input.publicSlug !== undefined) {
+    nextSlug = normalizeDevicePublicSlug(input.publicSlug);
+    if (nextSlug && !isValidDevicePublicSlug(nextSlug)) {
+      return {
+        success: false,
+        error: "اسلاگ باید فقط حروف انگلیسی کوچک، عدد و خط تیره باشد",
+      };
+    }
+    if (nextSlug) {
+      const conflict = await sql`
+        SELECT id FROM devices
+        WHERE public_slug = ${nextSlug} AND id <> ${input.id}
+        LIMIT 1
+      `;
+      if (conflict[0]) {
+        return { success: false, error: "این اسلاگ قبلاً استفاده شده است" };
+      }
+    }
+  }
+
+  try {
+    if (nextSlug !== undefined && input.removePassword) {
+      await sql`
+        UPDATE devices SET
+          public_slug = ${nextSlug},
+          page_view_password_hash = NULL,
+          updated_at = ${now}
+        WHERE id = ${input.id}
+      `;
+    } else if (nextSlug !== undefined && input.passwordHash !== undefined) {
+      await sql`
+        UPDATE devices SET
+          public_slug = ${nextSlug},
+          page_view_password_hash = ${input.passwordHash},
+          updated_at = ${now}
+        WHERE id = ${input.id}
+      `;
+    } else if (nextSlug !== undefined) {
+      await sql`
+        UPDATE devices SET
+          public_slug = ${nextSlug},
+          updated_at = ${now}
+        WHERE id = ${input.id}
+      `;
+    } else if (input.removePassword) {
+      await sql`
+        UPDATE devices SET
+          page_view_password_hash = NULL,
+          updated_at = ${now}
+        WHERE id = ${input.id}
+      `;
+    } else if (input.passwordHash !== undefined) {
+      await sql`
+        UPDATE devices SET
+          page_view_password_hash = ${input.passwordHash},
+          updated_at = ${now}
+        WHERE id = ${input.id}
+      `;
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (message.includes("idx_devices_public_slug") || message.includes("unique")) {
+      return { success: false, error: "این اسلاگ قبلاً استفاده شده است" };
+    }
+    throw error;
+  }
+
+  return { success: true };
+}
+
+export async function pgVerifyDevicePagePassword(
+  slug: string,
+  password: string
+): Promise<
+  | { status: "not_found" }
+  | { status: "wrong_password" }
+  | { status: "ok"; passwordHash: string | null; title: string }
+> {
+  const { verifyPassword } = await import("@/lib/auth/password");
+  const row = await pgGetDevicePagePasswordHash(slug);
+  if (!row) return { status: "not_found" };
+
+  if (row.passwordHash) {
+    const valid = await verifyPassword(password, row.passwordHash);
+    if (!valid) return { status: "wrong_password" };
+  }
+
+  return {
+    status: "ok",
+    passwordHash: row.passwordHash,
+    title: row.name,
+  };
+}
+
+/** User IDs whose home device is this device or any descendant. */
+export async function pgListUserIdsForDeviceSubtree(
+  deviceId: string
+): Promise<string[]> {
+  const sql = getSql();
+  await ensureDeviceSchema();
+  const rows = await sql`
+    WITH RECURSIVE subtree AS (
+      SELECT id, ARRAY[id] AS path FROM devices WHERE id = ${deviceId}
+      UNION ALL
+      SELECT c.id, s.path || c.id FROM devices c
+      INNER JOIN subtree s ON c.parent_id = s.id
+      WHERE NOT (c.id = ANY (s.path))
+    )
+    SELECT DISTINCT u.id
+    FROM users u
+    WHERE u.device_id IN (SELECT id FROM subtree)
+       OR u.organization_id IN (SELECT id FROM subtree)
+       OR (u.ministry_id IN (SELECT id FROM subtree) AND u.organization_id IS NULL)
+  `;
+  return rows.map((row) => String(row.id));
+}
+
+/** Immediate children that have a public slug (for public page navigation). */
+export async function pgListDevicePublicChildLinks(
+  parentId: string
+): Promise<Array<{ slug: string; name: string }>> {
+  const sql = getSql();
+  await ensureDeviceSchema();
+  const rows = await sql`
+    SELECT public_slug, COALESCE(short_name, name) AS label
+    FROM devices
+    WHERE parent_id = ${parentId}
+      AND is_active = true
+      AND public_slug IS NOT NULL
+      AND public_slug <> ''
+    ORDER BY COALESCE(short_name, name) ASC
+  `;
+  return rows.map((row) => ({
+    slug: String(row.public_slug),
+    name: String(row.label ?? ""),
+  }));
 }
 
 /** Walk up from a device; returns ancestors ordered root → immediate parent. */
