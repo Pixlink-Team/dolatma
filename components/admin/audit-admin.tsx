@@ -15,6 +15,7 @@ import {
   TriangleAlert,
   Users,
   X,
+  MessageSquare,
 } from "lucide-react";
 import {
   Area,
@@ -36,6 +37,7 @@ import { OnboardingAuditPanel } from "@/components/admin/onboarding-audit-panel"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { AuditCalendarPanel } from "@/components/admin/audit-calendar-panel";
+import { AuditMessagesPanel } from "@/components/admin/audit-messages-panel";
 import { AuditProblemsPanel } from "@/components/admin/audit-problems-panel";
 import { AuditStuckBehaviorPanel } from "@/components/admin/audit-stuck-behavior-panel";
 import {
@@ -910,6 +912,10 @@ export function AuditAdmin({ data, databaseReady }: AuditAdminProps) {
               </Badge>
             )}
           </TabsTrigger>
+          <TabsTrigger value="messages" className="gap-1.5">
+            <MessageSquare className="h-3.5 w-3.5" />
+            پیام‌ها
+          </TabsTrigger>
           <TabsTrigger value="stuck">
             خطاها و رفتار مشکوک
             {(summary.stuckSignals > 0 || (data.recentUserErrors?.length ?? 0) > 0) && (
@@ -929,6 +935,10 @@ export function AuditAdmin({ data, databaseReady }: AuditAdminProps) {
 
         <TabsContent value="calendar">
           <AuditCalendarPanel onSelectUser={openUserActivity} />
+        </TabsContent>
+
+        <TabsContent value="messages">
+          <AuditMessagesPanel users={data.allUsersPresence ?? []} />
         </TabsContent>
 
         <TabsContent value="problems">

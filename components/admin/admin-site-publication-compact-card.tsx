@@ -1,12 +1,13 @@
 "use client";
 
 import { Globe } from "lucide-react";
+import { AdminCreatedAtText } from "@/components/admin/admin-created-at";
 import { AdminItemActions } from "@/components/admin/admin-item-actions";
 import { AdminOwnerBadge } from "@/components/admin/admin-owner-badge";
 import { AdminPlanLabelsBadges } from "@/components/admin/admin-plan-labels-badges";
 import { MediaThumbnail } from "@/components/ui/media-thumbnail";
 import type { SocialMediaPost } from "@/lib/types";
-import { cn, formatPersianDate } from "@/lib/utils";
+import { cn, formatPersianDate, formatPersianNumber } from "@/lib/utils";
 
 interface AdminSitePublicationCompactCardProps {
   post: SocialMediaPost;
@@ -53,7 +54,11 @@ export function AdminSitePublicationCompactCard({
           <AdminPlanLabelsBadges planLabels={post.planLabels} planLabel={post.planLabel} />
           <p className="truncate text-[10px] text-muted-foreground">
             {formatPersianDate(post.publishedDate)}
+            {post.linkEntries && post.linkEntries.length > 0
+              ? ` · پخش گروهی (${formatPersianNumber(post.linkEntries.length)})`
+              : ""}
           </p>
+          <AdminCreatedAtText createdAt={post.createdAt} />
           <AdminOwnerBadge ownerUserId={post.ownerUserId} ownerName={post.ownerName} />
         </div>
       </button>

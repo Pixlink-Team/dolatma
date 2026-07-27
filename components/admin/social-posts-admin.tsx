@@ -17,14 +17,17 @@ import {
   collectAdminFilterUsers,
   DEFAULT_ADMIN_CONTENT_FILTER,
   matchesAdminContentFilter,
+  sortAdminContentItems,
   type AdminContentFilterState,
 } from "@/components/admin/admin-content-filter-bar";
 import { AdminCompactAddCard } from "@/components/admin/admin-compact-add-card";
+import { adminCreatedAtDetail } from "@/components/admin/admin-created-at";
 import { AdminItemActions } from "@/components/admin/admin-item-actions";
 import { AdminContentPreviewDialog } from "@/components/admin/admin-content-preview-dialog";
 import { AdminSocialPostCompactCard } from "@/components/admin/admin-social-post-compact-card";
 import { AdminViewModeToggle } from "@/components/admin/admin-view-mode-toggle";
 import { PlanLabelSelect } from "@/components/admin/plan-label-select";
+import { ContentOwnerSelect } from "@/components/admin/content-owner-select";
 import { ContentScoreControl } from "@/components/admin/content-score-control";
 import {
   BulkItemShell,
@@ -36,7 +39,7 @@ import { MediaUpload } from "@/components/ui/media-upload";
 import { PersianDateField } from "@/components/ui/persian-date-input";
 import { deleteSocialPostAction, fetchSocialLinkMetricsAction, saveSocialPostAction } from "@/lib/actions/extended-actions";
 import { detectLinkMetricsPlatform } from "@/lib/services/link-metrics/detect";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, Trash2 } from "lucide-react";
 import {
   parseEditSuggestionMissingFields,
   type EditSuggestionMissingField,
@@ -47,15 +50,26 @@ import { useAdminInfiniteScroll } from "@/lib/hooks/use-admin-infinite-scroll";
 import { AdminInfiniteScrollSentinel } from "@/components/admin/admin-infinite-scroll-sentinel";
 import { todayISO } from "@/lib/jalali";
 import { videoNeedsAutoCover } from "@/lib/client/video-cover";
-import { isSitePublication } from "@/lib/social-posts";
+import {
+  createEmptySocialPostLinkEntry,
+  getSocialPostLinkEntryPlatforms,
+  isGroupSocialPost,
+  isSitePublication,
+  MAX_SOCIAL_POST_LINK_ENTRIES,
+  normalizeSocialPostLinkEntries,
+  SOCIAL_PLATFORM_OPTIONS,
+  sumSocialPostLinkEntryViews,
+} from "@/lib/social-posts";
 import { SocialPlatformIcon, getSocialPlatformLabel } from "@/components/public/social-platform-icon";
-import type { AdminUser, SocialContentType, SocialMediaPost, SocialPlatform } from "@/lib/types";
+import type { AdminUser, SocialContentType, SocialMediaPost, SocialPlatform, SocialPostLinkEntry } from "@/lib/types";
 import { cn, formatPersianDate, formatPersianNumber, getStatusLabel } from "@/lib/utils";
 import { GenerateMissingVideoCoversButton } from "@/components/admin/generate-missing-video-covers-button";
 import {
   CONTENT_TITLE_MAX_LENGTH,
   CONTENT_TITLE_MAX_LENGTH_MESSAGE,
 } from "@/lib/content-constraints";
+import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
 
 const schema = z.object({
   platform: z.enum(["instagram", "x", "telegram", "linkedin", "youtube", "aparat", "rubika", "eitaa", "soroush", "bale", "other"]),
@@ -72,19 +86,12 @@ const schema = z.object({
   publishedDate: z.string(),
 });
 
-const platformOptions: SocialPlatform[] = [
-  "instagram",
-  "x",
-  "telegram",
-  "linkedin",
-  "youtube",
-  "aparat",
-  "rubika",
-  "eitaa",
-  "soroush",
-  "bale",
-  "other",
-];
+function platformsFromPost(post: SocialMediaPost): SocialPlatform[] {
+  if (isSitePublication(post)) return ["instagram"];
+  const fromEntries = getSocialPostLinkEntryPlatforms(post.linkEntries);
+  if (fromEntries.length > 0) return fromEntries;
+  return [post.platform as SocialPlatform];
+}
 
 const contentTypeOptions: SocialContentType[] = ["image", "text", "video", "carousel", "story", "reel", "audio"];
 
@@ -95,6 +102,7 @@ interface SocialPostsAdminProps {
   contentTopics?: ContentTopic[];
   canScore?: boolean;
   isFullAdmin?: boolean;
+  canTransferOwnership?: boolean;
   users?: AdminUser[];
 }
 
@@ -105,6 +113,7 @@ export function SocialPostsAdmin({
   contentTopics = [],
   canScore = false,
   isFullAdmin = false,
+  canTransferOwnership = false,
   users = [],
 }: SocialPostsAdminProps) {
   const { requestCreate, tutorialModal } = useSectionCreateGate("socialPosts");
@@ -115,7 +124,13 @@ export function SocialPostsAdmin({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [previewPost, setPreviewPost] = useState<SocialMediaPost | null>(null);
   const [planLabels, setPlanLabels] = useState<string[]>([]);
+  const [editOwnerUserId, setEditOwnerUserId] = useState<string | null>(null);
   const [highlightFields, setHighlightFields] = useState<EditSuggestionMissingField[]>([]);
+  const [isGroupDistribution, setIsGroupDistribution] = useState(false);
+  const [selectedPlatforms, setSelectedPlatforms] = useState<SocialPlatform[]>(["instagram"]);
+  const [linkEntries, setLinkEntries] = useState<SocialPostLinkEntry[]>([
+    createEmptySocialPostLinkEntry("instagram"),
+  ]);
   const [contentFilter, setContentFilter] = useState<AdminContentFilterState>(DEFAULT_ADMIN_CONTENT_FILTER);
   const { viewMode, setViewMode } = useAdminViewMode("social-posts");
   const [rows, setRows] = useState(initialPosts.filter((post) => !isSitePublication(post)));
@@ -123,10 +138,15 @@ export function SocialPostsAdmin({
 
   const filterUsers = useMemo(() => collectAdminFilterUsers(rows), [rows]);
   const filteredRows = useMemo(
-    () => rows.filter((item) => matchesAdminContentFilter(item, contentFilter)),
+    () =>
+      sortAdminContentItems(
+        rows.filter((item) => matchesAdminContentFilter(item, contentFilter)),
+        contentFilter.sortOrder,
+        (item) => item.publishedDate || item.updatedAt || item.createdAt
+      ),
     [rows, contentFilter]
   );
-  const paginationResetKey = `${contentFilter.userKey}:${contentFilter.planLabels.join(",")}:${viewMode}`;
+  const paginationResetKey = `${contentFilter.userKey}:${contentFilter.planLabels.join(",")}:${contentFilter.sortOrder}:${viewMode}`;
   const { visibleCount, hasMore, isLoadingMore, loadMore } = useAdminInfiniteScroll(
     filteredRows.length,
     paginationResetKey
@@ -208,6 +228,10 @@ export function SocialPostsAdmin({
       setEditingId(null);
       setHighlightFields([]);
       setPlanLabels([]);
+      setEditOwnerUserId(null);
+      setIsGroupDistribution(false);
+      setSelectedPlatforms(["instagram"]);
+      setLinkEntries([createEmptySocialPostLinkEntry("instagram")]);
       form.reset({
         platform: "instagram",
         title: "",
@@ -231,8 +255,26 @@ export function SocialPostsAdmin({
     setEditingId(post.id);
     setHighlightFields(fields);
     setPlanLabels(normalizePlanLabels(post.planLabels, post.planLabel));
+    setEditOwnerUserId(post.ownerUserId ?? null);
+    const groupEntries = normalizeSocialPostLinkEntries(post.linkEntries);
+    const groupMode = groupEntries.length > 0;
+    const platforms = platformsFromPost(post);
+    setSelectedPlatforms(platforms);
+    setIsGroupDistribution(groupMode || platforms.length > 1);
+    setLinkEntries(
+      groupMode
+        ? groupEntries
+        : [
+            {
+              id: crypto.randomUUID(),
+              link: post.link ?? "",
+              views: post.views ?? 0,
+              platform: platforms[0],
+            },
+          ]
+    );
     form.reset({
-      platform: post.platform as SocialPlatform,
+      platform: platforms[0] ?? (post.platform as SocialPlatform),
       title: post.title,
       coverImageUrl: post.coverImageUrl ?? "",
       views: post.views,
@@ -264,12 +306,177 @@ export function SocialPostsAdmin({
   const watchedDescription = form.watch("description");
   const watchedCover = form.watch("coverImageUrl");
   const watchedMedia = form.watch("mediaUrl");
+  const groupViewsTotal = useMemo(
+    () => sumSocialPostLinkEntryViews(linkEntries),
+    [linkEntries]
+  );
+  const filledLinkEntries = useMemo(
+    () => normalizeSocialPostLinkEntries(linkEntries),
+    [linkEntries]
+  );
   const highlightTitle = highlightFields.includes("title") && !watchedTitle?.trim();
-  const highlightLink = highlightFields.includes("link") && !watchedLink?.trim();
+  const highlightLink =
+    highlightFields.includes("link") &&
+    (isGroupDistribution || selectedPlatforms.length > 1
+      ? filledLinkEntries.length === 0
+      : !watchedLink?.trim());
   const highlightDescription =
     highlightFields.includes("description") && !watchedDescription?.trim();
   const highlightMedia =
     highlightFields.includes("media") && !watchedCover?.trim() && !watchedMedia?.trim();
+
+  const syncPrimaryPlatform = (platforms: SocialPlatform[]) => {
+    const primary = platforms[0] ?? "instagram";
+    form.setValue("platform", primary);
+  };
+
+  const updateLinkEntry = (
+    id: string,
+    patch: Partial<Pick<SocialPostLinkEntry, "link" | "views" | "platform">>
+  ) => {
+    setLinkEntries((prev) =>
+      prev.map((entry) => (entry.id === id ? { ...entry, ...patch } : entry))
+    );
+  };
+
+  const addLinkEntry = (platform?: SocialPlatform) => {
+    if (linkEntries.length >= MAX_SOCIAL_POST_LINK_ENTRIES) {
+      toast.error(`حداکثر ${MAX_SOCIAL_POST_LINK_ENTRIES} لینک مجاز است`);
+      return;
+    }
+    const entryPlatform = platform ?? selectedPlatforms[0];
+    setLinkEntries((prev) => [...prev, createEmptySocialPostLinkEntry(entryPlatform)]);
+  };
+
+  const removeLinkEntry = (id: string) => {
+    setLinkEntries((prev) => {
+      if (prev.length <= 1) {
+        return [createEmptySocialPostLinkEntry(selectedPlatforms[0] ?? "instagram")];
+      }
+      return prev.filter((entry) => entry.id !== id);
+    });
+  };
+
+  const ensureGroupModeWithPlatforms = (
+    platforms: SocialPlatform[],
+    seed?: { link: string; views: number }
+  ) => {
+    const nextPlatforms = platforms.length > 0 ? platforms : (["instagram"] as SocialPlatform[]);
+    setSelectedPlatforms(nextPlatforms);
+    syncPrimaryPlatform(nextPlatforms);
+    setIsGroupDistribution(true);
+    setLinkEntries((prev) => {
+      const byPlatform = new Map<SocialPlatform, SocialPostLinkEntry[]>();
+      for (const entry of prev) {
+        if (!entry.platform) continue;
+        const list = byPlatform.get(entry.platform) ?? [];
+        list.push(entry);
+        byPlatform.set(entry.platform, list);
+      }
+
+      const next: SocialPostLinkEntry[] = [];
+      let seedApplied = false;
+      for (const platform of nextPlatforms) {
+        const existing = byPlatform.get(platform);
+        if (existing && existing.length > 0) {
+          if (seed && !seedApplied && !existing[0].link.trim()) {
+            next.push({
+              ...existing[0],
+              link: seed.link,
+              views: seed.views || existing[0].views,
+            });
+            next.push(...existing.slice(1));
+            seedApplied = true;
+          } else {
+            next.push(...existing);
+          }
+          continue;
+        }
+        const useSeed = Boolean(seed) && !seedApplied;
+        next.push({
+          id: crypto.randomUUID(),
+          link: useSeed ? seed!.link : "",
+          views: useSeed ? seed!.views : 0,
+          platform,
+        });
+        if (useSeed) seedApplied = true;
+      }
+
+      const untagged = prev.filter((entry) => !entry.platform);
+      if (untagged.length > 0 && nextPlatforms.length === 1) {
+        return [...next, ...untagged.filter((entry) => entry.link.trim() || entry.views > 0)];
+      }
+      return next.length > 0 ? next : [createEmptySocialPostLinkEntry(nextPlatforms[0])];
+    });
+  };
+
+  const togglePlatform = (platform: SocialPlatform) => {
+    const isSelected = selectedPlatforms.includes(platform);
+    if (isSelected) {
+      if (selectedPlatforms.length <= 1) {
+        toast.error("حداقل یک شبکه اجتماعی را انتخاب کنید");
+        return;
+      }
+      const next = selectedPlatforms.filter((item) => item !== platform);
+      setSelectedPlatforms(next);
+      syncPrimaryPlatform(next);
+
+      if (isGroupDistribution || next.length > 1) {
+        setLinkEntries((prev) => {
+          const remaining = prev.filter((entry) => entry.platform !== platform);
+          if (remaining.length === 0) {
+            return [createEmptySocialPostLinkEntry(next[0])];
+          }
+          return remaining;
+        });
+        if (next.length > 1) {
+          setIsGroupDistribution(true);
+        }
+      }
+      return;
+    }
+
+    const next = [...selectedPlatforms, platform];
+    setSelectedPlatforms(next);
+    syncPrimaryPlatform(next);
+
+    if (next.length > 1 || isGroupDistribution) {
+      const seed =
+        !isGroupDistribution && next.length === 2
+          ? {
+              link: form.getValues("link")?.trim() ?? "",
+              views: Number(form.getValues("views")) || 0,
+            }
+          : undefined;
+      ensureGroupModeWithPlatforms(next, seed);
+      return;
+    }
+
+    setLinkEntries([createEmptySocialPostLinkEntry(platform)]);
+  };
+
+  const toggleGroupDistribution = (enabled: boolean) => {
+    if (enabled) {
+      const currentLink = form.getValues("link")?.trim() ?? "";
+      const currentViews = Number(form.getValues("views")) || 0;
+      const platforms =
+        selectedPlatforms.length > 0
+          ? selectedPlatforms
+          : ([form.getValues("platform")] as SocialPlatform[]);
+      ensureGroupModeWithPlatforms(platforms, { link: currentLink, views: currentViews });
+      return;
+    }
+
+    if (selectedPlatforms.length > 1) {
+      toast.error("برای خاموش کردن پخش گروهی، فقط یک شبکه اجتماعی را انتخاب کنید");
+      return;
+    }
+
+    const first = linkEntries[0];
+    form.setValue("link", first?.link ?? "");
+    form.setValue("views", first?.views ?? 0);
+    setIsGroupDistribution(false);
+  };
 
   const handleDelete = (post: SocialMediaPost) => {
     if (!window.confirm(`حذف «${post.title}»؟`)) return;
@@ -339,6 +546,7 @@ export function SocialPostsAdmin({
 
       if (platform !== "eitaa" && platform !== "aparat" && (detected === "eitaa" || detected === "aparat")) {
         form.setValue("platform", detected);
+        setSelectedPlatforms([detected]);
       }
 
       toast.success(
@@ -351,13 +559,51 @@ export function SocialPostsAdmin({
 
   const onSubmit = form.handleSubmit((data) => {
     startTransition(async () => {
+      const existing = editingId ? rows.find((row) => row.id === editingId) : undefined;
+      const selectedOwner = canTransferOwnership
+        ? users.find((user) => user.id === editOwnerUserId)
+        : null;
+
+      if (selectedPlatforms.length === 0) {
+        toast.error("حداقل یک شبکه اجتماعی را انتخاب کنید");
+        return;
+      }
+
+      const useGroupLinks = isGroupDistribution || selectedPlatforms.length > 1;
+      const normalizedEntries = useGroupLinks
+        ? normalizeSocialPostLinkEntries(linkEntries)
+        : [];
+
+      if (useGroupLinks && normalizedEntries.length === 0) {
+        toast.error("حداقل یک لینک برای پخش گروهی وارد کنید");
+        return;
+      }
+
+      const primaryPlatform = selectedPlatforms[0] ?? data.platform;
+      const resolvedViews = useGroupLinks
+        ? sumSocialPostLinkEntryViews(normalizedEntries)
+        : data.views;
+      const resolvedLink = useGroupLinks
+        ? normalizedEntries[0]?.link ?? ""
+        : data.link ?? "";
+
       const result = await saveSocialPostAction({
         ...data,
+        platform: primaryPlatform,
+        views: resolvedViews,
+        link: resolvedLink,
+        linkEntries: normalizedEntries,
         campaignId,
         id: editingId ?? undefined,
         published: true,
         planLabels,
         planLabel: planLabels[0] ?? null,
+        ...(canTransferOwnership
+          ? {
+              ownerUserId: editOwnerUserId,
+              ownerName: selectedOwner?.name ?? existing?.ownerName ?? null,
+            }
+          : {}),
       });
       if (!result.success) {
         toast.error("ذخیره نشد");
@@ -369,11 +615,31 @@ export function SocialPostsAdmin({
           ? result.id
           : editingId ?? crypto.randomUUID();
 
+      const ownerPatch = canTransferOwnership
+        ? {
+            ownerUserId: editOwnerUserId,
+            ownerName: selectedOwner?.name ?? existing?.ownerName ?? null,
+          }
+        : {};
+
+      const savedPatch = {
+        ...data,
+        platform: primaryPlatform,
+        views: resolvedViews,
+        link: resolvedLink,
+        linkEntries: normalizedEntries.length > 0 ? normalizedEntries : undefined,
+        campaignId,
+        published: true,
+        planLabels,
+        planLabel: planLabels[0] ?? null,
+        ...ownerPatch,
+      };
+
       if (editingId) {
         setRows((prev) =>
           prev.map((row) =>
             row.id === editingId
-              ? { ...row, ...data, campaignId, link: data.link ?? "", published: true, planLabels, planLabel: planLabels[0] ?? null } as SocialMediaPost
+              ? ({ ...row, ...savedPatch } as SocialMediaPost)
               : row
           )
         );
@@ -382,15 +648,10 @@ export function SocialPostsAdmin({
           ...prev,
           {
             id: savedId,
-            campaignId,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
             sortOrder: prev.length,
-            ...data,
-            link: data.link ?? "",
-            published: true,
-            planLabels,
-            planLabel: planLabels[0] ?? null,
+            ...savedPatch,
           } as SocialMediaPost,
         ]);
       }
@@ -417,9 +678,8 @@ export function SocialPostsAdmin({
       <AdminContentFilterBar
         filter={contentFilter}
         onChange={setContentFilter}
-        users={isFullAdmin ? filterUsers : []}
+        users={canTransferOwnership || isFullAdmin ? filterUsers : []}
         plans={contentPlans}
-        items={rows}
       />
 
       <SectionBulkEditBar
@@ -454,6 +714,7 @@ export function SocialPostsAdmin({
                 onView={() => setPreviewPost(post)}
                 onEdit={() => openEdit(post)}
                 onDelete={() => handleDelete(post)}
+                canScore={canScore}
               />
             </BulkItemShell>
           ))}
@@ -527,18 +788,58 @@ export function SocialPostsAdmin({
           previewPost
             ? [
                 { label: "تاریخ انتشار", value: formatPersianDate(previewPost.publishedDate) },
+                adminCreatedAtDetail(previewPost.createdAt),
                 { label: "نوع محتوا", value: getStatusLabel(previewPost.contentType) },
                 {
                   label: "برچسب‌ها",
                   value: previewPost.planLabels?.length ? previewPost.planLabels.join("، ") : "—",
                 },
                 { label: "بازدید", value: formatPersianNumber(previewPost.views) },
+                {
+                  label: "پخش گروهی",
+                  value: isGroupSocialPost(previewPost)
+                    ? `${formatPersianNumber(previewPost.linkEntries?.length ?? 0)} لینک`
+                    : "—",
+                },
                 { label: "لایک", value: formatPersianNumber(previewPost.likes) },
                 { label: "کامنت", value: formatPersianNumber(previewPost.comments) },
                 { label: "اشتراک‌گذاری", value: formatPersianNumber(previewPost.shares) },
                 {
                   label: "لینک",
-                  value: previewPost.link ? (
+                  value: isGroupSocialPost(previewPost) ? (
+                    <div className="space-y-1 text-right" dir="ltr">
+                      {(previewPost.linkEntries ?? []).slice(0, 8).map((entry) => (
+                        <div key={entry.id} className="text-xs">
+                          {entry.platform ? (
+                            <span className="me-2 inline-flex items-center gap-1 text-muted-foreground" dir="rtl">
+                              <SocialPlatformIcon
+                                platform={entry.platform}
+                                size="sm"
+                                className="h-3.5 w-3.5 rounded"
+                              />
+                              {getSocialPlatformLabel(entry.platform)}:
+                            </span>
+                          ) : null}
+                          <a
+                            href={entry.link}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-primary underline break-all"
+                          >
+                            {entry.link}
+                          </a>
+                          <span className="ms-2 text-muted-foreground" dir="rtl">
+                            ({formatPersianNumber(entry.views)} بازدید)
+                          </span>
+                        </div>
+                      ))}
+                      {(previewPost.linkEntries?.length ?? 0) > 8 ? (
+                        <p className="text-xs text-muted-foreground" dir="rtl">
+                          و {formatPersianNumber((previewPost.linkEntries?.length ?? 0) - 8)} لینک دیگر…
+                        </p>
+                      ) : null}
+                    </div>
+                  ) : previewPost.link ? (
                     <a href={previewPost.link} target="_blank" rel="noreferrer" className="text-primary underline" dir="ltr">
                       {previewPost.link}
                     </a>
@@ -558,6 +859,18 @@ export function SocialPostsAdmin({
               }
             : undefined
         }
+        canSendMessage
+        messageTarget={
+          previewPost
+            ? {
+                campaignId,
+                contentType: "social_post",
+                contentId: previewPost.id,
+                contentTitle: previewPost.title,
+                ownerName: previewPost.ownerName,
+              }
+            : null
+        }
       />
 
       <Dialog
@@ -569,45 +882,55 @@ export function SocialPostsAdmin({
             <DialogTitle>{editingId ? "ویرایش پست" : "پست جدید"}</DialogTitle>
           </DialogHeader>
           <form onSubmit={onSubmit} className="space-y-4 text-right">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>کانال</Label>
-                <Select value={form.watch("platform")} onValueChange={(value) => form.setValue("platform", value as SocialPlatform)}>
-                  <SelectTrigger>
-                    <SelectValue>
-                      <span className="flex items-center gap-2">
-                        <SocialPlatformIcon
-                          platform={form.watch("platform")}
-                          size="sm"
-                          className="h-5 w-5 rounded-md"
-                        />
-                        {getSocialPlatformLabel(form.watch("platform"))}
+            <div className="space-y-2">
+              <Label>شبکه‌های اجتماعی</Label>
+              <p className="text-xs text-muted-foreground">
+                شبکه‌هایی که این محتوا در آن‌ها منتشر شده را انتخاب کنید؛ برای هر کدام یک فیلد لینک نمایش داده می‌شود.
+              </p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {SOCIAL_PLATFORM_OPTIONS.map((platform) => {
+                  const checked = selectedPlatforms.includes(platform);
+                  return (
+                    <button
+                      key={platform}
+                      type="button"
+                      onClick={() => togglePlatform(platform)}
+                      className={cn(
+                        "flex items-center gap-2 rounded-lg border px-2.5 py-2 text-sm transition-colors text-right",
+                        checked
+                          ? "border-primary bg-primary/10 text-foreground"
+                          : "border-border bg-background text-muted-foreground hover:bg-muted/50"
+                      )}
+                      aria-pressed={checked}
+                    >
+                      <span
+                        className={cn(
+                          "flex h-4 w-4 shrink-0 items-center justify-center rounded border text-[10px] font-bold",
+                          checked
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : "border-muted-foreground/40"
+                        )}
+                      >
+                        {checked ? "✓" : ""}
                       </span>
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {platformOptions.map((platform) => (
-                      <SelectItem key={platform} value={platform}>
-                        <span className="flex items-center gap-2">
-                          <SocialPlatformIcon platform={platform} size="sm" className="h-5 w-5 rounded-md" />
-                          {getSocialPlatformLabel(platform)}
-                        </span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                      <SocialPlatformIcon platform={platform} size="sm" className="h-5 w-5 rounded-md" />
+                      <span className="truncate">{getSocialPlatformLabel(platform)}</span>
+                    </button>
+                  );
+                })}
               </div>
-              <div className="space-y-2">
-                <Label>نوع محتوا</Label>
-                <Select value={form.watch("contentType")} onValueChange={(value) => form.setValue("contentType", value as SocialContentType)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {contentTypeOptions.map((type) => (
-                      <SelectItem key={type} value={type}>{getStatusLabel(type)}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>نوع محتوا</Label>
+              <Select value={form.watch("contentType")} onValueChange={(value) => form.setValue("contentType", value as SocialContentType)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {contentTypeOptions.map((type) => (
+                    <SelectItem key={type} value={type}>{getStatusLabel(type)}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">
@@ -634,6 +957,8 @@ export function SocialPostsAdmin({
                 contentType="social_post"
                 contentId={editingId}
                 score={rows.find((row) => row.id === editingId)?.score}
+                autoScore={rows.find((row) => row.id === editingId)?.autoScore}
+                manualScore={rows.find((row) => row.id === editingId)?.manualScore}
                 canScore={canScore}
                 onScoreSaved={(score) =>
                   setRows((prev) =>
@@ -642,44 +967,175 @@ export function SocialPostsAdmin({
                 }
               />
             )}
+            {canTransferOwnership && (
+              <ContentOwnerSelect
+                users={users}
+                value={editOwnerUserId}
+                onChange={setEditOwnerUserId}
+              />
+            )}
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <div className="space-y-2"><Label>بازدید</Label><Input type="number" {...form.register("views")} /></div>
-              <div className="space-y-2"><Label>لایک</Label><Input type="number" {...form.register("likes")} /></div>
-              <div className="space-y-2"><Label>کامنت</Label><Input type="number" {...form.register("comments")} /></div>
-              <div className="space-y-2"><Label>اشتراک</Label><Input type="number" {...form.register("shares")} /></div>
-            </div>
-
-            <div className="space-y-2">
-              <Label className={cn(highlightLink && "text-destructive")}>لینک پست</Label>
-              <div className="flex gap-2">
-                <Input
-                  {...form.register("link")}
-                  dir="ltr"
-                  className={cn(
-                    "min-w-0 flex-1",
-                    highlightLink && "border-destructive focus-visible:ring-destructive"
-                  )}
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={isPending}
-                  onClick={handleFetchFromLink}
-                  title="خواندن اطلاعات از لینک (ایتا، آپارات یا صفحه وب)"
-                  className="shrink-0 gap-1.5"
-                >
-                  <RefreshCw className={cn("h-4 w-4", isPending && "animate-spin")} />
-                  از لینک
-                </Button>
+            <div className="flex items-center justify-between gap-3 rounded-lg border p-3">
+              <div className="space-y-1 text-right">
+                <Label htmlFor="group-distribution">پخش گروهی</Label>
+                <p className="text-xs text-muted-foreground">
+                  با انتخاب چند شبکه به‌صورت خودکار فعال می‌شود. برای چند لینک روی یک شبکه هم می‌توانید دستی روشن کنید.
+                </p>
               </div>
-              {highlightLink && (
-                <p className="text-xs text-destructive">لینک پست خالی است؛ لطفاً تکمیل کنید.</p>
-              )}
-              <p className="text-xs text-muted-foreground">
-                ایتا و آپارات: بازدید/آمار و محتوا. صفحات وب: عنوان، توضیح و کاور. بله/سروش/روبیکا دستی.
-              </p>
+              <Switch
+                id="group-distribution"
+                checked={isGroupDistribution || selectedPlatforms.length > 1}
+                onCheckedChange={toggleGroupDistribution}
+              />
             </div>
+
+            {isGroupDistribution || selectedPlatforms.length > 1 ? (
+              <div className="space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <Label className={cn(highlightLink && "text-destructive")}>
+                    لینک شبکه‌های انتخاب‌شده ({formatPersianNumber(filledLinkEntries.length)} لینک)
+                  </Label>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary">
+                      جمع بازدید: {formatPersianNumber(groupViewsTotal)}
+                    </Badge>
+                    <Button type="button" variant="outline" size="sm" onClick={() => addLinkEntry()}>
+                      + افزودن لینک
+                    </Button>
+                  </div>
+                </div>
+                <div className="max-h-72 space-y-2 overflow-y-auto rounded-lg border p-2">
+                  {linkEntries.map((entry, index) => (
+                    <div
+                      key={entry.id}
+                      className="grid grid-cols-[minmax(0,1fr)_6.5rem_auto] items-end gap-2 rounded-md border bg-muted/30 p-2"
+                    >
+                      <div className="space-y-1">
+                        <Label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                          {entry.platform ? (
+                            <>
+                              <SocialPlatformIcon
+                                platform={entry.platform}
+                                size="sm"
+                                className="h-4 w-4 rounded"
+                              />
+                              {getSocialPlatformLabel(entry.platform)}
+                            </>
+                          ) : (
+                            <>لینک {index + 1}</>
+                          )}
+                        </Label>
+                        <Input
+                          dir="ltr"
+                          value={entry.link}
+                          placeholder="https://..."
+                          className={cn(
+                            highlightLink &&
+                              !entry.link.trim() &&
+                              "border-destructive focus-visible:ring-destructive"
+                          )}
+                          onChange={(event) =>
+                            updateLinkEntry(entry.id, { link: event.target.value })
+                          }
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">بازدید</Label>
+                        <Input
+                          type="number"
+                          min={0}
+                          value={entry.views}
+                          onChange={(event) =>
+                            updateLinkEntry(entry.id, {
+                              views: Math.max(0, Number(event.target.value) || 0),
+                            })
+                          }
+                        />
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="mb-0.5"
+                        onClick={() => removeLinkEntry(entry.id)}
+                        title="حذف"
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+                {highlightLink && (
+                  <p className="text-xs text-destructive">حداقل یک لینک وارد کنید.</p>
+                )}
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label>لایک</Label>
+                    <Input type="number" {...form.register("likes")} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>کامنت</Label>
+                    <Input type="number" {...form.register("comments")} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>اشتراک</Label>
+                    <Input type="number" {...form.register("shares")} />
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  <div className="space-y-2">
+                    <Label>بازدید</Label>
+                    <Input type="number" {...form.register("views")} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>لایک</Label>
+                    <Input type="number" {...form.register("likes")} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>کامنت</Label>
+                    <Input type="number" {...form.register("comments")} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>اشتراک</Label>
+                    <Input type="number" {...form.register("shares")} />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className={cn(highlightLink && "text-destructive")}>لینک پست</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      {...form.register("link")}
+                      dir="ltr"
+                      className={cn(
+                        "min-w-0 flex-1",
+                        highlightLink && "border-destructive focus-visible:ring-destructive"
+                      )}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={isPending}
+                      onClick={handleFetchFromLink}
+                      title="خواندن اطلاعات از لینک (ایتا، آپارات یا صفحه وب)"
+                      className="shrink-0 gap-1.5"
+                    >
+                      <RefreshCw className={cn("h-4 w-4", isPending && "animate-spin")} />
+                      از لینک
+                    </Button>
+                  </div>
+                  {highlightLink && (
+                    <p className="text-xs text-destructive">لینک پست خالی است؛ لطفاً تکمیل کنید.</p>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    ایتا و آپارات: بازدید/آمار و محتوا. صفحات وب: عنوان، توضیح و کاور. بله/سروش/روبیکا دستی.
+                  </p>
+                </div>
+              </>
+            )}
 
             <PersianDateField control={form.control} name="publishedDate" label="تاریخ انتشار" />
 
@@ -706,7 +1162,8 @@ export function SocialPostsAdmin({
                   value={form.watch("mediaUrl") ?? ""}
                   onChange={(value) => form.setValue("mediaUrl", value)}
                   kind="video"
-                  accept="video/*"
+                  accept="video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov"
+                  maxFileSizeBytes={100 * 1024 * 1024}
                   coverImageUrl={form.watch("coverImageUrl")}
                   onAutoCoverGenerated={(coverUrl) => {
                     const currentCover = form.getValues("coverImageUrl")?.trim() ?? "";
@@ -721,6 +1178,26 @@ export function SocialPostsAdmin({
                   value={form.watch("mediaUrl") ?? ""}
                   onChange={(value) => form.setValue("mediaUrl", value)}
                   kind="image"
+                  accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov"
+                  maxFileSizeBytes={100 * 1024 * 1024}
+                  coverImageUrl={form.watch("coverImageUrl")}
+                  onAutoCoverGenerated={(coverUrl) => {
+                    const currentCover = form.getValues("coverImageUrl")?.trim() ?? "";
+                    if (!currentCover) {
+                      form.setValue("coverImageUrl", coverUrl);
+                    }
+                  }}
+                  onUploadedFile={(file) => {
+                    if (
+                      file.type.startsWith("video/") ||
+                      /\.(mp4|webm|mov|m4v)$/i.test(file.name)
+                    ) {
+                      const currentType = form.getValues("contentType");
+                      if (currentType === "image" || currentType === "text") {
+                        form.setValue("contentType", "video");
+                      }
+                    }
+                  }}
                 />
               )}
               {highlightMedia && (

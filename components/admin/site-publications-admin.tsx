@@ -14,19 +14,22 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
 import {
   AdminContentFilterBar,
   collectAdminFilterUsers,
   DEFAULT_ADMIN_CONTENT_FILTER,
   matchesAdminContentFilter,
+  sortAdminContentItems,
   type AdminContentFilterState,
 } from "@/components/admin/admin-content-filter-bar";
 import { AdminCompactAddCard } from "@/components/admin/admin-compact-add-card";
+import { adminCreatedAtDetail } from "@/components/admin/admin-created-at";
 import { AdminContentPreviewDialog } from "@/components/admin/admin-content-preview-dialog";
-import { AdminItemActions } from "@/components/admin/admin-item-actions";
 import { AdminSitePublicationCompactCard } from "@/components/admin/admin-site-publication-compact-card";
-import { AdminViewModeToggle } from "@/components/admin/admin-view-mode-toggle";
 import { PlanLabelSelect } from "@/components/admin/plan-label-select";
+import { ContentOwnerSelect } from "@/components/admin/content-owner-select";
 import { ContentScoreControl } from "@/components/admin/content-score-control";
 import {
   BulkItemShell,
@@ -36,29 +39,43 @@ import {
 import { MediaUpload } from "@/components/ui/media-upload";
 import { PersianDateField } from "@/components/ui/persian-date-input";
 import { deleteSocialPostAction, fetchSocialLinkMetricsAction, saveSocialPostAction } from "@/lib/actions/extended-actions";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, Trash2 } from "lucide-react";
 import { normalizePlanLabels, type ContentTopic } from "@/lib/content-topics";
 import { type EditSuggestionMissingField } from "@/lib/edit-suggestions";
 import { useAdminEditDeepLink } from "@/lib/hooks/use-admin-edit-deep-link";
-import { useAdminViewMode } from "@/lib/hooks/use-admin-view-mode";
 import { useSectionCreateGate } from "@/lib/hooks/use-section-create-gate";
 import { useAdminInfiniteScroll } from "@/lib/hooks/use-admin-infinite-scroll";
 import { AdminInfiniteScrollSentinel } from "@/components/admin/admin-infinite-scroll-sentinel";
 import { todayISO } from "@/lib/jalali";
-import { isSitePublication } from "@/lib/social-posts";
-import type { AdminUser, SocialMediaPost } from "@/lib/types";
-import { cn, formatPersianDate } from "@/lib/utils";
+import {
+  createEmptySocialPostLinkEntry,
+  isGroupSocialPost,
+  isSitePublication,
+  MAX_SOCIAL_POST_LINK_ENTRIES,
+  normalizeSocialPostLinkEntries,
+} from "@/lib/social-posts";
+import type { AdminUser, SocialMediaPost, SocialPostLinkEntry } from "@/lib/types";
+import { cn, formatPersianDate, formatPersianNumber } from "@/lib/utils";
 
 const schema = z.object({
   title: z
     .string()
     .min(1, "عنوان الزامی است")
     .max(CONTENT_TITLE_MAX_LENGTH, CONTENT_TITLE_MAX_LENGTH_MESSAGE),
-  link: z.string().url("لینک معتبر وارد کنید"),
+  link: z.string().optional(),
   coverImageUrl: z.string().optional(),
   description: z.string().optional(),
   publishedDate: z.string(),
 });
+
+function isValidHttpUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
 
 interface SitePublicationsAdminProps {
   campaignId: string;
@@ -67,6 +84,7 @@ interface SitePublicationsAdminProps {
   contentTopics?: ContentTopic[];
   canScore?: boolean;
   isFullAdmin?: boolean;
+  canTransferOwnership?: boolean;
   users?: AdminUser[];
 }
 
@@ -77,13 +95,18 @@ export function SitePublicationsAdmin({
   contentTopics = [],
   canScore = false,
   isFullAdmin = false,
+  canTransferOwnership = false,
   users = [],
 }: SitePublicationsAdminProps) {
   const { requestCreate, tutorialModal } = useSectionCreateGate("sitePublications");
-  const { viewMode, setViewMode } = useAdminViewMode("site-publications");
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [planLabels, setPlanLabels] = useState<string[]>([]);
+  const [editOwnerUserId, setEditOwnerUserId] = useState<string | null>(null);
+  const [isGroupDistribution, setIsGroupDistribution] = useState(false);
+  const [linkEntries, setLinkEntries] = useState<SocialPostLinkEntry[]>([
+    createEmptySocialPostLinkEntry(),
+  ]);
   const [contentFilter, setContentFilter] = useState<AdminContentFilterState>(DEFAULT_ADMIN_CONTENT_FILTER);
   const [rows, setRows] = useState(initialPosts.filter(isSitePublication));
   const [previewPost, setPreviewPost] = useState<SocialMediaPost | null>(null);
@@ -91,10 +114,15 @@ export function SitePublicationsAdmin({
 
   const filterUsers = useMemo(() => collectAdminFilterUsers(rows), [rows]);
   const filteredRows = useMemo(
-    () => rows.filter((item) => matchesAdminContentFilter(item, contentFilter)),
+    () =>
+      sortAdminContentItems(
+        rows.filter((item) => matchesAdminContentFilter(item, contentFilter)),
+        contentFilter.sortOrder,
+        (item) => item.publishedDate || item.updatedAt || item.createdAt
+      ),
     [rows, contentFilter]
   );
-  const paginationResetKey = `${contentFilter.userKey}:${contentFilter.planLabels.join(",")}:${viewMode}`;
+  const paginationResetKey = `${contentFilter.userKey}:${contentFilter.planLabels.join(",")}:${contentFilter.sortOrder}`;
   const { visibleCount, hasMore, isLoadingMore, loadMore } = useAdminInfiniteScroll(
     filteredRows.length,
     paginationResetKey
@@ -117,22 +145,45 @@ export function SitePublicationsAdmin({
     },
   });
 
+  const loadPostIntoForm = (
+    post: SocialMediaPost,
+    fields: EditSuggestionMissingField[],
+    setFields: (fields: EditSuggestionMissingField[]) => void
+  ) => {
+    setEditingId(post.id);
+    setPlanLabels(normalizePlanLabels(post.planLabels, post.planLabel));
+    setEditOwnerUserId(post.ownerUserId ?? null);
+    const groupEntries = normalizeSocialPostLinkEntries(post.linkEntries);
+    const groupMode = groupEntries.length > 0;
+    setIsGroupDistribution(groupMode);
+    setLinkEntries(
+      groupMode
+        ? groupEntries
+        : [
+            {
+              id: crypto.randomUUID(),
+              link: post.link ?? "",
+              views: 0,
+            },
+          ]
+    );
+    form.reset({
+      title: post.title,
+      link: post.link,
+      coverImageUrl: post.coverImageUrl ?? "",
+      description: post.description ?? "",
+      publishedDate: post.publishedDate,
+    });
+    setFields(fields);
+    setOpen(true);
+  };
+
   const { highlightFields, setHighlightFields, resetDeepLink } = useAdminEditDeepLink({
     items: rows,
     getId: (row) => row.id,
     basePath: "/admin/site-publications",
     onOpen: (post, fields) => {
-      setEditingId(post.id);
-      setPlanLabels(normalizePlanLabels(post.planLabels, post.planLabel));
-      form.reset({
-        title: post.title,
-        link: post.link,
-        coverImageUrl: post.coverImageUrl ?? "",
-        description: post.description ?? "",
-        publishedDate: post.publishedDate,
-      });
-      setHighlightFields(fields);
-      setOpen(true);
+      loadPostIntoForm(post, fields, setHighlightFields);
     },
   });
 
@@ -140,16 +191,65 @@ export function SitePublicationsAdmin({
   const watchedLink = form.watch("link");
   const watchedCover = form.watch("coverImageUrl");
   const watchedDescription = form.watch("description");
+  const filledLinkEntries = useMemo(
+    () => normalizeSocialPostLinkEntries(linkEntries),
+    [linkEntries]
+  );
   const highlightTitle = highlightFields.includes("title") && !watchedTitle?.trim();
-  const highlightLink = highlightFields.includes("link") && !watchedLink?.trim();
+  const highlightLink =
+    highlightFields.includes("link") &&
+    (isGroupDistribution ? filledLinkEntries.length === 0 : !watchedLink?.trim());
   const highlightMedia = highlightFields.includes("media") && !watchedCover?.trim();
   const highlightDescription =
     highlightFields.includes("description") && !watchedDescription?.trim();
+
+  const updateLinkEntry = (id: string, patch: Partial<Pick<SocialPostLinkEntry, "link">>) => {
+    setLinkEntries((prev) =>
+      prev.map((entry) => (entry.id === id ? { ...entry, ...patch } : entry))
+    );
+  };
+
+  const addLinkEntry = () => {
+    if (linkEntries.length >= MAX_SOCIAL_POST_LINK_ENTRIES) {
+      toast.error(`حداکثر ${formatPersianNumber(MAX_SOCIAL_POST_LINK_ENTRIES)} لینک مجاز است`);
+      return;
+    }
+    setLinkEntries((prev) => [...prev, createEmptySocialPostLinkEntry()]);
+  };
+
+  const removeLinkEntry = (id: string) => {
+    setLinkEntries((prev) => {
+      if (prev.length <= 1) return [createEmptySocialPostLinkEntry()];
+      return prev.filter((entry) => entry.id !== id);
+    });
+  };
+
+  const toggleGroupDistribution = (enabled: boolean) => {
+    if (enabled) {
+      const currentLink = form.getValues("link")?.trim() ?? "";
+      setLinkEntries([
+        {
+          id: crypto.randomUUID(),
+          link: currentLink,
+          views: 0,
+        },
+      ]);
+      setIsGroupDistribution(true);
+      return;
+    }
+
+    const first = linkEntries[0];
+    form.setValue("link", first?.link ?? "");
+    setIsGroupDistribution(false);
+  };
 
   const openCreate = () => {
     void requestCreate(() => {
       setEditingId(null);
       setPlanLabels([]);
+      setEditOwnerUserId(null);
+      setIsGroupDistribution(false);
+      setLinkEntries([createEmptySocialPostLinkEntry()]);
       setHighlightFields([]);
       form.reset({
         title: "",
@@ -163,23 +263,16 @@ export function SitePublicationsAdmin({
   };
 
   const openEdit = (post: SocialMediaPost, fields: EditSuggestionMissingField[] = []) => {
-    setEditingId(post.id);
-    setPlanLabels(normalizePlanLabels(post.planLabels, post.planLabel));
-    form.reset({
-      title: post.title,
-      link: post.link,
-      coverImageUrl: post.coverImageUrl ?? "",
-      description: post.description ?? "",
-      publishedDate: post.publishedDate,
-    });
-    setHighlightFields(fields);
-    setOpen(true);
+    loadPostIntoForm(post, fields, setHighlightFields);
   };
 
   const closeDialog = () => {
     setOpen(false);
     setEditingId(null);
     setPlanLabels([]);
+    setEditOwnerUserId(null);
+    setIsGroupDistribution(false);
+    setLinkEntries([createEmptySocialPostLinkEntry()]);
     resetDeepLink();
   };
 
@@ -194,7 +287,9 @@ export function SitePublicationsAdmin({
   };
 
   const handleFetchFromLink = () => {
-    const link = form.getValues("link")?.trim() ?? "";
+    const link = isGroupDistribution
+      ? (linkEntries.find((entry) => entry.link.trim())?.link.trim() ?? "")
+      : (form.getValues("link")?.trim() ?? "");
     if (!link) {
       toast.error("ابتدا لینک مطلب را وارد کنید");
       return;
@@ -235,13 +330,45 @@ export function SitePublicationsAdmin({
 
   const onSubmit = form.handleSubmit((data) => {
     startTransition(async () => {
+      const existing = editingId ? rows.find((row) => row.id === editingId) : undefined;
+      const selectedOwner = canTransferOwnership
+        ? users.find((user) => user.id === editOwnerUserId)
+        : null;
+
+      const normalizedEntries = isGroupDistribution
+        ? normalizeSocialPostLinkEntries(linkEntries)
+        : [];
+
+      if (isGroupDistribution && normalizedEntries.length === 0) {
+        toast.error("حداقل یک لینک برای پخش گروهی وارد کنید");
+        return;
+      }
+
+      const invalidGroupLink = normalizedEntries.find((entry) => !isValidHttpUrl(entry.link));
+      if (invalidGroupLink) {
+        toast.error("همه لینک‌های گروهی باید معتبر باشند");
+        return;
+      }
+
+      const resolvedLink = isGroupDistribution
+        ? (normalizedEntries[0]?.link ?? "")
+        : (data.link?.trim() ?? "");
+
+      if (!isGroupDistribution) {
+        if (!resolvedLink || !isValidHttpUrl(resolvedLink)) {
+          toast.error("لینک معتبر وارد کنید");
+          return;
+        }
+      }
+
       const result = await saveSocialPostAction({
         campaignId,
         id: editingId ?? undefined,
         platform: "site",
         contentType: "text",
         title: data.title,
-        link: data.link,
+        link: resolvedLink,
+        linkEntries: normalizedEntries,
         coverImageUrl: data.coverImageUrl || null,
         description: data.description || null,
         publishedDate: data.publishedDate,
@@ -252,6 +379,12 @@ export function SitePublicationsAdmin({
         shares: 0,
         planLabels,
         planLabel: planLabels[0] ?? null,
+        ...(canTransferOwnership
+          ? {
+              ownerUserId: editOwnerUserId,
+              ownerName: selectedOwner?.name ?? existing?.ownerName ?? null,
+            }
+          : {}),
       });
 
       if (!result.success) {
@@ -265,7 +398,8 @@ export function SitePublicationsAdmin({
         campaignId,
         platform: "site",
         title: data.title,
-        link: data.link,
+        link: resolvedLink,
+        linkEntries: normalizedEntries.length > 0 ? normalizedEntries : undefined,
         coverImageUrl: data.coverImageUrl || null,
         description: data.description || null,
         publishedDate: data.publishedDate,
@@ -278,12 +412,28 @@ export function SitePublicationsAdmin({
         planLabels,
         planLabel: planLabels[0] ?? null,
         sortOrder: rows.length + 1,
-        createdAt: new Date().toISOString(),
+        ownerUserId: canTransferOwnership
+          ? editOwnerUserId
+          : existing?.ownerUserId,
+        ownerName: canTransferOwnership
+          ? selectedOwner?.name ?? existing?.ownerName ?? null
+          : existing?.ownerName,
+        createdAt: existing?.createdAt ?? new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
 
       setRows((prev) =>
-        editingId ? prev.map((row) => (row.id === editingId ? { ...row, ...nextPost } : row)) : [...prev, nextPost]
+        editingId
+          ? prev.map((row) =>
+              row.id === editingId
+                ? {
+                    ...row,
+                    ...nextPost,
+                    linkEntries: normalizedEntries.length > 0 ? normalizedEntries : undefined,
+                  }
+                : row
+            )
+          : [...prev, nextPost]
       );
       toast.success("ذخیره شد");
       closeDialog();
@@ -300,17 +450,13 @@ export function SitePublicationsAdmin({
             ثبت مطالب منتشرشده در سایت با عنوان لینک‌دار، تاریخ و توضیح
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <AdminViewModeToggle value={viewMode} onChange={setViewMode} />
-        </div>
       </div>
 
       <AdminContentFilterBar
         filter={contentFilter}
         onChange={setContentFilter}
-        users={isFullAdmin ? filterUsers : []}
+        users={canTransferOwnership || isFullAdmin ? filterUsers : []}
         plans={contentPlans}
-        items={rows}
       />
 
       <SectionBulkEditBar
@@ -329,70 +475,25 @@ export function SitePublicationsAdmin({
         users={users}
       />
 
-      {viewMode === "grid" ? (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-          {!bulk.bulkMode && <AdminCompactAddCard onClick={openCreate} label="انتشار جدید" />}
-          {visibleRows.map((post) => (
-            <BulkItemShell
-              key={post.id}
-              enabled={bulk.bulkMode}
-              selected={bulk.isSelected(post.id)}
-              onToggle={() => bulk.toggle(post.id)}
-            >
-              <AdminSitePublicationCompactCard
-                post={post}
-                onClick={() => openEdit(post)}
-                onView={() => setPreviewPost(post)}
-                onEdit={() => openEdit(post)}
-                onDelete={() => handleDelete(post)}
-              />
-            </BulkItemShell>
-          ))}
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {!bulk.bulkMode && (
-            <div className="max-w-[10rem]">
-              <AdminCompactAddCard onClick={openCreate} label="انتشار جدید" />
-            </div>
-          )}
-          <div className="overflow-hidden rounded-xl border">
-            {visibleRows.map((post) => (
-              <div
-                key={post.id}
-                className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3 last:border-b-0"
-              >
-                <div className="flex min-w-0 items-start gap-3">
-                  {bulk.bulkMode && (
-                    <input
-                      type="checkbox"
-                      className="mt-1 h-4 w-4"
-                      checked={bulk.isSelected(post.id)}
-                      onChange={() => bulk.toggle(post.id)}
-                    />
-                  )}
-                  <div className="min-w-0">
-                    <p className="truncate font-medium">{post.title}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatPersianDate(post.publishedDate)} · {post.ownerName ?? "—"}
-                    </p>
-                  </div>
-                </div>
-                {!bulk.bulkMode && (
-                  <AdminItemActions
-                    onView={() => setPreviewPost(post)}
-                    onEdit={() => openEdit(post)}
-                    onDelete={() => handleDelete(post)}
-                  />
-                )}
-              </div>
-            ))}
-            {filteredRows.length === 0 && (
-              <div className="px-4 py-8 text-center text-sm text-muted-foreground">موردی یافت نشد.</div>
-            )}
-          </div>
-        </div>
-      )}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+        {!bulk.bulkMode && <AdminCompactAddCard onClick={openCreate} label="انتشار جدید" />}
+        {visibleRows.map((post) => (
+          <BulkItemShell
+            key={post.id}
+            enabled={bulk.bulkMode}
+            selected={bulk.isSelected(post.id)}
+            onToggle={() => bulk.toggle(post.id)}
+          >
+            <AdminSitePublicationCompactCard
+              post={post}
+              onClick={() => openEdit(post)}
+              onView={() => setPreviewPost(post)}
+              onEdit={() => openEdit(post)}
+              onDelete={() => handleDelete(post)}
+            />
+          </BulkItemShell>
+        ))}
+      </div>
 
       <AdminInfiniteScrollSentinel
         hasMore={hasMore}
@@ -411,7 +512,26 @@ export function SitePublicationsAdmin({
           previewPost ? (
             <div className="space-y-1 text-xs text-muted-foreground">
               <p>{formatPersianDate(previewPost.publishedDate)}</p>
-              {previewPost.link ? (
+              {isGroupSocialPost(previewPost) ? (
+                <div className="space-y-1" dir="ltr">
+                  {(previewPost.linkEntries ?? []).slice(0, 8).map((entry) => (
+                    <a
+                      key={entry.id}
+                      href={entry.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block break-all text-primary underline"
+                    >
+                      {entry.link}
+                    </a>
+                  ))}
+                  {(previewPost.linkEntries?.length ?? 0) > 8 ? (
+                    <p className="text-muted-foreground" dir="rtl">
+                      و {formatPersianNumber((previewPost.linkEntries?.length ?? 0) - 8)} لینک دیگر…
+                    </p>
+                  ) : null}
+                </div>
+              ) : previewPost.link ? (
                 <a
                   href={previewPost.link}
                   target="_blank"
@@ -428,9 +548,16 @@ export function SitePublicationsAdmin({
         details={
           previewPost
             ? [
+                adminCreatedAtDetail(previewPost.createdAt),
                 {
                   label: "برچسب‌ها",
                   value: previewPost.planLabels?.length ? previewPost.planLabels.join("، ") : "—",
+                },
+                {
+                  label: "پخش گروهی",
+                  value: isGroupSocialPost(previewPost)
+                    ? `${formatPersianNumber(previewPost.linkEntries?.length ?? 0)} لینک`
+                    : "—",
                 },
                 { label: "امتیاز", value: previewPost.score ?? "—" },
                 { label: "مالک", value: previewPost.ownerName ?? "—" },
@@ -447,6 +574,18 @@ export function SitePublicationsAdmin({
         }
         onDelete={previewPost ? () => handleDelete(previewPost) : undefined}
         deleteLabel="این انتشار"
+        canSendMessage
+        messageTarget={
+          previewPost
+            ? {
+                campaignId,
+                contentType: "site_publication",
+                contentId: previewPost.id,
+                contentTitle: previewPost.title,
+                ownerName: previewPost.ownerName,
+              }
+            : null
+        }
       />
 
       <Dialog open={open} onOpenChange={(nextOpen) => (nextOpen ? setOpen(true) : closeDialog())}>
@@ -469,37 +608,120 @@ export function SitePublicationsAdmin({
                 <p className="text-xs text-destructive">عنوان خالی است؛ لطفاً تکمیل کنید.</p>
               )}
             </div>
-            <div className="space-y-2">
-              <Label className={cn(highlightLink && "text-destructive")}>لینک مطلب</Label>
-              <div className="flex gap-2">
-                <Input
-                  {...form.register("link")}
-                  dir="ltr"
-                  placeholder="https://example.com/article"
-                  className={cn(
-                    "min-w-0 flex-1",
-                    highlightLink && "border-destructive focus-visible:ring-destructive"
-                  )}
-                />
+
+            <div className="flex items-center justify-between gap-3 rounded-lg border p-3">
+              <div className="space-y-1 text-right">
+                <Label htmlFor="site-group-distribution">پخش گروهی</Label>
+                <p className="text-xs text-muted-foreground">
+                  اگر یک مطلب را در چند لینک منتشر کرده‌اید، همه لینک‌ها را اینجا وارد کنید.
+                </p>
+              </div>
+              <Switch
+                id="site-group-distribution"
+                checked={isGroupDistribution}
+                onCheckedChange={toggleGroupDistribution}
+              />
+            </div>
+
+            {isGroupDistribution ? (
+              <div className="space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <Label className={cn(highlightLink && "text-destructive")}>
+                    لینک‌ها ({formatPersianNumber(filledLinkEntries.length)} لینک)
+                  </Label>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary">
+                      {formatPersianNumber(filledLinkEntries.length)} لینک
+                    </Badge>
+                    <Button type="button" variant="outline" size="sm" onClick={addLinkEntry}>
+                      + افزودن لینک
+                    </Button>
+                  </div>
+                </div>
+                <div className="max-h-64 space-y-2 overflow-y-auto rounded-lg border p-2">
+                  {linkEntries.map((entry, index) => (
+                    <div
+                      key={entry.id}
+                      className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-2 rounded-md border bg-muted/30 p-2"
+                    >
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">لینک {index + 1}</Label>
+                        <Input
+                          dir="ltr"
+                          value={entry.link}
+                          placeholder="https://..."
+                          className={cn(
+                            highlightLink &&
+                              !entry.link.trim() &&
+                              "border-destructive focus-visible:ring-destructive"
+                          )}
+                          onChange={(event) =>
+                            updateLinkEntry(entry.id, { link: event.target.value })
+                          }
+                        />
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="mb-0.5"
+                        onClick={() => removeLinkEntry(entry.id)}
+                        title="حذف"
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+                {highlightLink && (
+                  <p className="text-xs text-destructive">حداقل یک لینک وارد کنید.</p>
+                )}
                 <Button
                   type="button"
                   variant="outline"
                   disabled={isPending}
                   onClick={handleFetchFromLink}
-                  title="خواندن عنوان، توضیح و کاور از لینک"
-                  className="shrink-0 gap-1.5"
+                  title="خواندن عنوان، توضیح و کاور از اولین لینک"
+                  className="w-full gap-1.5"
                 >
                   <RefreshCw className={cn("h-4 w-4", isPending && "animate-spin")} />
-                  از لینک
+                  خواندن اطلاعات از اولین لینک
                 </Button>
               </div>
-              {highlightLink && (
-                <p className="text-xs text-destructive">لینک مطلب خالی است؛ لطفاً تکمیل کنید.</p>
-              )}
-              <p className="text-xs text-muted-foreground">
-                عنوان، توضیح و تصویر شاخص صفحه را در صورت خالی بودن پر می‌کند.
-              </p>
-            </div>
+            ) : (
+              <div className="space-y-2">
+                <Label className={cn(highlightLink && "text-destructive")}>لینک مطلب</Label>
+                <div className="flex gap-2">
+                  <Input
+                    {...form.register("link")}
+                    dir="ltr"
+                    placeholder="https://example.com/article"
+                    className={cn(
+                      "min-w-0 flex-1",
+                      highlightLink && "border-destructive focus-visible:ring-destructive"
+                    )}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={isPending}
+                    onClick={handleFetchFromLink}
+                    title="خواندن عنوان، توضیح و کاور از لینک"
+                    className="shrink-0 gap-1.5"
+                  >
+                    <RefreshCw className={cn("h-4 w-4", isPending && "animate-spin")} />
+                    از لینک
+                  </Button>
+                </div>
+                {highlightLink && (
+                  <p className="text-xs text-destructive">لینک مطلب خالی است؛ لطفاً تکمیل کنید.</p>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  عنوان، توضیح و تصویر شاخص صفحه را در صورت خالی بودن پر می‌کند.
+                </p>
+              </div>
+            )}
+
             <PersianDateField control={form.control} name="publishedDate" label="تاریخ انتشار" />
             <PlanLabelSelect
               topics={contentTopics}
@@ -513,12 +735,21 @@ export function SitePublicationsAdmin({
                 contentType="site_publication"
                 contentId={editingId}
                 score={rows.find((row) => row.id === editingId)?.score}
+                autoScore={rows.find((row) => row.id === editingId)?.autoScore}
+                manualScore={rows.find((row) => row.id === editingId)?.manualScore}
                 canScore={canScore}
                 onScoreSaved={(score) =>
                   setRows((prev) =>
                     prev.map((row) => (row.id === editingId ? { ...row, score } : row))
                   )
                 }
+              />
+            )}
+            {canTransferOwnership && (
+              <ContentOwnerSelect
+                users={users}
+                value={editOwnerUserId}
+                onChange={setEditOwnerUserId}
               />
             )}
             <div

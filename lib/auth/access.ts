@@ -16,6 +16,42 @@ export function isClientUser(session: AuthSession): boolean {
   return session.role === "client";
 }
 
+/** Admin and کارفرما (بالادستی سراسری) manage any campaign content. */
+export function canManageAllContent(session: AuthSession): boolean {
+  return isFullAdmin(session) || isClientUser(session);
+}
+
+const CONTENT_MESSAGE_SECTION_KEYS: ContributorPermissionKey[] = [
+  "billboards",
+  "posters",
+  "videos",
+  "files",
+  "rawMedia",
+  "socialPosts",
+  "sitePublications",
+  "activities",
+  "broadcast",
+  "meetings",
+  "submissions",
+];
+
+/**
+ * Who can send content-card messages to owners:
+ * - admin / client (کارفرما / بالادستی سراسری)
+ * - org_user who can manage any content section (مدیر دستگاه برای زیرشاخه)
+ */
+export function canSendContentMessages(
+  session: AuthSession,
+  permissions?: ContributorPermissions | null
+): boolean {
+  if (canManageAllContent(session)) return true;
+  if (!isOrgUserRole(session.role)) return false;
+  if (!permissions) return true;
+  return CONTENT_MESSAGE_SECTION_KEYS.some((key) =>
+    hasContributorPermission(permissions, key)
+  );
+}
+
 export function canAccessNotifications(session: AuthSession): boolean {
   return isFullAdmin(session) || isClientUser(session);
 }

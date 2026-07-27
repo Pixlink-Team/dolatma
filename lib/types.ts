@@ -1320,6 +1320,13 @@ export interface BroadcastReportSummary {
   clientName?: string;
   reportDateTime?: string;
   notes?: string;
+  /**
+   * pdf (default) or media (image / video / audio).
+   * Legacy value `"video"` is treated as `"media"`.
+   */
+  mediaType?: "pdf" | "media" | "video";
+  /** Optional auto/custom cover when media is a video */
+  coverImageUrl?: string;
   statusBreakdown?: BroadcastStatusRow[];
   cityBreakdown?: BroadcastCityRow[];
   billboards?: BroadcastBillboardRow[];

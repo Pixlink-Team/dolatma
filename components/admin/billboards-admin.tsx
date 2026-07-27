@@ -348,6 +348,18 @@ export function BillboardsAdmin({
               }
             : undefined
         }
+        canSendMessage
+        messageTarget={
+          previewBillboard
+            ? {
+                campaignId,
+                contentType: "billboard",
+                contentId: previewBillboard.id,
+                contentTitle: previewBillboard.title,
+                ownerName: previewBillboard.ownerName,
+              }
+            : null
+        }
       />
     </div>
   );

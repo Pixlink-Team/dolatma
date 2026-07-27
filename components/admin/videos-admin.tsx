@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { AdminVideoAddCard, AdminVideoCompactCard } from "@/components/admin/admin-video-compact-card";
 import { AdminVideoEditor } from "@/components/admin/admin-video-editor";
 import { AdminItemActions } from "@/components/admin/admin-item-actions";
+import { SendContentMessageButton } from "@/components/admin/send-content-message-button";
 import { AdminViewModeToggle } from "@/components/admin/admin-view-mode-toggle";
 import { GenerateMissingVideoCoversButton } from "@/components/admin/generate-missing-video-covers-button";
 import {
@@ -407,6 +408,17 @@ export function VideosAdmin({
             category={initialCategories.find((category) => category.id === previewVideo.categoryId)?.title}
             topics={previewVideo.planLabels ?? (previewVideo.planLabel ? [previewVideo.planLabel] : [])}
             ownerName={previewVideo.ownerName}
+            actions={
+              <SendContentMessageButton
+                target={{
+                  campaignId,
+                  contentType: "video",
+                  contentId: previewVideo.id,
+                  contentTitle: previewVideo.title,
+                  ownerName: previewVideo.ownerName,
+                }}
+              />
+            }
           />
         );
       })()}

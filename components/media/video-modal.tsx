@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 import { Download } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,7 @@ import {
   resolveVideoThumbnail,
 } from "@/lib/media-utils";
 import type { VideoVersion } from "@/lib/types";
-import { formatPersianDate } from "@/lib/utils";
+import { formatPersianDate, formatPersianDateTime } from "@/lib/utils";
 
 interface VideoModalProps {
   open: boolean;
@@ -30,6 +30,9 @@ interface VideoModalProps {
   category?: string | null;
   topics?: string[];
   ownerName?: string | null;
+  createdAt?: string | null;
+  /** Extra actions shown next to download buttons (e.g. send message). */
+  actions?: ReactNode;
 }
 
 export function VideoModal({
@@ -41,6 +44,8 @@ export function VideoModal({
   category,
   topics,
   ownerName,
+  createdAt,
+  actions,
 }: VideoModalProps) {
   const activeVersion = useMemo(() => {
     return resolveDisplayVersion(versions) ?? versions[0];
@@ -112,6 +117,7 @@ export function VideoModal({
             category={category}
             topics={topics}
             date={activeVersion.date ? formatPersianDate(activeVersion.date) : null}
+            createdAt={createdAt ? formatPersianDateTime(createdAt) : null}
             ownerName={ownerName}
             description={description}
             extras={
@@ -136,6 +142,7 @@ export function VideoModal({
                 دانلود کاور
               </Button>
             )}
+            {actions}
           </div>
         </div>
       </DialogContent>

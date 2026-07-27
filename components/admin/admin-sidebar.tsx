@@ -28,6 +28,7 @@ import {
   Medal,
   Menu,
   Megaphone,
+  MessageSquare,
   Radar,
   Radio,
   Rocket,
@@ -55,6 +56,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { cn, adminHref, isSupabaseConfigured } from "@/lib/utils";
 import { logoutAdminAction } from "@/lib/actions/auth-actions";
 import { getSessionContextAction } from "@/lib/actions/extended-actions";
+import { getMyUnreadContentMessageCountAction } from "@/lib/actions/content-message-actions";
 import { getMyUnreadProblemReplyCountAction } from "@/lib/actions/problem-report-actions";
 import { createClient } from "@/lib/supabase/client";
 import { useAdminCampaign } from "@/components/admin/admin-campaign-provider";
@@ -67,11 +69,16 @@ import { isDeviceScopedPanelRole, isOrgUserRole } from "@/lib/user-roles";
 import { MEDIA_COMMAND_NAV } from "@/lib/media-command/labels";
 import { MONITORING_NAV } from "@/lib/monitoring/labels";
 import {
+  CONTENT_MESSAGES_UNREAD_EVENT,
+  readContentMessagesUnreadFromEvent,
+} from "@/lib/content-messages-unread";
+import {
   PROBLEM_REPORTS_UNREAD_EVENT,
   readUnreadCountFromEvent,
 } from "@/lib/problem-reports-unread";
 
 const PROBLEM_REPORTS_HREF = "/admin/problem-reports";
+const MESSAGES_HREF = "/admin/messages";
 
 const allNavItems: {
   href: string;
@@ -110,6 +117,7 @@ const allNavItems: {
   { href: "/admin/press-publications", label: "مجله و روزنامه", icon: FileText, permissionKey: "activities" },
   { href: "/admin/activities", label: "اقدامات", icon: Sparkles, permissionKey: "activities" },
   { href: "/admin/elanha", label: "اعلان‌ها", icon: Bell, adminOrClientOnly: true },
+  { href: MESSAGES_HREF, label: "پیام‌های من", icon: MessageSquare, alwaysVisible: true },
   { href: "/admin/directives", label: "دستورکارها", icon: ClipboardCheck, permissionKey: "directives" },
   { href: PROBLEM_REPORTS_HREF, label: "گزارش مشکل", icon: TriangleAlert, alwaysVisible: true },
   { href: "/admin/broadcast", label: "پخش صدا و سیما", icon: Radio, permissionKey: "broadcast" },
@@ -166,6 +174,7 @@ export function AdminSidebar() {
   const [mediaCommandOpen, setMediaCommandOpen] = useState(false);
   const [monitoringOpen, setMonitoringOpen] = useState(false);
   const [problemReportsUnread, setProblemReportsUnread] = useState(0);
+  const [contentMessagesUnread, setContentMessagesUnread] = useState(0);
   const desktopNavRef = useRef<HTMLElement>(null);
   const { campaignId, campaigns, currentCampaign, setCampaignId } = useAdminCampaign();
 
@@ -177,18 +186,29 @@ export function AdminSidebar() {
           if (!cancelled && result.success) setProblemReportsUnread(result.count ?? 0);
         })
         .catch(() => {});
+      getMyUnreadContentMessageCountAction()
+        .then((result) => {
+          if (!cancelled && result.success) setContentMessagesUnread(result.count ?? 0);
+        })
+        .catch(() => {});
     };
     refresh();
     const timer = window.setInterval(refresh, 60_000);
-    const onUnreadEvent = (event: Event) => {
+    const onProblemUnreadEvent = (event: Event) => {
       const count = readUnreadCountFromEvent(event);
       if (count !== null) setProblemReportsUnread(count);
     };
-    window.addEventListener(PROBLEM_REPORTS_UNREAD_EVENT, onUnreadEvent);
+    const onMessagesUnreadEvent = (event: Event) => {
+      const count = readContentMessagesUnreadFromEvent(event);
+      if (count !== null) setContentMessagesUnread(count);
+    };
+    window.addEventListener(PROBLEM_REPORTS_UNREAD_EVENT, onProblemUnreadEvent);
+    window.addEventListener(CONTENT_MESSAGES_UNREAD_EVENT, onMessagesUnreadEvent);
     return () => {
       cancelled = true;
       window.clearInterval(timer);
-      window.removeEventListener(PROBLEM_REPORTS_UNREAD_EVENT, onUnreadEvent);
+      window.removeEventListener(PROBLEM_REPORTS_UNREAD_EVENT, onProblemUnreadEvent);
+      window.removeEventListener(CONTENT_MESSAGES_UNREAD_EVENT, onMessagesUnreadEvent);
     };
   }, []);
 
@@ -388,6 +408,13 @@ export function AdminSidebar() {
                     className="ms-auto h-2.5 w-2.5 shrink-0 rounded-full bg-red-500"
                     title="پاسخ خوانده‌نشده"
                     aria-label="پاسخ خوانده‌نشده"
+                  />
+                )}
+                {item.href === MESSAGES_HREF && contentMessagesUnread > 0 && (
+                  <span
+                    className="ms-auto h-2.5 w-2.5 shrink-0 rounded-full bg-red-500"
+                    title="پیام خوانده‌نشده"
+                    aria-label="پیام خوانده‌نشده"
                   />
                 )}
               </Link>
