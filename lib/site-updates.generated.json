@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "cdd50e2e71e1e836d1c56fac6fed293c2a35e096",
+      "committedAt": "2026-07-27T11:40:28+03:30",
+      "title": "افزودن صفحه عمومی با لینک و رمز جدا برای هر دستگاه و زیرمجموعه",
+      "subject": "Add password-protected public pages per device slug"
+    },
+    {
       "hash": "9680f584d2d480ee731081388880ec7facd4c26b",
       "committedAt": "2026-07-25T21:23:26+03:30",
       "title": "بهبود نمایش مأموریت‌ها و دستورکارها در موبایل و تبلت",

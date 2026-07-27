@@ -171,7 +171,11 @@ export function AdminLoginForm({ settings = DEFAULT_LOGIN_PAGE_SETTINGS }: Admin
       }
 
       persistLoginPreferences(email, rememberMe);
-      await loginAdminAction(email, password, redirectTo, rememberMe);
+      const result = await loginAdminAction(email, password, redirectTo, rememberMe);
+      if (result && result.success === false) {
+        setErrorMessage(result.error);
+        toast.error(result.error);
+      }
     } catch (err) {
       if (isNextRedirectError(err)) return;
       const nextErrorMessage = err instanceof Error ? err.message : "خطا در ورود";

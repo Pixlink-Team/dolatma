@@ -22,8 +22,13 @@ export async function POST(request: Request, { params }: RouteParams) {
     lockMs: 15 * 60 * 1000,
   });
   if (!rate.ok) {
+    const minutes = Math.max(1, Math.ceil(rate.retryAfterSec / 60));
     return NextResponse.json(
-      { error: `تلاش بیش از حد. ${rate.retryAfterSec} ثانیه صبر کنید` },
+      {
+        error: `به‌خاطر تلاش‌های ناموفق زیاد، ورود موقتاً قفل شده است. حدود ${minutes} دقیقه صبر کنید؛ در این مدت حتی رمز درست هم کار نمی‌کند.`,
+        code: "rate_limited",
+        retryAfterSec: rate.retryAfterSec,
+      },
       { status: 429, headers: { "Retry-After": String(rate.retryAfterSec) } }
     );
   }

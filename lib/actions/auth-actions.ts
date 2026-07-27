@@ -73,7 +73,7 @@ async function registerFailedLogin(rateKey: string, loginEmail: string, ip: stri
     });
     return {
       success: false as const,
-      error: `تلاش‌های ورود بیش از حد مجاز است. ${rate.retryAfterSec} ثانیه دیگر دوباره تلاش کنید`,
+      error: `به‌خاطر تلاش‌های ناموفق زیاد، ورود موقتاً قفل شده است. حدود ${Math.ceil(rate.retryAfterSec / 60)} دقیقه صبر کنید و دوباره با رمز درست وارد شوید.`,
     };
   }
 
@@ -118,7 +118,7 @@ export async function loginAdminAction(
       }).catch(() => {});
       return {
         success: false as const,
-        error: `تلاش‌های ورود بیش از حد مجاز است. ${blocked.retryAfterSec} ثانیه دیگر دوباره تلاش کنید`,
+        error: `به‌خاطر تلاش‌های ناموفق زیاد، ورود موقتاً قفل شده است. حدود ${Math.ceil(blocked.retryAfterSec / 60)} دقیقه صبر کنید و دوباره با رمز درست وارد شوید.`,
       };
     }
 

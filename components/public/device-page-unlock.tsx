@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Lock } from "lucide-react";
 import { toast } from "sonner";
@@ -24,12 +24,25 @@ export function DevicePageUnlock({
 }: DevicePageUnlockProps) {
   const router = useRouter();
   const [password, setPassword] = useState("");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [lockedUntilMs, setLockedUntilMs] = useState(0);
+  const [nowMs, setNowMs] = useState(() => Date.now());
   const [isPending, startTransition] = useTransition();
 
+  const lockRemainingSec = Math.max(0, Math.ceil((lockedUntilMs - nowMs) / 1000));
+  const isLocked = lockRemainingSec > 0;
+
+  useEffect(() => {
+    if (!isLocked) return;
+    const timerId = window.setInterval(() => setNowMs(Date.now()), 1000);
+    return () => window.clearInterval(timerId);
+  }, [isLocked]);
+
   const handleUnlock = () => {
-    if (!password.trim()) return;
+    if (!password.trim() || isLocked) return;
 
     startTransition(async () => {
+      setErrorMessage(null);
       const response = await fetch(`/api/device/${encodeURIComponent(slug)}/unlock`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -37,8 +50,22 @@ export function DevicePageUnlock({
       });
 
       if (!response.ok) {
-        const data = (await response.json().catch(() => null)) as { error?: string } | null;
-        toast.error(data?.error ?? "رمز اشتباه است");
+        const data = (await response.json().catch(() => null)) as {
+          error?: string;
+          code?: string;
+          retryAfterSec?: number;
+        } | null;
+        const message = data?.error ?? "رمز اشتباه است";
+        if (response.status === 429 || data?.code === "rate_limited") {
+          const retryAfterSec =
+            typeof data?.retryAfterSec === "number" && data.retryAfterSec > 0
+              ? data.retryAfterSec
+              : Number(response.headers.get("Retry-After")) || 15 * 60;
+          setLockedUntilMs(Date.now() + retryAfterSec * 1000);
+          setNowMs(Date.now());
+        }
+        setErrorMessage(message);
+        toast.error(message);
         return;
       }
 
@@ -84,14 +111,26 @@ export function DevicePageUnlock({
             placeholder="رمز صفحه دستگاه"
             autoFocus
             dir="ltr"
+            disabled={isLocked}
             className="text-left"
           />
+          {errorMessage ? (
+            <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              {isLocked
+                ? `${errorMessage} (${Math.ceil(lockRemainingSec / 60)} دقیقه باقی‌مانده)`
+                : errorMessage}
+            </p>
+          ) : null}
           <Button
             className="w-full"
             onClick={handleUnlock}
-            disabled={isPending || !password.trim()}
+            disabled={isPending || isLocked || !password.trim()}
           >
-            {isPending ? "در حال بررسی..." : "ورود به صفحه دستگاه"}
+            {isPending
+              ? "در حال بررسی..."
+              : isLocked
+                ? `قفل موقت — ${Math.ceil(lockRemainingSec / 60)} دقیقه صبر کنید`
+                : "ورود به صفحه دستگاه"}
           </Button>
         </div>
       </main>
