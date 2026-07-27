@@ -27,7 +27,6 @@ import { AdminContentPreviewDialog } from "@/components/admin/admin-content-prev
 import { AdminSocialPostCompactCard } from "@/components/admin/admin-social-post-compact-card";
 import { AdminViewModeToggle } from "@/components/admin/admin-view-mode-toggle";
 import { PlanLabelSelect } from "@/components/admin/plan-label-select";
-import { ContentOwnerSelect } from "@/components/admin/content-owner-select";
 import { ContentScoreControl } from "@/components/admin/content-score-control";
 import {
   BulkItemShell,
@@ -124,7 +123,6 @@ export function SocialPostsAdmin({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [previewPost, setPreviewPost] = useState<SocialMediaPost | null>(null);
   const [planLabels, setPlanLabels] = useState<string[]>([]);
-  const [editOwnerUserId, setEditOwnerUserId] = useState<string | null>(null);
   const [highlightFields, setHighlightFields] = useState<EditSuggestionMissingField[]>([]);
   const [isGroupDistribution, setIsGroupDistribution] = useState(false);
   const [selectedPlatforms, setSelectedPlatforms] = useState<SocialPlatform[]>(["instagram"]);
@@ -228,7 +226,6 @@ export function SocialPostsAdmin({
       setEditingId(null);
       setHighlightFields([]);
       setPlanLabels([]);
-      setEditOwnerUserId(null);
       setIsGroupDistribution(false);
       setSelectedPlatforms(["instagram"]);
       setLinkEntries([createEmptySocialPostLinkEntry("instagram")]);
@@ -255,7 +252,6 @@ export function SocialPostsAdmin({
     setEditingId(post.id);
     setHighlightFields(fields);
     setPlanLabels(normalizePlanLabels(post.planLabels, post.planLabel));
-    setEditOwnerUserId(post.ownerUserId ?? null);
     const groupEntries = normalizeSocialPostLinkEntries(post.linkEntries);
     const groupMode = groupEntries.length > 0;
     const platforms = platformsFromPost(post);
@@ -559,10 +555,6 @@ export function SocialPostsAdmin({
 
   const onSubmit = form.handleSubmit((data) => {
     startTransition(async () => {
-      const existing = editingId ? rows.find((row) => row.id === editingId) : undefined;
-      const selectedOwner = canTransferOwnership
-        ? users.find((user) => user.id === editOwnerUserId)
-        : null;
 
       if (selectedPlatforms.length === 0) {
         toast.error("حداقل یک شبکه اجتماعی را انتخاب کنید");
@@ -598,12 +590,6 @@ export function SocialPostsAdmin({
         published: true,
         planLabels,
         planLabel: planLabels[0] ?? null,
-        ...(canTransferOwnership
-          ? {
-              ownerUserId: editOwnerUserId,
-              ownerName: selectedOwner?.name ?? existing?.ownerName ?? null,
-            }
-          : {}),
       });
       if (!result.success) {
         toast.error("ذخیره نشد");
@@ -615,12 +601,6 @@ export function SocialPostsAdmin({
           ? result.id
           : editingId ?? crypto.randomUUID();
 
-      const ownerPatch = canTransferOwnership
-        ? {
-            ownerUserId: editOwnerUserId,
-            ownerName: selectedOwner?.name ?? existing?.ownerName ?? null,
-          }
-        : {};
 
       const savedPatch = {
         ...data,
@@ -632,7 +612,6 @@ export function SocialPostsAdmin({
         published: true,
         planLabels,
         planLabel: planLabels[0] ?? null,
-        ...ownerPatch,
       };
 
       if (editingId) {
@@ -965,13 +944,6 @@ export function SocialPostsAdmin({
                     prev.map((row) => (row.id === editingId ? { ...row, score } : row))
                   )
                 }
-              />
-            )}
-            {canTransferOwnership && (
-              <ContentOwnerSelect
-                users={users}
-                value={editOwnerUserId}
-                onChange={setEditOwnerUserId}
               />
             )}
 

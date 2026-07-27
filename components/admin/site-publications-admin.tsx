@@ -29,7 +29,6 @@ import { adminCreatedAtDetail } from "@/components/admin/admin-created-at";
 import { AdminContentPreviewDialog } from "@/components/admin/admin-content-preview-dialog";
 import { AdminSitePublicationCompactCard } from "@/components/admin/admin-site-publication-compact-card";
 import { PlanLabelSelect } from "@/components/admin/plan-label-select";
-import { ContentOwnerSelect } from "@/components/admin/content-owner-select";
 import { ContentScoreControl } from "@/components/admin/content-score-control";
 import {
   BulkItemShell,
@@ -102,7 +101,6 @@ export function SitePublicationsAdmin({
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [planLabels, setPlanLabels] = useState<string[]>([]);
-  const [editOwnerUserId, setEditOwnerUserId] = useState<string | null>(null);
   const [isGroupDistribution, setIsGroupDistribution] = useState(false);
   const [linkEntries, setLinkEntries] = useState<SocialPostLinkEntry[]>([
     createEmptySocialPostLinkEntry(),
@@ -152,7 +150,6 @@ export function SitePublicationsAdmin({
   ) => {
     setEditingId(post.id);
     setPlanLabels(normalizePlanLabels(post.planLabels, post.planLabel));
-    setEditOwnerUserId(post.ownerUserId ?? null);
     const groupEntries = normalizeSocialPostLinkEntries(post.linkEntries);
     const groupMode = groupEntries.length > 0;
     setIsGroupDistribution(groupMode);
@@ -247,7 +244,6 @@ export function SitePublicationsAdmin({
     void requestCreate(() => {
       setEditingId(null);
       setPlanLabels([]);
-      setEditOwnerUserId(null);
       setIsGroupDistribution(false);
       setLinkEntries([createEmptySocialPostLinkEntry()]);
       setHighlightFields([]);
@@ -270,7 +266,6 @@ export function SitePublicationsAdmin({
     setOpen(false);
     setEditingId(null);
     setPlanLabels([]);
-    setEditOwnerUserId(null);
     setIsGroupDistribution(false);
     setLinkEntries([createEmptySocialPostLinkEntry()]);
     resetDeepLink();
@@ -331,9 +326,6 @@ export function SitePublicationsAdmin({
   const onSubmit = form.handleSubmit((data) => {
     startTransition(async () => {
       const existing = editingId ? rows.find((row) => row.id === editingId) : undefined;
-      const selectedOwner = canTransferOwnership
-        ? users.find((user) => user.id === editOwnerUserId)
-        : null;
 
       const normalizedEntries = isGroupDistribution
         ? normalizeSocialPostLinkEntries(linkEntries)
@@ -379,12 +371,6 @@ export function SitePublicationsAdmin({
         shares: 0,
         planLabels,
         planLabel: planLabels[0] ?? null,
-        ...(canTransferOwnership
-          ? {
-              ownerUserId: editOwnerUserId,
-              ownerName: selectedOwner?.name ?? existing?.ownerName ?? null,
-            }
-          : {}),
       });
 
       if (!result.success) {
@@ -412,12 +398,8 @@ export function SitePublicationsAdmin({
         planLabels,
         planLabel: planLabels[0] ?? null,
         sortOrder: rows.length + 1,
-        ownerUserId: canTransferOwnership
-          ? editOwnerUserId
-          : existing?.ownerUserId,
-        ownerName: canTransferOwnership
-          ? selectedOwner?.name ?? existing?.ownerName ?? null
-          : existing?.ownerName,
+        ownerUserId: existing?.ownerUserId,
+        ownerName: existing?.ownerName,
         createdAt: existing?.createdAt ?? new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
@@ -743,13 +725,6 @@ export function SitePublicationsAdmin({
                     prev.map((row) => (row.id === editingId ? { ...row, score } : row))
                   )
                 }
-              />
-            )}
-            {canTransferOwnership && (
-              <ContentOwnerSelect
-                users={users}
-                value={editOwnerUserId}
-                onChange={setEditOwnerUserId}
               />
             )}
             <div
