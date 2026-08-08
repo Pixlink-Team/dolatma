@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "cc1e27b2704b46134ef364c85d5172cd272e968d",
+      "committedAt": "2026-08-08T13:59:50+03:30",
+      "title": "افزودن صفحه دسترسی رییس با بخش‌های اصلی سامانه",
+      "subject": "Add reis role hub landing page"
+    },
+    {
       "hash": "74cdeca874b1ca23d3356f53738f0ed7aa144892",
       "committedAt": "2026-07-27T14:57:57+03:30",
       "title": "حذف انتقال مالکیت از فرم ویرایش تکی محتوا",

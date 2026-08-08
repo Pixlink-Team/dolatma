@@ -40,6 +40,7 @@ import {
   TriangleAlert,
   Users,
   UserCircle,
+  UserPlus,
   Video,
   X,
 } from "lucide-react";
@@ -126,6 +127,7 @@ const allNavItems: {
   { href: "/admin/submissions", label: "مشارکت‌ها", icon: FileText, permissionKey: "submissions" },
   { href: "/admin/forms", label: "فرم‌ها", icon: FormInput, permissionKey: "forms", adminOrClientOnly: true },
   { href: "/admin/users", label: "کاربران", icon: Users, usersNav: true },
+  { href: "/admin/pre-registrations", label: "پیش‌ثبت‌نام‌ها", icon: UserPlus, adminOnly: true },
   { href: "/admin/best-practices", label: "بهترین اقدامات", icon: Award, permissionKey: "bestPractices" },
   { href: "/admin/updates", label: "آپدیت‌های سایت", icon: Rocket, permissionKey: "siteUpdates", adminOrClientOnly: true },
   { href: "/admin/backups", label: "پشتیبان‌گیری", icon: Archive, adminOnly: true },
@@ -139,6 +141,7 @@ const RAPID_RESPONSE_ROOT = "/admin/rapid-response";
 
 const managementNavHrefs = new Set([
   "/admin/users",
+  "/admin/pre-registrations",
   "/admin/ministries",
   "/admin/group-edit",
   "/admin/audit",

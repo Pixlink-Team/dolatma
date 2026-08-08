@@ -19,6 +19,7 @@ import {
 import { DEFAULT_LOGIN_PAGE_SETTINGS } from "@/lib/login-page-defaults";
 import { isSupabaseConfigured } from "@/lib/utils";
 import type { LoginPageSettings } from "@/lib/types";
+import { PreRegistrationPanel } from "@/components/admin/pre-registration-panel";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 
 type CardTiltState = {
@@ -92,6 +93,7 @@ type AdminLoginFormProps = {
 export function AdminLoginForm({ settings = DEFAULT_LOGIN_PAGE_SETTINGS }: AdminLoginFormProps) {
   const searchParams = useSearchParams();
   const redirectTo = getSafeRedirectPath(searchParams.get("next"));
+  const [mode, setMode] = useState<"login" | "preregister">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
@@ -270,101 +272,134 @@ export function AdminLoginForm({ settings = DEFAULT_LOGIN_PAGE_SETTINGS }: Admin
               </div>
             </header>
 
-            {rememberedUser ? (
-              <p className="mb-5 animate-in fade-in slide-in-from-top-1 duration-500 rounded-2xl border border-white/20 bg-white/10 px-4 py-3 text-sm text-white/90 [text-shadow:0_2px_12px_rgba(0,0,0,0.55)]">
-                خوش آمدید دوباره، <span className="font-semibold text-white">{rememberedUser}</span>
-              </p>
-            ) : null}
-
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <div className="space-y-2">
-                <Label
-                  htmlFor="email"
-                  className="text-sm font-medium text-white [text-shadow:0_2px_12px_rgba(0,0,0,0.74)]"
-                >
-                  نام کاربری
-                </Label>
-                <input
-                  id="email"
-                  type="text"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="نام کاربری خود را وارد کنید"
-                  required
-                  dir="rtl"
-                  autoComplete="username"
-                  className="h-[52px] w-full rounded-2xl border border-white/30 bg-white/10 px-4 py-3 text-right text-base text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18)] outline-none backdrop-blur-sm transition placeholder:text-right placeholder:text-white/45 focus:border-white/50 focus:bg-white/14 focus:ring-4 focus:ring-[#0A84FF]/20"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label
-                  htmlFor="password"
-                  className="text-sm font-medium text-white [text-shadow:0_2px_12px_rgba(0,0,0,0.74)]"
-                >
-                  رمز عبور
-                </Label>
-                <div className="relative">
-                  <input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    minLength={4}
-                    placeholder="رمز عبور خود را وارد کنید"
-                    autoComplete="current-password"
-                    className="h-[52px] w-full rounded-2xl border border-white/30 bg-white/10 py-3 pl-12 pr-4 text-right text-base text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18)] outline-none backdrop-blur-sm transition placeholder:text-white/45 focus:border-white/50 focus:bg-white/14 focus:ring-4 focus:ring-[#0A84FF]/20"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((current) => !current)}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-white/70 transition hover:bg-white/10 hover:text-white"
-                    aria-label={showPassword ? "مخفی کردن رمز عبور" : "نمایش رمز عبور"}
-                  >
-                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                  </button>
-                </div>
-              </div>
-
-              <label className="flex cursor-pointer items-center gap-3 select-none">
-                <input
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                  className="h-4 w-4 accent-[#0A84FF]"
-                />
-                <span className="text-sm text-white/85 [text-shadow:0_2px_10px_rgba(0,0,0,0.65)]">
-                  مرا به خاطر بسپار
-                  <span className="mt-0.5 block text-[11px] text-white/55">
-                    {rememberMe
-                      ? "نشست تا ۳۰ روز فعال می‌ماند"
-                      : "بدون تیک، نشست پس از ۱ روز منقضی می‌شود"}
-                  </span>
-                </span>
-              </label>
-
-              {errorMessage ? (
-                <p className="rounded-2xl border border-red-300/25 bg-red-500/18 px-4 py-3 text-sm text-red-50 shadow-[0_10px_30px_rgba(127,29,29,0.18)] backdrop-blur-sm [text-shadow:0_2px_10px_rgba(0,0,0,0.62)]">
-                  {errorMessage}
-                </p>
-              ) : null}
-
+            <div className="mb-6 grid grid-cols-2 gap-2 rounded-2xl border border-white/20 bg-white/10 p-1.5">
               <button
-                type="submit"
-                className="flex h-[52px] w-full items-center justify-center gap-2 rounded-2xl bg-[#0A84FF] px-5 py-3 text-base font-bold text-white shadow-[0_16px_42px_rgba(10,132,255,0.38)] transition hover:bg-[#0077ED] focus:outline-none focus:ring-4 focus:ring-[#0A84FF]/32 disabled:cursor-not-allowed disabled:opacity-70 [text-shadow:0_2px_10px_rgba(0,0,0,0.36)]"
-                disabled={loading}
+                type="button"
+                onClick={() => setMode("login")}
+                className={[
+                  "rounded-xl px-3 py-2.5 text-sm font-semibold transition",
+                  mode === "login"
+                    ? "bg-white text-zinc-900 shadow-sm"
+                    : "text-white/80 hover:bg-white/10 hover:text-white",
+                ].join(" ")}
               >
-                {loading ? (
-                  <>
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                    در حال ورود...
-                  </>
-                ) : (
-                  "ورود"
-                )}
+                ورود
               </button>
-            </form>
+              <button
+                type="button"
+                onClick={() => setMode("preregister")}
+                className={[
+                  "rounded-xl px-3 py-2.5 text-sm font-semibold transition",
+                  mode === "preregister"
+                    ? "bg-white text-zinc-900 shadow-sm"
+                    : "text-white/80 hover:bg-white/10 hover:text-white",
+                ].join(" ")}
+              >
+                پیش‌ثبت‌نام
+              </button>
+            </div>
+
+            {mode === "login" ? (
+              <>
+                {rememberedUser ? (
+                  <p className="mb-5 animate-in fade-in slide-in-from-top-1 duration-500 rounded-2xl border border-white/20 bg-white/10 px-4 py-3 text-sm text-white/90 [text-shadow:0_2px_12px_rgba(0,0,0,0.55)]">
+                    خوش آمدید دوباره، <span className="font-semibold text-white">{rememberedUser}</span>
+                  </p>
+                ) : null}
+
+                <form onSubmit={handleSubmit} className="space-y-5">
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="email"
+                      className="text-sm font-medium text-white [text-shadow:0_2px_12px_rgba(0,0,0,0.74)]"
+                    >
+                      نام کاربری
+                    </Label>
+                    <input
+                      id="email"
+                      type="text"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="نام کاربری خود را وارد کنید"
+                      required
+                      dir="rtl"
+                      autoComplete="username"
+                      className="h-[52px] w-full rounded-2xl border border-white/30 bg-white/10 px-4 py-3 text-right text-base text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18)] outline-none backdrop-blur-sm transition placeholder:text-right placeholder:text-white/45 focus:border-white/50 focus:bg-white/14 focus:ring-4 focus:ring-[#0A84FF]/20"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="password"
+                      className="text-sm font-medium text-white [text-shadow:0_2px_12px_rgba(0,0,0,0.74)]"
+                    >
+                      رمز عبور
+                    </Label>
+                    <div className="relative">
+                      <input
+                        id="password"
+                        type={showPassword ? "text" : "password"}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                        minLength={4}
+                        placeholder="رمز عبور خود را وارد کنید"
+                        autoComplete="current-password"
+                        className="h-[52px] w-full rounded-2xl border border-white/30 bg-white/10 py-3 pl-12 pr-4 text-right text-base text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18)] outline-none backdrop-blur-sm transition placeholder:text-white/45 focus:border-white/50 focus:bg-white/14 focus:ring-4 focus:ring-[#0A84FF]/20"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword((current) => !current)}
+                        className="absolute left-3 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-white/70 transition hover:bg-white/10 hover:text-white"
+                        aria-label={showPassword ? "مخفی کردن رمز عبور" : "نمایش رمز عبور"}
+                      >
+                        {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <label className="flex cursor-pointer items-center gap-3 select-none">
+                    <input
+                      type="checkbox"
+                      checked={rememberMe}
+                      onChange={(e) => setRememberMe(e.target.checked)}
+                      className="h-4 w-4 accent-[#0A84FF]"
+                    />
+                    <span className="text-sm text-white/85 [text-shadow:0_2px_10px_rgba(0,0,0,0.65)]">
+                      مرا به خاطر بسپار
+                      <span className="mt-0.5 block text-[11px] text-white/55">
+                        {rememberMe
+                          ? "نشست تا ۳۰ روز فعال می‌ماند"
+                          : "بدون تیک، نشست پس از ۱ روز منقضی می‌شود"}
+                      </span>
+                    </span>
+                  </label>
+
+                  {errorMessage ? (
+                    <p className="rounded-2xl border border-red-300/25 bg-red-500/18 px-4 py-3 text-sm text-red-50 shadow-[0_10px_30px_rgba(127,29,29,0.18)] backdrop-blur-sm [text-shadow:0_2px_10px_rgba(0,0,0,0.62)]">
+                      {errorMessage}
+                    </p>
+                  ) : null}
+
+                  <button
+                    type="submit"
+                    className="flex h-[52px] w-full items-center justify-center gap-2 rounded-2xl bg-[#0A84FF] px-5 py-3 text-base font-bold text-white shadow-[0_16px_42px_rgba(10,132,255,0.38)] transition hover:bg-[#0077ED] focus:outline-none focus:ring-4 focus:ring-[#0A84FF]/32 disabled:cursor-not-allowed disabled:opacity-70 [text-shadow:0_2px_10px_rgba(0,0,0,0.36)]"
+                    disabled={loading}
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                        در حال ورود...
+                      </>
+                    ) : (
+                      "ورود"
+                    )}
+                  </button>
+                </form>
+              </>
+            ) : (
+              <PreRegistrationPanel onBackToLogin={() => setMode("login")} />
+            )}
 
             <p className="mt-6 text-center text-xs text-white/70 [text-shadow:0_2px_14px_rgba(0,0,0,0.82)]">
               {settings.footer}

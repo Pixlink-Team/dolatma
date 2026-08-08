@@ -2290,3 +2290,29 @@ CREATE TABLE IF NOT EXISTS onboarding_steps (
 CREATE INDEX IF NOT EXISTS idx_onboarding_steps_active_order
   ON onboarding_steps(is_active, sort_order ASC);
 
+-- Login-page pre-registration requests (OTP-verified via sms.ir)
+CREATE TABLE IF NOT EXISTS pre_registrations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  phone TEXT NOT NULL,
+  full_name TEXT,
+  organization TEXT,
+  position_title TEXT,
+  note TEXT,
+  status TEXT NOT NULL DEFAULT 'pending_otp'
+    CHECK (status IN ('pending_otp', 'otp_verified', 'submitted')),
+  otp_hash TEXT,
+  otp_expires_at TIMESTAMPTZ,
+  otp_sent_at TIMESTAMPTZ,
+  otp_attempts INT NOT NULL DEFAULT 0,
+  verified_at TIMESTAMPTZ,
+  submitted_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_pre_registrations_phone_unique
+  ON pre_registrations(phone);
+
+CREATE INDEX IF NOT EXISTS idx_pre_registrations_status_created
+  ON pre_registrations(status, created_at DESC);
+
