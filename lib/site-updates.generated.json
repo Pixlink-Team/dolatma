@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "2340acdf923f2176cd6a8dc30f91419f7075ad70",
+      "committedAt": "2026-08-08T16:28:03+03:30",
+      "title": "خواناتر شدن فیلدهای ورود روی پس‌زمینه شیشه‌ای",
+      "subject": "Darken glass login fields for better readability"
+    },
+    {
       "hash": "85c23d9fe6b5f199b2b5e3466b10f781920beda5",
       "committedAt": "2026-08-08T16:26:34+03:30",
       "title": "افزودن وزارتخانه و انتخاب استان و شهر در پیش‌ثبت‌نام",

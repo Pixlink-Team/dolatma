@@ -302,8 +302,8 @@ export function AdminLoginForm({ settings = DEFAULT_LOGIN_PAGE_SETTINGS }: Admin
             {mode === "login" ? (
               <>
                 {rememberedUser ? (
-                  <p className="mb-5 animate-in fade-in slide-in-from-top-1 duration-500 rounded-2xl border border-white/20 bg-white/10 px-4 py-3 text-sm text-white/90 [text-shadow:0_2px_12px_rgba(0,0,0,0.55)]">
-                    خوش آمدید دوباره، <span className="font-semibold text-white">{rememberedUser}</span>
+                  <p className="mb-5 animate-in fade-in slide-in-from-top-1 duration-500 rounded-2xl border border-white/20 bg-white/10 px-4 py-3 text-sm font-semibold text-white [text-shadow:0_2px_12px_rgba(0,0,0,0.55)]">
+                    {rememberedUser}
                   </p>
                 ) : null}
 
