@@ -26,13 +26,26 @@ const SECTION_ICONS: Record<ReisSectionKey, LucideIcon> = {
   narrative: MessageSquareQuote,
 };
 
-export function ReisHub() {
+type ReisHubProps = {
+  userName?: string | null;
+};
+
+export function ReisHub({ userName }: ReisHubProps) {
+  const displayName = userName?.trim() || null;
+
   return (
     <div className="mx-auto w-full max-w-6xl space-y-10">
       <header className="space-y-3 text-center sm:text-right">
         <p className="text-sm font-medium text-primary">پنل دسترسی رییس</p>
         <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
-          انتخاب بخش مورد نظر
+          {displayName ? (
+            <>
+              {displayName}
+              <span className="font-semibold text-muted-foreground">، خوش آمدید</span>
+            </>
+          ) : (
+            "خوش آمدید"
+          )}
         </h1>
         <p className="mx-auto max-w-2xl text-sm leading-7 text-muted-foreground sm:mx-0">
           از میان بخش‌های زیر، مسیر مورد نظر خود را انتخاب کنید. هر بخش نمای
