@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { AdminSidebar } from "@/components/admin/admin-sidebar";
 import { AdminElanhaButton } from "@/components/admin/admin-elanha-button";
@@ -12,10 +12,17 @@ import {
 import { AuditTracker } from "@/components/admin/audit-tracker";
 import { AppErrorProvider } from "@/components/admin/app-error-provider";
 import { ProblemReportButton } from "@/components/admin/problem-report-button";
+import { ReisShell } from "@/components/admin/reis/reis-shell";
 import { ScrollToTopButton } from "@/components/ui/scroll-to-top-button";
+import { getSessionContextAction } from "@/lib/actions/extended-actions";
+import {
+  isReisAllowedPath,
+  REIS_HOME_PATH,
+} from "@/lib/reis/sections";
 import type { CampaignSettings } from "@/lib/types";
+import { isReisRole } from "@/lib/user-roles";
 
-function NavigationPendingOverlay() {
+function NavigationPendingOverlay({ offsetForSidebar }: { offsetForSidebar: boolean }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [pending, setPending] = useState(false);
@@ -54,7 +61,13 @@ function NavigationPendingOverlay() {
   if (!pending) return null;
 
   return (
-    <div className="pointer-events-none fixed inset-0 z-[90] flex items-start justify-center pt-6 lg:pr-64">
+    <div
+      className={
+        offsetForSidebar
+          ? "pointer-events-none fixed inset-0 z-[90] flex items-start justify-center pt-6 lg:pr-64"
+          : "pointer-events-none fixed inset-0 z-[90] flex items-start justify-center pt-6"
+      }
+    >
       <div className="flex items-center gap-2 rounded-full border bg-card/95 px-4 py-2 text-sm text-muted-foreground shadow-lg backdrop-blur">
         <Loader2 className="h-4 w-4 animate-spin text-primary" />
         در حال رفتن به صفحه…
@@ -84,7 +97,7 @@ function PanelChrome({
           <ProblemReportButton />
         </Suspense>
         <Suspense fallback={null}>
-          <NavigationPendingOverlay />
+          <NavigationPendingOverlay offsetForSidebar />
         </Suspense>
         <main className="min-h-screen lg:mr-64">
           <div className="container mx-auto px-4 py-8 pt-16 lg:pt-8">{children}</div>
@@ -93,6 +106,73 @@ function PanelChrome({
       </div>
     </AppErrorProvider>
   );
+}
+
+function ReisChrome({
+  children,
+  showAdminReturn,
+  userName,
+  withTracker = false,
+}: {
+  children: React.ReactNode;
+  showAdminReturn: boolean;
+  userName?: string | null;
+  withTracker?: boolean;
+}) {
+  return (
+    <AppErrorProvider>
+      {withTracker ? (
+        <Suspense fallback={null}>
+          <AuditTracker />
+        </Suspense>
+      ) : null}
+      <Suspense fallback={null}>
+        <NavigationPendingOverlay offsetForSidebar={false} />
+      </Suspense>
+      <ReisShell showAdminReturn={showAdminReturn} userName={userName}>
+        {children}
+      </ReisShell>
+    </AppErrorProvider>
+  );
+}
+
+function useReisShellMode(campaignId: string) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const [mode, setMode] = useState<"loading" | "reis" | "panel">("loading");
+  const [showAdminReturn, setShowAdminReturn] = useState(false);
+  const [userName, setUserName] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    getSessionContextAction(campaignId)
+      .then((session) => {
+        if (cancelled) return;
+        const reisRole = Boolean(session && isReisRole(session.role));
+        const onReisPath = pathname.startsWith(REIS_HOME_PATH);
+        setUserName(session?.name ?? session?.email ?? null);
+        setShowAdminReturn(!reisRole && onReisPath);
+
+        if (reisRole && !isReisAllowedPath(pathname)) {
+          router.replace(REIS_HOME_PATH);
+          setMode("reis");
+          return;
+        }
+
+        setMode(reisRole || onReisPath ? "reis" : "panel");
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setMode(pathname.startsWith(REIS_HOME_PATH) ? "reis" : "panel");
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [campaignId, pathname, router]);
+
+  return { mode, showAdminReturn, userName };
 }
 
 function AdminPanelShellInner({
@@ -105,10 +185,21 @@ function AdminPanelShellInner({
   const searchParams = useSearchParams();
   const defaultId = campaigns[0]?.id ?? "";
   const campaignId = searchParams.get("campaign") ?? defaultId;
+  const { mode, showAdminReturn, userName } = useReisShellMode(campaignId);
 
   return (
     <AdminCampaignProvider campaigns={campaigns} campaignId={campaignId}>
-      <PanelChrome withTracker>{children}</PanelChrome>
+      {mode === "loading" ? (
+        <div className="flex min-h-screen items-center justify-center text-muted-foreground">
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        </div>
+      ) : mode === "reis" ? (
+        <ReisChrome showAdminReturn={showAdminReturn} userName={userName} withTracker>
+          {children}
+        </ReisChrome>
+      ) : (
+        <PanelChrome withTracker>{children}</PanelChrome>
+      )}
     </AdminCampaignProvider>
   );
 }

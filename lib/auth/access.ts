@@ -16,9 +16,13 @@ export function isClientUser(session: AuthSession): boolean {
   return session.role === "client";
 }
 
-/** Admin and کارفرما (بالادستی سراسری) manage any campaign content. */
+export function isReisUser(session: AuthSession): boolean {
+  return session.role === "reis";
+}
+
+/** Admin and کارفرما / رییس (بالادستی سراسری) manage any campaign content. */
 export function canManageAllContent(session: AuthSession): boolean {
-  return isFullAdmin(session) || isClientUser(session);
+  return isFullAdmin(session) || isClientUser(session) || isReisUser(session);
 }
 
 const CONTENT_MESSAGE_SECTION_KEYS: ContributorPermissionKey[] = [

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Settings } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -31,8 +32,9 @@ import {
 } from "@/lib/edit-suggestions";
 import { evaluateDeviceOnboarding } from "@/lib/onboarding/progress";
 import type { OnboardingProgress } from "@/lib/onboarding/types";
+import { REIS_HOME_PATH } from "@/lib/reis/sections";
 import { withFileAccessTokensDeep } from "@/lib/uploads";
-import { isOrgUserRole } from "@/lib/user-roles";
+import { isOrgUserRole, isReisRole } from "@/lib/user-roles";
 import { formatPersianNumber, adminHref, isPostgresConfigured } from "@/lib/utils";
 
 const PERMISSION_TO_CONTENT_TYPE: Partial<
@@ -57,6 +59,9 @@ interface AdminDashboardProps {
 export default async function AdminDashboardPage({ searchParams }: AdminDashboardProps) {
   const params = await searchParams;
   const session = await getAuthSession();
+  if (session && isReisRole(session.role)) {
+    redirect(REIS_HOME_PATH);
+  }
   const canManageAll = Boolean(session && isFullAdmin(session));
   const { campaignId } = await resolveAdminCampaignId(params.campaign);
 

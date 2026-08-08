@@ -22,6 +22,8 @@ import { logAuditEvent, logAuditForSession } from "@/lib/audit/log-event";
 import { consumeRateLimit, getRateLimitBlock, resetRateLimit } from "@/lib/security/rate-limit";
 import { recordLoginSecurityAlert } from "@/lib/security/login-alerts";
 import { getSafeRedirectPath } from "@/lib/auth/safe-redirect";
+import { REIS_HOME_PATH } from "@/lib/reis/sections";
+import { isReisRole } from "@/lib/user-roles";
 import { isPostgresConfigured } from "@/lib/utils";
 
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
@@ -201,7 +203,10 @@ export async function loginAdminAction(
           metadata: { method: "db_user", rememberMe },
         });
 
-        redirect(nextPath);
+        const homePath = isReisRole(user.role) ? REIS_HOME_PATH : "/admin";
+        const resolvedPath =
+          nextPath === "/admin" || nextPath === "/admin/" ? homePath : nextPath;
+        redirect(resolvedPath);
       }
     }
 

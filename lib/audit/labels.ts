@@ -75,6 +75,8 @@ export function getAuditRoleLabel(role: string | null): string {
       return "کاربر دستگاه";
     case "client":
       return "کارفرما";
+    case "reis":
+      return "رییس";
     default:
       return role ?? "—";
   }

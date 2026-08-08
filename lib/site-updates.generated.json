@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "74cdeca874b1ca23d3356f53738f0ed7aa144892",
+      "committedAt": "2026-07-27T14:57:57+03:30",
+      "title": "حذف انتقال مالکیت از فرم ویرایش تکی محتوا",
+      "subject": "Remove single-edit ownership transfer UI"
+    },
+    {
       "hash": "480523f157b0d34396978fd0012b985a9a558906",
       "committedAt": "2026-07-27T14:51:25+03:30",
       "title": "رفع تشخیص نوع فایل برای آپلود تصویر، صوت و ویدیو در پخش صدا و سیما",

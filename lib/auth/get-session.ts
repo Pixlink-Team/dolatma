@@ -74,7 +74,7 @@ export function isFullAdmin(session: AuthSession): boolean {
  */
 export async function getOwnerFilter(session: AuthSession): Promise<OwnerScope> {
   if (isFullAdmin(session)) return undefined;
-  if (session.role === "client") return undefined;
+  if (session.role === "client" || session.role === "reis") return undefined;
   if (!session.userId) return null;
 
   if (isOrgUserRole(session.role) && isPostgresConfigured()) {

@@ -482,7 +482,7 @@ CREATE INDEX IF NOT EXISTS idx_billboard_periods_billboard ON billboard_display_
 ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
 ALTER TABLE users ADD CONSTRAINT users_role_check
   CHECK (role IN (
-    'admin', 'client', 'org_user',
+    'admin', 'client', 'reis', 'org_user',
     'contributor', 'ministry_parent', 'sub_user'
   ));
 
@@ -952,7 +952,7 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS parent_user_id UUID REFERENCES users(
 ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
 ALTER TABLE users ADD CONSTRAINT users_role_check
   CHECK (role IN (
-    'admin', 'client', 'org_user',
+    'admin', 'client', 'reis', 'org_user',
     'contributor', 'ministry_parent', 'sub_user'
   ));
 

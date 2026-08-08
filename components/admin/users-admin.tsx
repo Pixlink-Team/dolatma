@@ -61,7 +61,7 @@ const FILTER_ALL = "all";
 const schema = z.object({
   email: z.string().min(1, "نام کاربری یا ایمیل الزامی است"),
   name: z.string().min(1),
-  role: z.enum(["admin", "client", "org_user"]),
+  role: z.enum(["admin", "client", "reis", "org_user"]),
   orgRole: z.enum(["primary", "supervisor", "deputy", "pr"]).nullable().optional(),
   password: z.string().optional(),
   province: z.string().optional(),
@@ -73,7 +73,7 @@ const schema = z.object({
   campaignIds: z.array(z.string()),
 });
 
-const rolesWithCampaignAccess: AdminRole[] = ["org_user", "client"];
+const rolesWithCampaignAccess: AdminRole[] = ["org_user", "client", "reis"];
 
 function isSubtreeParentUser(user: AdminUser): boolean {
   return isOrgUserRole(user.role);
@@ -946,7 +946,10 @@ export function UsersAdmin({
       normalizeImportedCity(normalizedProvince, user.city ?? "") ?? user.city?.trim() ?? "";
 
     const role: AdminRole =
-      user.role === "admin" || user.role === "client" || user.role === "org_user"
+      user.role === "admin" ||
+      user.role === "client" ||
+      user.role === "reis" ||
+      user.role === "org_user"
         ? user.role
         : "org_user";
     const nextCampaignIds = rolesWithCampaignAccess.includes(role) ? soleCampaignIds : [];
@@ -1741,13 +1744,13 @@ export function UsersAdmin({
                             <Select
                               value={selectedRole}
                               onValueChange={(value) => {
-                                const nextRole = value as "admin" | "client" | "org_user";
+                                const nextRole = value as "admin" | "client" | "reis" | "org_user";
                                 form.setValue("role", nextRole);
                                 if (nextRole === "org_user") {
                                   const orgRole = (form.getValues("orgRole") ?? "pr") as OrgRole;
                                   form.setValue("orgRole", orgRole);
                                   applyOrgRolePreset(orgRole);
-                                } else if (nextRole === "client") {
+                                } else if (nextRole === "client" || nextRole === "reis") {
                                   form.setValue("orgRole", null);
                                   form.setValue("parentUserId", null);
                                   bindSoleCampaignAccess(defaultContributorPermissions());
@@ -1765,6 +1768,7 @@ export function UsersAdmin({
                               <SelectContent>
                                 <SelectItem value="org_user">کاربر دستگاه</SelectItem>
                                 <SelectItem value="client">کارفرما</SelectItem>
+                                <SelectItem value="reis">رییس</SelectItem>
                                 <SelectItem value="admin">مدیر سیستم</SelectItem>
                               </SelectContent>
                             </Select>

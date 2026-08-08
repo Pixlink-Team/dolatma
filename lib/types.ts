@@ -11,6 +11,7 @@ export type ClientDeviceType = AnalyticsDeviceType;
 export type AdminRole =
   | "admin"
   | "client"
+  | "reis"
   | "org_user"
   /** @deprecated Migrated to org_user — kept for old sessions/rows during transition. */
   | "contributor"

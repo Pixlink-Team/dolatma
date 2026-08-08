@@ -115,7 +115,7 @@ export async function ensureOrgUserSchema(): Promise<void> {
       await sql`
         UPDATE users
         SET org_role = NULL
-        WHERE role IN ('admin', 'client')
+        WHERE role IN ('admin', 'client', 'reis')
       `;
       await sql`
         UPDATE users
@@ -146,7 +146,7 @@ export async function ensureOrgUserSchema(): Promise<void> {
         await sql`
           ALTER TABLE users ADD CONSTRAINT users_role_check
             CHECK (role IN (
-              'admin', 'client', 'org_user',
+              'admin', 'client', 'reis', 'org_user',
               'contributor', 'ministry_parent', 'sub_user'
             ))
         `;

@@ -4,6 +4,7 @@ import { getOrgRoleLabel, type OrgRole } from "@/lib/org-roles";
 export const ADMIN_ROLES = [
   "admin",
   "client",
+  "reis",
   "org_user",
   // Legacy values kept for old session cookies until re-login after migration.
   "contributor",
@@ -14,7 +15,12 @@ export const ADMIN_ROLES = [
 export const SESSION_ROLES = ADMIN_ROLES;
 
 /** Roles accepted when creating/editing users in the panel. */
-export const ASSIGNABLE_ADMIN_ROLES = ["admin", "client", "org_user"] as const satisfies readonly AdminRole[];
+export const ASSIGNABLE_ADMIN_ROLES = [
+  "admin",
+  "client",
+  "reis",
+  "org_user",
+] as const satisfies readonly AdminRole[];
 
 export function isAdminRole(value: string): value is AdminRole {
   return (ADMIN_ROLES as readonly string[]).includes(value);
@@ -26,7 +32,9 @@ export function isSessionRole(value: string): value is SessionRole {
 
 /** Normalize legacy panel roles to the current model. */
 export function normalizeAdminRole(role: string | null | undefined): AdminRole {
-  if (role === "admin" || role === "client" || role === "org_user") return role;
+  if (role === "admin" || role === "client" || role === "reis" || role === "org_user") {
+    return role;
+  }
   if (
     role === "contributor" ||
     role === "ministry_parent" ||
@@ -35,6 +43,10 @@ export function normalizeAdminRole(role: string | null | undefined): AdminRole {
     return "org_user";
   }
   return "org_user";
+}
+
+export function isReisRole(role: SessionRole | AdminRole | string | null | undefined): boolean {
+  return role === "reis";
 }
 
 export function isOrgUserRole(role: SessionRole | AdminRole | string | null | undefined): boolean {
@@ -52,6 +64,8 @@ export function getRoleLabel(role: AdminRole | SessionRole | string): string {
       return "مدیر سیستم";
     case "client":
       return "کارفرما";
+    case "reis":
+      return "رییس";
     case "org_user":
       return "کاربر دستگاه";
     case "ministry_parent":

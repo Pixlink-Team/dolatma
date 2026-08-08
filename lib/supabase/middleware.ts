@@ -10,6 +10,7 @@ import { isPostgresConfigured, isSupabaseConfigured } from "@/lib/utils";
 /** Forward campaign query so nested layouts can enforce section permissions. */
 function nextWithCampaignHeader(request: NextRequest) {
   const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-pathname", request.nextUrl.pathname);
   const campaign = request.nextUrl.searchParams.get("campaign");
   if (campaign) {
     requestHeaders.set("x-admin-campaign", campaign);
