@@ -52,7 +52,7 @@ async function assertDirectivesAccess(campaignId: string) {
     return { session: null, permissions: null, error: "Unauthorized" as const };
   }
 
-  if (isFullAdmin(session)) {
+  if (isFullAdmin(session) || canManageDirectivesGlobally(session)) {
     return { session, permissions: null, error: null };
   }
 
@@ -72,9 +72,11 @@ async function assertDirectivesAccess(campaignId: string) {
 function revalidateDirectives(campaignId?: string) {
   revalidatePath("/admin");
   revalidatePath("/admin/directives");
+  revalidatePath("/admin/reis/strategic");
   if (campaignId) {
     revalidatePath(`/admin?campaign=${campaignId}`);
     revalidatePath(`/admin/directives?campaign=${campaignId}`);
+    revalidatePath(`/admin/reis/strategic?campaign=${campaignId}`);
   }
 }
 

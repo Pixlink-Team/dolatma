@@ -68,9 +68,9 @@ export function canViewDirectives(session: AuthSession): boolean {
   return Boolean(session);
 }
 
-/** Admin and client can issue directives to the full campaign audience. */
+/** Admin and client / reis can issue directives to the full campaign audience. */
 export function canManageDirectivesGlobally(session: AuthSession): boolean {
-  return isFullAdmin(session) || isClientUser(session);
+  return isFullAdmin(session) || isClientUser(session) || isReisUser(session);
 }
 
 /**

@@ -24,6 +24,7 @@ import { DirectiveGlobalMemoryAdmin } from "@/components/admin/directive-global-
 import { DirectivePlaybooksAdmin } from "@/components/admin/directive-playbooks-admin";
 import { DirectiveSmartWizard } from "@/components/admin/directive-smart-wizard";
 import { RejectedSubmissionsInbox } from "@/components/admin/rejected-submissions-inbox";
+import { ReisUpwardRequestsPanel } from "@/components/admin/reis/reis-upward-requests-panel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -79,6 +80,7 @@ import type {
   DirectiveUrgency,
   Ministry,
 } from "@/lib/types";
+import type { StrategicUpwardRequest } from "@/lib/strategic-requests";
 import { IRAN_PROVINCES } from "@/lib/iran-locations";
 import { USER_REGIONS, getUserRegionLabel, type UserRegion } from "@/lib/user-regions";
 import { adminHref, cn, formatPersianDate, formatPersianDateTime, formatPersianNumber } from "@/lib/utils";
@@ -122,8 +124,9 @@ function listToLines(values: string[] | undefined): string {
 type FormValues = z.infer<typeof schema>;
 
 type InboxTab = "new" | "seen" | "all" | "rejected";
-type ManagerView = "manage" | "inbox";
+type ManagerView = "manage" | "inbox" | "upward";
 type ManageListTab = "active" | "archive" | "patterns";
+type IssuerFilter = "all" | "mine" | "subordinates";
 
 interface AttachmentDraft {
   key: string;
@@ -200,6 +203,15 @@ interface DirectivesAdminProps {
   rejectedSubmissions?: CampaignSubmission[];
   campaignUsers: CampaignUserOption[];
   ministries?: Ministry[];
+  /** Show mine / subordinates issuer filters (reis strategic view). */
+  issuerFilterEnabled?: boolean;
+  currentUserId?: string | null;
+  headingTitle?: string;
+  headingDescription?: string;
+  /** Upward requests panel (subordinates → superiors). */
+  upwardRequests?: StrategicUpwardRequest[];
+  canCreateUpwardRequest?: boolean;
+  canRespondUpwardRequest?: boolean;
 }
 
 function sortDirectives(rows: CampaignDirective[]): CampaignDirective[] {
@@ -337,6 +349,13 @@ export function DirectivesAdmin({
   rejectedSubmissions: initialRejected = [],
   campaignUsers,
   ministries = [],
+  issuerFilterEnabled = false,
+  currentUserId = null,
+  headingTitle,
+  headingDescription,
+  upwardRequests: initialUpwardRequests = [],
+  canCreateUpwardRequest = false,
+  canRespondUpwardRequest = false,
 }: DirectivesAdminProps) {
   const [rows, setRows] = useState(initialDirectives);
   const [archivedRows, setArchivedRows] = useState(initialArchived);
@@ -345,6 +364,7 @@ export function DirectivesAdmin({
   const [managerView, setManagerView] = useState<ManagerView>("manage");
   const [manageListTab, setManageListTab] = useState<ManageListTab>("active");
   const [inboxTab, setInboxTab] = useState<InboxTab>("new");
+  const [issuerFilter, setIssuerFilter] = useState<IssuerFilter>("all");
   const [open, setOpen] = useState(false);
   const [creationMode, setCreationMode] = useState<DirectiveCreationMode>("normal");
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -438,16 +458,25 @@ export function DirectivesAdmin({
     return [...set].sort((a, b) => a.localeCompare(b, "fa"));
   }, [audienceMinistryId, audienceOrganizationId, campaignUsers]);
 
-  const showingInbox = !canManage || managerView === "inbox";
-  const showingArchive = !showingInbox && manageListTab === "archive";
-  const showingPatterns = !showingInbox && manageListTab === "patterns";
+  const showingUpward = managerView === "upward";
+  const showingInbox = !showingUpward && (!canManage || managerView === "inbox");
+  const showingArchive = !showingInbox && !showingUpward && manageListTab === "archive";
+  const showingPatterns = !showingInbox && !showingUpward && manageListTab === "patterns";
   const showingRejected = showingInbox && inboxTab === "rejected";
+  const showUpwardTab =
+    canCreateUpwardRequest || canRespondUpwardRequest || initialUpwardRequests.length > 0;
 
   const listRows = useMemo(() => {
-    if (showingPatterns || showingRejected) return [] as CampaignDirective[];
+    if (showingPatterns || showingRejected || showingUpward) return [] as CampaignDirective[];
     let base: CampaignDirective[];
     if (!showingInbox) {
       base = manageListTab === "archive" ? archivedRows : rows;
+      if (issuerFilterEnabled && issuerFilter !== "all" && currentUserId) {
+        base =
+          issuerFilter === "mine"
+            ? base.filter((row) => row.createdByUserId === currentUserId)
+            : base.filter((row) => row.createdByUserId !== currentUserId);
+      }
     } else if (inboxTab === "new") {
       base = inboxRowsState.filter((row) => !row.confirmed);
     } else if (inboxTab === "seen") {
@@ -458,6 +487,7 @@ export function DirectivesAdmin({
     return sortDirectives(base);
   }, [
     showingInbox,
+    showingUpward,
     showingPatterns,
     showingRejected,
     manageListTab,
@@ -465,7 +495,23 @@ export function DirectivesAdmin({
     rows,
     inboxTab,
     inboxRowsState,
+    issuerFilterEnabled,
+    issuerFilter,
+    currentUserId,
   ]);
+
+  const issuerCounts = useMemo(() => {
+    const source = manageListTab === "archive" ? archivedRows : rows;
+    if (!currentUserId) {
+      return { all: source.length, mine: 0, subordinates: source.length };
+    }
+    const mine = source.filter((row) => row.createdByUserId === currentUserId).length;
+    return {
+      all: source.length,
+      mine,
+      subordinates: source.length - mine,
+    };
+  }, [archivedRows, rows, manageListTab, currentUserId]);
 
   const openCreate = () => {
     setEditingId(null);
@@ -847,13 +893,14 @@ export function DirectivesAdmin({
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <h1 className="text-xl font-bold sm:text-2xl">دستورکارها</h1>
+          <h1 className="text-xl font-bold sm:text-2xl">{headingTitle ?? "دستورکارها"}</h1>
           <p className="text-sm text-muted-foreground">
-            {canManage
-              ? audienceScope === "subordinates"
-                ? "صدور دستورکار ساده یا همراه اتاق عملیات برای زیرمجموعه‌ها"
-                : "ثبت دستورکار ساده یا همراه اتاق عملیات، فایل‌ها، KPI و پیگیری"
-              : "دستورکارهای جدید را ببینید، تأیید مشاهده بزنید و برنامه اقدام ثبت کنید"}
+            {headingDescription ??
+              (canManage
+                ? audienceScope === "subordinates"
+                  ? "صدور دستورکار ساده یا همراه اتاق عملیات برای زیرمجموعه‌ها"
+                  : "ثبت دستورکار ساده یا همراه اتاق عملیات، فایل‌ها، KPI و پیگیری"
+                : "دستورکارهای جدید را ببینید، تأیید مشاهده بزنید و برنامه اقدام ثبت کنید")}
           </p>
         </div>
         {canManage && managerView === "manage" && manageListTab === "active" && (
@@ -876,9 +923,26 @@ export function DirectivesAdmin({
               {formatPersianNumber(inboxRowsState.filter((row) => !row.confirmed).length)}
               )
             </TabsTrigger>
+            {showUpwardTab ? (
+              <TabsTrigger value="upward">درخواست به بالاسری</TabsTrigger>
+            ) : null}
           </TabsList>
         </Tabs>
       )}
+
+      {!canManage && showUpwardTab ? (
+        <Tabs
+          value={showingUpward ? "upward" : "inbox"}
+          onValueChange={(value) =>
+            setManagerView(value === "upward" ? "upward" : "inbox")
+          }
+        >
+          <TabsList>
+            <TabsTrigger value="inbox">کارتابل من</TabsTrigger>
+            <TabsTrigger value="upward">درخواست به بالاسری</TabsTrigger>
+          </TabsList>
+        </Tabs>
+      ) : null}
 
       {!showingInbox && canManage && (
         <Tabs
@@ -896,6 +960,25 @@ export function DirectivesAdmin({
           </TabsList>
         </Tabs>
       )}
+
+      {!showingInbox && canManage && issuerFilterEnabled && manageListTab !== "patterns" ? (
+        <Tabs
+          value={issuerFilter}
+          onValueChange={(value) => setIssuerFilter(value as IssuerFilter)}
+        >
+          <TabsList>
+            <TabsTrigger value="all">
+              همه ({formatPersianNumber(issuerCounts.all)})
+            </TabsTrigger>
+            <TabsTrigger value="mine">
+              دستورکارهای من ({formatPersianNumber(issuerCounts.mine)})
+            </TabsTrigger>
+            <TabsTrigger value="subordinates">
+              دستورکارهای زیرمجموعه ({formatPersianNumber(issuerCounts.subordinates)})
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+      ) : null}
 
       {showingInbox && (
         <Tabs value={inboxTab} onValueChange={(value) => setInboxTab(value as InboxTab)}>
@@ -924,6 +1007,13 @@ export function DirectivesAdmin({
         <RejectedSubmissionsInbox
           initialItems={initialRejected}
           onCountChange={setRejectedCount}
+        />
+      ) : showingUpward ? (
+        <ReisUpwardRequestsPanel
+          campaignId={campaignId}
+          initialRequests={initialUpwardRequests}
+          canRespond={canRespondUpwardRequest}
+          canCreate={canCreateUpwardRequest}
         />
       ) : showingPatterns && isFullAdmin ? (
         <div className="space-y-8">
@@ -971,6 +1061,9 @@ export function DirectivesAdmin({
                     {!showingInbox && (
                       <Badge variant="outline">{formatAudienceLabel(item, audienceScope)}</Badge>
                     )}
+                    {!showingInbox && issuerFilterEnabled && item.createdByName ? (
+                      <Badge variant="secondary">صادرکننده: {item.createdByName}</Badge>
+                    ) : null}
                     {showingArchive && <Badge variant="secondary">آرشیو</Badge>}
                     {showingInbox && !item.confirmed && <Badge>جدید</Badge>}
                     {showingInbox && item.confirmed && !item.hasActionPlan && (

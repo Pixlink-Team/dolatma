@@ -18,6 +18,10 @@ import {
   pgListDirectivesForUserInbox,
 } from "@/lib/db/repository-directives";
 import { pgListMinistries } from "@/lib/db/repository-ministries";
+import {
+  pgListStrategicUpwardRequestsByRequester,
+  pgListStrategicUpwardRequestsForTarget,
+} from "@/lib/db/repository-strategic-requests";
 import { isPostgresConfigured } from "@/lib/utils";
 import { withFileAccessTokensDeep } from "@/lib/uploads";
 
@@ -35,7 +39,11 @@ export default async function DirectivesPage({ searchParams }: PageProps) {
   await requireContributorAccess(campaignId, "directives");
 
   const campaignPermissions =
-    session.userId && isPostgresConfigured() && !isFullAdmin(session) && session.role !== "client"
+    session.userId &&
+    isPostgresConfigured() &&
+    !isFullAdmin(session) &&
+    session.role !== "client" &&
+    session.role !== "reis"
       ? await pgGetUserPermissionsForCampaign(session.userId, campaignId)
       : null;
   const canManage = canManageDirectives(session, campaignPermissions);
@@ -49,6 +57,11 @@ export default async function DirectivesPage({ searchParams }: PageProps) {
       ? { createdByUserId: session.userId }
       : undefined;
 
+  const canCreateUpwardRequest =
+    Boolean(session.userId) && !canManageDirectivesGlobally(session);
+  const canRespondUpwardRequest =
+    canManage && !canManageDirectivesGlobally(session);
+
   if (!isPostgresConfigured()) {
     return (
       <DirectivesAdmin
@@ -61,6 +74,9 @@ export default async function DirectivesPage({ searchParams }: PageProps) {
         rejectedSubmissions={[]}
         campaignUsers={[]}
         ministries={[]}
+        upwardRequests={[]}
+        canCreateUpwardRequest={canCreateUpwardRequest}
+        canRespondUpwardRequest={canRespondUpwardRequest}
       />
     );
   }
@@ -72,6 +88,8 @@ export default async function DirectivesPage({ searchParams }: PageProps) {
     rejectedSubmissions,
     campaignUsers,
     ministries,
+    incomingRequests,
+    myRequests,
   ] = await Promise.all([
     canManage
       ? pgListDirectivesForCampaign(campaignId, createdByFilter)
@@ -94,9 +112,18 @@ export default async function DirectivesPage({ searchParams }: PageProps) {
     canManage && audienceScope === "global"
       ? pgListMinistries({ includeOrganizations: true })
       : Promise.resolve([]),
+    session.userId && (canCreateUpwardRequest || canRespondUpwardRequest)
+      ? pgListStrategicUpwardRequestsForTarget(campaignId, session.userId)
+      : Promise.resolve([]),
+    session.userId && canCreateUpwardRequest
+      ? pgListStrategicUpwardRequestsByRequester(campaignId, session.userId)
+      : Promise.resolve([]),
   ]);
 
   const initialDirectives = canManage ? manageDirectives : inboxDirectives;
+  const upwardById = new Map(
+    [...incomingRequests, ...myRequests].map((row) => [row.id, row])
+  );
 
   return (
     <DirectivesAdmin
@@ -110,6 +137,9 @@ export default async function DirectivesPage({ searchParams }: PageProps) {
       rejectedSubmissions={rejectedSubmissions}
       campaignUsers={campaignUsers}
       ministries={ministries}
+      upwardRequests={Array.from(upwardById.values())}
+      canCreateUpwardRequest={canCreateUpwardRequest}
+      canRespondUpwardRequest={canRespondUpwardRequest}
     />
   );
 }

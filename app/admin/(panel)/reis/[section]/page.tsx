@@ -17,6 +17,14 @@ export default async function ReisSectionPage({ params }: ReisSectionPageProps) 
     notFound();
   }
 
+  // Dedicated routes take over these sections.
+  if (sectionKey === "campaigns") {
+    redirect(`${REIS_HOME_PATH}/campaigns`);
+  }
+  if (sectionKey === "strategic") {
+    redirect(`${REIS_HOME_PATH}/strategic`);
+  }
+
   const section = getReisSection(sectionKey);
   if (!section) {
     notFound();
@@ -27,8 +35,6 @@ export default async function ReisSectionPage({ params }: ReisSectionPageProps) 
     redirect(section.href);
   }
 
-  // Defense calendar is external-only; any other key without a dedicated view yet
-  // shows the placeholder until its reis-specific pages are built.
   if (sectionKey === "defense-calendar") {
     redirect(REIS_HOME_PATH);
   }

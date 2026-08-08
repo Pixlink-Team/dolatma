@@ -96,6 +96,10 @@ export function isReisAllowedPath(pathname: string): boolean {
   if (pathname === REIS_HOME_PATH || pathname.startsWith(`${REIS_HOME_PATH}/`)) {
     return true;
   }
+  // Ops-room / tracking deep-links from strategic communications.
+  if (pathname === "/admin/directives" || pathname.startsWith("/admin/directives/")) {
+    return true;
+  }
   if (pathname === "/admin/profile" || pathname.startsWith("/admin/profile/")) {
     return true;
   }

@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "1c98385cd644f65af38947a29234d399e52868d2",
+      "committedAt": "2026-08-08T16:42:07+03:30",
+      "title": "کاهش تاریکی فیلدهای ورود برای خوانایی متعادل‌تر",
+      "subject": "Halve login field dark overlay opacity"
+    },
+    {
       "hash": "fe0d87184381615836f8cbd92cc7009a039bf0cd",
       "committedAt": "2026-08-08T16:31:01+03:30",
       "title": "نمایش فقط نام کاربری به‌جای متن خوش‌آمدگویی در صفحه ورود",
