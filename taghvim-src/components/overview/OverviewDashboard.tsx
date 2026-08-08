@@ -177,11 +177,11 @@ export function OverviewDashboard({ days }: OverviewDashboardProps) {
               </Link>
             ) : (
               <Link
-                href={taghvimPath("/admin/login")}
+                href={taghvimPath("/admin")}
                 className="inline-flex items-center gap-2 rounded-2xl border border-[var(--border)] bg-[var(--panel)]/90 px-3 py-2 text-sm text-[var(--text-primary)] transition hover:bg-[var(--hover)]"
               >
                 <UserRound className="h-4 w-4 text-[var(--text-muted)]" />
-                ورود به داشبورد
+                پنل مدیریت
               </Link>
             )}
           </div>

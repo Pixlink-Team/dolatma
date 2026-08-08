@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "cdc1384b5ed74b12b371f95bd9b28e1129225242",
+      "committedAt": "2026-08-08T18:11:53+03:30",
+      "title": "ورود خودکار به تقویم دفاع با همان حساب دولتما",
+      "subject": "SSO defense calendar with dolatma user bridge"
+    },
+    {
       "hash": "3075d0281ee78eb19efc18996c41ddfef0bb01f9",
       "committedAt": "2026-08-08T17:54:15+03:30",
       "title": "افزودن تقویم دفاع و سازندگی به پنل با دسترسی جداگانه",

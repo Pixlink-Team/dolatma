@@ -76,7 +76,8 @@ export function RequireAuth({
       const current = (await refreshCurrentUser()) ?? getCurrentUser();
       if (cancelled) return;
       if (!current) {
-        router.replace(taghvimPath("/login"));
+        // Dolatma SSO — never show a separate login; bounce to module root to re-bridge.
+        router.replace(taghvimPath("/"));
         return;
       }
 

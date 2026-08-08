@@ -148,7 +148,7 @@ function MyContentInner() {
   useEffect(() => {
     const current = getCurrentUser();
     if (!current) {
-      router.replace(taghvimPath("/login"));
+      router.replace(taghvimPath("/"));
       return;
     }
     setUser(current);

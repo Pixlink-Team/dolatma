@@ -134,7 +134,7 @@ function MySubusersInner() {
     void (async () => {
       const current = (await refreshCurrentUser()) ?? getCurrentUser();
       if (!current) {
-        router.replace(taghvimPath("/login"));
+        router.replace(taghvimPath("/"));
         return;
       }
       if (!userHasPermission(current, "manage_subusers")) {

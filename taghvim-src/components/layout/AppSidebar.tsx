@@ -309,7 +309,7 @@ export function AppSidebar({
         ) : null}
 
         <Link
-          href={user ? taghvimPath("/admin") : taghvimPath("/login")}
+          href={user ? taghvimPath("/admin") : taghvimPath("/")}
           className={clsx(
             "flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--panel-2)] transition hover:bg-[var(--hover)]",
             collapsed ? "justify-center p-2" : "px-2.5 py-2",
