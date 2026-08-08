@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "2b1f48b671152ff8ee16e1f5af926a33174ac6e2",
+      "committedAt": "2026-08-08T17:33:52+03:30",
+      "title": "بازطراحی داشبورد ارتباطات راهبردی با کارت و نمودار",
+      "subject": "Redesign reis strategic page as RTL management dashboard"
+    },
+    {
       "hash": "b2465c8b6f8ba8c06479af13d2d14ca473d9646c",
       "committedAt": "2026-08-08T17:11:29+03:30",
       "title": "اتصال کامل صفحات رصد و واکنش سریع در پنل رییس",
