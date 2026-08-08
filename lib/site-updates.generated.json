@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "85c23d9fe6b5f199b2b5e3466b10f781920beda5",
+      "committedAt": "2026-08-08T16:26:34+03:30",
+      "title": "افزودن وزارتخانه و انتخاب استان و شهر در پیش‌ثبت‌نام",
+      "subject": "Collect ministry, province, and city in pre-registration"
+    },
+    {
       "hash": "76dae8b2bcf9549831592978b503c29c64456c06",
       "committedAt": "2026-08-08T15:09:37+03:30",
       "title": "نمایش نام کاربر و خوش‌آمدگویی در پنل دسترسی رییس",
