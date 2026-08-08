@@ -26,6 +26,7 @@ import { isCampaignContentFilterActive } from "@/lib/campaign-content-filter";
 import { formatPlanLabelDisplay } from "@/lib/content-topics";
 import { useOwnerLocationFilter } from "@/lib/context/owner-location-filter-context";
 import {
+  DEFAULT_OWNER_LOCATION_FILTER,
   OWNER_DATE_ALL,
   OWNER_LOCATION_ALL,
   OWNER_MINISTRY_ALL,
@@ -66,7 +67,8 @@ export function OwnerLocationFilterBar() {
   const cityLocked = userLocked && filter.city !== OWNER_LOCATION_ALL;
 
   const filterActive =
-    isCampaignContentFilterActive(filter) || filter.sortOrder !== "default";
+    isCampaignContentFilterActive(filter) ||
+    filter.sortOrder !== DEFAULT_OWNER_LOCATION_FILTER.sortOrder;
 
   const userOptions = [
     { value: OWNER_USER_ALL, label: "همه شرکت‌ها" },

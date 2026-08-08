@@ -1,6 +1,7 @@
 import type { CampaignKPIs, PublicCampaignData } from "@/lib/types";
 import { resolveDateFilterRange, isCampaignContentFilterActive } from "@/lib/campaign-content-filter";
 import {
+  DEFAULT_OWNER_LOCATION_FILTER,
   filterItemsByOwnerLocation,
   OWNER_DATE_ALL,
   OWNER_LOCATION_ALL,
@@ -55,9 +56,12 @@ export function getOwnerFilterLabel(
     parts.push(`موضوع: ${filter.planLabels.map((label) => formatPlanLabelDisplay(label)).join("، ")}`);
   }
 
-  if (filter.sortOrder === "newest") parts.push("جدیدترین آپلود");
-  if (filter.sortOrder === "oldest") parts.push("قدیمی‌ترین آپلود");
-  if (filter.sortOrder === "top_scored") parts.push("۵ برتر (امتیاز)");
+  if (filter.sortOrder !== DEFAULT_OWNER_LOCATION_FILTER.sortOrder) {
+    if (filter.sortOrder === "newest") parts.push("جدیدترین آپلود");
+    if (filter.sortOrder === "oldest") parts.push("قدیمی‌ترین آپلود");
+    if (filter.sortOrder === "default") parts.push("ترتیب پیش‌فرض");
+    if (filter.sortOrder === "top_scored") parts.push("۵ برتر (امتیاز)");
+  }
 
   return parts.length > 0 ? parts.join(" · ") : null;
 }

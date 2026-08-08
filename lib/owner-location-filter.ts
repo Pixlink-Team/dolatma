@@ -45,7 +45,7 @@ export const DEFAULT_OWNER_LOCATION_FILTER: OwnerLocationFilter = {
   datePreset: OWNER_DATE_ALL,
   dateFrom: "",
   dateTo: "",
-  sortOrder: "default",
+  sortOrder: "newest",
 };
 
 export function isOwnerLocationFilterActive(filter: OwnerLocationFilter): boolean {

@@ -68,7 +68,7 @@ export function BillboardSection({ billboards, adminOwnerLabel }: BillboardSecti
   const [cityFilter, setCityFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [sort, setSort] = useState<PublicMediaSort>("default");
+  const [sort, setSort] = useState<PublicMediaSort>("newest");
   const [search, setSearch] = useState("");
   const [selectedBillboard, setSelectedBillboard] = useState<Billboard | null>(null);
   const [modalOpen, setModalOpen] = useState(false);

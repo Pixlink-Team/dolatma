@@ -73,7 +73,7 @@ function filterPosterGroups(
 
 export function PostersSection({ categories: _categories, posters, groups }: PostersSectionProps) {
   const categoryFilter = "all";
-  const [sort, setSort] = useState<PublicMediaSort>("default");
+  const [sort, setSort] = useState<PublicMediaSort>("newest");
   const { filter } = useOwnerLocationFilter();
 
   const locationFilteredGroups = useFilteredOwnerGroups(groups, getPosterLatestDate);

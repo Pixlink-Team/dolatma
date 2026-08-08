@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "39c960284273869aff79a605588be0dc7f508483",
+      "committedAt": "2026-08-08T14:17:10+03:30",
+      "title": "افزودن پیش‌ثبت‌نام با تأیید پیامکی در صفحه ورود",
+      "subject": "Add login pre-registration with sms.ir OTP"
+    },
+    {
       "hash": "cc1e27b2704b46134ef364c85d5172cd272e968d",
       "committedAt": "2026-08-08T13:59:50+03:30",
       "title": "افزودن صفحه دسترسی رییس با بخش‌های اصلی سامانه",

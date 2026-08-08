@@ -74,7 +74,7 @@ function filterVideoGroups(
 export function VideosSection({ categories: _categories, videos, groups }: VideosSectionProps) {
   // Category filter UI removed; always show all items.
   const categoryFilter = "all";
-  const [sort, setSort] = useState<PublicMediaSort>("default");
+  const [sort, setSort] = useState<PublicMediaSort>("newest");
   const { filter } = useOwnerLocationFilter();
 
   const locationFilteredGroups = useFilteredOwnerGroups(groups, getVideoLatestDate);
