@@ -52,8 +52,7 @@ export const REIS_SECTIONS: ReisSection[] = [
     key: "defense-calendar",
     title: "تقویم دفاع و سازندگی",
     description: "ورود به سامانه تقویم دفاع",
-    href: "https://taghvim.pixlink.ir/",
-    external: true,
+    href: "/admin/taghvim",
     accent: "from-amber-500/20 to-orange-600/10",
     iconBg: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
   },
@@ -105,6 +104,9 @@ export function isReisAllowedPath(pathname: string): boolean {
     return true;
   }
   if (pathname === "/admin/rapid-response" || pathname.startsWith("/admin/rapid-response/")) {
+    return true;
+  }
+  if (pathname === "/admin/taghvim" || pathname.startsWith("/admin/taghvim/")) {
     return true;
   }
   if (pathname === "/admin/profile" || pathname.startsWith("/admin/profile/")) {

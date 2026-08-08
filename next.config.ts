@@ -17,6 +17,12 @@ const contentSecurityPolicy = [
   "upgrade-insecure-requests",
 ].join("; ");
 
+const taghvimApiInternal = (
+  process.env.TAGHVIM_API_INTERNAL_URL ||
+  process.env.TAGHVIM_BACKEND_URL ||
+  "https://taghvim.pixlink.ir"
+).replace(/\/$/, "");
+
 const nextConfig: NextConfig = {
   output: "standalone",
   outputFileTracingRoot: path.join(__dirname),
@@ -53,6 +59,23 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  async rewrites() {
+    return [
+      {
+        source: "/api/taghvim/v1/:path*",
+        destination: `${taghvimApiInternal}/api/v1/:path*`,
+      },
+      {
+        source: "/api/taghvim/storage/:path*",
+        destination: `${taghvimApiInternal}/storage/:path*`,
+      },
+      // Laravel often emits absolute /storage/* URLs; proxy through same origin.
+      {
+        source: "/storage/:path*",
+        destination: `${taghvimApiInternal}/storage/:path*`,
+      },
+    ];
+  },
   async headers() {
     return [
       {
@@ -61,7 +84,10 @@ const nextConfig: NextConfig = {
           { key: "Content-Security-Policy", value: contentSecurityPolicy },
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "X-Frame-Options", value: "SAMEORIGIN" },
-          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          {
+            key: "Referrer-Policy",
+            value: "strict-origin-when-cross-origin",
+          },
           {
             key: "Permissions-Policy",
             value: "camera=(), microphone=(), geolocation=()",

@@ -40,7 +40,7 @@ export default async function ReisSectionPage({ params }: ReisSectionPageProps) 
   }
 
   if (sectionKey === "defense-calendar") {
-    redirect(REIS_HOME_PATH);
+    redirect("/admin/taghvim");
   }
 
   return <ReisSectionPlaceholder section={section} />;

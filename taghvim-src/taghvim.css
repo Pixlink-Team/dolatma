@@ -1,0 +1,181 @@
+/**
+ * Scoped styles for the embedded defense calendar.
+ * Inherits dolatma --background/--primary/--foreground; maps calendar-specific tokens.
+ */
+
+.taghvim-root {
+  --app-bottom-nav-h: 3.75rem;
+  --app-safe-top: env(safe-area-inset-top, 0px);
+  --app-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --app-content-pad-bottom: calc(
+    var(--app-bottom-nav-h) + var(--app-safe-bottom) + 0.25rem
+  );
+  --timeline-sticky-top: 0px;
+
+  --surface-1: var(--card);
+  --surface-2: var(--card);
+  --surface-3: var(--muted);
+  --surface-primary: var(--card);
+  --panel: var(--card);
+  --panel-2: var(--muted);
+  --text-primary: var(--foreground);
+  --text-secondary: var(--muted-foreground);
+  --text-muted: var(--muted-foreground);
+  --hover: color-mix(in oklab, var(--foreground) 5%, transparent);
+  --enemy: #ef4444;
+  --enemy-soft: color-mix(in oklab, #ef4444 18%, transparent);
+  --enemy-border: color-mix(in oklab, #ef4444 40%, transparent);
+  --government: var(--primary);
+  --government-soft: color-mix(in oklab, var(--primary) 18%, transparent);
+  --government-border: color-mix(in oklab, var(--primary) 40%, transparent);
+  --critical: #ff3040;
+  --purple: #6366f1;
+  --cyan: #22d3ee;
+  --mark-bg: color-mix(in oklab, var(--primary) 25%, transparent);
+  --mark-text: var(--foreground);
+  --scrollbar: color-mix(in oklab, var(--muted-foreground) 35%, transparent);
+  --overlay: rgba(15, 23, 42, 0.45);
+  --logo: var(--foreground);
+  --event-enemy-bg: linear-gradient(
+    90deg,
+    #fff1f2 0%,
+    #ffe4e6 45%,
+    #fff7f8 100%
+  );
+  --event-gov-bg: linear-gradient(
+    90deg,
+    #eff6ff 0%,
+    #dbeafe 45%,
+    #f8fbff 100%
+  );
+  --event-card-title: var(--foreground);
+  --event-card-body: var(--muted-foreground);
+  --detail-enemy-bg: var(--card);
+  --detail-gov-bg: var(--card);
+
+  color: var(--text-primary);
+  direction: rtl;
+  text-align: right;
+}
+
+html.dark .taghvim-root,
+.taghvim-root[data-theme="dark"] {
+  --overlay: rgba(0, 0, 0, 0.6);
+  --enemy-soft: rgba(127, 29, 29, 0.26);
+  --event-enemy-bg: linear-gradient(
+    90deg,
+    rgba(46, 16, 27, 0.92) 0%,
+    rgba(37, 15, 28, 0.92) 55%,
+    rgba(28, 17, 29, 0.92) 100%
+  );
+  --event-gov-bg: linear-gradient(
+    90deg,
+    rgba(13, 36, 67, 0.95) 0%,
+    rgba(12, 31, 58, 0.95) 55%,
+    rgba(10, 25, 47, 0.95) 100%
+  );
+  --event-card-title: #ffffff;
+  --event-card-body: #e2e8f0;
+}
+
+.taghvim-root ::selection {
+  background: color-mix(in oklab, var(--primary) 35%, transparent);
+}
+
+.taghvim-root mark {
+  background: var(--mark-bg);
+  color: var(--mark-text);
+}
+
+.taghvim-root .scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.taghvim-root .scrollbar-thin::-webkit-scrollbar-thumb {
+  background: var(--scrollbar);
+  border-radius: 999px;
+}
+
+.taghvim-root .card-surface {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+}
+
+.taghvim-root .settings-range-hint {
+  border: 1px solid color-mix(in oklab, var(--primary) 35%, transparent);
+  background: color-mix(in oklab, var(--primary) 12%, transparent);
+  color: var(--foreground);
+}
+
+.taghvim-root .settings-range-hint__title {
+  color: var(--foreground);
+}
+
+.taghvim-root .safe-top {
+  padding-top: var(--app-safe-top);
+}
+
+.taghvim-root .safe-bottom {
+  padding-bottom: var(--app-safe-bottom);
+}
+
+.taghvim-root .app-shell-pad {
+  padding-bottom: var(--app-content-pad-bottom);
+}
+
+@media (min-width: 768px) {
+  .taghvim-root .app-shell-pad {
+    padding-bottom: 0.5rem;
+  }
+}
+
+.taghvim-root .app-floating-bottom {
+  bottom: var(--app-content-pad-bottom);
+}
+
+@media (min-width: 768px) {
+  .taghvim-root .app-floating-bottom {
+    bottom: 1.5rem;
+  }
+}
+
+.taghvim-root .touch-target {
+  min-height: 2.75rem;
+  min-width: 2.75rem;
+}
+
+.taghvim-root .mobile-input {
+  font-size: 1rem;
+  line-height: 1.5rem;
+}
+
+@supports (-webkit-touch-callout: none) {
+  .taghvim-root .mobile-input {
+    font-size: 16px;
+  }
+}
+
+.taghvim-root .overscroll-contain {
+  overscroll-behavior: contain;
+}
+
+.taghvim-root .mobile-nav-snap {
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+
+.taghvim-root .mobile-nav-snap > * {
+  scroll-snap-align: center;
+}
+
+@media (pointer: coarse) {
+  .taghvim-root .login-parallax {
+    transform: none !important;
+  }
+
+  .taghvim-root .login-bg-parallax {
+    transform: scale(1.02) !important;
+  }
+}

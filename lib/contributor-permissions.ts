@@ -25,6 +25,8 @@ export interface ContributorPermissions {
   sectionTutorials: boolean;
   /** Panel management: national calendar page. */
   nationalCalendar: boolean;
+  /** Panel management: defense calendar (تقویم دفاع) embedded module. */
+  defenseCalendar: boolean;
   /** Best practices library page. */
   bestPractices: boolean;
   /** Scoped management: create/edit users under own device subtree. */
@@ -63,6 +65,7 @@ export const defaultContributorPermissions = (): ContributorPermissions => ({
   sectionTutorials: false,
   // Keep open by default — previously always visible; admin can revoke per user.
   nationalCalendar: true,
+  defenseCalendar: true,
   bestPractices: true,
   manageSubtreeUsers: false,
   manageSubtreeDirectives: false,
@@ -100,6 +103,7 @@ export const panelManagementKeys = [
   "siteUpdates",
   "sectionTutorials",
   "nationalCalendar",
+  "defenseCalendar",
 ] as const satisfies readonly ContributorPermissionKey[];
 
 export type PanelManagementKey = (typeof panelManagementKeys)[number];
@@ -110,6 +114,7 @@ export const panelManagementPermissionLabels: Record<PanelManagementKey, string>
   siteUpdates: "آپدیت‌های سایت",
   sectionTutorials: "آموزش بخش‌ها",
   nationalCalendar: "تقویم ملی",
+  defenseCalendar: "تقویم دفاع و سازندگی",
 };
 
 export const subtreeManagementKeys = [
@@ -148,6 +153,7 @@ export function normalizeContributorPermissions(
     siteUpdates: record.siteUpdates ?? defaults.siteUpdates,
     sectionTutorials: record.sectionTutorials ?? defaults.sectionTutorials,
     nationalCalendar: record.nationalCalendar ?? defaults.nationalCalendar,
+    defenseCalendar: record.defenseCalendar ?? defaults.defenseCalendar,
     bestPractices: record.bestPractices ?? defaults.bestPractices,
     manageSubtreeUsers: record.manageSubtreeUsers ?? defaults.manageSubtreeUsers,
     manageSubtreeDirectives:
@@ -189,6 +195,7 @@ export const deniedContributorPermissions = (): ContributorPermissions => ({
   siteUpdates: false,
   sectionTutorials: false,
   nationalCalendar: false,
+  defenseCalendar: false,
   bestPractices: false,
   manageSubtreeUsers: false,
   manageSubtreeDirectives: false,
