@@ -51,6 +51,11 @@ function normalizeUser(raw: Record<string, unknown>): AdminUser {
   };
 }
 
+/** Normalize Laravel UserResource payload from the dolatma SSO bridge. */
+export function normalizeBridgedUser(raw: Record<string, unknown>): AdminUser {
+  return normalizeUser(raw);
+}
+
 export async function loginRequest(
   username: string,
   password: string,

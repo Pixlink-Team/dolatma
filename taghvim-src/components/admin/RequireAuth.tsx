@@ -146,7 +146,8 @@ function AdminShell({
 
   async function onLogout() {
     await logoutRequest();
-    router.replace(taghvimPath("/login"));
+    // Return to dolatma panel — calendar uses dolatma SSO, not a separate login.
+    window.location.href = "/admin";
   }
 
   function visibleNav() {

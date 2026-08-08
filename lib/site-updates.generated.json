@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "3075d0281ee78eb19efc18996c41ddfef0bb01f9",
+      "committedAt": "2026-08-08T17:54:15+03:30",
+      "title": "افزودن تقویم دفاع و سازندگی به پنل با دسترسی جداگانه",
+      "subject": "Embed defense calendar under /admin/taghvim with Laravel API proxy"
+    },
+    {
       "hash": "2b1f48b671152ff8ee16e1f5af926a33174ac6e2",
       "committedAt": "2026-08-08T17:33:52+03:30",
       "title": "بازطراحی داشبورد ارتباطات راهبردی با کارت و نمودار",
