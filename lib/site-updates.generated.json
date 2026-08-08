@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "fe0d87184381615836f8cbd92cc7009a039bf0cd",
+      "committedAt": "2026-08-08T16:31:01+03:30",
+      "title": "نمایش فقط نام کاربری به‌جای متن خوش‌آمدگویی در صفحه ورود",
+      "subject": "Show only username on remembered login banner"
+    },
+    {
       "hash": "2340acdf923f2176cd6a8dc30f91419f7075ad70",
       "committedAt": "2026-08-08T16:28:03+03:30",
       "title": "خواناتر شدن فیلدهای ورود روی پس‌زمینه شیشه‌ای",

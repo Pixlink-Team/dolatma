@@ -324,7 +324,7 @@ export function AdminLoginForm({ settings = DEFAULT_LOGIN_PAGE_SETTINGS }: Admin
                       required
                       dir="rtl"
                       autoComplete="username"
-                      className="h-[52px] w-full rounded-2xl border border-white/40 bg-black/45 px-4 py-3 text-right text-base text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] outline-none backdrop-blur-md transition placeholder:text-right placeholder:text-white/60 focus:border-white/55 focus:bg-black/55 focus:ring-4 focus:ring-[#0A84FF]/25"
+                      className="h-[52px] w-full rounded-2xl border border-white/40 bg-black/20 px-4 py-3 text-right text-base text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] outline-none backdrop-blur-md transition placeholder:text-right placeholder:text-white/60 focus:border-white/55 focus:bg-black/28 focus:ring-4 focus:ring-[#0A84FF]/25"
                     />
                   </div>
 
@@ -345,7 +345,7 @@ export function AdminLoginForm({ settings = DEFAULT_LOGIN_PAGE_SETTINGS }: Admin
                         minLength={4}
                         placeholder="رمز عبور خود را وارد کنید"
                         autoComplete="current-password"
-                        className="h-[52px] w-full rounded-2xl border border-white/40 bg-black/45 py-3 pl-12 pr-4 text-right text-base text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] outline-none backdrop-blur-md transition placeholder:text-white/60 focus:border-white/55 focus:bg-black/55 focus:ring-4 focus:ring-[#0A84FF]/25"
+                        className="h-[52px] w-full rounded-2xl border border-white/40 bg-black/20 py-3 pl-12 pr-4 text-right text-base text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] outline-none backdrop-blur-md transition placeholder:text-white/60 focus:border-white/55 focus:bg-black/28 focus:ring-4 focus:ring-[#0A84FF]/25"
                       />
                       <button
                         type="button"

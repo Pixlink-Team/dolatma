@@ -70,10 +70,10 @@ export function PreRegistrationPanel({ onBackToLogin }: PreRegistrationPanelProp
   );
 
   const inputClassName =
-    "h-[52px] w-full rounded-2xl border border-white/40 bg-black/45 px-4 py-3 text-right text-base text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] outline-none backdrop-blur-md transition placeholder:text-white/60 focus:border-white/55 focus:bg-black/55 focus:ring-4 focus:ring-[#0A84FF]/25";
+    "h-[52px] w-full rounded-2xl border border-white/40 bg-black/20 px-4 py-3 text-right text-base text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] outline-none backdrop-blur-md transition placeholder:text-white/60 focus:border-white/55 focus:bg-black/28 focus:ring-4 focus:ring-[#0A84FF]/25";
 
   const selectTriggerClassName =
-    "h-[52px] min-h-[52px] rounded-2xl border border-white/40 bg-black/45 px-4 py-3 text-base text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] backdrop-blur-md transition hover:bg-black/55 focus:border-white/55 focus:ring-4 focus:ring-[#0A84FF]/25 [&_span]:text-white [&_span.text-muted-foreground]:text-white/60";
+    "h-[52px] min-h-[52px] rounded-2xl border border-white/40 bg-black/20 px-4 py-3 text-base text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] backdrop-blur-md transition hover:bg-black/28 focus:border-white/55 focus:ring-4 focus:ring-[#0A84FF]/25 [&_span]:text-white [&_span.text-muted-foreground]:text-white/60";
 
   const labelClassName =
     "text-sm font-medium text-white [text-shadow:0_2px_12px_rgba(0,0,0,0.74)]";
@@ -389,7 +389,7 @@ export function PreRegistrationPanel({ onBackToLogin }: PreRegistrationPanelProp
               value={note}
               onChange={(e) => setNote(e.target.value)}
               rows={3}
-              className="w-full rounded-2xl border border-white/40 bg-black/45 px-4 py-3 text-right text-base text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] outline-none backdrop-blur-md transition placeholder:text-white/60 focus:border-white/55 focus:bg-black/55 focus:ring-4 focus:ring-[#0A84FF]/25"
+              className="w-full rounded-2xl border border-white/40 bg-black/20 px-4 py-3 text-right text-base text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] outline-none backdrop-blur-md transition placeholder:text-white/60 focus:border-white/55 focus:bg-black/28 focus:ring-4 focus:ring-[#0A84FF]/25"
               placeholder="در صورت نیاز توضیح کوتاه بنویسید"
             />
           </div>
