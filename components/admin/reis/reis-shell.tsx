@@ -21,6 +21,14 @@ function isMonitoringSurface(pathname: string) {
   );
 }
 
+function isWideReisSurface(pathname: string) {
+  return (
+    isMonitoringSurface(pathname) ||
+    pathname === `${REIS_HOME_PATH}/strategic` ||
+    pathname.startsWith(`${REIS_HOME_PATH}/strategic/`)
+  );
+}
+
 type ReisShellProps = {
   children: React.ReactNode;
   /** When true, show a link back to the full admin panel (for admin/client preview). */
@@ -34,6 +42,7 @@ export function ReisShell({ children, showAdminReturn = false, userName }: ReisS
   const { campaignId } = useAdminCampaign();
   const isHub = pathname === REIS_HOME_PATH;
   const showMonitoringNav = isMonitoringSurface(pathname);
+  const wideLayout = isWideReisSurface(pathname);
 
   const handleLogout = async () => {
     if (isSupabaseConfigured()) {
@@ -56,7 +65,7 @@ export function ReisShell({ children, showAdminReturn = false, userName }: ReisS
         <div
           className={cn(
             "mx-auto flex w-full items-center justify-between gap-3 px-4 py-3 sm:px-6",
-            showMonitoringNav ? "max-w-7xl" : "max-w-6xl"
+            wideLayout ? "max-w-7xl" : "max-w-6xl"
           )}
         >
           <div className="flex min-w-0 items-center gap-3">
@@ -130,7 +139,7 @@ export function ReisShell({ children, showAdminReturn = false, userName }: ReisS
       <main
         className={cn(
           "relative z-10 mx-auto w-full px-4 py-8 sm:px-6 sm:py-10",
-          showMonitoringNav ? "max-w-7xl" : "max-w-6xl"
+          wideLayout ? "max-w-7xl" : "max-w-6xl"
         )}
       >
         {children}

@@ -208,6 +208,8 @@ interface DirectivesAdminProps {
   currentUserId?: string | null;
   headingTitle?: string;
   headingDescription?: string;
+  /** Hide the page title block when embedded in another dashboard. */
+  hideHeading?: boolean;
   /** Upward requests panel (subordinates → superiors). */
   upwardRequests?: StrategicUpwardRequest[];
   canCreateUpwardRequest?: boolean;
@@ -353,6 +355,7 @@ export function DirectivesAdmin({
   currentUserId = null,
   headingTitle,
   headingDescription,
+  hideHeading = false,
   upwardRequests: initialUpwardRequests = [],
   canCreateUpwardRequest = false,
   canRespondUpwardRequest = false,
@@ -890,26 +893,37 @@ export function DirectivesAdmin({
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
-        <div className="min-w-0">
-          <h1 className="text-xl font-bold sm:text-2xl">{headingTitle ?? "دستورکارها"}</h1>
-          <p className="text-sm text-muted-foreground">
-            {headingDescription ??
-              (canManage
-                ? audienceScope === "subordinates"
-                  ? "صدور دستورکار ساده یا همراه اتاق عملیات برای زیرمجموعه‌ها"
-                  : "ثبت دستورکار ساده یا همراه اتاق عملیات، فایل‌ها، KPI و پیگیری"
-                : "دستورکارهای جدید را ببینید، تأیید مشاهده بزنید و برنامه اقدام ثبت کنید")}
-          </p>
+    <div className="space-y-4" dir="rtl">
+      {hideHeading ? (
+        canManage && managerView === "manage" && manageListTab === "active" ? (
+          <div className="flex justify-start">
+            <Button className="w-full sm:w-auto" onClick={openCreate}>
+              <Plus className="h-4 w-4" />
+              ثبت دستورکار
+            </Button>
+          </div>
+        ) : null
+      ) : (
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
+          <div className="min-w-0">
+            <h1 className="text-xl font-bold sm:text-2xl">{headingTitle ?? "دستورکارها"}</h1>
+            <p className="text-sm text-muted-foreground">
+              {headingDescription ??
+                (canManage
+                  ? audienceScope === "subordinates"
+                    ? "صدور دستورکار ساده یا همراه اتاق عملیات برای زیرمجموعه‌ها"
+                    : "ثبت دستورکار ساده یا همراه اتاق عملیات، فایل‌ها، KPI و پیگیری"
+                  : "دستورکارهای جدید را ببینید، تأیید مشاهده بزنید و برنامه اقدام ثبت کنید")}
+            </p>
+          </div>
+          {canManage && managerView === "manage" && manageListTab === "active" && (
+            <Button className="w-full sm:w-auto" onClick={openCreate}>
+              <Plus className="h-4 w-4" />
+              ثبت دستورکار
+            </Button>
+          )}
         </div>
-        {canManage && managerView === "manage" && manageListTab === "active" && (
-          <Button className="w-full sm:w-auto" onClick={openCreate}>
-            <Plus className="h-4 w-4" />
-            ثبت دستورکار
-          </Button>
-        )}
-      </div>
+      )}
 
       {canManage && (
         <Tabs

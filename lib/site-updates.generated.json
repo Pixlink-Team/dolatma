@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "b2465c8b6f8ba8c06479af13d2d14ca473d9646c",
+      "committedAt": "2026-08-08T17:11:29+03:30",
+      "title": "اتصال کامل صفحات رصد و واکنش سریع در پنل رییس",
+      "subject": "Route reis users into nested monitoring pages"
+    },
+    {
       "hash": "7a8123b03df82e554ea8f9010ee8b5a01d7c643d",
       "committedAt": "2026-08-08T17:09:35+03:30",
       "title": "اصلاح مسیرهای داخلی بخش رصد و واکنش سریع برای رییس",
