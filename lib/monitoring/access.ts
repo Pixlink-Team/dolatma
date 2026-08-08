@@ -128,7 +128,7 @@ const ROLE_CAPABILITIES: Record<MonitoringRole, MonitoringCapability[]> = {
 export function resolveMonitoringRole(session: AuthSession | null): MonitoringRole {
   if (!session) return "viewer";
   if (session.type === "env_admin" || session.role === "admin") return "super_admin";
-  if (session.role === "client") return "central_command_manager";
+  if (session.role === "client" || session.role === "reis") return "central_command_manager";
   if (isOrgUserRole(session.role)) {
     if (isOrgRole(session.orgRole)) {
       return getMonitoringRoleForOrgRole(session.orgRole);

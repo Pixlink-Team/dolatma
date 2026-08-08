@@ -24,6 +24,9 @@ export default async function ReisSectionPage({ params }: ReisSectionPageProps) 
   if (sectionKey === "strategic") {
     redirect(`${REIS_HOME_PATH}/strategic`);
   }
+  if (sectionKey === "monitoring") {
+    redirect(`${REIS_HOME_PATH}/monitoring`);
+  }
 
   const section = getReisSection(sectionKey);
   if (!section) {

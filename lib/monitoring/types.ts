@@ -350,6 +350,28 @@ export interface ResponseAction {
   assignedUserName?: string;
 }
 
+/** Action row enriched with parent case context (manager / reis overview). */
+export interface ActiveResponseAction extends ResponseAction {
+  caseTitle: string;
+  caseNumber: string;
+  commandText: string | null;
+  caseStatus: CaseStatus;
+  caseRiskLevel: RiskLevel;
+  caseUrgencyLevel: UrgencyLevel;
+  organizationName?: string;
+}
+
+export interface RapidResponseCaseWithActions extends RapidResponseCase {
+  actions: ResponseAction[];
+}
+
+export interface ReisMonitoringOverview {
+  stats: MonitoringDashboardData["stats"];
+  urgentAlerts: MonitoringDashboardData["urgentAlerts"];
+  activeActions: ActiveResponseAction[];
+  openCases: RapidResponseCaseWithActions[];
+}
+
 export interface CaseMetricSnapshot {
   id: string;
   rapidResponseCaseId: string;

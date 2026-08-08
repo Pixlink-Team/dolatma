@@ -45,6 +45,8 @@ import {
   pgGetMonitoringOrganization,
   pgGetMonitoringSettings,
   pgListActions,
+  pgListActiveResponseActions,
+  pgListOpenCasesWithActions,
   pgListArchives,
   pgListAuditEvents,
   pgListCaseContents,
@@ -68,6 +70,7 @@ import {
 function revalidateMonitoring() {
   revalidatePath("/admin/monitoring", "layout");
   revalidatePath("/admin/rapid-response", "layout");
+  revalidatePath("/admin/reis/monitoring");
 }
 
 async function requireSession() {
@@ -89,6 +92,34 @@ export async function ensureMonitoringReadyAction(campaignId?: string | null) {
     return {
       success: false as const,
       error: error instanceof Error ? error.message : "خطا در آماده‌سازی ماژول رصد",
+    };
+  }
+}
+
+export async function getReisMonitoringOverviewAction(campaignId?: string) {
+  try {
+    const session = await requireSession();
+    assertMonitoringCapability(session, "view_dashboard");
+    await ensureMonitoringSchema();
+    await seedMonitoringModule(campaignId);
+    const [dashboard, activeActions, openCases] = await Promise.all([
+      pgGetMonitoringDashboard(),
+      pgListActiveResponseActions({ campaignId, limit: 40 }),
+      pgListOpenCasesWithActions({ campaignId, limit: 24 }),
+    ]);
+    return {
+      success: true as const,
+      data: {
+        stats: dashboard.stats,
+        urgentAlerts: dashboard.urgentAlerts,
+        activeActions,
+        openCases,
+      },
+    };
+  } catch (error) {
+    return {
+      success: false as const,
+      error: error instanceof Error ? error.message : "خطا در دریافت نمای رصد و واکنش سریع",
     };
   }
 }

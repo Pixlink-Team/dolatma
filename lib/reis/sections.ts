@@ -42,8 +42,8 @@ export const REIS_SECTIONS: ReisSection[] = [
   },
   {
     key: "monitoring",
-    title: "رصد و پاسخگویی",
-    description: "رصد فضای رسانه‌ای و مدیریت پاسخگویی",
+    title: "رصد و واکنش سریع",
+    description: "رصد فضای رسانه‌ای، پرونده‌ها و پیگیری اقدام‌های در حال اجرا",
     href: `${REIS_HOME_PATH}/monitoring`,
     accent: "from-emerald-500/20 to-teal-600/10",
     iconBg: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
@@ -98,6 +98,13 @@ export function isReisAllowedPath(pathname: string): boolean {
   }
   // Ops-room / tracking deep-links from strategic communications.
   if (pathname === "/admin/directives" || pathname.startsWith("/admin/directives/")) {
+    return true;
+  }
+  // Monitoring & rapid-response surfaces linked from رصد و واکنش سریع.
+  if (pathname === "/admin/monitoring" || pathname.startsWith("/admin/monitoring/")) {
+    return true;
+  }
+  if (pathname === "/admin/rapid-response" || pathname.startsWith("/admin/rapid-response/")) {
     return true;
   }
   if (pathname === "/admin/profile" || pathname.startsWith("/admin/profile/")) {

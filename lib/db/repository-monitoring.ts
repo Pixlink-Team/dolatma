@@ -1070,6 +1070,103 @@ export async function pgListActions(caseId: string): Promise<ResponseAction[]> {
   return rows.map((row) => mapAction(row as Record<string, unknown>));
 }
 
+/** Active / in-flight actions across open cases — manager operational queue. */
+export async function pgListActiveResponseActions(options: {
+  campaignId?: string;
+  limit?: number;
+} = {}): Promise<import("@/lib/monitoring/types").ActiveResponseAction[]> {
+  await ensureMonitoringSchema();
+  const sql = getSql();
+  const limit = options.limit ?? 40;
+  const rows = await sql`
+    SELECT
+      a.*,
+      c.title AS case_title,
+      c.case_number,
+      c.command_text,
+      c.case_status,
+      c.risk_level AS case_risk_level,
+      c.urgency_level AS case_urgency_level,
+      o.name AS organization_name
+    FROM response_actions a
+    JOIN rapid_response_cases c ON c.id = a.rapid_response_case_id
+    JOIN monitoring_organizations o ON o.id = c.organization_id
+    WHERE a.status IN ('in_progress', 'overdue', 'awaiting_approval', 'assigned', 'pending')
+      AND c.case_status NOT IN ('closed', 'resolved', 'rejected')
+      AND (
+        ${options.campaignId ?? null}::uuid IS NULL
+        OR c.campaign_id = ${options.campaignId ?? null}
+      )
+    ORDER BY
+      CASE a.status
+        WHEN 'overdue' THEN 0
+        WHEN 'in_progress' THEN 1
+        WHEN 'awaiting_approval' THEN 2
+        WHEN 'assigned' THEN 3
+        ELSE 4
+      END,
+      a.priority DESC,
+      a.updated_at DESC
+    LIMIT ${limit}
+  `;
+  return rows.map((row) => {
+    const base = mapAction(row as Record<string, unknown>);
+    return {
+      ...base,
+      caseTitle: String(row.case_title ?? ""),
+      caseNumber: String(row.case_number ?? ""),
+      commandText: row.command_text ? String(row.command_text) : null,
+      caseStatus: (row.case_status as import("@/lib/monitoring/types").CaseStatus) ?? "open",
+      caseRiskLevel: (row.case_risk_level as import("@/lib/monitoring/types").RiskLevel) ?? "medium",
+      caseUrgencyLevel:
+        (row.case_urgency_level as import("@/lib/monitoring/types").UrgencyLevel) ?? "normal",
+      organizationName: row.organization_name ? String(row.organization_name) : undefined,
+    };
+  });
+}
+
+export async function pgListOpenCasesWithActions(options: {
+  campaignId?: string;
+  limit?: number;
+} = {}): Promise<import("@/lib/monitoring/types").RapidResponseCaseWithActions[]> {
+  const cases = await pgListCases({
+    campaignId: options.campaignId,
+    limit: options.limit ?? 20,
+  });
+  const open = cases.filter(
+    (c) => !["closed", "resolved", "rejected"].includes(c.caseStatus)
+  );
+  const withActions = await Promise.all(
+    open.map(async (caseItem) => ({
+      ...caseItem,
+      actions: await pgListActions(caseItem.id),
+    }))
+  );
+  // Cases with in-progress work first, then by urgency/risk.
+  const statusRank = (status: string) => {
+    if (status === "in_progress") return 0;
+    if (status === "overdue") return 1;
+    if (status === "awaiting_approval") return 2;
+    if (status === "assigned") return 3;
+    if (status === "pending") return 4;
+    return 5;
+  };
+  withActions.sort((a, b) => {
+    const aActive = a.actions.some((x) =>
+      ["in_progress", "overdue", "awaiting_approval"].includes(x.status)
+    );
+    const bActive = b.actions.some((x) =>
+      ["in_progress", "overdue", "awaiting_approval"].includes(x.status)
+    );
+    if (aActive !== bActive) return aActive ? -1 : 1;
+    const aBest = Math.min(...a.actions.map((x) => statusRank(x.status)), 9);
+    const bBest = Math.min(...b.actions.map((x) => statusRank(x.status)), 9);
+    if (aBest !== bBest) return aBest - bBest;
+    return 0;
+  });
+  return withActions;
+}
+
 export async function pgCreateAction(
   input: Omit<ResponseAction, "id" | "createdAt" | "updatedAt" | "assignedUserName"> & { id?: string }
 ): Promise<ResponseAction> {
