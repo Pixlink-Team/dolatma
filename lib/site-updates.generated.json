@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "76dae8b2bcf9549831592978b503c29c64456c06",
+      "committedAt": "2026-08-08T15:09:37+03:30",
+      "title": "نمایش نام کاربر و خوش‌آمدگویی در پنل دسترسی رییس",
+      "subject": "Show welcome with user name on reis hub"
+    },
+    {
       "hash": "214ebff2bda026bb16d18b621d048d7e401b3c5b",
       "committedAt": "2026-08-08T14:35:26+03:30",
       "title": "مرتب‌سازی پیش‌فرض همه محتواها بر اساس جدیدترین آپلود",

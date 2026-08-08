@@ -2296,7 +2296,10 @@ CREATE TABLE IF NOT EXISTS pre_registrations (
   phone TEXT NOT NULL,
   full_name TEXT,
   organization TEXT,
+  ministry TEXT,
   position_title TEXT,
+  province TEXT,
+  city TEXT,
   note TEXT,
   status TEXT NOT NULL DEFAULT 'pending_otp'
     CHECK (status IN ('pending_otp', 'otp_verified', 'submitted')),

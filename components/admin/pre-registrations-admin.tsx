@@ -63,13 +63,16 @@ export function PreRegistrationsAdmin() {
             <p className="text-sm text-muted-foreground">هنوز درخواستی ثبت نشده است.</p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[720px] text-sm">
+              <table className="w-full min-w-[980px] text-sm">
                 <thead>
                   <tr className="border-b text-right text-muted-foreground">
                     <th className="px-2 py-2 font-medium">نام</th>
                     <th className="px-2 py-2 font-medium">موبایل</th>
                     <th className="px-2 py-2 font-medium">سازمان</th>
+                    <th className="px-2 py-2 font-medium">وزارتخانه</th>
                     <th className="px-2 py-2 font-medium">سمت</th>
+                    <th className="px-2 py-2 font-medium">استان</th>
+                    <th className="px-2 py-2 font-medium">شهر</th>
                     <th className="px-2 py-2 font-medium">توضیحات</th>
                     <th className="px-2 py-2 font-medium">زمان ثبت</th>
                   </tr>
@@ -82,7 +85,10 @@ export function PreRegistrationsAdmin() {
                         {item.phone}
                       </td>
                       <td className="px-2 py-3">{item.organization || "—"}</td>
+                      <td className="px-2 py-3">{item.ministry || "—"}</td>
                       <td className="px-2 py-3">{item.positionTitle || "—"}</td>
+                      <td className="px-2 py-3">{item.province || "—"}</td>
+                      <td className="px-2 py-3">{item.city || "—"}</td>
                       <td className="max-w-[220px] truncate px-2 py-3 text-muted-foreground">
                         {item.note || "—"}
                       </td>

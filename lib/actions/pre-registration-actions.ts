@@ -21,6 +21,7 @@ import {
   verifyPhoneVerificationToken,
 } from "@/lib/pre-registration/otp";
 import { maskIranMobile, normalizeIranMobile } from "@/lib/pre-registration/phone";
+import { getCitiesForProvince, isIranProvince } from "@/lib/iran-locations";
 import { isSmsIrOtpConfigured, sendSmsIrOtp } from "@/lib/sms/smsir-otp";
 import { isPostgresConfigured } from "@/lib/utils";
 
@@ -158,7 +159,10 @@ export async function submitPreRegistrationAction(input: {
   verificationToken: string;
   fullName: string;
   organization: string;
+  ministry: string;
   positionTitle: string;
+  province: string;
+  city: string;
   note?: string;
 }): Promise<ActionOk | ActionFail> {
   if (!isPostgresConfigured()) {
@@ -179,7 +183,10 @@ export async function submitPreRegistrationAction(input: {
 
   const fullName = trimField(input.fullName, 120);
   const organization = trimField(input.organization, 160);
+  const ministry = trimField(input.ministry, 160);
   const positionTitle = trimField(input.positionTitle, 120);
+  const province = trimField(input.province, 80);
+  const city = trimField(input.city, 80);
   const noteRaw = trimField(input.note ?? "", 500);
   const note = noteRaw || null;
 
@@ -187,10 +194,20 @@ export async function submitPreRegistrationAction(input: {
     return { success: false, error: "نام و نام خانوادگی را وارد کنید" };
   }
   if (organization.length < 2) {
-    return { success: false, error: "نام سازمان یا دستگاه را وارد کنید" };
+    return { success: false, error: "نام سازمان را وارد کنید" };
+  }
+  if (ministry.length < 2) {
+    return { success: false, error: "وزارتخانه را وارد کنید" };
   }
   if (positionTitle.length < 2) {
     return { success: false, error: "سمت سازمانی را وارد کنید" };
+  }
+  if (!isIranProvince(province)) {
+    return { success: false, error: "استان را از فهرست انتخاب کنید" };
+  }
+  const cities = getCitiesForProvince(province);
+  if (!city || !cities.includes(city)) {
+    return { success: false, error: "شهر را از فهرست انتخاب کنید" };
   }
 
   const existing = await pgGetPreRegistrationByPhone(phone);
@@ -208,7 +225,10 @@ export async function submitPreRegistrationAction(input: {
     phone,
     fullName,
     organization,
+    ministry,
     positionTitle,
+    province,
+    city,
     note,
   });
 

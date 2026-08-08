@@ -1,13 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Label } from "@/components/ui/label";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import {
   sendPreRegistrationOtpAction,
   submitPreRegistrationAction,
   verifyPreRegistrationOtpAction,
 } from "@/lib/actions/pre-registration-actions";
+import { ensureSelectOptions, IRAN_PROVINCES } from "@/lib/iran-locations";
+import { getProvinceCityOptions } from "@/lib/iran-location-center";
 import { CheckCircle2, Loader2 } from "lucide-react";
 
 type Step = "phone" | "otp" | "details" | "done";
@@ -15,6 +18,8 @@ type Step = "phone" | "otp" | "details" | "done";
 type PreRegistrationPanelProps = {
   onBackToLogin: () => void;
 };
+
+const EMPTY_VALUE = "__none__";
 
 export function PreRegistrationPanel({ onBackToLogin }: PreRegistrationPanelProps) {
   const [step, setStep] = useState<Step>("phone");
@@ -24,7 +29,10 @@ export function PreRegistrationPanel({ onBackToLogin }: PreRegistrationPanelProp
   const [verificationToken, setVerificationToken] = useState("");
   const [fullName, setFullName] = useState("");
   const [organization, setOrganization] = useState("");
+  const [ministry, setMinistry] = useState("");
   const [positionTitle, setPositionTitle] = useState("");
+  const [province, setProvince] = useState("");
+  const [city, setCity] = useState("");
   const [note, setNote] = useState("");
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -36,8 +44,36 @@ export function PreRegistrationPanel({ onBackToLogin }: PreRegistrationPanelProp
     return () => window.clearTimeout(timerId);
   }, [resendSeconds]);
 
+  const provinceOptions = useMemo(
+    () => ensureSelectOptions([...IRAN_PROVINCES], province),
+    [province]
+  );
+  const cityOptions = useMemo(
+    () => ensureSelectOptions(getProvinceCityOptions(province), city),
+    [province, city]
+  );
+
+  const searchableProvinces = useMemo(
+    () => [
+      { value: EMPTY_VALUE, label: "انتخاب استان" },
+      ...provinceOptions.map((item) => ({ value: item, label: item })),
+    ],
+    [provinceOptions]
+  );
+
+  const searchableCities = useMemo(
+    () => [
+      { value: EMPTY_VALUE, label: province ? "انتخاب شهر" : "ابتدا استان را انتخاب کنید" },
+      ...cityOptions.map((item) => ({ value: item, label: item })),
+    ],
+    [cityOptions, province]
+  );
+
   const inputClassName =
     "h-[52px] w-full rounded-2xl border border-white/30 bg-white/10 px-4 py-3 text-right text-base text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18)] outline-none backdrop-blur-sm transition placeholder:text-white/45 focus:border-white/50 focus:bg-white/14 focus:ring-4 focus:ring-[#0A84FF]/20";
+
+  const selectTriggerClassName =
+    "h-[52px] min-h-[52px] rounded-2xl border border-white/30 bg-white/10 px-4 py-3 text-base text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18)] backdrop-blur-sm transition hover:bg-white/14 focus:border-white/50 focus:ring-4 focus:ring-[#0A84FF]/20 [&_span]:text-white [&_span.text-muted-foreground]:text-white/45";
 
   const labelClassName =
     "text-sm font-medium text-white [text-shadow:0_2px_12px_rgba(0,0,0,0.74)]";
@@ -113,7 +149,10 @@ export function PreRegistrationPanel({ onBackToLogin }: PreRegistrationPanelProp
         verificationToken,
         fullName,
         organization,
+        ministry,
         positionTitle,
+        province,
+        city,
         note,
       });
       if (!result.success) {
@@ -273,7 +312,7 @@ export function PreRegistrationPanel({ onBackToLogin }: PreRegistrationPanelProp
           </div>
           <div className="space-y-2">
             <Label htmlFor="prereg-org" className={labelClassName}>
-              سازمان / دستگاه
+              نام سازمان
             </Label>
             <input
               id="prereg-org"
@@ -282,7 +321,21 @@ export function PreRegistrationPanel({ onBackToLogin }: PreRegistrationPanelProp
               onChange={(e) => setOrganization(e.target.value)}
               required
               className={inputClassName}
-              placeholder="نام سازمان یا دستگاه اجرایی"
+              placeholder="نام سازمان"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="prereg-ministry" className={labelClassName}>
+              وزارتخانه
+            </Label>
+            <input
+              id="prereg-ministry"
+              type="text"
+              value={ministry}
+              onChange={(e) => setMinistry(e.target.value)}
+              required
+              className={inputClassName}
+              placeholder="نام وزارتخانه"
             />
           </div>
           <div className="space-y-2">
@@ -298,6 +351,34 @@ export function PreRegistrationPanel({ onBackToLogin }: PreRegistrationPanelProp
               className={inputClassName}
               placeholder="سمت سازمانی"
             />
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label className={labelClassName}>استان</Label>
+              <SearchableSelect
+                value={province || EMPTY_VALUE}
+                onValueChange={(value) => {
+                  setProvince(value === EMPTY_VALUE ? "" : value);
+                  setCity("");
+                }}
+                options={searchableProvinces}
+                placeholder="انتخاب استان"
+                searchPlaceholder="جستجوی استان..."
+                triggerClassName={selectTriggerClassName}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className={labelClassName}>شهر</Label>
+              <SearchableSelect
+                value={city || EMPTY_VALUE}
+                onValueChange={(value) => setCity(value === EMPTY_VALUE ? "" : value)}
+                options={searchableCities}
+                placeholder={province ? "انتخاب شهر" : "ابتدا استان را انتخاب کنید"}
+                searchPlaceholder="جستجوی شهر..."
+                disabled={!province}
+                triggerClassName={selectTriggerClassName}
+              />
+            </div>
           </div>
           <div className="space-y-2">
             <Label htmlFor="prereg-note" className={labelClassName}>

@@ -7,7 +7,10 @@ export type PreRegistrationRow = {
   phone: string;
   fullName: string | null;
   organization: string | null;
+  ministry: string | null;
   positionTitle: string | null;
+  province: string | null;
+  city: string | null;
   note: string | null;
   status: PreRegistrationStatus;
   otpHash: string | null;
@@ -25,7 +28,10 @@ export type PreRegistrationPublic = {
   phone: string;
   fullName: string | null;
   organization: string | null;
+  ministry: string | null;
   positionTitle: string | null;
+  province: string | null;
+  city: string | null;
   note: string | null;
   status: PreRegistrationStatus;
   verifiedAt: string | null;
@@ -45,7 +51,10 @@ export async function ensurePreRegistrationSchema(): Promise<void> {
           phone TEXT NOT NULL,
           full_name TEXT,
           organization TEXT,
+          ministry TEXT,
           position_title TEXT,
+          province TEXT,
+          city TEXT,
           note TEXT,
           status TEXT NOT NULL DEFAULT 'pending_otp'
             CHECK (status IN ('pending_otp', 'otp_verified', 'submitted')),
@@ -59,6 +68,9 @@ export async function ensurePreRegistrationSchema(): Promise<void> {
           updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
         )
       `;
+      await sql`ALTER TABLE pre_registrations ADD COLUMN IF NOT EXISTS ministry TEXT`;
+      await sql`ALTER TABLE pre_registrations ADD COLUMN IF NOT EXISTS province TEXT`;
+      await sql`ALTER TABLE pre_registrations ADD COLUMN IF NOT EXISTS city TEXT`;
       await sql`
         CREATE UNIQUE INDEX IF NOT EXISTS idx_pre_registrations_phone_unique
           ON pre_registrations(phone)
@@ -81,7 +93,10 @@ function mapRow(row: Record<string, unknown>): PreRegistrationRow {
     phone: String(row.phone),
     fullName: row.full_name == null ? null : String(row.full_name),
     organization: row.organization == null ? null : String(row.organization),
+    ministry: row.ministry == null ? null : String(row.ministry),
     positionTitle: row.position_title == null ? null : String(row.position_title),
+    province: row.province == null ? null : String(row.province),
+    city: row.city == null ? null : String(row.city),
     note: row.note == null ? null : String(row.note),
     status: row.status as PreRegistrationStatus,
     otpHash: row.otp_hash == null ? null : String(row.otp_hash),
@@ -101,7 +116,10 @@ function toPublic(row: PreRegistrationRow): PreRegistrationPublic {
     phone: row.phone,
     fullName: row.fullName,
     organization: row.organization,
+    ministry: row.ministry,
     positionTitle: row.positionTitle,
+    province: row.province,
+    city: row.city,
     note: row.note,
     status: row.status,
     verifiedAt: row.verifiedAt,
@@ -204,7 +222,10 @@ export async function pgSubmitPreRegistration(input: {
   phone: string;
   fullName: string;
   organization: string;
+  ministry: string;
   positionTitle: string;
+  province: string;
+  city: string;
   note: string | null;
 }): Promise<PreRegistrationRow | null> {
   await ensurePreRegistrationSchema();
@@ -214,7 +235,10 @@ export async function pgSubmitPreRegistration(input: {
     SET
       full_name = ${input.fullName},
       organization = ${input.organization},
+      ministry = ${input.ministry},
       position_title = ${input.positionTitle},
+      province = ${input.province},
+      city = ${input.city},
       note = ${input.note},
       status = 'submitted',
       otp_hash = NULL,
