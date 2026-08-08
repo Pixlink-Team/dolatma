@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "214ebff2bda026bb16d18b621d048d7e401b3c5b",
+      "committedAt": "2026-08-08T14:35:26+03:30",
+      "title": "مرتب‌سازی پیش‌فرض همه محتواها بر اساس جدیدترین آپلود",
+      "subject": "Default campaign content sort to newest upload"
+    },
+    {
       "hash": "39c960284273869aff79a605588be0dc7f508483",
       "committedAt": "2026-08-08T14:17:10+03:30",
       "title": "افزودن پیش‌ثبت‌نام با تأیید پیامکی در صفحه ورود",
