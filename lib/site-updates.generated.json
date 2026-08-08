@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "7a8123b03df82e554ea8f9010ee8b5a01d7c643d",
+      "committedAt": "2026-08-08T17:09:35+03:30",
+      "title": "اصلاح مسیرهای داخلی بخش رصد و واکنش سریع برای رییس",
+      "subject": "Split reis monitoring access from client-safe nav helpers"
+    },
+    {
       "hash": "82a202a385abdf52c11f3a37c514e3982cbc2e3d",
       "committedAt": "2026-08-08T17:07:01+03:30",
       "title": "باز شدن کامل بخش رصد و واکنش سریع از صفحه دسترسی رییس",
