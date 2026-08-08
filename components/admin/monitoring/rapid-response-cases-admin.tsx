@@ -30,8 +30,10 @@ import {
   RiskBadge,
   UrgencyBadge,
 } from "@/components/admin/monitoring/monitoring-ui";
+import { useMonitoringPaths } from "@/components/admin/monitoring/monitoring-paths";
 
 export function RapidResponseCasesAdmin({ campaignId }: { campaignId: string }) {
+  const paths = useMonitoringPaths();
   const [cases, setCases] = useState<RapidResponseCase[]>([]);
   const [organizations, setOrganizations] = useState<MonitoringOrganization[]>([]);
   const [organizationId, setOrganizationId] = useState("all");
@@ -162,7 +164,7 @@ export function RapidResponseCasesAdmin({ campaignId }: { campaignId: string }) 
                   </div>
                 </div>
                 <Button asChild size="sm">
-                  <Link href={adminHref(`/admin/rapid-response/cases/${c.id}`, campaignId)}>
+                  <Link href={adminHref(paths.caseDetail(c.id), campaignId)}>
                     جزئیات
                   </Link>
                 </Button>

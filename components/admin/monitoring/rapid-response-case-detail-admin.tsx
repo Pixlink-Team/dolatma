@@ -61,6 +61,7 @@ import {
   UrgencyBadge,
 } from "@/components/admin/monitoring/monitoring-ui";
 import { NarrativeComparisonChart } from "@/components/admin/monitoring/narrative-comparison-chart";
+import { useMonitoringPaths } from "@/components/admin/monitoring/monitoring-paths";
 
 const ACTION_COLUMNS: ActionStatus[] = [
   "pending",
@@ -85,6 +86,7 @@ export function RapidResponseCaseDetailAdmin({
   campaignId: string;
   caseId: string;
 }) {
+  const paths = useMonitoringPaths();
   const [caseItem, setCaseItem] = useState<RapidResponseCase | null>(null);
   const [actions, setActions] = useState<ResponseAction[]>([]);
   const [snapshots, setSnapshots] = useState<CaseMetricSnapshot[]>([]);
@@ -217,7 +219,7 @@ export function RapidResponseCaseDetailAdmin({
         </div>
         <div className="flex flex-wrap gap-2">
           <Button asChild variant="outline" size="sm">
-            <Link href={adminHref("/admin/rapid-response/cases", campaignId)}>لیست پرونده‌ها</Link>
+            <Link href={adminHref(paths.cases, campaignId)}>لیست پرونده‌ها</Link>
           </Button>
           <Button
             size="sm"
@@ -297,7 +299,7 @@ export function RapidResponseCaseDetailAdmin({
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="font-medium">{item.title}</p>
               <Button asChild size="sm" variant="ghost">
-                <Link href={adminHref(`/admin/monitoring/items/${item.id}`, campaignId)}>
+                <Link href={adminHref(paths.item(item.id), campaignId)}>
                   مشاهده خبر
                 </Link>
               </Button>

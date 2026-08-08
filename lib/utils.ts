@@ -137,8 +137,11 @@ export function slugify(text: string): string {
     .replace(/^-|-$/g, "") || generateId().slice(0, 8);
 }
 
-export function adminHref(path: string, campaignId: string) {
-  return `${path}?campaign=${campaignId}`;
+export function adminHref(path: string, campaignId?: string | null) {
+  const id = campaignId?.trim();
+  if (!id) return path;
+  const join = path.includes("?") ? "&" : "?";
+  return `${path}${join}campaign=${id}`;
 }
 
 export function getStatusLabel(status: string): string {

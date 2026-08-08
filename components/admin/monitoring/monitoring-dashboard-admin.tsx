@@ -27,10 +27,12 @@ import {
   RiskBadge,
   UrgencyBadge,
 } from "@/components/admin/monitoring/monitoring-ui";
+import { useMonitoringPaths } from "@/components/admin/monitoring/monitoring-paths";
 import { NarrativeComparisonChart } from "@/components/admin/monitoring/narrative-comparison-chart";
 
 export function MonitoringDashboardAdmin({ campaignId }: { campaignId: string }) {
   const router = useRouter();
+  const paths = useMonitoringPaths();
   const [data, setData] = useState<MonitoringDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [pending, startTransition] = useTransition();
@@ -112,7 +114,7 @@ export function MonitoringDashboardAdmin({ campaignId }: { campaignId: string })
             به‌روزرسانی
           </Button>
           <Button asChild>
-            <Link href={adminHref("/admin/monitoring/items/new", campaignId)}>ثبت خبر منفی</Link>
+            <Link href={adminHref(paths.newItem, campaignId)}>ثبت خبر منفی</Link>
           </Button>
         </div>
       </div>
@@ -176,7 +178,7 @@ export function MonitoringDashboardAdmin({ campaignId }: { campaignId: string })
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <Button asChild size="sm" variant="outline">
-                      <Link href={adminHref(`/admin/rapid-response/cases/${alert.caseId}`, campaignId)}>
+                      <Link href={adminHref(paths.caseDetail(alert.caseId), campaignId)}>
                         مشاهده پرونده
                       </Link>
                     </Button>
@@ -184,7 +186,7 @@ export function MonitoringDashboardAdmin({ campaignId }: { campaignId: string })
                       size="sm"
                       variant="outline"
                       onClick={() =>
-                        router.push(adminHref(`/admin/rapid-response/cases/${alert.caseId}`, campaignId))
+                        router.push(adminHref(paths.caseDetail(alert.caseId), campaignId))
                       }
                     >
                       تعیین مسئول
@@ -244,7 +246,7 @@ export function MonitoringDashboardAdmin({ campaignId }: { campaignId: string })
                   <td className="px-3 py-2">{SENTIMENT_LABELS[item.sentiment]}</td>
                   <td className="px-3 py-2">
                     <Button asChild size="sm" variant="ghost">
-                      <Link href={adminHref(`/admin/monitoring/items/${item.id}`, campaignId)}>جزئیات</Link>
+                      <Link href={adminHref(paths.item(item.id), campaignId)}>جزئیات</Link>
                     </Button>
                   </td>
                 </tr>

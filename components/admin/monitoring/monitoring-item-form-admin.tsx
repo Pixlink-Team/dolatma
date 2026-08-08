@@ -33,6 +33,7 @@ import {
   ensureMonitoringReadyAction,
   getMonitoringLookupsAction,
 } from "@/lib/actions/monitoring-actions";
+import { useMonitoringPaths } from "@/components/admin/monitoring/monitoring-paths";
 
 type SubmitMode = "save" | "submit_review" | "convert_to_case";
 
@@ -62,6 +63,7 @@ const emptyForm = {
 
 export function MonitoringItemFormAdmin({ campaignId }: { campaignId: string }) {
   const router = useRouter();
+  const paths = useMonitoringPaths();
   const [organizations, setOrganizations] = useState<MonitoringOrganization[]>([]);
   const [sources, setSources] = useState<MediaSource[]>([]);
   const [form, setForm] = useState(emptyForm);
@@ -135,12 +137,12 @@ export function MonitoringItemFormAdmin({ campaignId }: { campaignId: string }) 
 
       if (mode === "convert_to_case" && result.caseId) {
         toast.success("خبر ثبت و پرونده واکنش سریع ایجاد شد");
-        router.push(adminHref(`/admin/rapid-response/cases/${result.caseId}`, campaignId));
+        router.push(adminHref(paths.caseDetail(result.caseId), campaignId));
         return;
       }
 
       toast.success(mode === "submit_review" ? "برای بررسی ارسال شد" : "خبر ذخیره شد");
-      router.push(adminHref(`/admin/monitoring/items/${result.item.id}`, campaignId));
+      router.push(adminHref(paths.item(result.item.id), campaignId));
     });
   };
 

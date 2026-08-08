@@ -1,12 +1,11 @@
-import { ReisMonitoringAdmin } from "@/components/admin/reis/reis-monitoring-admin";
+import { MonitoringDashboardAdmin } from "@/components/admin/monitoring/monitoring-dashboard-admin";
 import { requireReisMonitoringAccess } from "@/lib/reis/monitoring-access";
 
 interface PageProps {
   searchParams: Promise<{ campaign?: string }>;
 }
 
-export default async function ReisMonitoringPage({ searchParams }: PageProps) {
+export default async function ReisMonitoringDashboardPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const { campaignId } = await requireReisMonitoringAccess(params.campaign);
-  return <ReisMonitoringAdmin campaignId={campaignId} />;
-}
+  return <MonitoringDashboardAdmin campaignId={campaignId} /

@@ -38,30 +38,31 @@ import type {
   ReisMonitoringOverview,
 } from "@/lib/monitoring/types";
 import { adminHref, cn, formatPersianNumber } from "@/lib/utils";
+import { useMonitoringPaths } from "@/components/admin/monitoring/monitoring-paths";
 
-const QUICK_LINKS = [
+const QUICK_LINK_DEFS = [
   {
-    href: "/admin/monitoring/dashboard",
+    key: "dashboard" as const,
     label: "داشبورد رصد",
     icon: LayoutDashboard,
   },
   {
-    href: "/admin/monitoring/feed",
+    key: "feed" as const,
     label: "جریان رصد",
     icon: Radar,
   },
   {
-    href: "/admin/monitoring/items/new",
+    key: "newItem" as const,
     label: "ثبت خبر منفی",
     icon: FilePlus2,
   },
   {
-    href: "/admin/rapid-response/cases",
+    key: "cases" as const,
     label: "پرونده‌های واکنش سریع",
     icon: FolderOpen,
   },
   {
-    href: "/admin/monitoring/archive",
+    key: "archive" as const,
     label: "بانک خبر و تحلیل",
     icon: Archive,
   },
@@ -91,6 +92,7 @@ function sortCaseActions(actions: RapidResponseCaseWithActions["actions"]) {
 }
 
 export function ReisMonitoringAdmin({ campaignId }: { campaignId: string }) {
+  const paths = useMonitoringPaths();
   const [data, setData] = useState<ReisMonitoringOverview | null>(null);
   const [loading, setLoading] = useState(true);
   const [pending, startTransition] = useTransition();
@@ -160,11 +162,12 @@ export function ReisMonitoringAdmin({ campaignId }: { campaignId: string }) {
       </div>
 
       <div className="flex flex-wrap gap-2">
-        {QUICK_LINKS.map((item) => {
+        {QUICK_LINK_DEFS.map((item) => {
           const Icon = item.icon;
+          const href = paths[item.key];
           return (
-            <Button key={item.href} asChild variant="outline" size="sm" className="gap-1.5">
-              <Link href={adminHref(item.href, campaignId)}>
+            <Button key={item.key} asChild variant="outline" size="sm" className="gap-1.5">
+              <Link href={adminHref(href, campaignId)}>
                 <Icon className="h-3.5 w-3.5" />
                 {item.label}
               </Link>
@@ -251,9 +254,7 @@ export function ReisMonitoringAdmin({ campaignId }: { campaignId: string }) {
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <Button asChild size="sm" variant="outline">
-                      <Link
-                        href={adminHref(`/admin/rapid-response/cases/${alert.caseId}`, campaignId)}
-                      >
+                      <Link href={adminHref(paths.caseDetail(alert.caseId), campaignId)}>
                         مشاهده پرونده
                       </Link>
                     </Button>
@@ -309,6 +310,7 @@ function ActiveActionCard({
   action: ActiveResponseAction;
   campaignId: string;
 }) {
+  const paths = useMonitoringPaths();
   return (
     <div
       className={cn(
@@ -363,7 +365,7 @@ function ActiveActionCard({
           </div>
         </div>
         <Button asChild size="sm" variant="outline">
-          <Link href={adminHref(`/admin/rapid-response/cases/${action.rapidResponseCaseId}`, campaignId)}>
+          <Link href={adminHref(paths.caseDetail(action.rapidResponseCaseId), campaignId)}>
             جزئیات پرونده
           </Link>
         </Button>
@@ -379,6 +381,7 @@ function CaseActionsCard({
   caseItem: RapidResponseCaseWithActions;
   campaignId: string;
 }) {
+  const paths = useMonitoringPaths();
   const actions = sortCaseActions(caseItem.actions);
   const running = actions.filter((a) =>
     ["in_progress", "overdue", "awaiting_approval"].includes(a.status)
@@ -434,7 +437,7 @@ function CaseActionsCard({
           ) : null}
         </div>
         <Button asChild size="sm" variant="outline">
-          <Link href={adminHref(`/admin/rapid-response/cases/${caseItem.id}`, campaignId)}>
+          <Link href={adminHref(paths.caseDetail(caseItem.id), campaignId)}>
             باز کردن پرونده
           </Link>
         </Button>

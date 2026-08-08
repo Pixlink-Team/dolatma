@@ -17,7 +17,8 @@ export default async function ReisSectionPage({ params }: ReisSectionPageProps) 
     notFound();
   }
 
-  // Dedicated routes take over these sections.
+  // Dedicated static routes (`campaigns`, `strategic`, `monitoring`) take
+  // precedence over this dynamic segment. These redirects are only a fallback.
   if (sectionKey === "campaigns") {
     redirect(`${REIS_HOME_PATH}/campaigns`);
   }

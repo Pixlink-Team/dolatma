@@ -19,8 +19,10 @@ import {
   MonitoringEmptyState,
   MonitoringSection,
 } from "@/components/admin/monitoring/monitoring-ui";
+import { useMonitoringPaths } from "@/components/admin/monitoring/monitoring-paths";
 
 export function MonitoringTrendsAdmin({ campaignId }: { campaignId: string }) {
+  const paths = useMonitoringPaths();
   const [trends, setTrends] = useState<Trend[]>([]);
   const [pending, startTransition] = useTransition();
 
@@ -55,7 +57,7 @@ export function MonitoringTrendsAdmin({ campaignId }: { campaignId: string }) {
             به‌روزرسانی
           </Button>
           <Button asChild variant="outline">
-            <Link href={adminHref("/admin/monitoring/feed", campaignId)}>جریان رصد</Link>
+            <Link href={adminHref(paths.feed, campaignId)}>جریان رصد</Link>
           </Button>
         </div>
       </div>

@@ -27,6 +27,7 @@ import {
   MonitoringSection,
   MonitoringStatCard,
 } from "@/components/admin/monitoring/monitoring-ui";
+import { useMonitoringPaths } from "@/components/admin/monitoring/monitoring-paths";
 
 function joinList(values: string[]): string {
   return values.join("\n");
@@ -40,6 +41,7 @@ function splitList(text: string): string[] {
 }
 
 export function CampaignMonitoringAdmin({ campaignId }: { campaignId: string }) {
+  const paths = useMonitoringPaths();
   const [data, setData] = useState<CampaignMonitoringBundle | null>(null);
   const [edit, setEdit] = useState({
     keywords: "",
@@ -156,7 +158,7 @@ export function CampaignMonitoringAdmin({ campaignId }: { campaignId: string }) 
             به‌روزرسانی
           </Button>
           <Button asChild variant="outline">
-            <Link href={adminHref("/admin/monitoring/dashboard", campaignId)}>داشبورد رصد</Link>
+            <Link href={adminHref(paths.dashboard, campaignId)}>داشبورد رصد</Link>
           </Button>
         </div>
       </div>
@@ -253,7 +255,7 @@ export function CampaignMonitoringAdmin({ campaignId }: { campaignId: string }) 
             data.during.negativeNews.map((item) => (
               <Link
                 key={item.id}
-                href={adminHref(`/admin/monitoring/items/${item.id}`, campaignId)}
+                href={adminHref(paths.item(item.id), campaignId)}
                 className="block rounded-xl border p-3 hover:bg-muted/40"
               >
                 <p className="font-medium">{item.title}</p>

@@ -13,8 +13,9 @@ import {
   Users,
   type LucideIcon,
 } from "lucide-react";
+import { useAdminCampaign } from "@/components/admin/admin-campaign-provider";
 import { REIS_SECTIONS, type ReisSectionKey } from "@/lib/reis/sections";
-import { cn, formatPersianNumber } from "@/lib/utils";
+import { adminHref, cn, formatPersianNumber } from "@/lib/utils";
 
 const SECTION_ICONS: Record<ReisSectionKey, LucideIcon> = {
   campaigns: Megaphone,
@@ -32,6 +33,7 @@ type ReisHubProps = {
 
 export function ReisHub({ userName }: ReisHubProps) {
   const displayName = userName?.trim() || null;
+  const { campaignId } = useAdminCampaign();
 
   return (
     <div className="mx-auto w-full max-w-6xl space-y-10">
@@ -56,6 +58,10 @@ export function ReisHub({ userName }: ReisHubProps) {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {REIS_SECTIONS.map((section, index) => {
           const Icon = SECTION_ICONS[section.key];
+          const href =
+            section.external || !campaignId
+              ? section.href
+              : adminHref(section.href, campaignId);
           const cardClass = cn(
             "group relative flex h-full flex-col overflow-hidden rounded-2xl border border-border/80 bg-card p-5 shadow-[var(--shadow-apple)] transition-[transform,box-shadow,border-color] duration-[var(--duration-apple)] ease-[var(--ease-apple)]",
             "hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-[var(--shadow-apple-hover)]",
@@ -111,7 +117,7 @@ export function ReisHub({ userName }: ReisHubProps) {
             return (
               <a
                 key={section.key}
-                href={section.href}
+                href={href}
                 target="_blank"
                 rel="noopener noreferrer"
                 className={cardClass}
@@ -122,7 +128,7 @@ export function ReisHub({ userName }: ReisHubProps) {
           }
 
           return (
-            <Link key={section.key} href={section.href} className={cardClass}>
+            <Link key={section.key} href={href} className={cardClass}>
               {body}
             </Link>
           );

@@ -23,6 +23,7 @@ import {
   RiskBadge,
   UrgencyBadge,
 } from "@/components/admin/monitoring/monitoring-ui";
+import { useMonitoringPaths } from "@/components/admin/monitoring/monitoring-paths";
 
 function riskFromScore(score: number) {
   if (score >= 75) return "critical" as const;
@@ -38,6 +39,7 @@ export function OrganizationMediaIntelligenceAdmin({
   campaignId: string;
   organizationId: string;
 }) {
+  const paths = useMonitoringPaths();
   const [data, setData] = useState<OrganizationMediaIntelligence | null>(null);
   const [loading, setLoading] = useState(true);
   const [pending, startTransition] = useTransition();
@@ -190,7 +192,7 @@ export function OrganizationMediaIntelligenceAdmin({
               {data.recentItems.map((item) => (
                 <Link
                   key={item.id}
-                  href={adminHref(`/admin/monitoring/items/${item.id}`, campaignId)}
+                  href={adminHref(paths.item(item.id), campaignId)}
                   className="block rounded-xl border p-3 hover:bg-muted/40"
                 >
                   <div className="flex flex-wrap items-center gap-2">
@@ -219,7 +221,7 @@ export function OrganizationMediaIntelligenceAdmin({
               {data.recentCases.map((c) => (
                 <Link
                   key={c.id}
-                  href={adminHref(`/admin/rapid-response/cases/${c.id}`, campaignId)}
+                  href={adminHref(paths.caseDetail(c.id), campaignId)}
                   className="block rounded-xl border p-3 hover:bg-muted/40"
                 >
                   <p className="font-medium">{c.title}</p>

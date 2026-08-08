@@ -102,10 +102,12 @@ export async function getReisMonitoringOverviewAction(campaignId?: string) {
     assertMonitoringCapability(session, "view_dashboard");
     await ensureMonitoringSchema();
     await seedMonitoringModule(campaignId);
+    // Match the main dashboard: show all open cases/actions (not only one campaign),
+    // otherwise the reis overview looks empty when seed/cases span campaigns.
     const [dashboard, activeActions, openCases] = await Promise.all([
       pgGetMonitoringDashboard(),
-      pgListActiveResponseActions({ campaignId, limit: 40 }),
-      pgListOpenCasesWithActions({ campaignId, limit: 24 }),
+      pgListActiveResponseActions({ limit: 40 }),
+      pgListOpenCasesWithActions({ limit: 24 }),
     ]);
     return {
       success: true as const,

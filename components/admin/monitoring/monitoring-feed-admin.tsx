@@ -33,6 +33,7 @@ import {
   RiskBadge,
   UrgencyBadge,
 } from "@/components/admin/monitoring/monitoring-ui";
+import { useMonitoringPaths } from "@/components/admin/monitoring/monitoring-paths";
 
 const TABS = [
   { id: "all", label: "همه" },
@@ -46,6 +47,7 @@ const TABS = [
 ] as const;
 
 export function MonitoringFeedAdmin({ campaignId }: { campaignId: string }) {
+  const paths = useMonitoringPaths();
   const [items, setItems] = useState<MonitoredItem[]>([]);
   const [total, setTotal] = useState(0);
   const [organizations, setOrganizations] = useState<MonitoringOrganization[]>([]);
@@ -116,7 +118,7 @@ export function MonitoringFeedAdmin({ campaignId }: { campaignId: string }) {
           </p>
         </div>
         <Button asChild>
-          <Link href={adminHref("/admin/monitoring/items/new", campaignId)}>ثبت دستی خبر</Link>
+          <Link href={adminHref(paths.newItem, campaignId)}>ثبت دستی خبر</Link>
         </Button>
       </div>
 
@@ -211,7 +213,7 @@ export function MonitoringFeedAdmin({ campaignId }: { campaignId: string }) {
       {tab === "trends" ? (
         <div className="rounded-xl border p-4 text-sm text-muted-foreground">
           برای مشاهده ترندها به صفحه{" "}
-          <Link className="text-primary underline" href={adminHref("/admin/monitoring/trends", campaignId)}>
+          <Link className="text-primary underline" href={adminHref(paths.trends, campaignId)}>
             ترندها
           </Link>{" "}
           بروید. منابع فعال: {formatPersianNumber(sources.length)}
@@ -265,7 +267,7 @@ export function MonitoringFeedAdmin({ campaignId }: { campaignId: string }) {
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <Button asChild size="sm" variant="outline">
-                    <Link href={adminHref(`/admin/monitoring/items/${item.id}`, campaignId)}>جزئیات</Link>
+                    <Link href={adminHref(paths.item(item.id), campaignId)}>جزئیات</Link>
                   </Button>
                   <Button size="sm" variant="outline" disabled={pending} onClick={() => runReview(item.id, "approve")}>
                     تأیید
@@ -295,7 +297,7 @@ export function MonitoringFeedAdmin({ campaignId }: { campaignId: string }) {
                     ادامه رصد
                   </Button>
                   <Button asChild size="sm">
-                    <Link href={adminHref(`/admin/monitoring/items/${item.id}?convert=1`, campaignId)}>
+                    <Link href={adminHref(`${paths.item(item.id)}?convert=1`, campaignId)}>
                       تبدیل به پرونده
                     </Link>
                   </Button>

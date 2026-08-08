@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "a15b1a12f744f69e5dde27cd3d1afbca80574a12",
+      "committedAt": "2026-08-08T16:56:56+03:30",
+      "title": "باز شدن بخش رصد و واکنش سریع با نمایش اقدام‌های در حال اجرا",
+      "subject": "Open reis monitoring and rapid-response hub"
+    },
+    {
       "hash": "f25846ca81e6f086310ff46c5f824bcf91268620",
       "committedAt": "2026-08-08T16:53:02+03:30",
       "title": "اتصال کمپین رییس به گزارش زنده و افزودن مدیریت دستورکار و درخواست بالاسری",

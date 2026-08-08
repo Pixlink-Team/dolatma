@@ -3,12 +3,23 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ArrowRight, LogOut } from "lucide-react";
+import { useAdminCampaign } from "@/components/admin/admin-campaign-provider";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { logoutAdminAction } from "@/lib/actions/auth-actions";
+import { REIS_MONITORING_BASE, REIS_MONITORING_NAV } from "@/lib/reis/monitoring";
 import { REIS_HOME_PATH } from "@/lib/reis/sections";
 import { createClient } from "@/lib/supabase/client";
-import { isSupabaseConfigured } from "@/lib/utils";
+import { adminHref, cn, isSupabaseConfigured } from "@/lib/utils";
+
+function isMonitoringSurface(pathname: string) {
+  return (
+    pathname === REIS_MONITORING_BASE ||
+    pathname.startsWith(`${REIS_MONITORING_BASE}/`) ||
+    pathname.startsWith("/admin/monitoring") ||
+    pathname.startsWith("/admin/rapid-response")
+  );
+}
 
 type ReisShellProps = {
   children: React.ReactNode;
@@ -20,7 +31,9 @@ type ReisShellProps = {
 export function ReisShell({ children, showAdminReturn = false, userName }: ReisShellProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const { campaignId } = useAdminCampaign();
   const isHub = pathname === REIS_HOME_PATH;
+  const showMonitoringNav = isMonitoringSurface(pathname);
 
   const handleLogout = async () => {
     if (isSupabaseConfigured()) {
@@ -40,7 +53,12 @@ export function ReisShell({ children, showAdminReturn = false, userName }: ReisS
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(37,99,235,0.08),_transparent_55%),radial-gradient(ellipse_at_bottom_left,_rgba(14,165,233,0.06),_transparent_45%)]"
       />
       <header className="relative z-10 border-b border-border/70 bg-background/80 backdrop-blur">
-        <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
+        <div
+          className={cn(
+            "mx-auto flex w-full items-center justify-between gap-3 px-4 py-3 sm:px-6",
+            showMonitoringNav ? "max-w-7xl" : "max-w-6xl"
+          )}
+        >
           <div className="flex min-w-0 items-center gap-3">
             {!isHub ? (
               <Button asChild variant="ghost" size="sm" className="shrink-0 gap-1.5">
@@ -51,7 +69,9 @@ export function ReisShell({ children, showAdminReturn = false, userName }: ReisS
               </Button>
             ) : null}
             <div className="min-w-0">
-              <p className="truncate text-sm font-semibold">دسترسی رییس</p>
+              <p className="truncate text-sm font-semibold">
+                {showMonitoringNav ? "رصد و واکنش سریع" : "دسترسی رییس"}
+              </p>
               {userName ? (
                 <p className="truncate text-xs text-muted-foreground">{userName}</p>
               ) : null}
@@ -76,8 +96,43 @@ export function ReisShell({ children, showAdminReturn = false, userName }: ReisS
             </Button>
           </div>
         </div>
+        {showMonitoringNav ? (
+          <div className="border-t border-border/60">
+            <nav
+              aria-label="بخش‌های رصد و واکنش سریع"
+              className="mx-auto flex w-full max-w-7xl gap-1 overflow-x-auto px-4 py-2 sm:px-6"
+            >
+              {REIS_MONITORING_NAV.map((item) => {
+                const href = adminHref(item.href, campaignId);
+                const isActive =
+                  "exact" in item && item.exact
+                    ? pathname === item.href
+                    : pathname === item.href || pathname.startsWith(`${item.href}/`);
+                return (
+                  <Link
+                    key={item.href}
+                    href={href}
+                    className={cn(
+                      "shrink-0 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
+                      isActive
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                    )}
+                  >
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </nav>
+          </div>
+        ) : null}
       </header>
-      <main className="relative z-10 mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
+      <main
+        className={cn(
+          "relative z-10 mx-auto w-full px-4 py-8 sm:px-6 sm:py-10",
+          showMonitoringNav ? "max-w-7xl" : "max-w-6xl"
+        )}
+      >
         {children}
       </main>
     </div>

@@ -47,6 +47,7 @@ import {
   RiskBadge,
   UrgencyBadge,
 } from "@/components/admin/monitoring/monitoring-ui";
+import { useMonitoringPaths } from "@/components/admin/monitoring/monitoring-paths";
 
 const WIZARD_STEPS = [
   "اطلاعات پایه",
@@ -79,6 +80,7 @@ export function MonitoringItemDetailAdmin({
   initialConvert?: boolean;
 }) {
   const router = useRouter();
+  const paths = useMonitoringPaths();
 
   const [item, setItem] = useState<MonitoredItem | null>(null);
   const [similar, setSimilar] = useState<MonitoredItem[]>([]);
@@ -201,7 +203,7 @@ export function MonitoringItemDetailAdmin({
         return;
       }
       toast.success(`پرونده ${result.caseNumber} ایجاد شد`);
-      router.push(adminHref(`/admin/rapid-response/cases/${result.caseId}`, campaignId));
+      router.push(adminHref(paths.caseDetail(result.caseId), campaignId));
     });
   };
 
@@ -251,7 +253,7 @@ export function MonitoringItemDetailAdmin({
         </div>
         <div className="flex flex-wrap gap-2">
           <Button asChild variant="outline">
-            <Link href={adminHref("/admin/monitoring/feed", campaignId)}>بازگشت به جریان</Link>
+            <Link href={adminHref(paths.feed, campaignId)}>بازگشت به جریان</Link>
           </Button>
           {item.status !== "converted_to_case" ? (
             <Button
@@ -682,7 +684,7 @@ export function MonitoringItemDetailAdmin({
             {similar.map((s) => (
               <Link
                 key={s.id}
-                href={adminHref(`/admin/monitoring/items/${s.id}`, campaignId)}
+                href={adminHref(paths.item(s.id), campaignId)}
                 className="block rounded-xl border p-3 hover:bg-muted/40"
               >
                 <p className="font-medium">{s.title}</p>
