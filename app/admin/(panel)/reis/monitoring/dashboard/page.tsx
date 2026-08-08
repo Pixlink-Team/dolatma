@@ -8,4 +8,5 @@ interface PageProps {
 export default async function ReisMonitoringDashboardPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const { campaignId } = await requireReisMonitoringAccess(params.campaign);
-  return <MonitoringDashboardAdmin campaignId={campaignId} /
+  return <MonitoringDashboardAdmin campaignId={campaignId} />;
+}

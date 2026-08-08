@@ -1,5 +1,5 @@
 import { RapidResponseCaseDetailAdmin } from "@/components/admin/monitoring/rapid-response-case-detail-admin";
-import { requireReisMonitoringAccess } from "@/lib/reis/monitoring";
+import { requireReisMonitoringAccess } from "@/lib/reis/monitoring-access";
 
 interface PageProps {
   params: Promise<{ id: string }>;

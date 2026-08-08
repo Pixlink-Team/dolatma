@@ -1,5 +1,5 @@
 import { OrganizationMediaIntelligenceAdmin } from "@/components/admin/monitoring/organization-media-intelligence-admin";
-import { requireReisMonitoringAccess } from "@/lib/reis/monitoring";
+import { requireReisMonitoringAccess } from "@/lib/reis/monitoring-access";
 
 interface PageProps {
   params: Promise<{ id: string }>;

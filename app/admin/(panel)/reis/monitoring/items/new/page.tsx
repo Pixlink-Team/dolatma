@@ -8,4 +8,5 @@ interface PageProps {
 export default async function ReisMonitoringNewItemPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const { campaignId } = await requireReisMonitoringAccess(params.campaign);
-  return <MonitoringItemFormAdmin campaignId={campaignId} /
+  return <MonitoringItemFormAdmin campaignId={campaignId} />;
+}

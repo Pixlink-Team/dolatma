@@ -1,5 +1,5 @@
 import { MonitoringItemDetailAdmin } from "@/components/admin/monitoring/monitoring-item-detail-admin";
-import { requireReisMonitoringAccess } from "@/lib/reis/monitoring";
+import { requireReisMonitoringAccess } from "@/lib/reis/monitoring-access";
 
 interface PageProps {
   params: Promise<{ id: string }>;
