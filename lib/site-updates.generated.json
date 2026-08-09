@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "73827567a10ab157eb417f31309dced2c740e41c",
+      "committedAt": "2026-08-08T19:26:59+03:30",
+      "title": "ورود خودکار به تقویم دفاع بدون لاگین جدا",
+      "subject": "Auto-login defense calendar via dolatma SSO fallback"
+    },
+    {
       "hash": "cdc1384b5ed74b12b371f95bd9b28e1129225242",
       "committedAt": "2026-08-08T18:11:53+03:30",
       "title": "ورود خودکار به تقویم دفاع با همان حساب دولتما",

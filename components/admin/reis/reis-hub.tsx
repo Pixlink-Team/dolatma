@@ -7,6 +7,7 @@ import {
   ChevronLeft,
   ClipboardCheck,
   ExternalLink,
+  FileBarChart,
   Megaphone,
   MessageSquareQuote,
   Radar,
@@ -25,6 +26,7 @@ const SECTION_ICONS: Record<ReisSectionKey, LucideIcon> = {
   education: BookOpen,
   meetings: Users,
   narrative: MessageSquareQuote,
+  reporting: FileBarChart,
 };
 
 type ReisHubProps = {

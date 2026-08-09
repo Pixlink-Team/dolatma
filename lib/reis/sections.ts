@@ -8,6 +8,7 @@ export const REIS_SECTION_KEYS = [
   "education",
   "meetings",
   "narrative",
+  "reporting",
 ] as const;
 
 export type ReisSectionKey = (typeof REIS_SECTION_KEYS)[number];
@@ -79,6 +80,14 @@ export const REIS_SECTIONS: ReisSection[] = [
     href: `${REIS_HOME_PATH}/narrative`,
     accent: "from-fuchsia-500/20 to-purple-600/10",
     iconBg: "bg-fuchsia-500/15 text-fuchsia-700 dark:text-fuchsia-300",
+  },
+  {
+    key: "reporting",
+    title: "گزارش‌گیری",
+    description: "تهیه و مشاهده گزارش‌های مدیریتی و عملکردی",
+    href: `${REIS_HOME_PATH}/reporting`,
+    accent: "from-slate-500/20 to-zinc-600/10",
+    iconBg: "bg-slate-500/15 text-slate-700 dark:text-slate-300",
   },
 ];
 
