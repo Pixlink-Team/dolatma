@@ -542,8 +542,11 @@ export async function handleTaghvimApi(
     if (!actorHasPermission(actor, "manage_content")) {
       return jsonError("Forbidden", 403);
     }
-    // No bundled seed dump in dolatma — clear is enough; restore is a no-op success.
-    return Response.json({ message: "restore skipped — use migrate script" });
+    // No bundled seed dump in dolatma — restore must be done via migrate script.
+    return jsonError(
+      "بازیابی داده نمونه در این نسخه در دسترس نیست. از اسکریپت migrate استفاده کنید.",
+      501,
+    );
   }
 
   // Settings / categories

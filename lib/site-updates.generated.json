@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "814b2b32a033d6f5ab16d630965558f1551ac8c6",
+      "committedAt": "2026-08-10T12:15:43+03:30",
+      "title": "نمایش پرچم ایران در بنر شعار تقویم دفاعی",
+      "subject": "Fix missing Iran flag logo in calendar motto banner"
+    },
+    {
       "hash": "b668f91f72e68764e4b58abd00efbc5b255b7b46",
       "committedAt": "2026-08-10T11:49:48+03:30",
       "title": "یکی‌سازی کامل تقویم دفاع داخل دولتما بدون لاگین جدا",

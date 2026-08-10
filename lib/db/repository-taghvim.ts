@@ -1400,11 +1400,17 @@ export async function demoStats() {
   const days = await sql`SELECT COUNT(*)::int AS c FROM taghvim_calendar_days WHERE deleted_at IS NULL`;
   const enemies = await sql`SELECT COUNT(*)::int AS c FROM taghvim_enemy_actions WHERE deleted_at IS NULL`;
   const govs = await sql`SELECT COUNT(*)::int AS c FROM taghvim_government_actions WHERE deleted_at IS NULL`;
+  const dayCount = Number(days[0]?.c ?? 0);
+  const enemyCount = Number(enemies[0]?.c ?? 0);
+  const govCount = Number(govs[0]?.c ?? 0);
+  const events = enemyCount + govCount;
   return {
     data: {
-      days: Number(days[0]?.c ?? 0),
-      enemy_actions: Number(enemies[0]?.c ?? 0),
-      government_actions: Number(govs[0]?.c ?? 0),
+      days: dayCount,
+      events,
+      cleared: dayCount === 0 && events === 0,
+      enemy_actions: enemyCount,
+      government_actions: govCount,
     },
   };
 }
@@ -1412,12 +1418,27 @@ export async function demoStats() {
 export async function clearDemoData() {
   await ensureTaghvimSchema();
   const sql = getSql();
+  const days = await sql`SELECT COUNT(*)::int AS c FROM taghvim_calendar_days`;
+  const enemies = await sql`SELECT COUNT(*)::int AS c FROM taghvim_enemy_actions`;
+  const govs = await sql`SELECT COUNT(*)::int AS c FROM taghvim_government_actions`;
+  const media = await sql`SELECT COUNT(*)::int AS c FROM taghvim_media`;
+  const dayCount = Number(days[0]?.c ?? 0);
+  const eventCount =
+    Number(enemies[0]?.c ?? 0) + Number(govs[0]?.c ?? 0);
+  const mediaCount = Number(media[0]?.c ?? 0);
   await sql`DELETE FROM taghvim_media`;
   await sql`DELETE FROM taghvim_government_actions`;
   await sql`DELETE FROM taghvim_enemy_actions`;
   await sql`DELETE FROM taghvim_calendar_days`;
   await sql`DELETE FROM taghvim_notifications`;
-  return { message: "cleared" };
+  return {
+    message: "cleared",
+    data: {
+      days: dayCount,
+      events: eventCount,
+      media: mediaCount,
+    },
+  };
 }
 
 export async function getSettings() {

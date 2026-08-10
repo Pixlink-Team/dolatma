@@ -34,6 +34,7 @@ function AdminHomeContent() {
   const [canUsers, setCanUsers] = useState(false);
   const [canSubusers, setCanSubusers] = useState(false);
   const [canSettings, setCanSettings] = useState(false);
+  const [canAgencies, setCanAgencies] = useState(false);
   const [canContent, setCanContent] = useState(false);
   const [canArchive, setCanArchive] = useState(false);
   const [canBackup, setCanBackup] = useState(false);
@@ -61,6 +62,7 @@ function AdminHomeContent() {
       setCanUsers(userHasPermission(user, "manage_users"));
       setCanSubusers(userHasPermission(user, "manage_subusers"));
       setCanSettings(userHasPermission(user, "manage_settings"));
+      setCanAgencies(userHasPermission(user, "manage_agencies"));
       setCanContent(userHasPermission(user, "manage_content"));
       setCanArchive(userHasPermission(user, "view_archive"));
       setCanBackup(userHasPermission(user, "run_backup"));
@@ -159,7 +161,7 @@ function AdminHomeContent() {
           </Link>
         ) : null}
 
-        {canUsers ? (
+        {canAgencies ? (
           <Link
             href={taghvimPath("/admin/agencies")}
             className="rounded-2xl border border-[var(--border)] bg-[var(--panel)] p-5 transition hover:border-blue-500/30"
