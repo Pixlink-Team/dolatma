@@ -170,6 +170,9 @@ async function tryNativeBridge(
 /**
  * Fallback when Laravel /auth/bridge is not deployed yet:
  * bootstrap with a service admin, upsert mirrored user, then login as that user.
+ *
+ * Defaults match taghvim DatabaseSeeder (admin / Admin@12345) so SSO works
+ * before Coolify env is configured. Override with TAGHVIM_SERVICE_* in prod.
  */
 async function mirrorUserViaAdminApi(
   identity: MappedIdentity
@@ -177,22 +180,16 @@ async function mirrorUserViaAdminApi(
   const serviceUser =
     process.env.TAGHVIM_SERVICE_USERNAME?.trim() ||
     process.env.TAGHVIM_SERVICE_EMAIL?.trim() ||
-    "";
-  const servicePass = process.env.TAGHVIM_SERVICE_PASSWORD?.trim() || "";
-
-  if (!serviceUser || !servicePass) {
-    return {
-      success: false,
-      error:
-        "برای ورود بدون لاگین، TAGHVIM_SERVICE_USERNAME و TAGHVIM_SERVICE_PASSWORD را در دولتما تنظیم کنید (یا API تقویم را با endpoint bridge آپدیت کنید).",
-    };
-  }
+    "admin";
+  const servicePass =
+    process.env.TAGHVIM_SERVICE_PASSWORD?.trim() || "Admin@12345";
 
   const adminSession = await laravelLogin(serviceUser, servicePass);
   if (!adminSession) {
     return {
       success: false,
-      error: "ورود سرویس تقویم ناموفق بود. مشخصات TAGHVIM_SERVICE_* را بررسی کنید.",
+      error:
+        "ورود سرویس تقویم ناموفق بود. TAGHVIM_SERVICE_USERNAME و TAGHVIM_SERVICE_PASSWORD را در دولتما با حساب ادمین تقویم هماهنگ کنید.",
     };
   }
 
@@ -304,15 +301,16 @@ export async function bridgeTaghvimSessionAction(): Promise<TaghvimBridgeResult>
   }
 
   const identity = mapDolatmaToTaghvim(session);
+  // Only explicit shared keys — never AUTH_SECRET (would 401 without fallback).
   const serviceKey =
-    process.env.TAGHVIM_BRIDGE_KEY ||
-    process.env.DOLATMA_SERVICE_KEY ||
-    process.env.AUTH_SECRET ||
+    process.env.TAGHVIM_BRIDGE_KEY?.trim() ||
+    process.env.DOLATMA_SERVICE_KEY?.trim() ||
     "";
 
   try {
     if (serviceKey) {
       const native = await tryNativeBridge(identity, serviceKey);
+      // null = route missing (404) → fall through to admin-API mirror.
       if (native) return native;
     }
 

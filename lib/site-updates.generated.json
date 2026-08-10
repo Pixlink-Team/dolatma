@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "6a69e6b2ab47c9b2e85363c080094ae3d91a23ec",
+      "committedAt": "2026-08-10T11:11:13+03:30",
+      "title": "افزودن بررسی سلامت سرویس برای پایداری بیشتر دیپلوی",
+      "subject": "Add container health checks for app readiness"
+    },
+    {
       "hash": "7cf979d166ea5439e0d34ad39d430c20ee3887a7",
       "committedAt": "2026-08-10T10:54:31+03:30",
       "title": "یکپارچه‌سازی ظاهر و هویت تقویم دفاع با پنل دولتما",

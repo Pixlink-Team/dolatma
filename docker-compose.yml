@@ -27,6 +27,10 @@ services:
       ADMIN_EMAIL: ${ADMIN_EMAIL:?Set ADMIN_EMAIL in .env}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env}
       AUTH_SECRET: ${AUTH_SECRET:?Set AUTH_SECRET in .env (min 16 random characters)}
+      TAGHVIM_API_INTERNAL_URL: ${TAGHVIM_API_INTERNAL_URL:-https://taghvim.pixlink.ir}
+      TAGHVIM_BRIDGE_KEY: ${TAGHVIM_BRIDGE_KEY:-}
+      TAGHVIM_SERVICE_USERNAME: ${TAGHVIM_SERVICE_USERNAME:-admin}
+      TAGHVIM_SERVICE_PASSWORD: ${TAGHVIM_SERVICE_PASSWORD:-Admin@12345}
       UPLOAD_DIR: /app/data/uploads
       BACKUP_DIR: /app/data/backups
     depends_on:
