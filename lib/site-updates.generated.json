@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "7cf979d166ea5439e0d34ad39d430c20ee3887a7",
+      "committedAt": "2026-08-10T10:54:31+03:30",
+      "title": "یکپارچه‌سازی ظاهر و هویت تقویم دفاع با پنل دولتما",
+      "subject": "Unify defense calendar UI with dolatma chrome"
+    },
+    {
       "hash": "5a3ea1f6f106feea9a21ecace83872c93d23a510",
       "committedAt": "2026-08-09T11:52:24+03:30",
       "title": "افزودن بخش گزارش‌گیری به پنل دسترسی رییس",
