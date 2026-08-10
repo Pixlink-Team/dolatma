@@ -51,59 +51,25 @@ function normalizeUser(raw: Record<string, unknown>): AdminUser {
   };
 }
 
-/** Normalize Laravel UserResource payload from the dolatma SSO bridge. */
+/** @deprecated Bridge removed — kept for call-site compatibility. */
 export function normalizeBridgedUser(raw: Record<string, unknown>): AdminUser {
   return normalizeUser(raw);
 }
 
 export async function loginRequest(
-  username: string,
-  password: string,
+  _username: string,
+  _password: string,
 ): Promise<AuthSession> {
-  let response: Response;
-  try {
-    response = await fetch(`${getApiBase()}/auth/login`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify({ username, password }),
-    });
-  } catch {
-    throw new Error(
-      "اتصال به سرور برقرار نشد. آدرس API یا CORS را در تنظیمات سرور بررسی کنید.",
-    );
-  }
-
-  if (!response.ok) {
-    if (response.status === 401 || response.status === 422) {
-      throw new Error("نام کاربری یا رمز عبور نادرست است.");
-    }
-    throw new Error("ورود ناموفق بود.");
-  }
-
-  const payload = await response.json();
-  const rawUser = (payload.user?.data ?? payload.user) as Record<string, unknown>;
-  const user = normalizeUser(rawUser);
-  setSession(payload.token, user);
-  return { token: payload.token, user };
+  throw new Error(
+    "ورود جداگانه تقویم حذف شده است؛ از حساب دولتما استفاده کنید.",
+  );
 }
 
 export async function logoutRequest() {
-  const session = getSession();
-  if (session?.token) {
-    try {
-      await fetch(`${getApiBase()}/auth/logout`, {
-        method: "POST",
-        headers: {
-          Accept: "application/json",
-          Authorization: `Bearer ${session.token}`,
-        },
-      });
-    } catch {
-      // ignore
-    }
+  try {
+    await apiFetch("/auth/logout", { method: "POST" });
+  } catch {
+    // ignore
   }
   clearSession();
 }
@@ -113,24 +79,24 @@ export function getCurrentUser(): AdminUser | null {
 }
 
 export function getAuthToken(): string | null {
-  return getSession()?.token ?? null;
+  return getSession()?.token ?? "dolatma";
 }
 
-/** Refresh permissions/profile from API into the local session. */
+/** Refresh permissions/profile from local API into the session store. */
 export async function refreshCurrentUser(): Promise<AdminUser | null> {
-  const token = getAuthToken();
-  if (!token) return null;
-
   try {
     const response = await apiFetch("/auth/me");
-    if (!response.ok) return getCurrentUser();
+    if (!response.ok) {
+      clearSession();
+      return null;
+    }
     const payload = await response.json();
     const rawUser = (payload.data ?? payload.user ?? payload) as Record<
       string,
       unknown
     >;
     const user = normalizeUser(rawUser);
-    setSession(token, user);
+    setSession("dolatma", user);
     return user;
   } catch {
     return getCurrentUser();
@@ -141,12 +107,8 @@ export async function apiFetch(
   path: string,
   init: RequestInit = {},
 ): Promise<Response> {
-  const token = getAuthToken();
   const headers = new Headers(init.headers);
   headers.set("Accept", "application/json");
-  if (token) {
-    headers.set("Authorization", `Bearer ${token}`);
-  }
   if (init.body && !(init.body instanceof FormData) && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
@@ -157,11 +119,12 @@ export async function apiFetch(
       {
         ...init,
         headers,
+        credentials: "include",
       },
     );
   } catch {
     throw new Error(
-      "اتصال به سرور برقرار نشد. لطفاً API را اجرا کنید و CORS دامنه را تنظیم کنید.",
+      "اتصال به سرور برقرار نشد. لطفاً صفحه را تازه کنید.",
     );
   }
 }

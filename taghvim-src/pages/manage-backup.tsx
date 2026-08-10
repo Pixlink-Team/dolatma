@@ -1,7 +1,7 @@
 "use client";
 
 import { RequireAuth } from "@taghvim/components/admin/RequireAuth";
-import { apiFetch, getAuthToken } from "@taghvim/lib/auth";
+import { apiFetch } from "@taghvim/lib/auth";
 import { getApiBase } from "@taghvim/lib/api";
 import { Download, HardDrive, RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -9,7 +9,8 @@ import { useEffect, useState } from "react";
 type BackupItem = {
   filename: string;
   size: number;
-  modified_at: string;
+  modified_at?: string;
+  created_at?: string;
 };
 
 export default function BackupPage() {
@@ -59,14 +60,10 @@ function BackupManager() {
   }
 
   function download(filename: string) {
-    const token = getAuthToken();
     const url = `${getApiBase()}/backups/${encodeURIComponent(filename)}/download`;
     const a = document.createElement("a");
-    // Use fetch blob for auth header
     void (async () => {
-      const res = await fetch(url, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
+      const res = await fetch(url, { credentials: "include" });
       if (!res.ok) {
         setError("دانلود ناموفق بود");
         return;
@@ -120,7 +117,9 @@ function BackupManager() {
                 <p className="text-sm font-medium text-[var(--text-primary)]">{item.filename}</p>
                 <p className="text-xs text-[var(--text-secondary)]">
                   {(item.size / 1024).toFixed(1)} KB ·{" "}
-                  {new Date(item.modified_at).toLocaleString("fa-IR")}
+                  {new Date(
+                    item.modified_at || item.created_at || Date.now()
+                  ).toLocaleString("fa-IR")}
                 </p>
               </div>
               <button

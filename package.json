@@ -10,7 +10,8 @@
     "lint": "next lint",
     "db:migrate": "node scripts/db-migrate.mjs",
     "db:seed": "node scripts/db-seed.mjs",
-    "db:remap-billboard-categories": "node scripts/remap-billboard-categories.mjs"
+    "db:remap-billboard-categories": "node scripts/remap-billboard-categories.mjs",
+    "taghvim:migrate-from-laravel": "node scripts/migrate-taghvim-from-laravel.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.0.1",

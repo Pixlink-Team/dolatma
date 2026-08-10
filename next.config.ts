@@ -17,12 +17,6 @@ const contentSecurityPolicy = [
   "upgrade-insecure-requests",
 ].join("; ");
 
-const taghvimApiInternal = (
-  process.env.TAGHVIM_API_INTERNAL_URL ||
-  process.env.TAGHVIM_BACKEND_URL ||
-  "https://taghvim.pixlink.ir"
-).replace(/\/$/, "");
-
 const nextConfig: NextConfig = {
   output: "standalone",
   outputFileTracingRoot: path.join(__dirname),
@@ -56,23 +50,6 @@ const nextConfig: NextConfig = {
         source: "/favicon.ico",
         destination: "/images/dolat-icon.png",
         permanent: false,
-      },
-    ];
-  },
-  async rewrites() {
-    return [
-      {
-        source: "/api/taghvim/v1/:path*",
-        destination: `${taghvimApiInternal}/api/v1/:path*`,
-      },
-      {
-        source: "/api/taghvim/storage/:path*",
-        destination: `${taghvimApiInternal}/storage/:path*`,
-      },
-      // Laravel often emits absolute /storage/* URLs; proxy through same origin.
-      {
-        source: "/storage/:path*",
-        destination: `${taghvimApiInternal}/storage/:path*`,
       },
     ];
   },

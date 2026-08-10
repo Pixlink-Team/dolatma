@@ -2319,3 +2319,139 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_pre_registrations_phone_unique
 CREATE INDEX IF NOT EXISTS idx_pre_registrations_status_created
   ON pre_registrations(status, created_at DESC);
 
+-- Defense calendar (taghvim) — also ensured at runtime in repository-taghvim.ts
+CREATE TABLE IF NOT EXISTS taghvim_users (
+  id BIGSERIAL PRIMARY KEY,
+  dolatma_user_id UUID,
+  name TEXT NOT NULL,
+  username TEXT NOT NULL UNIQUE,
+  email TEXT,
+  mobile TEXT,
+  password_hash TEXT,
+  role TEXT NOT NULL DEFAULT 'editor',
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  parent_id BIGINT,
+  permissions JSONB NOT NULL DEFAULT '[]'::jsonb,
+  agency_ids JSONB NOT NULL DEFAULT '[]'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS taghvim_categories (
+  id BIGSERIAL PRIMARY KEY,
+  name TEXT NOT NULL,
+  slug TEXT NOT NULL UNIQUE,
+  color TEXT NOT NULL DEFAULT '#64748b',
+  type TEXT NOT NULL DEFAULT 'enemy',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS taghvim_calendar_days (
+  id BIGSERIAL PRIMARY KEY,
+  date DATE NOT NULL UNIQUE,
+  title TEXT,
+  summary TEXT,
+  status TEXT NOT NULL DEFAULT 'published',
+  is_featured BOOLEAN NOT NULL DEFAULT false,
+  created_by BIGINT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  deleted_at TIMESTAMPTZ
+);
+
+CREATE TABLE IF NOT EXISTS taghvim_enemy_actions (
+  id BIGSERIAL PRIMARY KEY,
+  calendar_day_id BIGINT NOT NULL,
+  category_id BIGINT,
+  title TEXT NOT NULL,
+  description TEXT,
+  severity TEXT NOT NULL DEFAULT 'medium',
+  source TEXT,
+  location TEXT,
+  latitude DOUBLE PRECISION,
+  longitude DOUBLE PRECISION,
+  occurred_at TIMESTAMPTZ,
+  status TEXT NOT NULL DEFAULT 'published',
+  custom_fields JSONB NOT NULL DEFAULT '{}'::jsonb,
+  agency_id TEXT,
+  created_by BIGINT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  deleted_at TIMESTAMPTZ
+);
+
+CREATE TABLE IF NOT EXISTS taghvim_government_actions (
+  id BIGSERIAL PRIMARY KEY,
+  calendar_day_id BIGINT NOT NULL,
+  category_id BIGINT,
+  response_to_id BIGINT,
+  title TEXT NOT NULL,
+  description TEXT,
+  agency TEXT,
+  location TEXT,
+  latitude DOUBLE PRECISION,
+  longitude DOUBLE PRECISION,
+  completed_at TIMESTAMPTZ,
+  status TEXT NOT NULL DEFAULT 'published',
+  custom_fields JSONB NOT NULL DEFAULT '{}'::jsonb,
+  tags JSONB NOT NULL DEFAULT '[]'::jsonb,
+  agency_id TEXT,
+  created_by BIGINT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  deleted_at TIMESTAMPTZ
+);
+
+CREATE TABLE IF NOT EXISTS taghvim_media (
+  id BIGSERIAL PRIMARY KEY,
+  attachable_type TEXT NOT NULL,
+  attachable_id BIGINT NOT NULL,
+  path TEXT NOT NULL,
+  mime_type TEXT,
+  size BIGINT NOT NULL DEFAULT 0,
+  alt TEXT,
+  sort_order INT NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS taghvim_settings (
+  id SMALLINT PRIMARY KEY DEFAULT 1,
+  payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS taghvim_form_definitions (
+  id BIGSERIAL PRIMARY KEY,
+  key TEXT NOT NULL UNIQUE,
+  name TEXT NOT NULL,
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS taghvim_form_fields (
+  id BIGSERIAL PRIMARY KEY,
+  form_definition_id BIGINT NOT NULL,
+  key TEXT NOT NULL,
+  label TEXT NOT NULL,
+  type TEXT NOT NULL,
+  options JSONB,
+  required BOOLEAN NOT NULL DEFAULT false,
+  sort_order INT NOT NULL DEFAULT 0,
+  section TEXT NOT NULL DEFAULT 'main',
+  is_system BOOLEAN NOT NULL DEFAULT false,
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS taghvim_notifications (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id BIGINT NOT NULL,
+  type TEXT NOT NULL,
+  data JSONB NOT NULL DEFAULT '{}'::jsonb,
+  read_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+

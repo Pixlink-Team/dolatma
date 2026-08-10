@@ -1,23 +1,22 @@
 "use client";
 
-import { bridgeTaghvimSessionAction } from "@/lib/actions/taghvim-bridge-actions";
 import {
   canViewAdminViews,
-  normalizeBridgedUser,
+  refreshCurrentUser,
 } from "@taghvim/lib/auth";
-import type { AdminUser } from "@taghvim/types/auth";
-import { setSession, clearSession } from "@taghvim/lib/admin-store";
+import { clearSession } from "@taghvim/lib/admin-store";
 import {
   isTaghvimPublicPath,
   stripTaghvimBase,
   taghvimPath,
 } from "@taghvim/lib/paths";
+import type { AdminUser } from "@taghvim/types/auth";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 
 /**
- * Ensures the defense calendar uses the current dolatma user via Laravel bridge.
- * No separate taghvim username/password login.
+ * Loads the defense-calendar actor from the dolatma session via /auth/me.
+ * No separate taghvim login or Laravel SSO bridge.
  */
 export function AuthGate({ children }: { children: ReactNode }) {
   const router = useRouter();
@@ -32,21 +31,16 @@ export function AuthGate({ children }: { children: ReactNode }) {
     void (async () => {
       setBooting(true);
       setError(null);
-
-      const result = await bridgeTaghvimSessionAction();
+      const me = await refreshCurrentUser();
       if (cancelled) return;
-
-      if (!result.success) {
+      if (!me) {
         clearSession();
         setUser(null);
-        setError(result.error);
+        setError("نشست دولتما یافت نشد یا به تقویم دفاع دسترسی ندارید.");
         setBooting(false);
         return;
       }
-
-      const bridged = normalizeBridgedUser(result.user);
-      setSession(result.token, bridged);
-      setUser(bridged);
+      setUser(me);
       setBooting(false);
     })();
 
@@ -81,12 +75,9 @@ export function AuthGate({ children }: { children: ReactNode }) {
     return (
       <div className="mx-auto flex min-h-[50vh] max-w-lg flex-col items-center justify-center gap-4 p-6 text-center">
         <p className="text-base font-medium text-foreground">
-          اتصال تقویم دفاع با حساب دولتما برقرار نشد
+          دسترسی به تقویم دفاع برقرار نشد
         </p>
         <p className="text-sm text-muted-foreground">{error}</p>
-        <p className="text-xs text-muted-foreground">
-          ورود جداگانه‌ای برای تقویم وجود ندارد؛ همین حساب دولتما استفاده می‌شود.
-        </p>
         <div className="flex flex-wrap items-center justify-center gap-2">
           <button
             type="button"
@@ -96,15 +87,15 @@ export function AuthGate({ children }: { children: ReactNode }) {
               setError(null);
               setBooting(true);
               setUser(null);
-              void bridgeTaghvimSessionAction().then((result) => {
-                if (!result.success) {
-                  setError(result.error);
+              void refreshCurrentUser().then((me) => {
+                if (!me) {
+                  setError(
+                    "نشست دولتما یافت نشد یا به تقویم دفاع دسترسی ندارید."
+                  );
                   setBooting(false);
                   return;
                 }
-                const bridged = normalizeBridgedUser(result.user);
-                setSession(result.token, bridged);
-                setUser(bridged);
+                setUser(me);
                 setBooting(false);
               });
             }}

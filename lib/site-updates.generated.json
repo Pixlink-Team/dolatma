@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "2445e485ca5d0c1dba2471d8fd69e00a0ab90c80",
+      "committedAt": "2026-08-10T11:13:58+03:30",
+      "title": "رفع ورود خودکار به تقویم دفاع با حساب دولتما",
+      "subject": "Fix defense calendar SSO without Coolify service env"
+    },
+    {
       "hash": "6a69e6b2ab47c9b2e85363c080094ae3d91a23ec",
       "committedAt": "2026-08-10T11:11:13+03:30",
       "title": "افزودن بررسی سلامت سرویس برای پایداری بیشتر دیپلوی",

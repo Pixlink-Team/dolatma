@@ -59,6 +59,7 @@ export async function fetchTimeline(
 
   const response = await fetch(url, {
     cache: "no-store",
+    credentials: "include",
     headers: {
       Accept: "application/json",
       ...authHeaders(),
@@ -75,6 +76,7 @@ export async function fetchTimeline(
 export async function fetchDay(date: string) {
   const response = await fetch(`${getApiBase()}/timeline/${date}`, {
     cache: "no-store",
+    credentials: "include",
     headers: {
       Accept: "application/json",
       ...authHeaders(),
