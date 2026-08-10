@@ -1,5 +1,5 @@
 "use client";
-import { taghvimPath, stripTaghvimBase, TAGHVIM_BASE } from "@taghvim/lib/paths";
+import { taghvimPath, stripTaghvimBase } from "@taghvim/lib/paths";
 
 import { getCurrentUser, logoutRequest, refreshCurrentUser } from "@taghvim/lib/auth";
 import {
@@ -27,11 +27,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { AdminMobileTabBar } from "@taghvim/components/admin/AdminMobileTabBar";
-import { IranEmblem } from "@taghvim/components/brand/IranEmblem";
-import { SiteMottoBanner } from "@taghvim/components/brand/SiteMottoBanner";
 import { CreateEventForm } from "@taghvim/components/forms/CreateEventForm";
-import { ThemeToggle } from "@taghvim/components/theme/ThemeToggle";
-import { getSiteBranding } from "@taghvim/lib/branding";
 
 type NavItem = {
   href: string;
@@ -42,14 +38,14 @@ type NavItem = {
 };
 
 const NAV: NavItem[] = [
-  { href: taghvimPath("/admin"), label: "داشبورد ادمین", icon: LayoutDashboard, exact: true },
+  { href: taghvimPath("/admin"), label: "داشبورد", icon: LayoutDashboard, exact: true },
   { href: taghvimPath("/admin/agencies"), label: "وزارتخانه‌ها", icon: Building2, permission: "manage_agencies" },
-  { href: taghvimPath("/admin/users"), label: "کاربران و دسترسی‌ها", icon: Users, permission: "manage_users" },
+  { href: taghvimPath("/admin/users"), label: "کاربران", icon: Users, permission: "manage_users" },
   { href: taghvimPath("/my-subusers"), label: "زیردستان من", icon: UserPlus, permission: "manage_subusers" },
   { href: taghvimPath("/admin/form-builder"), label: "فرم‌ساز", icon: FormInput, permission: "manage_form_schema" },
   { href: taghvimPath("/admin/archive"), label: "آرشیو", icon: Archive, permission: "view_archive" },
   { href: taghvimPath("/admin/backup"), label: "بکاپ", icon: HardDrive, permission: "run_backup" },
-  { href: taghvimPath("/admin/settings"), label: "تنظیمات داشبورد", icon: Settings, permission: "manage_settings" },
+  { href: taghvimPath("/admin/settings"), label: "تنظیمات", icon: Settings, permission: "manage_settings" },
   { href: taghvimPath("/timeline"), label: "بازگشت به تقویم", icon: Shield },
 ];
 
@@ -76,7 +72,6 @@ export function RequireAuth({
       const current = (await refreshCurrentUser()) ?? getCurrentUser();
       if (cancelled) return;
       if (!current) {
-        // Dolatma SSO — never show a separate login; bounce to module root to re-bridge.
         router.replace(taghvimPath("/"));
         return;
       }
@@ -94,7 +89,11 @@ export function RequireAuth({
         return;
       }
       if (requirePermission && !userHasPermission(current, requirePermission)) {
-        router.replace(canViewAdminViews(current) ? taghvimPath("/admin") : taghvimPath("/my-content"));
+        router.replace(
+          canViewAdminViews(current)
+            ? taghvimPath("/admin")
+            : taghvimPath("/my-content"),
+        );
         return;
       }
 
@@ -114,7 +113,7 @@ export function RequireAuth({
 
   if (!ready || !user) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[var(--background)] text-[var(--text-secondary)]">
+      <div className="flex min-h-[40vh] items-center justify-center text-muted-foreground">
         در حال بررسی دسترسی...
       </div>
     );
@@ -131,14 +130,9 @@ function AdminShell({
   children: ReactNode;
 }) {
   const pathname = usePathname();
-  const router = useRouter();
   const canContent = userHasPermission(user, "manage_content");
   const [createOpen, setCreateOpen] = useState(false);
-  const [branding, setBranding] = useState(() => getSiteBranding());
-
-  useEffect(() => {
-    setBranding(getSiteBranding());
-  }, []);
+  const isDolatmaLinked = user.username?.startsWith("dm_") ?? false;
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -147,7 +141,6 @@ function AdminShell({
 
   async function onLogout() {
     await logoutRequest();
-    // Return to dolatma panel — calendar uses dolatma SSO, not a separate login.
     window.location.href = "/admin";
   }
 
@@ -159,121 +152,82 @@ function AdminShell({
   }
 
   return (
-    <div
-      className="min-h-dvh bg-[var(--background)] text-[var(--text-primary)] safe-top"
-      style={{ direction: "rtl" }}
-    >
-      <div className="mx-auto flex min-h-dvh max-w-6xl gap-4 p-3 pb-[var(--app-content-pad-bottom)] sm:p-4 lg:pb-4">
-        <aside className="sticky top-4 hidden h-[calc(100vh-2rem)] w-64 shrink-0 flex-col rounded-2xl border border-[var(--border)] bg-[var(--panel)] lg:flex">
-          <div className="border-b border-[var(--border)] p-4">
-            <div className="mb-2 flex items-center gap-2">
-              <IranEmblem className="h-7 w-7 text-[var(--logo)]" />
-              <div>
-                <p className="text-xs text-[var(--text-secondary)]">پنل مدیریت</p>
-                <h1 className="text-lg font-bold text-[var(--text-primary)]">
-                  {branding.siteTitle}
-                </h1>
-                <p className="mt-0.5 text-[10px] leading-4 text-[var(--text-muted)]">
-                  {branding.siteTagline}
-                </p>
-              </div>
-            </div>
+    <div className="w-full text-foreground" style={{ direction: "rtl" }}>
+      <header className="mb-4 rounded-xl border border-border/70 bg-card/80 backdrop-blur">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/60 px-3 py-2.5 sm:px-4">
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold">مدیریت تقویم دفاع</p>
+            <p className="truncate text-[11px] text-muted-foreground">
+              {user.name}
+              {" · "}
+              {ROLE_LABELS[user.role]}
+              {isDolatmaLinked ? " · متصل به دولتما" : ""}
+            </p>
           </div>
-
-          <nav className="flex-1 space-y-1 p-2">
-            {visibleNav().map((item) => {
-              const active = item.exact
-                ? pathname === item.href
-                : item.href === taghvimPath("/timeline")
-                  ? stripTaghvimBase(pathname).startsWith("/timeline")
-                  : pathname === item.href || pathname.startsWith(`${item.href}/`);
-              const Icon = item.icon;
-
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={clsx(
-                    "flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm transition",
-                    active
-                      ? "bg-blue-500/15 text-[var(--primary)]"
-                      : "text-[var(--text-secondary)] hover:bg-[var(--hover)]",
-                  )}
-                >
-                  <Icon className="h-4 w-4" />
-                  {item.label}
-                </Link>
-              );
-            })}
-          </nav>
-
-          <div className="space-y-2 border-t border-[var(--border)] p-3">
+          <div className="flex shrink-0 items-center gap-2">
             {canContent ? (
               <button
                 type="button"
                 onClick={() => setCreateOpen(true)}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-3 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-500"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground transition hover:opacity-90"
               >
-                <Plus className="h-4 w-4" />
-                ثبت رویداد جدید
+                <Plus className="h-3.5 w-3.5" />
+                ثبت رویداد
               </button>
             ) : null}
-            <ThemeToggle className="w-full justify-center" />
-            <div className="rounded-xl bg-[var(--panel-2)] p-3 text-xs">
-              <p className="font-semibold text-[var(--text-primary)]">{user.name}</p>
-              <p className="mt-1 text-[var(--text-secondary)]">
-                {user.username || user.email || "—"}
-              </p>
-              <p className="mt-1 text-[var(--primary)]">{ROLE_LABELS[user.role]}</p>
-            </div>
             <button
               type="button"
               onClick={onLogout}
-              className="flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--border)] px-3 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--hover)]"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs text-muted-foreground transition hover:bg-accent"
+              title="بازگشت به پنل دولتما"
             >
-              <LogOut className="h-4 w-4" />
-              خروج
+              <LogOut className="h-3.5 w-3.5" />
+              بازگشت به پنل
             </button>
           </div>
-        </aside>
+        </div>
 
-        <main className="min-w-0 flex-1 space-y-4">
-          <SiteMottoBanner compact />
+        <nav
+          aria-label="بخش‌های مدیریت تقویم"
+          className="hidden items-center gap-1 overflow-x-auto px-3 py-2 lg:flex sm:px-4"
+        >
+          {visibleNav().map((item) => {
+            const active = item.exact
+              ? pathname === item.href
+              : item.href === taghvimPath("/timeline")
+                ? stripTaghvimBase(pathname).startsWith("/timeline")
+                : pathname === item.href ||
+                  pathname.startsWith(`${item.href}/`);
+            const Icon = item.icon;
 
-          <div className="sticky top-0 z-20 flex items-center justify-between gap-3 rounded-2xl border border-[var(--border)] bg-[var(--panel)]/95 px-3 py-3 backdrop-blur-xl lg:static lg:hidden">
-            <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-[var(--text-primary)]">{user.name}</p>
-              <p className="text-xs text-[var(--text-secondary)]">{ROLE_LABELS[user.role]}</p>
-            </div>
-            <div className="flex shrink-0 items-center gap-2">
-              {canContent ? (
-                <button
-                  type="button"
-                  onClick={() => setCreateOpen(true)}
-                  className="touch-target rounded-xl bg-blue-600 px-3 text-xs font-semibold text-white"
-                >
-                  ثبت رویداد
-                </button>
-              ) : null}
-              <ThemeToggle />
-              <button
-                type="button"
-                onClick={onLogout}
-                className="touch-target rounded-xl border border-[var(--border)] px-3 text-xs"
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={clsx(
+                  "inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
+                  active
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                )}
               >
-                خروج
-              </button>
-            </div>
-          </div>
+                <Icon className="h-3.5 w-3.5" />
+                {item.label}
+              </Link>
+            );
+          })}
+        </nav>
+      </header>
 
-          {children}
-        </main>
-      </div>
+      <main className="min-w-0 space-y-4 pb-20 lg:pb-4">{children}</main>
 
       <AdminMobileTabBar user={user} />
 
       {canContent ? (
-        <CreateEventForm open={createOpen} onClose={() => setCreateOpen(false)} />
+        <CreateEventForm
+          open={createOpen}
+          onClose={() => setCreateOpen(false)}
+        />
       ) : null}
     </div>
   );

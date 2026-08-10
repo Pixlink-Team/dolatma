@@ -1,15 +1,13 @@
 "use client";
 
 import { AuthGate } from "@taghvim/components/auth/AuthGate";
-import { ThemeProvider } from "@taghvim/components/theme/ThemeProvider";
 import type { ReactNode } from "react";
 
+/** Thin shell: dolatma chrome owns sidebar/theme; calendar only needs SSO gate. */
 export function TaghvimAppShell({ children }: { children: ReactNode }) {
   return (
-    <div className="taghvim-root min-h-[calc(100vh-2rem)] -mx-1 text-[var(--text-primary)]" data-theme="light">
-      <ThemeProvider>
-        <AuthGate>{children}</AuthGate>
-      </ThemeProvider>
+    <div className="taghvim-root w-full text-[var(--text-primary)]">
+      <AuthGate>{children}</AuthGate>
     </div>
   );
 }

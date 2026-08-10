@@ -12,6 +12,7 @@
   );
   --timeline-sticky-top: 0px;
 
+  /* Inherit dolatma tokens; only calendar-specific colors stay local. */
   --surface-1: var(--card);
   --surface-2: var(--card);
   --surface-3: var(--muted);
@@ -22,6 +23,7 @@
   --text-secondary: var(--muted-foreground);
   --text-muted: var(--muted-foreground);
   --hover: color-mix(in oklab, var(--foreground) 5%, transparent);
+  --logo: var(--foreground);
   --enemy: #ef4444;
   --enemy-soft: color-mix(in oklab, #ef4444 18%, transparent);
   --enemy-border: color-mix(in oklab, #ef4444 40%, transparent);
@@ -35,7 +37,6 @@
   --mark-text: var(--foreground);
   --scrollbar: color-mix(in oklab, var(--muted-foreground) 35%, transparent);
   --overlay: rgba(15, 23, 42, 0.45);
-  --logo: var(--foreground);
   --event-enemy-bg: linear-gradient(
     90deg,
     #fff1f2 0%,

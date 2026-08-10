@@ -80,10 +80,13 @@ export function AuthGate({ children }: { children: ReactNode }) {
   if (error) {
     return (
       <div className="mx-auto flex min-h-[50vh] max-w-lg flex-col items-center justify-center gap-4 p-6 text-center">
-        <p className="text-base font-medium text-[var(--text-primary)]">
-          ورود به تقویم دفاع ممکن نشد
+        <p className="text-base font-medium text-foreground">
+          اتصال تقویم دفاع با حساب دولتما برقرار نشد
         </p>
-        <p className="text-sm text-[var(--text-secondary)]">{error}</p>
+        <p className="text-sm text-muted-foreground">{error}</p>
+        <p className="text-xs text-muted-foreground">
+          ورود جداگانه‌ای برای تقویم وجود ندارد؛ همین حساب دولتما استفاده می‌شود.
+        </p>
         <div className="flex flex-wrap items-center justify-center gap-2">
           <button
             type="button"
@@ -110,7 +113,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
           </button>
           <a
             href="/admin"
-            className="rounded-xl border border-[var(--border)] px-4 py-2 text-sm text-[var(--text-secondary)]"
+            className="rounded-xl border border-border px-4 py-2 text-sm text-muted-foreground"
           >
             بازگشت به پنل
           </a>
@@ -121,7 +124,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
 
   if (booting || !user) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[var(--background)] text-[var(--text-secondary)]">
+      <div className="flex min-h-[40vh] items-center justify-center text-muted-foreground">
         در حال ورود با حساب دولتما...
       </div>
     );

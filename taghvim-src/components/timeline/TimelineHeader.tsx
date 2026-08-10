@@ -3,8 +3,6 @@
 import { NotificationBell } from "@taghvim/components/notifications/NotificationBell";
 import { MobileMenuButton } from "@taghvim/components/layout/AppSidebar";
 import { PersianDatePicker } from "@taghvim/components/shared/PersianDatePicker";
-import { ThemeToggle } from "@taghvim/components/theme/ThemeToggle";
-import { SiteMottoBanner } from "@taghvim/components/brand/SiteMottoBanner";
 import { ViewSwitcher } from "@taghvim/components/timeline/ViewSwitcher";
 import type { TimelineViewMode } from "@taghvim/types/timeline";
 import { Filter, Search } from "lucide-react";
@@ -43,21 +41,19 @@ export function TimelineHeader({
   const showExtras = showViewSwitcher || showDateFilters;
 
   return (
-    <header className="z-30 shrink-0 bg-[var(--background)] px-2 pb-2 pt-1 md:space-y-2 md:border-b md:border-[var(--border)] md:px-0">
-      <SiteMottoBanner className="hidden md:flex" />
-
+    <header className="z-30 shrink-0 bg-background px-2 pb-2 pt-1 md:space-y-2 md:border-b md:border-border md:px-0">
       <div className="flex items-center gap-2 md:gap-3">
         <MobileMenuButton onClick={onOpenMobileMenu} />
 
         <label className="relative min-w-0 flex-1">
-          <Search className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-muted)]" />
+          <Search className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <input
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder="جست‌وجوی رویداد..."
             inputMode="search"
             enterKeyHint="search"
-            className="mobile-input w-full rounded-xl border border-[var(--border)] bg-[var(--panel)] py-2.5 pr-10 pl-3 text-base text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)] focus:ring-2 focus:ring-blue-500/50 md:text-sm"
+            className="mobile-input w-full rounded-xl border border-border bg-card py-2.5 pr-10 pl-3 text-base text-foreground outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/40 md:text-sm"
             aria-label="جست‌وجو"
           />
         </label>
@@ -65,19 +61,18 @@ export function TimelineHeader({
         <button
           type="button"
           onClick={onOpenFilters}
-          className="touch-target inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl border border-[var(--border)] bg-[var(--panel)] px-3 text-xs text-[var(--text-primary)] hover:bg-[var(--hover)]"
+          className="touch-target inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl border border-border bg-card px-3 text-xs text-foreground hover:bg-accent"
         >
           <Filter className="h-4 w-4" />
           <span className="hidden md:inline">فیلترها</span>
           {activeFilterCount > 0 ? (
-            <span className="rounded-md bg-blue-500/15 px-1.5 text-[10px] text-[var(--primary)]">
+            <span className="rounded-md bg-primary/15 px-1.5 text-[10px] text-primary">
               {activeFilterCount.toLocaleString("fa-IR")}
             </span>
           ) : null}
         </button>
 
         <div className="hidden items-center gap-2 md:flex">
-          <ThemeToggle />
           <NotificationBell />
         </div>
       </div>

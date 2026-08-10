@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "5a3ea1f6f106feea9a21ecace83872c93d23a510",
+      "committedAt": "2026-08-09T11:52:24+03:30",
+      "title": "افزودن بخش گزارش‌گیری به پنل دسترسی رییس",
+      "subject": "Add reporting section to reis hub"
+    },
+    {
       "hash": "73827567a10ab157eb417f31309dced2c740e41c",
       "committedAt": "2026-08-08T19:26:59+03:30",
       "title": "ورود خودکار به تقویم دفاع بدون لاگین جدا",

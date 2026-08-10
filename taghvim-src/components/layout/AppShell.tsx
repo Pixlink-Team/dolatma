@@ -13,8 +13,8 @@ type AppShellProps = {
 };
 
 /**
- * RTL layout (right → left):
- * Sidebar (right) | Main (center) | Detail Panel (left)
+ * Embedded layout inside dolatma admin main:
+ * Secondary nav (top) | Main + optional detail panel
  */
 export function AppShell({
   sidebar,
@@ -33,25 +33,25 @@ export function AppShell({
   }, [pathname]);
 
   return (
-    <div className="h-dvh overflow-hidden bg-[var(--background)] text-[var(--text-primary)] safe-top">
-      <div
-        className="mx-auto flex h-full max-w-[1680px] gap-0 p-0 sm:gap-3 sm:p-3 lg:gap-4 lg:p-4"
-        style={{ direction: "rtl" }}
-      >
-        {sidebar}
+    <div
+      className="flex w-full flex-col gap-3 text-[var(--text-primary)]"
+      style={{ direction: "rtl" }}
+    >
+      {sidebar}
 
-        {/* Center: timeline content — only the events list scrolls inside */}
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col">{main}</div>
+      <div className="flex min-h-0 w-full flex-col gap-3 xl:flex-row">
+        <div className="min-w-0 flex-1">{main}</div>
 
-        {/* Left: event details */}
         <aside
           className={clsx(
-            "hidden h-full self-stretch transition-all duration-200 xl:block",
-            detailOpen ? "w-[400px] shrink-0" : "w-0 overflow-hidden",
+            "hidden shrink-0 transition-all duration-200 xl:block",
+            detailOpen ? "w-[400px]" : "w-0 overflow-hidden",
           )}
         >
           {detailOpen ? (
-            <div className="h-full min-h-0 w-full">{detail}</div>
+            <div className="sticky top-4 h-[min(80vh,720px)] min-h-0 w-full">
+              {detail}
+            </div>
           ) : null}
         </aside>
       </div>

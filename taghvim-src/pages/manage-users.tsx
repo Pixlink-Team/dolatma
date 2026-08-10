@@ -195,7 +195,14 @@ function UserTreeNode({
         style={{ marginRight: depth * 16 }}
       >
         <div>
-          <p className="text-sm font-medium text-[var(--text-primary)]">{node.user.name}</p>
+          <p className="text-sm font-medium text-[var(--text-primary)]">
+            {node.user.name}
+            {node.user.username?.startsWith("dm_") ? (
+              <span className="mr-2 inline-flex rounded-md bg-primary/15 px-1.5 py-0.5 text-[10px] font-medium text-primary">
+                متصل به دولتما
+              </span>
+            ) : null}
+          </p>
           <p className="text-xs text-[var(--text-secondary)]">
             {node.user.username || node.user.email || "—"}
             {node.user.mobile ? ` · ${node.user.mobile}` : ""} ·{" "}
@@ -331,6 +338,11 @@ function UserForm({
       <h3 className="font-semibold text-[var(--text-primary)]">
         {initial ? `ویرایش کاربر · ${initial.name}` : "کاربر جدید"}
       </h3>
+      {initial?.username?.startsWith("dm_") ? (
+        <p className="rounded-lg bg-primary/10 px-3 py-2 text-xs text-primary">
+          این کاربر از حساب دولتما ساخته شده؛ ورود از پنل دولتما انجام می‌شود.
+        </p>
+      ) : null}
       <div className="grid gap-3 sm:grid-cols-2">
         <input
           className="rounded-xl border border-[var(--border)] bg-[var(--panel-2)] px-3 py-2 text-sm"
@@ -341,11 +353,12 @@ function UserForm({
         />
         <input
           className="rounded-xl border border-[var(--border)] bg-[var(--panel-2)] px-3 py-2 text-sm"
-          placeholder="نام کاربری (برای ورود)"
+          placeholder="نام کاربری"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
           autoComplete="username"
           required
+          disabled={initial?.username?.startsWith("dm_") ?? false}
         />
         <input
           className="rounded-xl border border-[var(--border)] bg-[var(--panel-2)] px-3 py-2 text-sm"
