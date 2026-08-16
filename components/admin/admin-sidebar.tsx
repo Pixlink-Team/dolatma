@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   Archive,
+  ArrowRight,
   Award,
   Bell,
   Building2,
@@ -67,7 +68,7 @@ import {
   type ContributorPermissionKey,
   type ContributorPermissions,
 } from "@/lib/contributor-permissions";
-import { isDeviceScopedPanelRole, isOrgUserRole } from "@/lib/user-roles";
+import { isDeviceScopedPanelRole, isOrgUserRole, isReisRole } from "@/lib/user-roles";
 import { MEDIA_COMMAND_NAV } from "@/lib/media-command/labels";
 import { MONITORING_NAV } from "@/lib/monitoring/labels";
 import {
@@ -78,6 +79,7 @@ import {
   PROBLEM_REPORTS_UNREAD_EVENT,
   readUnreadCountFromEvent,
 } from "@/lib/problem-reports-unread";
+import { REIS_HOME_PATH } from "@/lib/reis/sections";
 
 const PROBLEM_REPORTS_HREF = "/admin/problem-reports";
 const MESSAGES_HREF = "/admin/messages";
@@ -168,12 +170,18 @@ const DIRECTIVES_HREF = "/admin/directives";
 /** Survives remounts so the right-side menu keeps its scroll after navigation. */
 let savedSidebarScrollTop = 0;
 
-export function AdminSidebar() {
+type AdminSidebarProps = {
+  /** When reis is in full-panel mode via «تنظیمات», show a link back to the hub. */
+  showReisReturn?: boolean;
+};
+
+export function AdminSidebar({ showReisReturn = false }: AdminSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isFullAdminUser, setIsFullAdminUser] = useState(false);
   const [isClientRole, setIsClientRole] = useState(false);
+  const [isReisPanelUser, setIsReisPanelUser] = useState(false);
   const [canViewUsersNav, setCanViewUsersNav] = useState(false);
   const [canViewDevicesNav, setCanViewDevicesNav] = useState(false);
   const [permissions, setPermissions] = useState<ContributorPermissions | null>(null);
@@ -183,6 +191,9 @@ export function AdminSidebar() {
   const [contentMessagesUnread, setContentMessagesUnread] = useState(0);
   const desktopNavRef = useRef<HTMLElement>(null);
   const { campaignId, campaigns, currentCampaign, setCampaignId } = useAdminCampaign();
+
+  // Reis in panel mode sees the same content/management nav as client.
+  const seesAllCampaignSections = isFullAdminUser || isClientRole || isReisPanelUser;
 
   useEffect(() => {
     let cancelled = false;
@@ -226,8 +237,10 @@ export function AdminSidebar() {
           if (cancelled || !session) return;
           const fullAdmin = session.type === "env_admin" || session.role === "admin";
           const clientRole = session.role === "client";
+          const reisRole = isReisRole(session.role);
           setIsFullAdminUser(fullAdmin);
           setIsClientRole(clientRole);
+          setIsReisPanelUser(reisRole);
           const perms = session.permissions ?? null;
           // Prefer active-campaign flags; fall back to session OR-flag when unset.
           setCanViewUsersNav(
@@ -284,21 +297,21 @@ export function AdminSidebar() {
   const navItems = allNavItems.filter((item) => {
     if (item.alwaysVisible) return true;
     if (item.usersNav) {
-      return isFullAdminUser || isClientRole || canViewUsersNav;
+      return seesAllCampaignSections || canViewUsersNav;
     }
     if (item.devicesNav) {
       return isFullAdminUser || canViewDevicesNav;
     }
-    // Panel management items: admin/client always, or org_user with explicit grant.
+    // Panel management items: admin/client/reis always, or org_user with explicit grant.
     if (item.adminOrClientOnly) {
-      if (isFullAdminUser || isClientRole) return true;
+      if (seesAllCampaignSections) return true;
       if (item.permissionKey) {
         return hasContributorPermission(permissions, item.permissionKey);
       }
       return false;
     }
-    // Admin and client see all content sections.
-    if (isFullAdminUser || isClientRole) return true;
+    // Admin, client, and reis see all content sections.
+    if (seesAllCampaignSections) return true;
     // Admin-only items may still be granted via permission (e.g. section tutorials).
     if (item.adminOnly) {
       if (!item.permissionKey) return false;
@@ -309,19 +322,13 @@ export function AdminSidebar() {
   });
 
   const showMediaCommand =
-    isFullAdminUser ||
-    isClientRole ||
-    hasContributorPermission(permissions, "mediaCommand");
+    seesAllCampaignSections || hasContributorPermission(permissions, "mediaCommand");
   const showMonitoring =
-    isFullAdminUser ||
-    isClientRole ||
-    hasContributorPermission(permissions, "monitoring");
+    seesAllCampaignSections || hasContributorPermission(permissions, "monitoring");
 
   /** Pin directives as a red alert CTA when the user has directives access. */
   const showDirectivesAlert =
-    isFullAdminUser ||
-    isClientRole ||
-    hasContributorPermission(permissions, "directives");
+    seesAllCampaignSections || hasContributorPermission(permissions, "directives");
   const directivesNavItem = navItems.find((item) => item.href === DIRECTIVES_HREF);
   const contentNavItems = navItems.filter((item) => {
     if (managementNavHrefs.has(item.href)) return false;
@@ -562,6 +569,14 @@ export function AdminSidebar() {
         )}
       </nav>
       <div className="p-3 border-t space-y-2">
+        {showReisReturn ? (
+          <Link href={REIS_HOME_PATH}>
+            <Button variant="outline" size="sm" className="w-full gap-1.5">
+              <ArrowRight className="h-4 w-4" />
+              بازگشت به بخش‌ها
+            </Button>
+          </Link>
+        ) : null}
         <div className="flex items-center justify-between gap-2">
           <span className="text-xs text-muted-foreground">تم</span>
           <ThemeToggle />

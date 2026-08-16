@@ -11,6 +11,7 @@ import {
   Megaphone,
   MessageSquareQuote,
   Radar,
+  Settings,
   Users,
   type LucideIcon,
 } from "lucide-react";
@@ -27,6 +28,7 @@ const SECTION_ICONS: Record<ReisSectionKey, LucideIcon> = {
   meetings: Users,
   narrative: MessageSquareQuote,
   reporting: FileBarChart,
+  settings: Settings,
 };
 
 type ReisHubProps = {

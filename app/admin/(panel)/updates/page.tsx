@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import {
   hasAnyCampaignPermission,
-  isClientUser,
+  isBroadPanelUser,
 } from "@/lib/auth/access";
 import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
 import { getSiteUpdates } from "@/lib/site-updates";
@@ -13,7 +13,7 @@ export default async function SiteUpdatesPage() {
 
   const allowed =
     isFullAdmin(session) ||
-    isClientUser(session) ||
+    isBroadPanelUser(session) ||
     (await hasAnyCampaignPermission(session, "siteUpdates"));
   if (!allowed) redirect("/admin");
 

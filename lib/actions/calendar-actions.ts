@@ -2,7 +2,7 @@
 
 import {
   hasAnyCampaignPermission,
-  isClientUser,
+  isBroadPanelUser,
 } from "@/lib/auth/access";
 import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
 import { pgListCalendarDirectives } from "@/lib/db/repository-directives";
@@ -18,7 +18,7 @@ export async function getNationalCalendarAction(campaignId?: string | null) {
 
   const allowed =
     isFullAdmin(session) ||
-    isClientUser(session) ||
+    isBroadPanelUser(session) ||
     (await hasAnyCampaignPermission(session, "nationalCalendar"));
   if (!allowed) {
     return {

@@ -9,6 +9,7 @@ export const REIS_SECTION_KEYS = [
   "meetings",
   "narrative",
   "reporting",
+  "settings",
 ] as const;
 
 export type ReisSectionKey = (typeof REIS_SECTION_KEYS)[number];
@@ -89,6 +90,15 @@ export const REIS_SECTIONS: ReisSection[] = [
     accent: "from-slate-500/20 to-zinc-600/10",
     iconBg: "bg-slate-500/15 text-slate-700 dark:text-slate-300",
   },
+  {
+    key: "settings",
+    title: "تنظیمات",
+    description:
+      "مشاهده همه بخش‌های در دسترس پنل، مشابه صفحه مدیریت ادمین",
+    href: "/admin",
+    accent: "from-stone-500/20 to-neutral-600/10",
+    iconBg: "bg-stone-500/15 text-stone-700 dark:text-stone-300",
+  },
 ];
 
 export function isReisSectionKey(value: string): value is ReisSectionKey {
@@ -99,30 +109,14 @@ export function getReisSection(key: string): ReisSection | undefined {
   return REIS_SECTIONS.find((section) => section.key === key);
 }
 
-/** Paths the reis role may access inside /admin. */
+/**
+ * Paths the reis role may access inside /admin.
+ * Curated hub lives under /admin/reis; «تنظیمات» opens the full panel
+ * (same surfaces as client/admin, gated by existing page access checks).
+ */
 export function isReisAllowedPath(pathname: string): boolean {
-  if (pathname === REIS_HOME_PATH || pathname.startsWith(`${REIS_HOME_PATH}/`)) {
-    return true;
-  }
-  // Ops-room / tracking deep-links from strategic communications.
-  if (pathname === "/admin/directives" || pathname.startsWith("/admin/directives/")) {
-    return true;
-  }
-  // Monitoring & rapid-response surfaces linked from رصد و واکنش سریع.
-  if (pathname === "/admin/monitoring" || pathname.startsWith("/admin/monitoring/")) {
-    return true;
-  }
-  if (pathname === "/admin/rapid-response" || pathname.startsWith("/admin/rapid-response/")) {
-    return true;
-  }
-  if (pathname === "/admin/taghvim" || pathname.startsWith("/admin/taghvim/")) {
-    return true;
-  }
-  if (pathname === "/admin/profile" || pathname.startsWith("/admin/profile/")) {
-    return true;
-  }
   if (pathname === "/admin/login" || pathname.startsWith("/admin/login/")) {
     return true;
   }
-  return false;
+  return pathname === "/admin" || pathname.startsWith("/admin/");
 }

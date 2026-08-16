@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { Settings } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +12,7 @@ import { resolveAdminBillboards } from "@/lib/billboards";
 import type { Billboard, CampaignSettings } from "@/lib/types";
 import { BulkContentImport } from "@/components/admin/bulk-content-import";
 import { OnboardingProgressCard } from "@/components/admin/onboarding-progress-card";
-import { canManageDirectives } from "@/lib/auth/access";
+import { canManageAllContent, canManageDirectives } from "@/lib/auth/access";
 import { getSessionHomeDeviceId } from "@/lib/auth/device-access";
 import { getAuthSession, getOwnerFilter, isFullAdmin } from "@/lib/auth/get-session";
 import { getAllUsers } from "@/lib/data-access/admin";
@@ -32,9 +31,8 @@ import {
 } from "@/lib/edit-suggestions";
 import { evaluateDeviceOnboarding } from "@/lib/onboarding/progress";
 import type { OnboardingProgress } from "@/lib/onboarding/types";
-import { REIS_HOME_PATH } from "@/lib/reis/sections";
 import { withFileAccessTokensDeep } from "@/lib/uploads";
-import { isOrgUserRole, isReisRole } from "@/lib/user-roles";
+import { isOrgUserRole } from "@/lib/user-roles";
 import { formatPersianNumber, adminHref, isPostgresConfigured } from "@/lib/utils";
 
 const PERMISSION_TO_CONTENT_TYPE: Partial<
@@ -59,10 +57,7 @@ interface AdminDashboardProps {
 export default async function AdminDashboardPage({ searchParams }: AdminDashboardProps) {
   const params = await searchParams;
   const session = await getAuthSession();
-  if (session && isReisRole(session.role)) {
-    redirect(REIS_HOME_PATH);
-  }
-  const canManageAll = Boolean(session && isFullAdmin(session));
+  const canManageAll = Boolean(session && canManageAllContent(session));
   const { campaignId } = await resolveAdminCampaignId(params.campaign);
 
   if (!campaignId) {
@@ -171,7 +166,7 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
           await pgListDirectivesForUserInbox(campaignId, session.userId)
         )
       : [];
-  const bulkImportUsers = canManageAll ? await getAllUsers() : [];
+  const bulkImportUsers = session && isFullAdmin(session) ? await getAllUsers() : [];
 
   let onboardingProgress: OnboardingProgress | null = null;
   if (
@@ -210,7 +205,7 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
             {canManageAll ? data.settings.title : `${data.settings.title} — آمار آپلودهای شما`}
           </p>
         </div>
-        {canManageAll && (
+        {session && isFullAdmin(session) && (
           <Link href={adminHref("/admin/settings", campaignId)}>
             <Badge variant="outline" className="gap-1 cursor-pointer">
               <Settings className="h-3 w-3" />
@@ -224,7 +219,7 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
         <OnboardingProgressCard progress={onboardingProgress} />
       ) : null}
 
-      {canManageAll ? (
+      {session && isFullAdmin(session) ? (
         <BulkContentImport
           users={bulkImportUsers}
           posterCategories={data.posterCategories ?? []}

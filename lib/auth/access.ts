@@ -20,9 +20,14 @@ export function isReisUser(session: AuthSession): boolean {
   return session.role === "reis";
 }
 
+/** کارفرما / رییس — broad panel visibility (same nav surfaces as each other). */
+export function isBroadPanelUser(session: AuthSession): boolean {
+  return isClientUser(session) || isReisUser(session);
+}
+
 /** Admin and کارفرما / رییس (بالادستی سراسری) manage any campaign content. */
 export function canManageAllContent(session: AuthSession): boolean {
-  return isFullAdmin(session) || isClientUser(session) || isReisUser(session);
+  return isFullAdmin(session) || isBroadPanelUser(session);
 }
 
 const CONTENT_MESSAGE_SECTION_KEYS: ContributorPermissionKey[] = [
@@ -57,7 +62,7 @@ export function canSendContentMessages(
 }
 
 export function canAccessNotifications(session: AuthSession): boolean {
-  return isFullAdmin(session) || isClientUser(session);
+  return isFullAdmin(session) || isBroadPanelUser(session);
 }
 
 /**
@@ -70,7 +75,7 @@ export function canViewDirectives(session: AuthSession): boolean {
 
 /** Admin and client / reis can issue directives to the full campaign audience. */
 export function canManageDirectivesGlobally(session: AuthSession): boolean {
-  return isFullAdmin(session) || isClientUser(session) || isReisUser(session);
+  return isFullAdmin(session) || isBroadPanelUser(session);
 }
 
 /**
@@ -130,7 +135,7 @@ export function canManageForms(
   session: AuthSession,
   permissions?: ContributorPermissions | null
 ): boolean {
-  if (isFullAdmin(session) || isClientUser(session)) return true;
+  if (isFullAdmin(session) || isBroadPanelUser(session)) return true;
   return hasContributorPermission(permissions, "forms");
 }
 
@@ -139,7 +144,7 @@ export async function canManageFormsForCampaign(
   session: AuthSession,
   campaignId: string
 ): Promise<boolean> {
-  if (isFullAdmin(session) || isClientUser(session)) return true;
+  if (isFullAdmin(session) || isBroadPanelUser(session)) return true;
   if (!session.userId || !isPostgresConfigured()) return false;
   const permissions = await pgGetUserPermissionsForCampaign(session.userId, campaignId);
   return hasContributorPermission(permissions, "forms");
@@ -147,7 +152,7 @@ export async function canManageFormsForCampaign(
 
 /**
  * Who can score content:
- * - admin / client: always
+ * - admin / client / reis: always
  * - org_user with scoreSubtreeContent (scoped to owner filter elsewhere)
  */
 export function canScoreContent(
@@ -155,7 +160,7 @@ export function canScoreContent(
   permissions?: ContributorPermissions | null
 ): boolean {
   if (isFullAdmin(session)) return true;
-  if (isClientUser(session)) return true;
+  if (isBroadPanelUser(session)) return true;
   if (!isOrgUserRole(session.role)) return false;
   return resolveOrgManagementFlag(
     permissions,
@@ -165,11 +170,11 @@ export function canScoreContent(
 }
 
 /**
- * Manage automatic scoring rules (the `/admin/scoring` page): admin/client only.
+ * Manage automatic scoring rules (the `/admin/scoring` page): admin/client/reis.
  * Org users may score content via `canScoreContent`, but never edit the rules themselves.
  */
 export function canManageScoringRules(session: AuthSession): boolean {
-  return isFullAdmin(session) || isClientUser(session);
+  return isFullAdmin(session) || isBroadPanelUser(session);
 }
 
 /**
@@ -213,12 +218,12 @@ function hasPanelPermission(
   return hasContributorPermission(permissions, key);
 }
 
-/** Campaign (راستا) settings page — admin/client, or granted `campaignSettings`. */
+/** Campaign (راستا) settings page — admin/client/reis, or granted `campaignSettings`. */
 export function canAccessCampaignSettings(
   session: AuthSession,
   permissions?: ContributorPermissions | null
 ): boolean {
-  if (isFullAdmin(session) || isClientUser(session)) return true;
+  if (isFullAdmin(session) || isBroadPanelUser(session)) return true;
   return hasPanelPermission(session, permissions, "campaignSettings");
 }
 
@@ -226,18 +231,18 @@ export async function canAccessCampaignSettingsForCampaign(
   session: AuthSession,
   campaignId: string
 ): Promise<boolean> {
-  if (isFullAdmin(session) || isClientUser(session)) return true;
+  if (isFullAdmin(session) || isBroadPanelUser(session)) return true;
   if (!session.userId || !isPostgresConfigured()) return false;
   const permissions = await pgGetUserPermissionsForCampaign(session.userId, campaignId);
   return hasContributorPermission(permissions, "campaignSettings");
 }
 
-/** Site updates page — admin/client, or granted `siteUpdates` on any/active campaign. */
+/** Site updates page — admin/client/reis, or granted `siteUpdates` on any/active campaign. */
 export function canAccessSiteUpdates(
   session: AuthSession,
   permissions?: ContributorPermissions | null
 ): boolean {
-  if (isFullAdmin(session) || isClientUser(session)) return true;
+  if (isFullAdmin(session) || isBroadPanelUser(session)) return true;
   return hasPanelPermission(session, permissions, "siteUpdates");
 }
 
@@ -253,12 +258,12 @@ export function canAccessSectionTutorials(
   return hasPanelPermission(session, permissions, "sectionTutorials");
 }
 
-/** National calendar — admin/client, or granted `nationalCalendar` on any/active campaign. */
+/** National calendar — admin/client/reis, or granted `nationalCalendar` on any/active campaign. */
 export function canAccessNationalCalendar(
   session: AuthSession,
   permissions?: ContributorPermissions | null
 ): boolean {
-  if (isFullAdmin(session) || isClientUser(session)) return true;
+  if (isFullAdmin(session) || isBroadPanelUser(session)) return true;
   return hasPanelPermission(session, permissions, "nationalCalendar");
 }
 

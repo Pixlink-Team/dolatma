@@ -79,9 +79,11 @@ function NavigationPendingOverlay({ offsetForSidebar }: { offsetForSidebar: bool
 function PanelChrome({
   children,
   withTracker = false,
+  showReisReturn = false,
 }: {
   children: React.ReactNode;
   withTracker?: boolean;
+  showReisReturn?: boolean;
 }) {
   return (
     <AppErrorProvider>
@@ -91,7 +93,7 @@ function PanelChrome({
             <AuditTracker />
           </Suspense>
         ) : null}
-        <AdminSidebar />
+        <AdminSidebar showReisReturn={showReisReturn} />
         <AdminElanhaButton />
         <Suspense fallback={null}>
           <ProblemReportButton />
@@ -141,6 +143,7 @@ function useReisShellMode(campaignId: string) {
   const router = useRouter();
   const [mode, setMode] = useState<"loading" | "reis" | "panel">("loading");
   const [showAdminReturn, setShowAdminReturn] = useState(false);
+  const [showReisReturn, setShowReisReturn] = useState(false);
   const [userName, setUserName] = useState<string | null>(null);
 
   useEffect(() => {
@@ -152,6 +155,7 @@ function useReisShellMode(campaignId: string) {
         const onReisPath = pathname.startsWith(REIS_HOME_PATH);
         setUserName(session?.name ?? session?.email ?? null);
         setShowAdminReturn(!reisRole && onReisPath);
+        setShowReisReturn(reisRole && !onReisPath);
 
         if (reisRole && !isReisAllowedPath(pathname)) {
           router.replace(REIS_HOME_PATH);
@@ -159,7 +163,13 @@ function useReisShellMode(campaignId: string) {
           return;
         }
 
-        setMode(reisRole || onReisPath ? "reis" : "panel");
+        // Reis hub stays in the curated shell; «تنظیمات» opens the full admin panel chrome.
+        if (reisRole) {
+          setMode(onReisPath ? "reis" : "panel");
+          return;
+        }
+
+        setMode(onReisPath ? "reis" : "panel");
       })
       .catch(() => {
         if (!cancelled) {
@@ -172,7 +182,7 @@ function useReisShellMode(campaignId: string) {
     };
   }, [campaignId, pathname, router]);
 
-  return { mode, showAdminReturn, userName };
+  return { mode, showAdminReturn, showReisReturn, userName };
 }
 
 function AdminPanelShellInner({
@@ -185,7 +195,7 @@ function AdminPanelShellInner({
   const searchParams = useSearchParams();
   const defaultId = campaigns[0]?.id ?? "";
   const campaignId = searchParams.get("campaign") ?? defaultId;
-  const { mode, showAdminReturn, userName } = useReisShellMode(campaignId);
+  const { mode, showAdminReturn, showReisReturn, userName } = useReisShellMode(campaignId);
 
   return (
     <AdminCampaignProvider campaigns={campaigns} campaignId={campaignId}>
@@ -198,7 +208,9 @@ function AdminPanelShellInner({
           {children}
         </ReisChrome>
       ) : (
-        <PanelChrome withTracker>{children}</PanelChrome>
+        <PanelChrome withTracker showReisReturn={showReisReturn}>
+          {children}
+        </PanelChrome>
       )}
     </AdminCampaignProvider>
   );

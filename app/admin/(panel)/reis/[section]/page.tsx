@@ -43,5 +43,9 @@ export default async function ReisSectionPage({ params }: ReisSectionPageProps) 
     redirect("/admin/taghvim");
   }
 
+  if (sectionKey === "settings") {
+    redirect("/admin");
+  }
+
   return <ReisSectionPlaceholder section={section} />;
 }

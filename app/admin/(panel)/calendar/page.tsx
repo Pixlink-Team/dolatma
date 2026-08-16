@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { NationalCalendarAdmin } from "@/components/admin/national-calendar-admin";
 import {
   hasAnyCampaignPermission,
-  isClientUser,
+  isBroadPanelUser,
 } from "@/lib/auth/access";
 import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
 import { getNationalCalendarAction } from "@/lib/actions/calendar-actions";
@@ -14,7 +14,7 @@ export default async function NationalCalendarPage() {
 
   const allowed =
     isFullAdmin(session) ||
-    isClientUser(session) ||
+    isBroadPanelUser(session) ||
     (await hasAnyCampaignPermission(session, "nationalCalendar"));
   if (!allowed) redirect("/admin");
 

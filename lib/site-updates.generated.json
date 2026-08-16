@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "7fcfa1fb2fc416b8c98f2decd3184ad8d5556194",
+      "committedAt": "2026-08-10T12:17:09+03:30",
+      "title": "رفع خطای صفحه مدیریت تقویم دفاع",
+      "subject": "Fix defense calendar manage page demo-data crash"
+    },
+    {
       "hash": "814b2b32a033d6f5ab16d630965558f1551ac8c6",
       "committedAt": "2026-08-10T12:15:43+03:30",
       "title": "نمایش پرچم ایران در بنر شعار تقویم دفاعی",

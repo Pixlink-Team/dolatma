@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getAllCampaigns, getAllUsers } from "@/lib/data-access/admin";
-import { canManageSubtreeUsers, isClientUser } from "@/lib/auth/access";
+import { canManageSubtreeUsers, isBroadPanelUser } from "@/lib/auth/access";
 import { listAccessibleDevices } from "@/lib/auth/device-access";
 import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
 import { scopeMinistriesForOrgUser } from "@/lib/auth/scope-ministries-for-org-user";
@@ -15,13 +15,13 @@ export default async function UsersPage() {
   if (!session) redirect("/admin/login");
 
   const isAdmin = isFullAdmin(session);
-  const isClient = isClientUser(session);
+  const isBroad = isBroadPanelUser(session);
   const isOrgUser = isOrgUserRole(session.role);
 
   const canManageSubtree = canManageSubtreeUsers(session);
 
   // Org users need manageSubtreeUsers; without it the users menu and page stay closed.
-  if (!isAdmin && !isClient && !(isOrgUser && canManageSubtree)) redirect("/admin");
+  if (!isAdmin && !isBroad && !(isOrgUser && canManageSubtree)) redirect("/admin");
 
   if (isPostgresConfigured()) {
     await pgEnsureDefaultMinistries();
