@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "85b50b282b9b843f66ae268396b6e85e01d47ce6",
+      "committedAt": "2026-08-19T10:59:39+03:30",
+      "title": "افزودن صفحه رییس‌جمهور با نقشه تعاملی ایران و نمایش شاخص‌های مهم ملی و شهری",
+      "subject": "Add president dashboard with interactive Iran city insights"
+    },
+    {
       "hash": "09b0090feaf1e3dfb96d8a22e4bc979c5cf81b09",
       "committedAt": "2026-08-16T10:21:11+03:30",
       "title": "افزودن بخش تنظیمات در پنل رییس برای مشاهده همه بخش‌های در دسترس مانند ادمین",

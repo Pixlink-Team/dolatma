@@ -1,6 +1,5 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import { useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { BarChart3, Building2, Eye, Gauge, MapPin, Target, Users } from "lucide-react";
@@ -14,14 +13,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { PresidentIranMap } from "@/components/admin/president-iran-map";
 import type { PresidentDashboardData } from "@/lib/data-access/president-dashboard";
 import { formatPersianDateShort, formatPersianNumber } from "@/lib/utils";
-
-const PresidentIranMap = dynamic(
-  () =>
-    import("@/components/admin/president-iran-map").then((mod) => mod.PresidentIranMap),
-  { ssr: false, loading: () => <div className="h-[420px] rounded-xl border bg-muted/30" /> }
-);
 
 interface PresidentDashboardProps {
   data: PresidentDashboardData;
@@ -33,31 +27,82 @@ export function PresidentDashboard({ data, selectedOwnerId, dateRange }: Preside
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [selectedCityKey, setSelectedCityKey] = useState<string | null>(null);
+  const [selectedProvince, setSelectedProvince] = useState<string | null>(null);
 
-  const selectedCity = useMemo(
-    () => data.citySummaries.find((item) => item.key === selectedCityKey) ?? null,
-    [data.citySummaries, selectedCityKey]
+  const provinceSummaries = useMemo(() => {
+    const map = new Map<string, {
+      province: string;
+      uploads: number;
+      views: number;
+      score: number;
+      ownerIds: Set<string>;
+      campaignIds: Set<string>;
+    }>();
+    for (const city of data.citySummaries) {
+      const key = city.province;
+      const current = map.get(key) ?? {
+        province: key,
+        uploads: 0,
+        views: 0,
+        score: 0,
+        ownerIds: new Set<string>(),
+        campaignIds: new Set<string>(),
+      };
+      current.uploads += city.uploads;
+      current.views += city.views;
+      current.score += city.score;
+      map.set(key, current);
+    }
+    return [...map.values()]
+      .sort((a, b) => b.uploads - a.uploads)
+      .map((item) => ({
+        province: item.province,
+        uploads: item.uploads,
+        views: item.views,
+        score: item.score,
+        avgScore: item.uploads > 0 ? Math.round(item.score / item.uploads) : 0,
+      }));
+  }, [data.citySummaries]);
+
+  const provinceMapData = useMemo(() => {
+    const result: Record<string, { uploads: number; views: number }> = {};
+    for (const item of provinceSummaries) {
+      result[item.province] = { uploads: item.uploads, views: item.views };
+    }
+    return result;
+  }, [provinceSummaries]);
+
+  const selectedProvinceSummary = useMemo(
+    () => provinceSummaries.find((item) => item.province === selectedProvince) ?? null,
+    [provinceSummaries, selectedProvince]
   );
 
-  const effectiveKpis = selectedCity
+  const citiesOfProvince = useMemo(
+    () =>
+      selectedProvince
+        ? data.citySummaries.filter((item) => item.province === selectedProvince)
+        : data.citySummaries,
+    [data.citySummaries, selectedProvince]
+  );
+
+  const effectiveKpis = selectedProvinceSummary
     ? {
-        activeCampaigns: selectedCity.campaignCount,
-        totalUploads: selectedCity.uploads,
-        totalViews: selectedCity.views,
-        activeOwners: selectedCity.ownerCount,
-        avgScore: selectedCity.uploads > 0 ? Math.round(selectedCity.score / selectedCity.uploads) : 0,
+        activeCampaigns: data.kpis.activeCampaigns,
+        totalUploads: selectedProvinceSummary.uploads,
+        totalViews: selectedProvinceSummary.views,
+        activeOwners: data.kpis.activeOwners,
+        avgScore: selectedProvinceSummary.avgScore,
         completionRate: data.kpis.completionRate,
       }
     : data.kpis;
 
-  const topCitiesChart = useMemo(
+  const topProvincesChart = useMemo(
     () =>
-      data.citySummaries.slice(0, 10).map((item) => ({
-        label: item.city,
+      provinceSummaries.slice(0, 10).map((item) => ({
+        label: item.province,
         value: item.uploads,
       })),
-    [data.citySummaries]
+    [provinceSummaries]
   );
 
   const timelineChart = useMemo(
@@ -84,7 +129,7 @@ export function PresidentDashboard({ data, selectedOwnerId, dateRange }: Preside
       <div>
         <h1 className="text-2xl font-bold">صفحه رییس‌جمهور</h1>
         <p className="text-sm text-muted-foreground">
-          نمای ملی عملکرد؛ با کلیک روی هر شهر، شاخص‌های همان شهر نمایش داده می‌شود.
+          نمای ملی عملکرد؛ با کلیک روی هر استان، شاخص‌های همان استان نمایش داده می‌شود.
         </p>
       </div>
 
@@ -136,8 +181,8 @@ export function PresidentDashboard({ data, selectedOwnerId, dateRange }: Preside
           <Button
             type="button"
             variant="outline"
-            onClick={() => setSelectedCityKey(null)}
-            disabled={!selectedCityKey}
+            onClick={() => setSelectedProvince(null)}
+            disabled={!selectedProvince}
           >
             بازگشت به کل ایران
           </Button>
@@ -146,15 +191,15 @@ export function PresidentDashboard({ data, selectedOwnerId, dateRange }: Preside
 
       <div className="overflow-hidden rounded-xl border">
         <PresidentIranMap
-          points={data.citySummaries}
-          selectedCityKey={selectedCityKey}
-          onSelectCity={setSelectedCityKey}
+          provinceData={provinceMapData}
+          selectedProvince={selectedProvince}
+          onSelectProvince={setSelectedProvince}
         />
       </div>
 
-      {selectedCity ? (
+      {selectedProvince ? (
         <div className="rounded-xl border bg-primary/5 px-4 py-3 text-sm">
-          شهر انتخاب‌شده: <span className="font-bold">{selectedCity.city}</span> - {selectedCity.province}
+          استان انتخاب‌شده: <span className="font-bold">{selectedProvince}</span>
         </div>
       ) : null}
 
@@ -169,46 +214,67 @@ export function PresidentDashboard({ data, selectedOwnerId, dateRange }: Preside
 
       <div className="grid gap-4 xl:grid-cols-2">
         <BarChartCard data={timelineChart} title="روند تولید محتوا (۱۴ روز اخیر)" color="#2563eb" />
-        <BarChartCard data={topCitiesChart} title="۱۰ شهر برتر بر اساس حجم محتوا" color="#16a34a" />
+        <BarChartCard data={topProvincesChart} title="۱۰ استان برتر بر اساس حجم محتوا" color="#16a34a" />
       </div>
 
       <div className="overflow-x-auto rounded-xl border">
         <table className="w-full min-w-[900px] text-sm">
           <thead className="bg-muted/40 text-right">
             <tr>
-              <th className="p-3 font-medium">شهر</th>
-              <th className="p-3 font-medium">استان</th>
+              <th className="p-3 font-medium">{selectedProvince ? "شهر" : "استان"}</th>
+              {selectedProvince && <th className="p-3 font-medium">استان</th>}
               <th className="p-3 font-medium">کل محتوا</th>
               <th className="p-3 font-medium">بازدید</th>
               <th className="p-3 font-medium">میانگین امتیاز</th>
-              <th className="p-3 font-medium">کاربران فعال</th>
-              <th className="p-3 font-medium">کمپین‌های فعال</th>
+              {!selectedProvince && <th className="p-3 font-medium">رتبه</th>}
+              {selectedProvince && <th className="p-3 font-medium">کاربران فعال</th>}
+              {selectedProvince && <th className="p-3 font-medium">کمپین‌های فعال</th>}
             </tr>
           </thead>
           <tbody>
-            {data.citySummaries.length === 0 ? (
+            {selectedProvince ? (
+              citiesOfProvince.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="p-6 text-center text-muted-foreground">
+                    داده شهری برای استان انتخاب‌شده یافت نشد.
+                  </td>
+                </tr>
+              ) : (
+                citiesOfProvince.map((item) => {
+                  const avgScore = item.uploads > 0 ? Math.round(item.score / item.uploads) : 0;
+                  return (
+                    <tr key={item.key} className="border-t">
+                      <td className="p-3 font-medium">{item.city}</td>
+                      <td className="p-3">{item.province}</td>
+                      <td className="p-3">{formatPersianNumber(item.uploads)}</td>
+                      <td className="p-3">{formatPersianNumber(item.views)}</td>
+                      <td className="p-3">{formatPersianNumber(avgScore)}</td>
+                      <td className="p-3">{formatPersianNumber(item.ownerCount)}</td>
+                      <td className="p-3">{formatPersianNumber(item.campaignCount)}</td>
+                    </tr>
+                  );
+                })
+              )
+            ) : provinceSummaries.length === 0 ? (
               <tr>
-                <td colSpan={7} className="p-6 text-center text-muted-foreground">
-                  داده شهری برای بازه/فیلتر فعلی یافت نشد.
+                <td colSpan={4} className="p-6 text-center text-muted-foreground">
+                  داده‌ای برای بازه/فیلتر فعلی یافت نشد.
                 </td>
               </tr>
             ) : (
-              data.citySummaries.map((item) => {
-                const avgScore = item.uploads > 0 ? Math.round(item.score / item.uploads) : 0;
-                const active = selectedCityKey === item.key;
+              provinceSummaries.map((item, idx) => {
+                const active = selectedProvince === item.province;
                 return (
                   <tr
-                    key={item.key}
+                    key={item.province}
                     className={`border-t ${active ? "bg-primary/5" : ""} cursor-pointer`}
-                    onClick={() => setSelectedCityKey(item.key)}
+                    onClick={() => setSelectedProvince(item.province)}
                   >
-                    <td className="p-3 font-medium">{item.city}</td>
-                    <td className="p-3">{item.province}</td>
+                    <td className="p-3 font-medium">{item.province}</td>
                     <td className="p-3">{formatPersianNumber(item.uploads)}</td>
                     <td className="p-3">{formatPersianNumber(item.views)}</td>
-                    <td className="p-3">{formatPersianNumber(avgScore)}</td>
-                    <td className="p-3">{formatPersianNumber(item.ownerCount)}</td>
-                    <td className="p-3">{formatPersianNumber(item.campaignCount)}</td>
+                    <td className="p-3">{formatPersianNumber(item.avgScore)}</td>
+                    <td className="p-3">{formatPersianNumber(idx + 1)}</td>
                   </tr>
                 );
               })
@@ -219,7 +285,7 @@ export function PresidentDashboard({ data, selectedOwnerId, dateRange }: Preside
 
       <div className="text-xs text-muted-foreground">
         <MapPin className="me-1 inline h-3.5 w-3.5" />
-        با کلیک روی شهر در جدول یا نقشه، نمای شهری فعال می‌شود.
+        با کلیک روی استان در نقشه یا جدول، نمای استانی فعال می‌شود.
       </div>
     </div>
   );

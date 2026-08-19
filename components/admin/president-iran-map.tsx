@@ -1,89 +1,108 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import type { Map as LeafletMap } from "leaflet";
-import { addLeafletTileLayer } from "@/lib/leaflet-tiles";
-import { MAP_DEFAULT_CENTER } from "@/lib/iran-location-center";
-import { formatPersianNumber } from "@/lib/utils";
+import { useCallback, useState } from "react";
+import { IRAN_MAP_PROVINCES, IRAN_MAP_VIEWBOX } from "@/lib/iran-map-paths";
+import { cn, formatPersianNumber } from "@/lib/utils";
 
-interface PresidentMapPoint {
-  key: string;
-  province: string;
-  city: string;
-  lat: number;
-  lng: number;
+interface ProvinceData {
   uploads: number;
   views: number;
 }
 
 interface PresidentIranMapProps {
-  points: PresidentMapPoint[];
-  selectedCityKey: string | null;
-  onSelectCity: (cityKey: string) => void;
+  provinceData: Record<string, ProvinceData>;
+  selectedProvince: string | null;
+  onSelectProvince: (province: string) => void;
 }
 
 export function PresidentIranMap({
-  points,
-  selectedCityKey,
-  onSelectCity,
+  provinceData,
+  selectedProvince,
+  onSelectProvince,
 }: PresidentIranMapProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<LeafletMap | null>(null);
+  const [hoveredProvince, setHoveredProvince] = useState<string | null>(null);
+  const [tooltip, setTooltip] = useState<{
+    x: number;
+    y: number;
+    name: string;
+    data: ProvinceData | null;
+  } | null>(null);
 
-  useEffect(() => {
-    if (!containerRef.current) return;
-    let disposed = false;
+  const handleMouseMove = useCallback(
+    (event: React.MouseEvent, name: string) => {
+      const rect = (event.currentTarget as SVGElement).closest("svg")!.getBoundingClientRect();
+      setTooltip({
+        x: event.clientX - rect.left,
+        y: event.clientY - rect.top - 10,
+        name,
+        data: provinceData[name] ?? null,
+      });
+    },
+    [provinceData]
+  );
 
-    void import("leaflet").then((leafletModule) => {
-      if (disposed || !containerRef.current) return;
-      const L = leafletModule.default;
+  const handleMouseLeave = useCallback(() => {
+    setHoveredProvince(null);
+    setTooltip(null);
+  }, []);
 
-      if (mapRef.current) {
-        mapRef.current.remove();
-        mapRef.current = null;
-      }
+  return (
+    <div className="relative select-none">
+      <svg
+        viewBox={IRAN_MAP_VIEWBOX}
+        className="h-auto w-full"
+        style={{ maxHeight: 520 }}
+      >
+        {IRAN_MAP_PROVINCES.map((prov) => {
+          const isSelected = selectedProvince === prov.name;
+          const isHovered = hoveredProvince === prov.name;
+          const data = provinceData[prov.name];
+          const hasData = data && data.uploads > 0;
 
-      const map = L.map(containerRef.current, { scrollWheelZoom: false }).setView(
-        [MAP_DEFAULT_CENTER.lat, MAP_DEFAULT_CENTER.lng],
-        5
-      );
-      addLeafletTileLayer(L, map);
-      mapRef.current = map;
+          return (
+            <path
+              key={prov.name}
+              d={prov.d}
+              className={cn(
+                "cursor-pointer stroke-border/80 transition-colors duration-150",
+                isSelected
+                  ? "fill-primary/60 stroke-primary stroke-[2]"
+                  : isHovered
+                    ? "fill-primary/30 stroke-primary/60 stroke-[1.5]"
+                    : hasData
+                      ? "fill-primary/15 stroke-border"
+                      : "fill-muted/40 stroke-border"
+              )}
+              strokeWidth={isSelected ? 2 : isHovered ? 1.5 : 0.8}
+              onMouseEnter={() => setHoveredProvince(prov.name)}
+              onMouseMove={(event) => handleMouseMove(event, prov.name)}
+              onMouseLeave={handleMouseLeave}
+              onClick={() => onSelectProvince(prov.name)}
+            />
+          );
+        })}
+      </svg>
 
-      const bounds: Array<[number, number]> = [];
-      for (const point of points) {
-        const isSelected = selectedCityKey === point.key;
-        const marker = L.circleMarker([point.lat, point.lng], {
-          radius: isSelected ? 14 : 10,
-          color: isSelected ? "#dc2626" : "#1d4ed8",
-          weight: 2,
-          fillColor: isSelected ? "#f87171" : "#60a5fa",
-          fillOpacity: 0.8,
-        });
-        marker.bindTooltip(
-          `<strong>${point.city}</strong><br/>${point.province}<br/>محتوا: ${formatPersianNumber(point.uploads)}<br/>بازدید: ${formatPersianNumber(point.views)}`,
-          { direction: "top", opacity: 1 }
-        );
-        marker.on("click", () => onSelectCity(point.key));
-        marker.addTo(map);
-        bounds.push([point.lat, point.lng]);
-      }
-
-      if (bounds.length > 1) {
-        map.fitBounds(bounds, { padding: [24, 24] });
-      } else if (bounds.length === 1) {
-        map.setView(bounds[0], 8);
-      }
-    });
-
-    return () => {
-      disposed = true;
-      if (mapRef.current) {
-        mapRef.current.remove();
-        mapRef.current = null;
-      }
-    };
-  }, [points, selectedCityKey, onSelectCity]);
-
-  return <div ref={containerRef} className="h-[420px] w-full bg-muted/20" />;
+      {tooltip && (
+        <div
+          className="pointer-events-none absolute z-50 rounded-lg border bg-popover px-3 py-2 text-xs shadow-md"
+          style={{
+            left: tooltip.x,
+            top: tooltip.y,
+            transform: "translate(-50%, -100%)",
+          }}
+        >
+          <p className="font-bold">{tooltip.name}</p>
+          {tooltip.data ? (
+            <div className="mt-1 space-y-0.5 text-muted-foreground">
+              <p>محتوا: {formatPersianNumber(tooltip.data.uploads)}</p>
+              <p>بازدید: {formatPersianNumber(tooltip.data.views)}</p>
+            </div>
+          ) : (
+            <p className="mt-1 text-muted-foreground">بدون داده</p>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
