@@ -121,7 +121,8 @@ export function PresidentIranMap({
                 ? "fill-primary font-bold"
                 : "fill-zinc-500 dark:fill-zinc-400"
             )}
-            fontSize={selectedProvince === prov.name || hoveredProvince === prov.name ? "8.5" : "7"}
+            fontSize={selectedProvince === prov.name || hoveredProvince === prov.name ? "13" : "11"}
+            fontWeight={selectedProvince === prov.name || hoveredProvince === prov.name ? "700" : "600"}
           >
             {prov.name}
           </text>
@@ -141,7 +142,7 @@ export function PresidentIranMap({
               y={city.y - 3.5}
               textAnchor="middle"
               className="fill-zinc-400 dark:fill-zinc-500"
-              fontSize="5"
+              fontSize="7"
             >
               {city.name}
             </text>

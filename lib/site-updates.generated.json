@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "da8fe9e23d041eabf6c83ae96ddc88e545a2de34",
+      "committedAt": "2026-08-19T12:30:03+03:30",
+      "title": "نمایش دستگاه‌های فعال هر استان با تعداد زیرمجموعه و کاربران",
+      "subject": "Show active devices per province in president dashboard"
+    },
+    {
       "hash": "3acee6d82bdff8dc043182c5a47a1cf0dbf3396f",
       "committedAt": "2026-08-19T11:54:53+03:30",
       "title": "حذف دریاها از نقشه رییس‌جمهور",
