@@ -1,6 +1,18 @@
 {
   "entries": [
     {
+      "hash": "6f77d79fd283427bf1bd40852f91a8805194ac4f",
+      "committedAt": "2026-08-19T11:18:03+03:30",
+      "title": "افزودن امکان تغییر آیکون پیش‌فرض سایت از تنظیمات ادمین",
+      "subject": "Add site icon settings and replace default favicon"
+    },
+    {
+      "hash": "406cbf9e7c0024e743ea362641653cf3ca184dde",
+      "committedAt": "2026-08-19T11:17:47+03:30",
+      "title": "تغییر نقشه شهری به نقشه تعاملی استانی با قابلیت hover و کلیک",
+      "subject": "Replace Leaflet city map with SVG province map"
+    },
+    {
       "hash": "85b50b282b9b843f66ae268396b6e85e01d47ce6",
       "committedAt": "2026-08-19T10:59:39+03:30",
       "title": "افزودن صفحه رییس‌جمهور با نقشه تعاملی ایران و نمایش شاخص‌های مهم ملی و شهری",
