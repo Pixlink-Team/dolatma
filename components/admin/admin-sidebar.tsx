@@ -99,6 +99,7 @@ const allNavItems: {
   permissionKey?: ContributorPermissionKey;
 }[] = [
   { href: "/admin", label: "داشبورد", icon: LayoutDashboard },
+  { href: "/admin/president", label: "صفحه رییس‌جمهور", icon: Radar, adminOrClientOnly: true },
   { href: "/admin/profile", label: "پروفایل من", icon: UserCircle },
   { href: "/admin/settings", label: "تنظیمات راستا", icon: Settings, permissionKey: "campaignSettings", adminOrClientOnly: true },
   { href: "/admin/capacity-map", label: "نقشه ملی ظرفیت", icon: Map, adminOrClientOnly: true },

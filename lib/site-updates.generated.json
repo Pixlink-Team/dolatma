@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "09b0090feaf1e3dfb96d8a22e4bc979c5cf81b09",
+      "committedAt": "2026-08-16T10:21:11+03:30",
+      "title": "افزودن بخش تنظیمات در پنل رییس برای مشاهده همه بخش‌های در دسترس مانند ادمین",
+      "subject": "Add settings section to Reis hub for full admin panel access"
+    },
+    {
       "hash": "7fcfa1fb2fc416b8c98f2decd3184ad8d5556194",
       "committedAt": "2026-08-10T12:17:09+03:30",
       "title": "رفع خطای صفحه مدیریت تقویم دفاع",

@@ -10,5 +10,8 @@ export default async function HomePage() {
   if (!session) {
     redirect("/admin/login");
   }
+  if (session.role === "client") {
+    redirect("/admin/president");
+  }
   redirect(isReisRole(session.role) ? REIS_HOME_PATH : "/admin");
 }
