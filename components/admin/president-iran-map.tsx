@@ -4,7 +4,6 @@ import { useCallback, useMemo, useState } from "react";
 import {
   IRAN_MAP_PROVINCES,
   IRAN_MAP_CITIES,
-  IRAN_MAP_WATERS,
   IRAN_MAP_VIEWBOX,
 } from "@/lib/iran-map-paths";
 import { cn, formatPersianNumber } from "@/lib/utils";
@@ -90,27 +89,6 @@ export function PresidentIranMap({
   return (
     <div className="relative select-none overflow-hidden rounded-xl bg-sky-50/50 dark:bg-slate-900/40">
       <svg viewBox={IRAN_MAP_VIEWBOX} className="h-auto w-full" style={{ maxHeight: 580 }}>
-        {/* Water bodies */}
-        {IRAN_MAP_WATERS.map((water) => (
-          <g key={water.name}>
-            <path
-              d={water.d}
-              className="fill-sky-200/50 stroke-sky-300/60 dark:fill-sky-900/30 dark:stroke-sky-700/40"
-              strokeWidth="0.5"
-            />
-            <text
-              x={water.labelX}
-              y={water.labelY}
-              textAnchor="middle"
-              className="fill-sky-400/80 dark:fill-sky-500/60"
-              fontSize="10"
-              fontStyle="italic"
-            >
-              {water.name}
-            </text>
-          </g>
-        ))}
-
         {/* Province shapes */}
         {IRAN_MAP_PROVINCES.map((prov) => (
           <path

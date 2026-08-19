@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "fd3cae43888ed72eb3aaa42be6eadf9f853dc6cc",
+      "committedAt": "2026-08-19T11:41:58+03:30",
+      "title": "رفع مشکل رنگ‌بندی و نمایش نقشه ایران",
+      "subject": "Fix Iran map styling: proper Tailwind classes, closed water paths, cleaner colors"
+    },
+    {
       "hash": "aa134fa3bac81f3e6c022018cabf9e4ab2ec0919",
       "committedAt": "2026-08-19T11:33:12+03:30",
       "title": "بهبود نقشه ایران با نام استان‌ها، شهرهای مهم، خلیج فارس و دریای خزر",
