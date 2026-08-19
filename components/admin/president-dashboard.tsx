@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { BarChart3, Building2, Eye, Gauge, MapPin, Target, Users } from "lucide-react";
+import { BarChart3, Building2, Eye, Gauge, Landmark, MapPin, Target, Users } from "lucide-react";
 import { KPICard } from "@/components/public/kpi-card";
 import { BarChartCard } from "@/components/charts/bar-chart-card";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,7 @@ import {
 import { PresidentIranMap } from "@/components/admin/president-iran-map";
 import type { PresidentDashboardData } from "@/lib/data-access/president-dashboard";
 import { formatPersianDateShort, formatPersianNumber } from "@/lib/utils";
+import { DEVICE_TYPE_LABELS } from "@/lib/device-labels";
 
 interface PresidentDashboardProps {
   data: PresidentDashboardData;
@@ -75,6 +76,19 @@ export function PresidentDashboard({ data, selectedOwnerId, dateRange }: Preside
   const selectedProvinceSummary = useMemo(
     () => provinceSummaries.find((item) => item.province === selectedProvince) ?? null,
     [provinceSummaries, selectedProvince]
+  );
+
+  const provinceDevices = useMemo(
+    () =>
+      selectedProvince
+        ? data.devices.filter((d) => d.province === selectedProvince)
+        : [],
+    [data.devices, selectedProvince]
+  );
+
+  const activeDeviceCount = useMemo(
+    () => provinceDevices.filter((d) => d.isActive).length,
+    [provinceDevices]
   );
 
   const citiesOfProvince = useMemo(
@@ -198,8 +212,54 @@ export function PresidentDashboard({ data, selectedOwnerId, dateRange }: Preside
       </div>
 
       {selectedProvince ? (
-        <div className="rounded-xl border bg-primary/5 px-4 py-3 text-sm">
-          استان انتخاب‌شده: <span className="font-bold">{selectedProvince}</span>
+        <div className="space-y-4">
+          <div className="rounded-xl border bg-primary/5 px-4 py-3 text-sm">
+            استان انتخاب‌شده: <span className="font-bold">{selectedProvince}</span>
+            {provinceDevices.length > 0 && (
+              <span className="ms-3 text-muted-foreground">
+                ({formatPersianNumber(activeDeviceCount)} دستگاه فعال از {formatPersianNumber(provinceDevices.length)})
+              </span>
+            )}
+          </div>
+
+          {provinceDevices.length > 0 && (
+            <div className="space-y-2">
+              <h3 className="flex items-center gap-2 text-sm font-semibold">
+                <Landmark className="h-4 w-4" />
+                دستگاه‌های فعال در {selectedProvince}
+              </h3>
+              <div className="overflow-x-auto rounded-xl border">
+                <table className="w-full min-w-[700px] text-sm">
+                  <thead className="bg-muted/40 text-right">
+                    <tr>
+                      <th className="p-3 font-medium">نام دستگاه</th>
+                      <th className="p-3 font-medium">نوع</th>
+                      <th className="p-3 font-medium">شهر</th>
+                      <th className="p-3 font-medium">زیرمجموعه‌ها</th>
+                      <th className="p-3 font-medium">کاربران</th>
+                      <th className="p-3 font-medium">وضعیت</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {provinceDevices.map((device) => (
+                      <tr key={device.id} className="border-t">
+                        <td className="p-3 font-medium">{device.shortName || device.name}</td>
+                        <td className="p-3">{DEVICE_TYPE_LABELS[device.type] ?? device.type}</td>
+                        <td className="p-3">{device.city ?? "—"}</td>
+                        <td className="p-3">{formatPersianNumber(device.childrenCount)}</td>
+                        <td className="p-3">{formatPersianNumber(device.usersCount)}</td>
+                        <td className="p-3">
+                          <span className={`inline-block rounded-full px-2 py-0.5 text-xs ${device.isActive ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" : "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"}`}>
+                            {device.isActive ? "فعال" : "غیرفعال"}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
       ) : null}
 

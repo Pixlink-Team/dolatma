@@ -2,6 +2,8 @@ import { getAllCampaigns, getAdminData, getAllUsers } from "@/lib/data-access/ad
 import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
 import { getLocationCenter } from "@/lib/iran-location-center";
 import { isPostgresConfigured } from "@/lib/utils";
+import { pgListDevices } from "@/lib/db/repository-devices";
+import type { DeviceType } from "@/lib/types";
 
 type ContentRecord = {
   campaignId: string;
@@ -66,6 +68,18 @@ export interface PresidentDashboardOwnerOption {
   contentCount: number;
 }
 
+export interface PresidentProvinceDevice {
+  id: string;
+  name: string;
+  shortName: string | null;
+  type: DeviceType;
+  province: string;
+  city: string | null;
+  childrenCount: number;
+  usersCount: number;
+  isActive: boolean;
+}
+
 export interface PresidentDashboardData {
   selectedOwnerId: string | null;
   canSwitchOwner: boolean;
@@ -73,6 +87,7 @@ export interface PresidentDashboardData {
   citySummaries: PresidentDashboardCitySummary[];
   timeseries: PresidentDashboardTimePoint[];
   ownerOptions: PresidentDashboardOwnerOption[];
+  devices: PresidentProvinceDevice[];
 }
 
 function normalizeText(value: string | null | undefined): string | null {
@@ -326,6 +341,28 @@ export async function getPresidentDashboardData(input?: {
     totalSubmissions > 0 ? Math.round((approvedSubmissions / totalSubmissions) * 100) : 0;
   const avgScore = filteredRecords.length > 0 ? Math.round(totalScore / filteredRecords.length) : 0;
 
+  let devices: PresidentProvinceDevice[] = [];
+  if (isPostgresConfigured()) {
+    try {
+      const allDevices = await pgListDevices();
+      devices = allDevices
+        .filter((d) => d.province)
+        .map((d) => ({
+          id: d.id,
+          name: d.name,
+          shortName: d.shortName ?? null,
+          type: d.type,
+          province: d.province!,
+          city: d.city ?? null,
+          childrenCount: d.childrenCount ?? 0,
+          usersCount: d.usersCount ?? 0,
+          isActive: d.isActive,
+        }));
+    } catch {
+      // DB may not have devices table yet
+    }
+  }
+
   return {
     selectedOwnerId,
     canSwitchOwner,
@@ -340,5 +377,6 @@ export async function getPresidentDashboardData(input?: {
     citySummaries,
     timeseries,
     ownerOptions,
+    devices,
   };
 }

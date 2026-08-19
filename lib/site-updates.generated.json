@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "3acee6d82bdff8dc043182c5a47a1cf0dbf3396f",
+      "committedAt": "2026-08-19T11:54:53+03:30",
+      "title": "حذف دریاها از نقشه رییس‌جمهور",
+      "subject": "Remove water bodies from president map"
+    },
+    {
       "hash": "fd3cae43888ed72eb3aaa42be6eadf9f853dc6cc",
       "committedAt": "2026-08-19T11:41:58+03:30",
       "title": "رفع مشکل رنگ‌بندی و نمایش نقشه ایران",
