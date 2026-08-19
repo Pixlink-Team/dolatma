@@ -225,6 +225,69 @@ function ChannelAnalyticsSettings({
   );
 }
 
+function SiteIconCard() {
+  const [uploading, setUploading] = useState(false);
+  const currentUrl = "/images/dolat-icon.png?" + Date.now();
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/site-icon", { method: "POST", body: fd });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error ?? "خطا در آپلود آیکون");
+        return;
+      }
+      toast.success("آیکون سایت تغییر کرد. بعد از بیلد بعدی اعمال می‌شود.");
+    } catch {
+      toast.error("خطا در آپلود آیکون");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">آیکون پیش‌فرض سایت</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <p className="text-sm text-muted-foreground">
+          آیکون تب مرورگر و آیکون اپلیکیشن (favicon / apple-icon) که در همه صفحات بدون فاویکون اختصاصی نمایش داده می‌شود.
+        </p>
+        <div className="flex items-center gap-4">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={currentUrl}
+            alt="آیکون فعلی"
+            className="h-16 w-16 rounded-lg border object-contain bg-white p-1"
+          />
+          <div className="space-y-2">
+            <Label htmlFor="site-icon-upload" className="cursor-pointer">
+              <Button variant="outline" size="sm" asChild disabled={uploading}>
+                <span>{uploading ? "در حال آپلود..." : "تغییر آیکون"}</span>
+              </Button>
+            </Label>
+            <input
+              id="site-icon-upload"
+              type="file"
+              accept="image/png,image/webp,image/x-icon,image/svg+xml"
+              className="hidden"
+              onChange={handleUpload}
+              disabled={uploading}
+            />
+            <p className="text-xs text-muted-foreground">PNG، WebP یا ICO — حداکثر ۲ مگابایت</p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export function SettingsAdmin({
   initialSettings,
   canEditFullSettings = true,
@@ -341,6 +404,8 @@ export function SettingsAdmin({
       </div>
 
       <CampaignTools isFullAdmin={canEditFullSettings} />
+
+      {canEditFullSettings && <SiteIconCard />}
 
       <Card>
         <CardHeader>
