@@ -227,7 +227,7 @@ function waterPath(coords) {
     .join("");
 }
 
-const persianGulfPath = waterPath(PERSIAN_GULF_COORDS);
+const persianGulfPath = waterPath(PERSIAN_GULF_COORDS) + "Z";
 const caspianPath = waterPath(CASPIAN_COORDS) + "Z";
 
 // Persian Gulf label position
