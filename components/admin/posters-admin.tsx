@@ -47,6 +47,8 @@ import { resolveDisplayVersion } from "@/lib/media-utils";
 import { formatPersianDate } from "@/lib/utils";
 import type { AdminUser, MediaCategory, Poster, PosterVersion } from "@/lib/types";
 
+const EMPTY_POSTER_VERSIONS: PosterVersion[] = [];
+
 interface PostersAdminProps {
   campaignId: string;
   initialCategories: MediaCategory[];
@@ -136,7 +138,10 @@ export function PostersAdmin({
   }, [activePosterId, draftPoster, posters]);
 
   const isDraftPoster = Boolean(draftPoster && activePosterId === draftPoster.id);
-  const activeVersions = activePosterId ? versionsByPosterId.get(activePosterId) ?? [] : [];
+  const activeVersions = useMemo(() => {
+    if (!activePosterId) return EMPTY_POSTER_VERSIONS;
+    return versionsByPosterId.get(activePosterId) ?? EMPTY_POSTER_VERSIONS;
+  }, [activePosterId, versionsByPosterId]);
   const refresh = () => router.refresh();
 
   const clearEditQuery = () => {

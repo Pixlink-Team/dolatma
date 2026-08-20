@@ -113,15 +113,9 @@ export function SitePublicationFormDialog({
     setPlanLabels(initialPlanLabels);
     setSourceProductionType(initialSourceProduction?.type ?? null);
     setSourceProductionId(initialSourceProduction?.id ?? null);
-  }, [
-    open,
-    initialValues,
-    initialValuesKey,
-    form,
-    initialSourceProduction?.type,
-    initialSourceProduction?.id,
-    initialPlanLabels,
-  ]);
+    // Reset only when dialog opens or the prefill key changes — not on unstable object identity.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, initialValuesKey]);
 
   const onSubmit = form.handleSubmit((data) => {
     if (!data.link.trim()) {

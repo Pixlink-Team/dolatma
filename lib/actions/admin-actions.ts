@@ -6,7 +6,10 @@ import {
   FORBIDDEN,
   requireAuthSessionOrRedirect,
 } from "@/lib/auth/require-auth-action";
-import { assertCanMutateOwnedContent } from "@/lib/auth/assert-content-ownership";
+import {
+  assertCanMutateOwnedContent,
+  assertCanMutateOwnedContentOnSave,
+} from "@/lib/auth/assert-content-ownership";
 import { assertTutorialForPossibleCreate } from "@/lib/auth/require-tutorial-completion";
 import {
   deleteBillboard,
@@ -52,6 +55,7 @@ import type {
 import { resolveSaveOwnerUserId } from "@/lib/admin-content-owner";
 import { auditContentChange, auditContentDelete, logAuditFromCurrentSession } from "@/lib/audit/log-event";
 import { getContentTitleValidationError } from "@/lib/content-constraints";
+import { getPlanLabelsValidationError } from "@/lib/content-topics";
 import {
   hasContributorPermission,
   type ContributorPermissionKey,
@@ -63,6 +67,14 @@ import { stripFileAccessTokensDeep } from "@/lib/uploads";
 
 function validateTitlePayload(data: { title?: unknown }) {
   const error = getContentTitleValidationError(data.title);
+  return error ? { success: false as const, error } : null;
+}
+
+function validatePlanLabelsPayload(data: {
+  planLabels?: string[] | null;
+  planLabel?: string | null;
+}) {
+  const error = getPlanLabelsValidationError(data.planLabels, data.planLabel);
   return error ? { success: false as const, error } : null;
 }
 
@@ -151,6 +163,13 @@ async function assertContributorOwnsBillboard(
   return assertCanMutateOwnedContent(session, "billboards", billboardId);
 }
 
+async function assertContributorOwnsBillboardOnSave(
+  session: AuthSession,
+  billboardId: string | undefined | null
+): Promise<{ success: false; error: string } | null> {
+  return assertCanMutateOwnedContentOnSave(session, "billboards", billboardId);
+}
+
 export async function saveCampaignAction(data: Partial<CampaignSettings> & { id?: string }) {
   const auth = await requireFullAdmin();
   if (isAuthError(auth)) return auth;
@@ -204,8 +223,10 @@ export async function saveBillboardAction(data: Partial<Billboard> & { id?: stri
   if (sectionDenied) return sectionDenied;
   const validationError = validateTitlePayload(data);
   if (validationError) return validationError;
-  if (data.id) {
-    const denied = await assertContributorOwnsBillboard(auth, data.id);
+  const planLabelsError = validatePlanLabelsPayload(data);
+  if (planLabelsError) return planLabelsError;
+  {
+    const denied = await assertContributorOwnsBillboardOnSave(auth, data.id);
     if (denied) return denied;
   }
   const tutorialDenied = await assertTutorialForPossibleCreate(
@@ -295,8 +316,10 @@ export async function savePosterAction(data: Partial<Poster> & { id?: string }) 
   if (sectionDenied) return sectionDenied;
   const validationError = validateTitlePayload(data);
   if (validationError) return validationError;
-  if (data.id) {
-    const denied = await assertCanMutateOwnedContent(auth, "posters", data.id);
+  const planLabelsError = validatePlanLabelsPayload(data);
+  if (planLabelsError) return planLabelsError;
+  {
+    const denied = await assertCanMutateOwnedContentOnSave(auth, "posters", data.id);
     if (denied) return denied;
   }
   const tutorialDenied = await assertTutorialForPossibleCreate("posters", "posters", data.id);
@@ -379,8 +402,10 @@ export async function saveVideoAction(data: Partial<Video> & { id?: string }) {
   if (sectionDenied) return sectionDenied;
   const validationError = validateTitlePayload(data);
   if (validationError) return validationError;
-  if (data.id) {
-    const denied = await assertCanMutateOwnedContent(auth, "videos", data.id);
+  const planLabelsError = validatePlanLabelsPayload(data);
+  if (planLabelsError) return planLabelsError;
+  {
+    const denied = await assertCanMutateOwnedContentOnSave(auth, "videos", data.id);
     if (denied) return denied;
   }
   const tutorialDenied = await assertTutorialForPossibleCreate("videos", "videos", data.id);
@@ -461,8 +486,8 @@ export async function saveCompanyWebsiteAction(data: Partial<CompanyWebsite> & {
   if (isAuthError(auth)) return auth;
   const validationError = validateTitlePayload(data);
   if (validationError) return validationError;
-  if (data.id) {
-    const denied = await assertCanMutateOwnedContent(auth, "company_websites", data.id);
+  {
+    const denied = await assertCanMutateOwnedContentOnSave(auth, "company_websites", data.id);
     if (denied) return denied;
   }
   const tutorialDenied = await assertTutorialForPossibleCreate(
@@ -603,8 +628,10 @@ export async function saveCampaignFileAction(data: Partial<CampaignFile> & { id?
   if (sectionDenied) return sectionDenied;
   const validationError = validateTitlePayload(data);
   if (validationError) return validationError;
-  if (data.id) {
-    const denied = await assertCanMutateOwnedContent(auth, "campaign_files", data.id);
+  const planLabelsError = validatePlanLabelsPayload(data);
+  if (planLabelsError) return planLabelsError;
+  {
+    const denied = await assertCanMutateOwnedContentOnSave(auth, "campaign_files", data.id);
     if (denied) return denied;
   }
   const tutorialDenied = await assertTutorialForPossibleCreate(
@@ -652,8 +679,10 @@ export async function saveRawMediaUploadAction(data: Partial<RawMediaUpload> & {
   if (sectionDenied) return sectionDenied;
   const validationError = validateTitlePayload(data);
   if (validationError) return validationError;
-  if (data.id) {
-    const denied = await assertCanMutateOwnedContent(auth, "raw_media_uploads", data.id);
+  const planLabelsError = validatePlanLabelsPayload(data);
+  if (planLabelsError) return planLabelsError;
+  {
+    const denied = await assertCanMutateOwnedContentOnSave(auth, "raw_media_uploads", data.id);
     if (denied) return denied;
   }
   const tutorialDenied = await assertTutorialForPossibleCreate(
@@ -701,11 +730,13 @@ export async function saveTextContentAction(data: Partial<TextContent> & { id?: 
   if (sectionDenied) return sectionDenied;
   const validationError = validateTitlePayload(data);
   if (validationError) return validationError;
+  const planLabelsError = validatePlanLabelsPayload(data);
+  if (planLabelsError) return planLabelsError;
   if (!data.body?.trim()) {
     return { success: false as const, error: "متن محتوا الزامی است" };
   }
-  if (data.id) {
-    const denied = await assertCanMutateOwnedContent(auth, "text_contents", data.id);
+  {
+    const denied = await assertCanMutateOwnedContentOnSave(auth, "text_contents", data.id);
     if (denied) return denied;
   }
   const tutorialDenied = await assertTutorialForPossibleCreate(

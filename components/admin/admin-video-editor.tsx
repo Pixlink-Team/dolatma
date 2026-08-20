@@ -161,17 +161,9 @@ export function AdminVideoEditor({
     setVideoUrl(current?.videoUrl || "");
     setThumbnailUrl(current ? draftCoverFromVersion(current) : "");
     setDuration(current?.duration ?? "");
-  }, [
-    video.id,
-    video.title,
-    video.description,
-    video.categoryId,
-    video.planLabel,
-    video.planLabels,
-    video.score,
-    versions,
-    categories,
-  ]);
+    // Only re-seed when switching videos — unstable versions[] would wipe in-progress uploads.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [video.id]);
 
   const previewCover = videoUrl
     ? resolveVideoThumbnail(videoUrl, thumbnailUrl || undefined)

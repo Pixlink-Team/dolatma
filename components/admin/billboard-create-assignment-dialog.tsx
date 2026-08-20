@@ -308,16 +308,9 @@ export function BillboardCreateAssignmentDialog({
     };
 
     void loadForm();
-  }, [
-    open,
-    contributorProfile,
-    editingBillboard,
-    initialValues,
-    initialValuesKey,
-    initialSourceProduction?.type,
-    initialSourceProduction?.id,
-    initialPlanLabels,
-  ]);
+    // Reset only when dialog opens / edit target / prefill key changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, initialValuesKey, editingBillboard?.id]);
 
   const patchValues = (patch: Partial<BillboardSectionFormValues>) => {
     setValues((prev) => ({ ...prev, ...patch }));

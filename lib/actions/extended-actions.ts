@@ -2,7 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { getAuthSession, getOwnerFilter, isFullAdmin } from "@/lib/auth/get-session";
-import { assertCanMutateOwnedContent } from "@/lib/auth/assert-content-ownership";
+import {
+  assertCanMutateOwnedContent,
+  assertCanMutateOwnedContentOnSave,
+} from "@/lib/auth/assert-content-ownership";
 import { canAccessCampaignSettingsForCampaign, canManageSubtreeUsers, isClientUser } from "@/lib/auth/access";
 import { getSessionHomeDeviceId } from "@/lib/auth/device-access";
 import { pgIsDeviceInSubtree } from "@/lib/db/repository-devices";
@@ -36,11 +39,20 @@ import {
   logAuditForSession,
 } from "@/lib/audit/log-event";
 import { getContentTitleValidationError } from "@/lib/content-constraints";
+import { getPlanLabelsValidationError } from "@/lib/content-topics";
 import type { TutorialSectionKey } from "@/lib/section-tutorials";
 import { assertProductionSourceAllowed } from "@/lib/production-source";
 
 function validateTitlePayload(data: { title?: unknown }) {
   const error = getContentTitleValidationError(data.title);
+  return error ? { success: false as const, error } : null;
+}
+
+function validatePlanLabelsPayload(data: {
+  planLabels?: string[] | null;
+  planLabel?: string | null;
+}) {
+  const error = getPlanLabelsValidationError(data.planLabels, data.planLabel);
   return error ? { success: false as const, error } : null;
 }
 
@@ -97,6 +109,8 @@ async function withSaveOwnerScope<T extends { id?: string; ownerUserId?: string 
 export async function saveSocialPostAction(data: Partial<SocialMediaPost> & { id?: string }) {
   const validationError = validateTitlePayload(data);
   if (validationError) return validationError;
+  const planLabelsError = validatePlanLabelsPayload(data);
+  if (planLabelsError) return planLabelsError;
   const session = await getAuthSession();
   if (!session) return { success: false, error: "Unauthorized" };
 
@@ -113,8 +127,8 @@ export async function saveSocialPostAction(data: Partial<SocialMediaPost> & { id
     return { success: false, error: "Database required" };
   }
 
-  if (data.id) {
-    const denied = await assertCanMutateOwnedContent(session, "social_media_posts", data.id);
+  {
+    const denied = await assertCanMutateOwnedContentOnSave(session, "social_media_posts", data.id);
     if (denied) return denied;
   }
 
@@ -405,8 +419,8 @@ export async function saveBroadcastReportAction(data: Partial<BroadcastReport> &
   );
   if (tutorialDenied) return tutorialDenied;
 
-  if (data.id) {
-    const denied = await assertCanMutateOwnedContent(session, "broadcast_reports", data.id);
+  {
+    const denied = await assertCanMutateOwnedContentOnSave(session, "broadcast_reports", data.id);
     if (denied) return denied;
   }
 
@@ -476,8 +490,8 @@ export async function saveSmsSendReportAction(data: Partial<SmsSendReport> & { i
   );
   if (tutorialDenied) return tutorialDenied;
 
-  if (data.id) {
-    const denied = await assertCanMutateOwnedContent(session, "sms_send_reports", data.id);
+  {
+    const denied = await assertCanMutateOwnedContentOnSave(session, "sms_send_reports", data.id);
     if (denied) return denied;
   }
 
@@ -508,6 +522,8 @@ export async function deleteSmsSendReportAction(id: string) {
 export async function saveCampaignActivityAction(data: Partial<CampaignActivity> & { id?: string }) {
   const validationError = validateTitlePayload(data);
   if (validationError) return validationError;
+  const planLabelsError = validatePlanLabelsPayload(data);
+  if (planLabelsError) return planLabelsError;
   const session = await getAuthSession();
   if (!session) return { success: false, error: "Unauthorized" };
 
@@ -538,8 +554,8 @@ export async function saveCampaignActivityAction(data: Partial<CampaignActivity>
   );
   if (tutorialDenied) return tutorialDenied;
 
-  if (data.id) {
-    const denied = await assertCanMutateOwnedContent(session, "campaign_activities", data.id);
+  {
+    const denied = await assertCanMutateOwnedContentOnSave(session, "campaign_activities", data.id);
     if (denied) return denied;
   }
 
@@ -607,8 +623,8 @@ export async function saveMeetingAction(
   );
   if (tutorialDenied) return tutorialDenied;
 
-  if (data.id) {
-    const denied = await assertCanMutateOwnedContent(session, "campaign_meetings", data.id);
+  {
+    const denied = await assertCanMutateOwnedContentOnSave(session, "campaign_meetings", data.id);
     if (denied) return denied;
   }
 

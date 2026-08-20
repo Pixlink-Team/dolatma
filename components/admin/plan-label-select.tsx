@@ -46,11 +46,23 @@ export function PlanLabelSelect({
   onChange,
   onChangeMultiple,
   label = "موضوع",
-  optional = true,
+  optional = false,
   multiple = true,
 }: PlanLabelSelectProps) {
   const options = buildOptions(topics, plans);
-  if (options.length === 0) return null;
+  if (options.length === 0) {
+    return (
+      <div className="space-y-2">
+        <Label>
+          {label}
+          {!optional ? <span className="mr-1 text-destructive">*</span> : null}
+        </Label>
+        <p className="text-xs text-destructive">
+          هنوز موضوعی در تنظیمات راستا تعریف نشده است.
+        </p>
+      </div>
+    );
+  }
 
   const selected = multiple
     ? values ?? (value?.trim() ? [value] : [])
@@ -73,6 +85,7 @@ export function PlanLabelSelect({
 
   const removeValue = (token: string) => {
     const updated = selected.filter((item) => item !== token);
+    if (!optional && updated.length === 0) return;
     if (multiple && onChangeMultiple) {
       onChangeMultiple(updated);
     } else {
@@ -92,20 +105,25 @@ export function PlanLabelSelect({
 
   return (
     <div className="space-y-2">
-      <Label>{label}</Label>
+      <Label>
+        {label}
+        {!optional ? <span className="mr-1 text-destructive">*</span> : null}
+      </Label>
       {selected.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {selected.map((token) => (
             <Badge key={token} variant="secondary" className="gap-1 pl-2">
               {formatPlanLabelDisplay(token)}
-              <button
-                type="button"
-                className="rounded-full hover:bg-muted"
-                onClick={() => removeValue(token)}
-                aria-label="حذف موضوع"
-              >
-                <X className="h-3 w-3" />
-              </button>
+              {(optional || selected.length > 1) && (
+                <button
+                  type="button"
+                  className="rounded-full hover:bg-muted"
+                  onClick={() => removeValue(token)}
+                  aria-label="حذف موضوع"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              )}
             </Badge>
           ))}
         </div>
@@ -120,16 +138,18 @@ export function PlanLabelSelect({
           searchPlaceholder="جستجوی موضوع..."
           clearAfterSelect
         />
-      ) : (
-        optional && selected.length === 0 && (
-          <p className="text-xs text-muted-foreground">موضوعی تعریف نشده است.</p>
-        )
-      )}
-      {multiple && selected.length > 0 && (
-        <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => {
-          onChangeMultiple?.([]);
-          onChange?.(null);
-        }}>
+      ) : null}
+      {optional && multiple && selected.length > 0 && (
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-7 px-2 text-xs"
+          onClick={() => {
+            onChangeMultiple?.([]);
+            onChange?.(null);
+          }}
+        >
           پاک کردن همه
         </Button>
       )}

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
-import { assertCanMutateOwnedContent } from "@/lib/auth/assert-content-ownership";
+import { assertCanMutateOwnedContentOnSave } from "@/lib/auth/assert-content-ownership";
 import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
 import { assertTutorialForPossibleCreate } from "@/lib/auth/require-tutorial-completion";
 import { resolveDefaultAdminOwnerUserId } from "@/lib/admin-content-owner";
@@ -130,6 +130,9 @@ export async function POST(request: Request) {
     .getAll("planLabels")
     .map((value) => String(value).trim())
     .filter(Boolean);
+  if (planLabels.length === 0 && !planLabel) {
+    return NextResponse.json({ error: "موضوع الزامی است" }, { status: 400 });
+  }
   const sourceProductionTypeRaw = String(formData.get("sourceProductionType") ?? "").trim();
   const sourceProductionId = String(formData.get("sourceProductionId") ?? "").trim() || null;
   const sourceProductionType = isProductionSourceType(sourceProductionTypeRaw)
@@ -149,8 +152,8 @@ export async function POST(request: Request) {
     }
   }
 
-  if (billboardId) {
-    const denied = await assertCanMutateOwnedContent(session, "billboards", billboardId);
+  {
+    const denied = await assertCanMutateOwnedContentOnSave(session, "billboards", billboardId);
     if (denied) {
       return NextResponse.json({ error: denied.error }, { status: 403 });
     }

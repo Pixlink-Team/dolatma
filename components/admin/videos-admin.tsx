@@ -40,6 +40,8 @@ import { AdminInfiniteScrollSentinel } from "@/components/admin/admin-infinite-s
 import { resolveDisplayVersion } from "@/lib/media-utils";
 import { VideoModal } from "@/components/media/video-modal";
 import type { AdminUser, MediaCategory, Video, VideoVersion } from "@/lib/types";
+
+const EMPTY_VIDEO_VERSIONS: VideoVersion[] = [];
 import { pickDefaultVideoCategoryId } from "@/lib/video-types";
 
 interface VideosAdminProps {
@@ -160,7 +162,10 @@ export function VideosAdmin({
   }, [activeVideoId, draftVideo, videos]);
 
   const isDraftVideo = Boolean(draftVideo && activeVideoId === draftVideo.id);
-  const activeVersions = activeVideoId ? versionsByVideoId.get(activeVideoId) ?? [] : [];
+  const activeVersions = useMemo(() => {
+    if (!activeVideoId) return EMPTY_VIDEO_VERSIONS;
+    return versionsByVideoId.get(activeVideoId) ?? EMPTY_VIDEO_VERSIONS;
+  }, [activeVideoId, versionsByVideoId]);
   const refresh = () => router.refresh();
 
   const clearEditQuery = () => {

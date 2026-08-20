@@ -83,6 +83,19 @@ export function normalizePlanLabels(
   return legacy ? [legacy] : [];
 }
 
+export const PLAN_LABELS_REQUIRED_MESSAGE = "موضوع الزامی است";
+
+/** Returns an error when no topic/plan label is selected. */
+export function getPlanLabelsValidationError(
+  planLabels?: string[] | null,
+  legacyPlanLabel?: string | null
+): string | null {
+  if (normalizePlanLabels(planLabels, legacyPlanLabel).length === 0) {
+    return PLAN_LABELS_REQUIRED_MESSAGE;
+  }
+  return null;
+}
+
 export function matchesPlanLabelFilter(
   planLabels: string[] | null | undefined,
   legacyPlanLabel: string | null | undefined,

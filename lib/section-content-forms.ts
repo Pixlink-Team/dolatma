@@ -289,13 +289,13 @@ const DEFAULT_FIELDS: Record<ContentFormSectionKey, () => ContentFormField[]> = 
   posters: () => [
     systemField("image", "تصویر پوستر", true),
     systemField("title", "عنوان", false),
-    systemField("planLabels", "موضوع", false),
+    systemField("planLabels", "موضوع", true),
     systemField("description", "توضیحات", false),
     systemField("score", "امتیاز", false),
   ],
   billboards: () => [
     systemField("category", "دسته‌بندی", true),
-    systemField("planLabels", "موضوع", false),
+    systemField("planLabels", "موضوع", true),
     systemField("provinceCity", "استان و شهر", false),
     systemField("map", "موقعیت روی نقشه", true),
     systemField("axis", "محور / خیابان / بزرگراه", true),
@@ -308,7 +308,7 @@ const DEFAULT_FIELDS: Record<ContentFormSectionKey, () => ContentFormField[]> = 
   videos: () => [
     systemField("video", "ویدیو", true),
     systemField("title", "عنوان", true),
-    systemField("planLabels", "موضوع", false),
+    systemField("planLabels", "موضوع", true),
     systemField("description", "توضیحات", false),
     systemField("videoType", "نوع ویدیو", false),
     systemField("score", "امتیاز", false),
@@ -316,20 +316,20 @@ const DEFAULT_FIELDS: Record<ContentFormSectionKey, () => ContentFormField[]> = 
   ],
   files: () => [
     systemField("title", "عنوان", true),
-    systemField("planLabels", "موضوع", false),
+    systemField("planLabels", "موضوع", true),
     systemField("description", "توضیحات", false),
     systemField("document", "فایل", true),
   ],
   rawMedia: () => [
     systemField("title", "عنوان", true),
-    systemField("planLabels", "موضوع", false),
+    systemField("planLabels", "موضوع", true),
     systemField("description", "توضیحات", false),
     systemField("mediaKind", "نوع فایل", true),
     systemField("rawFile", "فایل خام", true),
   ],
   sitePublications: () => [
     systemField("title", "عنوان", true),
-    systemField("planLabels", "موضوع", false),
+    systemField("planLabels", "موضوع", true),
     systemField("link", "لینک مطلب", true),
     systemField("publishedDate", "تاریخ انتشار", false),
     systemField("score", "امتیاز", false),
@@ -340,7 +340,7 @@ const DEFAULT_FIELDS: Record<ContentFormSectionKey, () => ContentFormField[]> = 
     systemField("platform", "کانال", true),
     systemField("contentType", "نوع محتوا", true),
     systemField("title", "عنوان / نام کاور", false),
-    systemField("planLabels", "موضوع", false),
+    systemField("planLabels", "موضوع", true),
     systemField("score", "امتیاز", false),
     systemField("engagement", "آمار تعامل", false),
     systemField("link", "لینک پست", false),
@@ -351,7 +351,7 @@ const DEFAULT_FIELDS: Record<ContentFormSectionKey, () => ContentFormField[]> = 
   ],
   pressPublications: () => [
     systemField("title", "عنوان", true),
-    systemField("planLabels", "موضوع", false),
+    systemField("planLabels", "موضوع", true),
     systemField("activityType", "نوع (مجله / روزنامه)", true),
     systemField("activityDate", "تاریخ", true),
     systemField("link", "لینک مطلب", false),
@@ -361,7 +361,7 @@ const DEFAULT_FIELDS: Record<ContentFormSectionKey, () => ContentFormField[]> = 
   ],
   activities: () => [
     systemField("title", "عنوان", true),
-    systemField("planLabels", "موضوع", false),
+    systemField("planLabels", "موضوع", true),
     systemField("activityType", "نوع اقدام", true),
     systemField("isCreative", "اقدام خلاقانه", false),
     systemField("activityDate", "تاریخ", true),
@@ -468,7 +468,8 @@ export function normalizeContentFormFields(
         widget,
         type: "text",
         label: label || contentSystemWidgetLabels[widget],
-        required,
+        // Topic is always required across content forms.
+        required: widget === "planLabels" ? true : required,
       });
       continue;
     }

@@ -123,6 +123,35 @@ export async function assertCanMutateOwnedContent(
   return null;
 }
 
+/**
+ * Ownership check for upsert/save paths.
+ * When the row does not exist yet (client-generated UUID on create), skip —
+ * otherwise contributors can never create posters/videos.
+ */
+export async function assertCanMutateOwnedContentOnSave(
+  session: AuthSession,
+  table: OwnedContentTable | "poster_versions" | "video_versions",
+  id: string | undefined | null
+): Promise<{ success: false; error: string } | null> {
+  if (!id) return null;
+  if (isFullAdmin(session)) return null;
+  if (!isPostgresConfigured()) return null;
+
+  const row =
+    table === "poster_versions"
+      ? await getPosterOwnerFromVersion(id)
+      : table === "video_versions"
+        ? await getVideoOwnerFromVersion(id)
+        : await getOwnedRow(table, id);
+
+  // Create path: client already minted an id before the first INSERT.
+  if (!row) return null;
+  if (!session.userId || row.ownerUserId !== session.userId) {
+    return { success: false, error: "دسترسی ندارید" };
+  }
+  return null;
+}
+
 export async function assertCanMutateOwnedContentFromSession(
   table: OwnedContentTable | "poster_versions" | "video_versions",
   id: string

@@ -44,6 +44,14 @@ import { todayISO } from "@/lib/jalali";
 import { resolveDisplayVersion } from "@/lib/media-utils";
 import type { ContentFormField, MediaCategory, Poster, PosterVersion } from "@/lib/types";
 
+function getActionErrorMessage(result: unknown, fallback: string): string {
+  if (result && typeof result === "object" && "error" in result) {
+    const message = (result as { error?: unknown }).error;
+    if (typeof message === "string" && message.trim()) return message;
+  }
+  return fallback;
+}
+
 interface AdminPosterEditorProps {
   poster: Poster;
   versions: PosterVersion[];
@@ -117,17 +125,9 @@ export function AdminPosterEditor({
       metadata: parseMetadataObject(poster.metadata),
     });
     setEditCategoryId(poster.categoryId);
-  }, [
-    poster.id,
-    poster.title,
-    poster.description,
-    poster.categoryId,
-    poster.planLabel,
-    poster.planLabels,
-    poster.score,
-    poster.metadata,
-    versions,
-  ]);
+    // Only re-seed when switching posters — unstable versions[] would wipe in-progress uploads.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [poster.id]);
 
   const refresh = () => router.refresh();
 
@@ -175,10 +175,14 @@ export function AdminPosterEditor({
         updatedAt: new Date().toISOString(),
       };
 
-      await savePosterAction(savedPoster);
+      const posterResult = await savePosterAction(savedPoster);
+      if (!posterResult?.success) {
+        toast.error(getActionErrorMessage(posterResult, "ذخیره پوستر ناموفق بود"));
+        return;
+      }
 
       const keepId = displayVersion?.id;
-      await savePosterVersionAction({
+      const versionResult = await savePosterVersionAction({
         id: keepId,
         posterId: poster.id,
         versionNumber: displayVersion?.versionNumber ?? 1,
@@ -189,10 +193,18 @@ export function AdminPosterEditor({
         isFinal: true,
         status: "final",
       });
+      if (!versionResult?.success) {
+        toast.error(getActionErrorMessage(versionResult, "ذخیره نسخه پوستر ناموفق بود"));
+        return;
+      }
 
       for (const version of versions) {
         if (version.id !== keepId) {
-          await deletePosterVersionAction(version.id);
+          const deleteResult = await deletePosterVersionAction(version.id);
+          if (!deleteResult?.success) {
+            toast.error(getActionErrorMessage(deleteResult, "حذف نسخه قدیمی ناموفق بود"));
+            return;
+          }
         }
       }
 
@@ -213,7 +225,11 @@ export function AdminPosterEditor({
   const confirmDeletePoster = () => {
     setConfirmDeleteOpen(false);
     startTransition(async () => {
-      await deletePosterAction(poster.id);
+      const result = await deletePosterAction(poster.id);
+      if (!result?.success) {
+        toast.error(getActionErrorMessage(result, "حذف پوستر ناموفق بود"));
+        return;
+      }
       toast.success("پوستر حذف شد");
       onClose();
       refresh();
