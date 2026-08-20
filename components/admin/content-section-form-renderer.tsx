@@ -120,7 +120,6 @@ interface SharedRendererProps {
   /** Preview in form builder: non-interactive. */
   readOnly?: boolean;
   className?: string;
-  showAdminNotes?: boolean;
 }
 
 interface PosterRendererProps extends SharedRendererProps {
@@ -369,7 +368,6 @@ export function ContentSectionFormRenderer(props: ContentSectionFormRendererProp
     isNew = true,
     readOnly = false,
     className,
-    showAdminNotes = true,
   } = props;
 
   const [locationTypeFromMap, setLocationTypeFromMap] = useState(false);
@@ -546,17 +544,7 @@ export function ContentSectionFormRenderer(props: ContentSectionFormRendererProp
                 />
               );
             case "notes":
-              return (
-                <div key={field.id} className="space-y-2">
-                  <Label>{field.label}</Label>
-                  <Textarea
-                    value={values.notes}
-                    onChange={(e) => onChange({ notes: e.target.value })}
-                    rows={2}
-                    readOnly={readOnly}
-                  />
-                </div>
-              );
+              return null;
             case "score":
               if (isNew || !campaignId || !props.contentId) return null;
               return (
@@ -710,18 +698,7 @@ export function ContentSectionFormRenderer(props: ContentSectionFormRendererProp
               />
             );
           case "notes":
-            if (!showAdminNotes) return null;
-            return (
-              <div key={field.id} className="space-y-2">
-                <Label>{field.label}</Label>
-                <Textarea
-                  value={values.notes}
-                  onChange={(e) => onChange({ notes: e.target.value })}
-                  rows={2}
-                  readOnly={readOnly}
-                />
-              </div>
-            );
+            return null;
           case "planLabels":
             return (
               <PlanLabelSelect
@@ -808,12 +785,26 @@ export function ContentSectionFormRenderer(props: ContentSectionFormRendererProp
           />
         );
 
-        const mediaField = (urlKey: keyof GenericSectionFormValues) => (
+        const mediaField = (
+          urlKey: keyof GenericSectionFormValues,
+          options?: {
+            kind?: "image" | "video" | "audio";
+            uploadKind?: "image" | "video" | "audio" | "raw-image" | "raw-video";
+            accept?: string;
+            maxFileSizeBytes?: number;
+            fileOnly?: boolean;
+          }
+        ) => (
           <MediaUpload
             key={field.id}
             label={field.label}
             value={String(values[urlKey] ?? "")}
             onChange={(url) => onChange({ [urlKey]: url })}
+            kind={options?.kind ?? "image"}
+            uploadKind={options?.uploadKind}
+            accept={options?.accept}
+            maxFileSizeBytes={options?.maxFileSizeBytes}
+            fileOnly={options?.fileOnly}
             showLinkInput={false}
           />
         );
@@ -840,7 +831,6 @@ export function ContentSectionFormRenderer(props: ContentSectionFormRendererProp
           case "attendees":
           case "tasks":
           case "decisions":
-          case "notes":
             return textField(
               widget === "description"
                 ? "description"
@@ -850,11 +840,11 @@ export function ContentSectionFormRenderer(props: ContentSectionFormRendererProp
                     ? "attendees"
                     : widget === "tasks"
                       ? "tasks"
-                      : widget === "decisions"
-                        ? "decisions"
-                        : "notes",
+                      : "decisions",
               true
             );
+          case "notes":
+            return null;
           case "link":
           case "location":
           case "platform":
@@ -937,17 +927,44 @@ export function ContentSectionFormRenderer(props: ContentSectionFormRendererProp
           case "cover":
             return mediaField("coverUrl");
           case "video":
-            return fileField("videoUrl", "آپلود ویدیو");
+            return mediaField("videoUrl", {
+              kind: "video",
+              accept: "video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov",
+              maxFileSizeBytes: 100 * 1024 * 1024,
+            });
           case "document":
             return fileField("documentUrl", "آپلود فایل");
           case "rawFile":
-            return fileField("rawFileUrl", "آپلود فایل خام");
+            return mediaField("rawFileUrl", {
+              kind: values.mediaKind === "video" ? "video" : "image",
+              uploadKind: values.mediaKind === "video" ? "raw-video" : "raw-image",
+              accept:
+                values.mediaKind === "video"
+                  ? "video/*,.mp4,.webm,.mov,.mkv,.avi,.mpeg,.mpg,.wmv"
+                  : "image/*,.jpg,.jpeg,.png,.webp,.gif,.heic,.heif,.raw,.cr2,.nef,.dng,.tif,.tiff",
+              maxFileSizeBytes:
+                values.mediaKind === "video"
+                  ? 2 * 1024 * 1024 * 1024
+                  : 100 * 1024 * 1024,
+              fileOnly: true,
+            });
           case "pdf":
             return fileField("pdfUrl", "آپلود PDF");
           case "audio":
-            return fileField("audioUrl", "آپلود صوت");
+            return mediaField("audioUrl", {
+              kind: "audio",
+              uploadKind: "audio",
+              accept: "audio/*",
+              maxFileSizeBytes: 50 * 1024 * 1024,
+              fileOnly: true,
+            });
           case "media":
-            return fileField("mediaUrl", "آپلود رسانه");
+            return mediaField("mediaUrl", {
+              kind: "image",
+              accept:
+                "image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov",
+              maxFileSizeBytes: 100 * 1024 * 1024,
+            });
           case "mediaItems":
             return (
               <div key={field.id} className="space-y-2">

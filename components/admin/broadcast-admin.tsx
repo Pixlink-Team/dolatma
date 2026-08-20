@@ -13,7 +13,6 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   AdminEditorDialog,
   AdminEditorDialogActions,
@@ -28,6 +27,10 @@ import {
   AdminBroadcastAddCard,
   AdminBroadcastCompactCard,
 } from "@/components/admin/admin-broadcast-compact-card";
+import {
+  ADMIN_CONTENT_GRID_CLASS,
+  AdminEmptyCreateState,
+} from "@/components/admin/admin-compact-add-card";
 import { AdminCreatedAtText } from "@/components/admin/admin-created-at";
 import {
   AdminContentFilterBar,
@@ -69,7 +72,6 @@ const schema = z.object({
   pdfUrl: z.string().min(1),
   fileName: z.string().min(1),
   coverImageUrl: z.string().optional(),
-  notes: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -87,7 +89,6 @@ function emptyFormValues(): FormValues {
     pdfUrl: "",
     fileName: "",
     coverImageUrl: "",
-    notes: "",
   };
 }
 
@@ -99,7 +100,6 @@ function reportToFormValues(report: BroadcastReport): FormValues {
     pdfUrl: report.pdfUrl,
     fileName: report.fileName,
     coverImageUrl: report.summaryData.coverImageUrl ?? "",
-    notes: report.summaryData.notes ?? "",
   };
 }
 
@@ -236,8 +236,11 @@ export function BroadcastAdmin({ campaignId, initialReports }: BroadcastAdminPro
     startTransition(async () => {
       const fileKind =
         data.mediaType === "media" ? detectFormFileKind(data.pdfUrl, data.fileName) : null;
+      const existingNotes = editingId
+        ? rows.find((row) => row.id === editingId)?.summaryData.notes
+        : undefined;
       const summaryData = {
-        notes: data.notes,
+        ...(existingNotes ? { notes: existingNotes } : {}),
         mediaType: data.mediaType,
         ...(fileKind === "video" && data.coverImageUrl?.trim()
           ? { coverImageUrl: data.coverImageUrl.trim() }
@@ -316,14 +319,11 @@ export function BroadcastAdmin({ campaignId, initialReports }: BroadcastAdminPro
       />
 
       {sortedRows.length === 0 ? (
-        <div className="rounded-xl border px-4 py-8 text-center text-sm text-muted-foreground">
-          هنوز گزارشی ثبت نشده است.
-          <div className="mt-3 flex justify-center">
-            <AdminBroadcastAddCard compact onClick={openCreate} />
-          </div>
-        </div>
+        <AdminEmptyCreateState message="هنوز گزارشی ثبت نشده است.">
+          <AdminBroadcastAddCard onClick={openCreate} />
+        </AdminEmptyCreateState>
       ) : viewMode === "grid" ? (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+        <div className={ADMIN_CONTENT_GRID_CLASS}>
           <AdminBroadcastAddCard onClick={openCreate} />
           {sortedRows.map((report) => (
             <AdminBroadcastCompactCard
@@ -474,6 +474,8 @@ export function BroadcastAdmin({ campaignId, initialReports }: BroadcastAdminPro
                 <MediaUpload
                   label="فایل مدیا (تصویر، صوت یا ویدیو)"
                   kind="image"
+                  accept={MEDIA_ACCEPT}
+                  maxFileSizeBytes={100 * 1024 * 1024}
                   fileOnly
                   value={watchedPdfUrl}
                   coverImageUrl={watchedCoverImageUrl}
@@ -495,7 +497,6 @@ export function BroadcastAdmin({ campaignId, initialReports }: BroadcastAdminPro
                       );
                     }
                   }}
-                  accept={MEDIA_ACCEPT}
                   showPreview={false}
                   showLinkInput={false}
                   dropzoneContent={
@@ -594,10 +595,6 @@ export function BroadcastAdmin({ campaignId, initialReports }: BroadcastAdminPro
               )}
             </div>
 
-            <div className="space-y-2">
-              <Label>یادداشت (اختیاری)</Label>
-              <Textarea {...form.register("notes")} placeholder="نکات تکمیلی برای نمایش در داشبورد" />
-            </div>
       </AdminEditorDialog>
 
       {previewVersion && previewReport && previewKind === "video" && (

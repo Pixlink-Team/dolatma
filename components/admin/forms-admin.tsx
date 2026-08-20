@@ -68,7 +68,6 @@ function FormPreview({
         campaignId={campaignId}
         isNew
         readOnly
-        showAdminNotes
       />
     );
   }

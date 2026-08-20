@@ -84,6 +84,9 @@ interface BillboardCreateAssignmentDialogProps {
   initialValues?: BillboardCreateInitialValues | null;
   /** Stable key so advancing bulk queue reloads the form. */
   initialValuesKey?: string | null;
+  /** Prefill production source (e.g. publish from ready-productions card). */
+  initialSourceProduction?: { type: ProductionSourceType; id: string } | null;
+  initialPlanLabels?: string[];
   /** Admin-only: assign content to this user on create. */
   ownerUserId?: string | null;
   highlightFields?: EditSuggestionMissingField[];
@@ -145,6 +148,8 @@ function emptyValues(): BillboardSectionFormValues {
   };
 }
 
+const EMPTY_PLAN_LABELS: string[] = [];
+
 export function BillboardCreateAssignmentDialog({
   open,
   onOpenChange,
@@ -152,11 +157,12 @@ export function BillboardCreateAssignmentDialog({
   contentPlans = [],
   contentTopics = [],
   canScore = false,
-  mode,
   contributorProfile = null,
   editingBillboard = null,
   initialValues = null,
   initialValuesKey = null,
+  initialSourceProduction = null,
+  initialPlanLabels = EMPTY_PLAN_LABELS,
   ownerUserId = null,
   highlightFields = [],
   onCreated,
@@ -292,17 +298,26 @@ export function BillboardCreateAssignmentDialog({
         longitude: center.lng,
         mapCenter: { lat: center.lat, lng: center.lng, revision: Date.now() },
         notes: initialValues?.notes?.trim() || "",
-        planLabels: [],
+        planLabels: normalizePlanLabels(initialPlanLabels),
         periods: nextPeriods,
         score: null,
         metadata: {},
       });
-      setSourceProductionType(null);
-      setSourceProductionId(null);
+      setSourceProductionType(initialSourceProduction?.type ?? null);
+      setSourceProductionId(initialSourceProduction?.id ?? null);
     };
 
     void loadForm();
-  }, [open, contributorProfile, editingBillboard, initialValues, initialValuesKey]);
+  }, [
+    open,
+    contributorProfile,
+    editingBillboard,
+    initialValues,
+    initialValuesKey,
+    initialSourceProduction?.type,
+    initialSourceProduction?.id,
+    initialPlanLabels,
+  ]);
 
   const patchValues = (patch: Partial<BillboardSectionFormValues>) => {
     setValues((prev) => ({ ...prev, ...patch }));
@@ -427,13 +442,15 @@ export function BillboardCreateAssignmentDialog({
       onOpenChange={onOpenChange}
       title={isEditing ? "ویرایش تبلیغات محیطی" : "ثبت تبلیغات محیطی جدید"}
       description={
-        initialValues
-          ? "داده‌های Excel پر شده‌اند؛ بقیه فیلدها (مثل موقعیت دقیق روی نقشه) را تکمیل کنید. می‌توانید چند دوره نمایش اضافه کنید."
-          : contributorProfile?.province &&
-              contributorProfile?.city &&
-              !isEditing
-            ? `استان و شهر از پروفایل ${contributorProfile.name} پر شده‌اند. می‌توانید چند دوره نمایش اضافه کنید.`
-            : "استان و شهر را انتخاب کنید تا نقشه به همان موقعیت برود. می‌توانید چند دوره نمایش اضافه کنید."
+        initialSourceProduction
+          ? "تولید انتخاب‌شده از قبل پر شده؛ موقعیت و دوره‌های نمایش را تکمیل کنید."
+          : initialValues
+            ? "داده‌های Excel پر شده‌اند؛ بقیه فیلدها (مثل موقعیت دقیق روی نقشه) را تکمیل کنید. می‌توانید چند دوره نمایش اضافه کنید."
+            : contributorProfile?.province &&
+                contributorProfile?.city &&
+                !isEditing
+              ? `استان و شهر از پروفایل ${contributorProfile.name} پر شده‌اند. می‌توانید چند دوره نمایش اضافه کنید.`
+              : "استان و شهر را انتخاب کنید تا نقشه به همان موقعیت برود. می‌توانید چند دوره نمایش اضافه کنید."
       }
       descriptionVisible
       size="2xl"
@@ -493,7 +510,6 @@ export function BillboardCreateAssignmentDialog({
               highlightDescription={highlightDescription}
               highlightMedia={highlightMedia}
               onLocationCenterChange={handleLocationCenterChange}
-              showAdminNotes={mode === "admin"}
             />
           )}
 

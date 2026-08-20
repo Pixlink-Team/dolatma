@@ -125,7 +125,6 @@ const POSTER_SYSTEM_WIDGETS: ContentSystemWidget[] = [
   "title",
   "planLabels",
   "description",
-  "notes",
   "score",
 ];
 
@@ -138,7 +137,6 @@ const BILLBOARD_SYSTEM_WIDGETS: ContentSystemWidget[] = [
   "address",
   "locationType",
   "areaSqm",
-  "notes",
   "score",
   "periods",
 ];
@@ -151,7 +149,6 @@ const VIDEO_SYSTEM_WIDGETS: ContentSystemWidget[] = [
   "videoType",
   "score",
   "cover",
-  "notes",
 ];
 
 const FILE_SYSTEM_WIDGETS: ContentSystemWidget[] = [
@@ -220,7 +217,6 @@ const BROADCAST_SYSTEM_WIDGETS: ContentSystemWidget[] = [
   "title",
   "reportDate",
   "pdf",
-  "notes",
 ];
 
 const MEETING_SYSTEM_WIDGETS: ContentSystemWidget[] = [
@@ -295,7 +291,6 @@ const DEFAULT_FIELDS: Record<ContentFormSectionKey, () => ContentFormField[]> = 
     systemField("title", "عنوان", false),
     systemField("planLabels", "موضوع", false),
     systemField("description", "توضیحات", false),
-    systemField("notes", "یادداشت", false),
     systemField("score", "امتیاز", false),
   ],
   billboards: () => [
@@ -307,7 +302,6 @@ const DEFAULT_FIELDS: Record<ContentFormSectionKey, () => ContentFormField[]> = 
     systemField("address", "آدرس توصیفی", false),
     systemField("locationType", "محل", true),
     systemField("areaSqm", "متراژ (متر مربع)", false),
-    systemField("notes", "یادداشت داخلی", false),
     systemField("score", "امتیاز", false),
     systemField("periods", "دوره‌های نمایش", true),
   ],
@@ -319,7 +313,6 @@ const DEFAULT_FIELDS: Record<ContentFormSectionKey, () => ContentFormField[]> = 
     systemField("videoType", "نوع ویدیو", false),
     systemField("score", "امتیاز", false),
     systemField("cover", "کاور سفارشی", false),
-    systemField("notes", "یادداشت", false),
   ],
   files: () => [
     systemField("title", "عنوان", true),
@@ -381,7 +374,6 @@ const DEFAULT_FIELDS: Record<ContentFormSectionKey, () => ContentFormField[]> = 
     systemField("title", "عنوان گزارش", true),
     systemField("reportDate", "تاریخ گزارش", true),
     systemField("pdf", "فایل PDF گزارش", true),
-    systemField("notes", "یادداشت", false),
   ],
   meetings: () => [
     systemField("title", "عنوان جلسه", true),

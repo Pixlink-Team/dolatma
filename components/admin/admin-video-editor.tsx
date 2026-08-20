@@ -2,9 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Play, Trash2, Upload, VideoIcon } from "lucide-react";
+import { Play, Upload, VideoIcon } from "lucide-react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,6 +25,7 @@ import {
   ADMIN_EDITOR_FOOTER_CLASS,
   ADMIN_EDITOR_SCROLL_CLASS,
   ADMIN_EDITOR_SCROLL_INNER_CLASS,
+  AdminEditorDialogActions,
 } from "@/components/admin/admin-editor-dialog";
 import { ContentScoreControl } from "@/components/admin/content-score-control";
 import {
@@ -125,7 +125,6 @@ export function AdminVideoEditor({
     displayVersion ? draftCoverFromVersion(displayVersion) : ""
   );
   const [duration, setDuration] = useState(displayVersion?.duration ?? "");
-  const [notes, setNotes] = useState(displayVersion?.notes ?? "");
   const [editTitle, setEditTitle] = useState(video.title);
   const [editDescription, setEditDescription] = useState(video.description ?? "");
   const [editCategoryId, setEditCategoryId] = useState(
@@ -154,7 +153,6 @@ export function AdminVideoEditor({
     setVideoUrl(current?.videoUrl || "");
     setThumbnailUrl(current ? draftCoverFromVersion(current) : "");
     setDuration(current?.duration ?? "");
-    setNotes(current?.notes ?? "");
   }, [
     video.id,
     video.title,
@@ -196,26 +194,46 @@ export function AdminVideoEditor({
         updatedAt: new Date().toISOString(),
       };
 
-      await saveVideoAction(savedVideo);
+      const videoResult = await saveVideoAction(savedVideo);
+      if (!videoResult?.success) {
+        toast.error(
+          "error" in (videoResult ?? {}) && typeof videoResult?.error === "string"
+            ? videoResult.error
+            : "ذخیره ویدیو ناموفق بود"
+        );
+        return;
+      }
 
       const media = buildVideoVersionMedia(videoUrl, thumbnailUrl);
       const keepId = displayVersion?.id;
-      await saveVideoVersionAction({
+      const versionResult = await saveVideoVersionAction({
         id: keepId,
         videoId: video.id,
         versionNumber: displayVersion?.versionNumber ?? 1,
         videoUrl: media.videoUrl,
         thumbnailUrl: media.thumbnailUrl,
         duration: duration || undefined,
-        notes: notes || undefined,
+        notes: displayVersion?.notes || undefined,
         date: displayVersion?.date ?? todayISO(),
         isFinal: true,
         status: "final",
       });
+      if (!versionResult?.success) {
+        toast.error(
+          "error" in (versionResult ?? {}) && typeof versionResult?.error === "string"
+            ? versionResult.error
+            : "ذخیره نسخه ویدیو ناموفق بود"
+        );
+        return;
+      }
 
       for (const version of versions) {
         if (version.id !== keepId) {
-          await deleteVideoVersionAction(version.id);
+          const deleteResult = await deleteVideoVersionAction(version.id);
+          if (!deleteResult?.success) {
+            toast.error("حذف نسخه قبلی ناموفق بود");
+            return;
+          }
         }
       }
 
@@ -236,7 +254,15 @@ export function AdminVideoEditor({
   const confirmDeleteVideo = () => {
     setConfirmDeleteOpen(false);
     startTransition(async () => {
-      await deleteVideoAction(video.id);
+      const result = await deleteVideoAction(video.id);
+      if (!result?.success) {
+        toast.error(
+          "error" in (result ?? {}) && typeof result?.error === "string"
+            ? result.error
+            : "حذف ویدیو ناموفق بود"
+        );
+        return;
+      }
       toast.success("ویدیو حذف شد");
       onClose();
       refresh();
@@ -384,29 +410,17 @@ export function AdminVideoEditor({
               dropzone={false}
               showPreview={false}
             />
-            <div>
-              <Label>یادداشت (اختیاری)</Label>
-              <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
-            </div>
           </div>
         </div>
       </div>
 
       <div className={ADMIN_EDITOR_FOOTER_CLASS}>
-        <Button onClick={handleSaveAll} disabled={isPending} className="flex-1">
-          {isPending ? "در حال ذخیره..." : "ذخیره"}
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          onClick={handleDeleteVideo}
-          disabled={isPending}
-          aria-label={isNew ? "بستن" : "حذف ویدیو"}
-          title={isNew ? "بستن" : "حذف"}
-        >
-          <Trash2 className="h-4 w-4 text-destructive" />
-        </Button>
+        <AdminEditorDialogActions
+          onSave={handleSaveAll}
+          isPending={isPending}
+          onDelete={handleDeleteVideo}
+          deleteLabel={isNew ? "بستن" : "حذف ویدیو"}
+        />
       </div>
 
       <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
