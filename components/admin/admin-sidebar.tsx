@@ -163,6 +163,7 @@ const managementNavHrefs = new Set([
   "/admin/forms",
   "/admin/best-practices",
   "/admin/backups",
+  PROBLEM_REPORTS_HREF,
   "/admin/reported-problems",
 ]);
 
@@ -561,7 +562,14 @@ export function AdminSidebar({ showReisReturn = false }: AdminSidebarProps) {
                     )}
                   >
                     <Icon className="h-4 w-4 shrink-0" />
-                    <span className="truncate">{item.label}</span>
+                    <span className="truncate flex-1">{item.label}</span>
+                    {item.href === PROBLEM_REPORTS_HREF && problemReportsUnread > 0 && (
+                      <span
+                        className="ms-auto h-2.5 w-2.5 shrink-0 rounded-full bg-red-500"
+                        title="پاسخ خوانده‌نشده"
+                        aria-label="پاسخ خوانده‌نشده"
+                      />
+                    )}
                   </Link>
                 );
               })}

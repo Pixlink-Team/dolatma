@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "0bd3d79a1a0b9ead523e272bccba8828cf17790e",
+      "committedAt": "2026-08-19T13:42:55+03:30",
+      "title": "بزرگ‌تر شدن نام استان‌ها روی نقشه برای خوانایی بهتر",
+      "subject": "Enlarge province labels on president map"
+    },
+    {
       "hash": "da8fe9e23d041eabf6c83ae96ddc88e545a2de34",
       "committedAt": "2026-08-19T12:30:03+03:30",
       "title": "نمایش دستگاه‌های فعال هر استان با تعداد زیرمجموعه و کاربران",
