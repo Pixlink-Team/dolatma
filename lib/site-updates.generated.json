@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "e7e4374135579cdd84a829165e3ded579c28715e",
+      "committedAt": "2026-08-20T18:14:54+03:30",
+      "title": "فاصله استاندارد بین فیلد آخر و دکمه ذخیره در فرم‌ها",
+      "subject": "Fix admin form modal spacing above save button"
+    },
+    {
       "hash": "192ece61a996400d40f629ee3822eec7d0101ae3",
       "committedAt": "2026-08-20T18:12:52+03:30",
       "title": "افزودن صفحه مدیریت خبر و متن در پنل ادمین",
