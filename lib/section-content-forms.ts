@@ -48,6 +48,7 @@ export const CONTENT_SYSTEM_WIDGETS: ContentSystemWidget[] = [
   "axis",
   "areaSqm",
   "address",
+  "locationType",
   "map",
   "periods",
   "video",
@@ -89,6 +90,7 @@ export const contentSystemWidgetLabels: Record<ContentSystemWidget, string> = {
   axis: "محور",
   areaSqm: "متراژ",
   address: "آدرس",
+  locationType: "محل",
   map: "نقشه",
   periods: "دوره‌های نمایش",
   video: "ویدیو",
@@ -130,10 +132,11 @@ const POSTER_SYSTEM_WIDGETS: ContentSystemWidget[] = [
 const BILLBOARD_SYSTEM_WIDGETS: ContentSystemWidget[] = [
   "category",
   "provinceCity",
-  "axis",
-  "areaSqm",
-  "address",
   "map",
+  "axis",
+  "address",
+  "locationType",
+  "areaSqm",
   "notes",
   "planLabels",
   "score",
@@ -298,10 +301,11 @@ const DEFAULT_FIELDS: Record<ContentFormSectionKey, () => ContentFormField[]> = 
   billboards: () => [
     systemField("category", "دسته‌بندی", true),
     systemField("provinceCity", "استان و شهر", false),
-    systemField("axis", "محور / خیابان / بزرگراه", true),
-    systemField("areaSqm", "متراژ (متر مربع)", false),
-    systemField("address", "آدرس توصیفی", false),
     systemField("map", "موقعیت روی نقشه", true),
+    systemField("axis", "محور / خیابان / بزرگراه", true),
+    systemField("address", "آدرس توصیفی", false),
+    systemField("locationType", "محل", true),
+    systemField("areaSqm", "متراژ (متر مربع)", false),
     systemField("notes", "یادداشت داخلی", false),
     systemField("planLabels", "موضوع", false),
     systemField("score", "امتیاز", false),
@@ -510,7 +514,42 @@ export function normalizeContentFormFields(
     fields.push(field);
   }
 
-  return fields.length > 0 ? fields : defaultContentFormFields(sectionKey);
+  if (fields.length === 0) return defaultContentFormFields(sectionKey);
+
+  if (sectionKey === "billboards") {
+    return applyBillboardFieldOrder(fields);
+  }
+
+  return fields;
+}
+
+/** Keep billboard system widgets in the product order; inject محل if missing. */
+function applyBillboardFieldOrder(fields: ContentFormField[]): ContentFormField[] {
+  const byWidget = new Map<ContentSystemWidget, ContentFormField>();
+  const custom: ContentFormField[] = [];
+
+  for (const field of fields) {
+    if (field.kind === "system" && field.widget) {
+      byWidget.set(field.widget, field);
+    } else {
+      custom.push(field);
+    }
+  }
+
+  if (!byWidget.has("locationType")) {
+    byWidget.set("locationType", systemField("locationType", "محل", true));
+  }
+
+  const ordered: ContentFormField[] = [];
+  for (const widget of BILLBOARD_SYSTEM_WIDGETS) {
+    const field = byWidget.get(widget);
+    if (field) ordered.push(field);
+  }
+  for (const [widget, field] of byWidget) {
+    if (!BILLBOARD_SYSTEM_WIDGETS.includes(widget)) ordered.push(field);
+  }
+
+  return [...ordered, ...custom];
 }
 
 export function validateContentFormFields(

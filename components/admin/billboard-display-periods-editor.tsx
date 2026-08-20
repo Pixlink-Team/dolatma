@@ -25,7 +25,6 @@ interface BillboardDisplayPeriodsEditorProps {
   onChange: (periods: DisplayPeriodDraft[]) => void;
   singlePeriod?: boolean;
   requireBillboardImage?: boolean;
-  requireConfirmationImage?: boolean;
   highlightMedia?: boolean;
 }
 
@@ -46,7 +45,6 @@ export function BillboardDisplayPeriodsEditor({
   onChange,
   singlePeriod = false,
   requireBillboardImage = false,
-  requireConfirmationImage = false,
   highlightMedia = false,
 }: BillboardDisplayPeriodsEditorProps) {
   const updatePeriod = (id: string, patch: Partial<DisplayPeriodDraft>) => {
@@ -75,9 +73,7 @@ export function BillboardDisplayPeriodsEditor({
         <Label className={cn("text-sm font-semibold", highlightMedia && "text-destructive")}>
           دوره نمایش *
         </Label>
-        <p className="text-xs text-muted-foreground">
-          عکس بیلبورد الزامی است. تصویر تأییدیه اختیاری است.
-        </p>
+        <p className="text-xs text-muted-foreground">عکس بیلبورد الزامی است.</p>
         {highlightMedia && (
           <p className="mt-1 text-xs text-destructive">عکس بیلبورد هنوز اضافه نشده است.</p>
         )}
@@ -124,40 +120,21 @@ export function BillboardDisplayPeriodsEditor({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <ImageFileDropzone
-                label="عکس بیلبورد"
-                required={requireBillboardImage && !period.existingBillboardImageUrl}
-                value={period.billboardImageFile}
-                onChange={(file) => updatePeriod(period.id, { billboardImageFile: file })}
+          <div className="space-y-2">
+            <ImageFileDropzone
+              label="عکس بیلبورد"
+              required={requireBillboardImage && !period.existingBillboardImageUrl}
+              value={period.billboardImageFile}
+              onChange={(file) => updatePeriod(period.id, { billboardImageFile: file })}
+            />
+            {!period.billboardImageFile && period.existingBillboardImageUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={period.existingBillboardImageUrl}
+                alt="عکس فعلی"
+                className="h-24 w-full rounded-md border object-cover"
               />
-              {!period.billboardImageFile && period.existingBillboardImageUrl && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={period.existingBillboardImageUrl}
-                  alt="عکس فعلی"
-                  className="h-24 w-full rounded-md border object-cover"
-                />
-              )}
-            </div>
-            <div className="space-y-2">
-              <ImageFileDropzone
-                label="تصویر تأییدیه"
-                required={requireConfirmationImage}
-                optionalHint={requireConfirmationImage ? undefined : "اختیاری"}
-                value={period.imageFile}
-                onChange={(file) => updatePeriod(period.id, { imageFile: file })}
-              />
-              {!period.imageFile && period.existingConfirmationImageUrl && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={period.existingConfirmationImageUrl}
-                  alt="تأییدیه فعلی"
-                  className="h-24 w-full rounded-md border object-cover"
-                />
-              )}
-            </div>
+            )}
           </div>
         </div>
       ))}

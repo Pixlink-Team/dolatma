@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "9dd2c308a0270d65fbcf82ebe72e59a23e8e0869",
+      "committedAt": "2026-08-20T17:15:41+03:30",
+      "title": "چیدمان جدید داشبورد با راه‌اندازی، دستورکار و وضعیت‌های دسته‌بندی‌شده",
+      "subject": "Reorder dashboard with grouped status cards"
+    },
+    {
       "hash": "ba20bb640a20689d11d289927148fa752a24e3fb",
       "committedAt": "2026-08-20T16:25:53+03:30",
       "title": "بهبود ثبت سایت‌ها و پشتیبانی امتیازدهی برای محتواهای متنی",

@@ -375,6 +375,7 @@ export type ContentSystemWidget =
   | "axis"
   | "areaSqm"
   | "address"
+  | "locationType"
   | "map"
   | "periods"
   | "video"
