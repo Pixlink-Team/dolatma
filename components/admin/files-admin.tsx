@@ -181,6 +181,10 @@ export function FilesAdmin({
       toast.error("عنوان فایل الزامی است");
       return;
     }
+    if (planLabels.length === 0) {
+      toast.error("موضوع الزامی است");
+      return;
+    }
     if (!upload.url) {
       toast.error("ابتدا فایل را آپلود کنید");
       return;

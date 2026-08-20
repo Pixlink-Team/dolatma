@@ -330,6 +330,15 @@ export function BillboardCreateAssignmentDialog({
       return;
     }
 
+    const planLabelsField = fieldByWidget(fields, "planLabels");
+    if (
+      (planLabelsField?.required ?? true) &&
+      values.planLabels.length === 0
+    ) {
+      toast.error("موضوع الزامی است");
+      return;
+    }
+
     const axisField = fieldByWidget(fields, "axis");
     if ((axisField?.required ?? true) && values.axis.trim().length < 2) {
       toast.error("محور باید حداقل ۲ کاراکتر باشد");

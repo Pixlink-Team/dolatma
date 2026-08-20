@@ -541,6 +541,8 @@ export function ContentSectionFormRenderer(props: ContentSectionFormRendererProp
                   plans={contentPlans}
                   values={values.planLabels}
                   onChangeMultiple={(planLabels) => onChange({ planLabels })}
+                  optional={!field.required}
+                  label={field.label}
                 />
               );
             case "notes":
@@ -707,6 +709,8 @@ export function ContentSectionFormRenderer(props: ContentSectionFormRendererProp
                 plans={contentPlans}
                 values={values.planLabels}
                 onChangeMultiple={(planLabels) => onChange({ planLabels })}
+                optional={!field.required}
+                label={field.label}
               />
             );
           case "score":
@@ -883,6 +887,8 @@ export function ContentSectionFormRenderer(props: ContentSectionFormRendererProp
                 plans={contentPlans}
                 values={values.planLabels}
                 onChangeMultiple={(planLabels) => onChange({ planLabels })}
+                optional={!field.required}
+                label={field.label}
               />
             );
           case "isCreative":

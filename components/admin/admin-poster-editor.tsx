@@ -148,6 +148,12 @@ export function AdminPosterEditor({
       return;
     }
 
+    const planLabelsField = fieldByWidget(fields, "planLabels");
+    if ((planLabelsField?.required ?? true) && values.planLabels.length === 0) {
+      toast.error("موضوع الزامی است");
+      return;
+    }
+
     for (const field of fields) {
       if (field.kind !== "custom" || !field.required) continue;
       const raw = values.metadata[field.key];

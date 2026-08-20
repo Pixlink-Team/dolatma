@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
 import { hasContributorPermission, type ContributorPermissionKey } from "@/lib/contributor-permissions";
 import { matchBillboardCategoryKey } from "@/lib/billboard-categories";
-import { normalizePlanLabels } from "@/lib/content-topics";
+import { getPlanLabelsValidationError, normalizePlanLabels } from "@/lib/content-topics";
 import { getSql } from "@/lib/db/client";
 import { pgGetUserById, pgGetUserPermissionsForCampaign } from "@/lib/db/repository-extended";
 import { updateMockStore } from "@/lib/mock-data";
@@ -126,6 +126,13 @@ export async function bulkUpdateContentAction(input: {
   }
   if (!hasAnyPatch(input.patch)) {
     return { success: false, updated: 0, error: "هیچ تغییری برای اعمال انتخاب نشده است" };
+  }
+
+  if (input.patch.planLabels !== undefined) {
+    const planLabelsError = getPlanLabelsValidationError(input.patch.planLabels);
+    if (planLabelsError) {
+      return { success: false, updated: 0, error: planLabelsError };
+    }
   }
 
   const session = await getAuthSession();

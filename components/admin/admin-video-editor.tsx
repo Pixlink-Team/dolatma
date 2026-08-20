@@ -180,6 +180,10 @@ export function AdminVideoEditor({
       toast.error("ویدیو لازم است");
       return;
     }
+    if (editPlanLabels.length === 0) {
+      toast.error("موضوع الزامی است");
+      return;
+    }
 
     startTransition(async () => {
       const savedVideo = {
