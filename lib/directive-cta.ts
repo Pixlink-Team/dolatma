@@ -1,4 +1,5 @@
 import { adminHref } from "@/lib/utils";
+import { ensureHttpUrl } from "@/lib/url";
 
 export type DirectiveCtaKind = "none" | "external" | "internal";
 
@@ -65,15 +66,7 @@ export function resolveDirectiveCtaHref(input: {
   campaignId: string;
 }): string | null {
   if (input.kind === "external") {
-    const url = input.url?.trim() ?? "";
-    if (!url) return null;
-    try {
-      const parsed = new URL(url);
-      if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return null;
-      return parsed.toString();
-    } catch {
-      return null;
-    }
+    return ensureHttpUrl(input.url);
   }
 
   if (input.kind === "internal") {
@@ -129,17 +122,14 @@ export function normalizeDirectiveCtaInput(input: {
   const label = input.ctaLabel?.trim() || null;
 
   if (kind === "external") {
-    const url = input.ctaUrl?.trim() || "";
+    const url = ensureHttpUrl(input.ctaUrl);
     if (!url) {
-      return { ok: false, error: "آدرس لینک دکمه را وارد کنید" };
-    }
-    try {
-      const parsed = new URL(url);
-      if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
-        return { ok: false, error: "لینک باید با http یا https شروع شود" };
-      }
-    } catch {
-      return { ok: false, error: "آدرس لینک معتبر نیست" };
+      return {
+        ok: false,
+        error: input.ctaUrl?.trim()
+          ? "آدرس لینک معتبر نیست"
+          : "آدرس لینک دکمه را وارد کنید",
+      };
     }
     if (!label) {
       return { ok: false, error: "متن دکمه لینک را وارد کنید" };

@@ -1614,7 +1614,7 @@ export function DirectivesAdmin({
                     dir="ltr"
                     className="text-left"
                     {...form.register("ctaUrl")}
-                    placeholder="https://example.com"
+                    placeholder="example.com یا https://example.com"
                   />
                 </div>
               )}

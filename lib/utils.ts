@@ -1,6 +1,9 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { parseISODateLocal } from "@/lib/jalali";
+import { ensureHttpUrl } from "@/lib/url";
+
+export { ensureHttpUrl } from "@/lib/url";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -245,12 +248,11 @@ export function maskEmail(email?: string | null): string {
 }
 
 export function isValidUrl(url: string): boolean {
-  try {
-    new URL(url);
-    return true;
-  } catch {
-    return false;
-  }
+  return ensureHttpUrl(url) !== null;
+}
+
+export function isValidHttpUrl(value: string): boolean {
+  return ensureHttpUrl(value) !== null;
 }
 
 /** Mock data is for local demos only — never force it in production builds. */

@@ -1,4 +1,5 @@
 import type { SocialMediaPost, SocialPlatform, SocialPostLinkEntry } from "@/lib/types";
+import { ensureHttpUrl } from "@/lib/url";
 
 export const MAX_SOCIAL_POST_LINK_ENTRIES = 200;
 
@@ -75,7 +76,8 @@ export function parseSocialPostLinkEntries(value: unknown): SocialPostLinkEntry[
     .map((item) => {
       if (!item || typeof item !== "object") return null;
       const record = item as Record<string, unknown>;
-      const link = typeof record.link === "string" ? record.link.trim() : "";
+      const rawLink = typeof record.link === "string" ? record.link.trim() : "";
+      const link = ensureHttpUrl(rawLink) ?? rawLink;
       const viewsRaw = record.views;
       const views =
         typeof viewsRaw === "number"
