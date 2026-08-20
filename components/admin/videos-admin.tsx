@@ -57,7 +57,7 @@ interface VideosAdminProps {
 }
 
 const editorDialogClass =
-  "!flex min-h-0 max-h-[92vh] max-w-2xl flex-col gap-0 overflow-hidden p-0 !top-4 !translate-x-[-50%] !translate-y-0 sm:!top-6";
+  "!flex min-h-0 max-h-[92vh] max-w-2xl flex-col gap-0 overflow-hidden rounded-xl p-0 !top-4 !translate-x-[-50%] !translate-y-0 sm:!top-6";
 
 export function VideosAdmin({
   campaignId,

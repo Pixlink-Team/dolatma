@@ -5,6 +5,16 @@ import { useRouter } from "next/navigation";
 import { Play, Trash2, Upload, VideoIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -101,6 +111,7 @@ export function AdminVideoEditor({
   const router = useRouter();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const [isPending, startTransition] = useTransition();
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
   const displayVersion = useMemo(() => resolveDisplayVersion(versions), [versions]);
 
@@ -236,143 +247,142 @@ export function AdminVideoEditor({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div
-        ref={scrollAreaRef}
-        className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-y-contain px-6"
-      >
-        <MediaUpload
-          label="ویدیو"
-          kind="video"
-          fileOnly
-          value={videoUrl}
-          onChange={setVideoUrl}
-          onUploadedFile={(file) => {
-            void readVideoDuration(file).then((nextDuration) => {
-              if (nextDuration) setDuration(nextDuration);
-            });
-          }}
-          coverImageUrl={thumbnailUrl}
-          onAutoCoverGenerated={(coverUrl) => {
-            setThumbnailUrl((current) => (current.trim() ? current : coverUrl));
-          }}
-          accept="video/mp4,video/webm,video/quicktime"
-          showPreview={false}
-          showLinkInput={false}
-          dropzoneContent={
-            <div
-              className={cn(
-                "relative aspect-video w-full overflow-hidden rounded-[10px] bg-muted",
-                highlightMedia && "ring-2 ring-destructive ring-offset-2"
-              )}
-            >
-              {videoUrl ? (
-                previewCover ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={previewCover} alt={editTitle} className="h-full w-full object-contain" />
-                ) : (
-                  <VideoThumbnail
-                    videoUrl={videoUrl}
-                    thumbnailUrl={thumbnailUrl || undefined}
-                    alt={editTitle}
-                    className="object-contain"
-                  />
-                )
-              ) : (
-                <div className="flex h-full flex-col items-center justify-center gap-2 px-3 text-center text-sm text-muted-foreground">
-                  <VideoIcon className="h-10 w-10" />
-                  <span className="text-sm">ویدیو را بکشید و رها کنید یا انتخاب کنید</span>
-                  <span className="inline-flex items-center gap-1.5 rounded-md border bg-background px-3 py-1.5 text-xs font-medium text-foreground shadow-sm">
-                    <Upload className="h-3.5 w-3.5" />
-                    انتخاب ویدیو
-                  </span>
-                </div>
-              )}
-              {videoUrl ? (
-                <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-                  <Play className="h-12 w-12 text-white" />
-                </div>
-              ) : null}
-            </div>
-          }
-        />
-
-        <div className="space-y-3">
-          <div>
-            <Label className={cn(highlightTitle && "text-destructive")}>عنوان</Label>
-            <Input
-              value={editTitle}
-              maxLength={CONTENT_TITLE_MAX_LENGTH}
-              onChange={(e) => setEditTitle(e.target.value)}
-              placeholder="عنوان ویدیو"
-              className={cn(highlightTitle && "border-destructive focus-visible:ring-destructive")}
-            />
-            {highlightTitle && (
-              <p className="mt-1 text-xs text-destructive">عنوان پیش‌فرض است؛ یک عنوان اختصاصی وارد کنید.</p>
-            )}
-          </div>
-          <div>
-            <Label className={cn(highlightDescription && "text-amber-700 dark:text-amber-300")}>توضیحات</Label>
-            <Textarea
-              value={editDescription}
-              onChange={(e) => setEditDescription(e.target.value)}
-              rows={2}
-              placeholder="توضیحات (اختیاری)"
-              className={cn(
-                highlightDescription && "border-amber-500 focus-visible:ring-amber-500"
-              )}
-            />
-            {highlightDescription && (
-              <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">توضیحات خالی است؛ بهتر است تکمیل شود.</p>
-            )}
-          </div>
-          <div>
-            <Label>نوع ویدیو</Label>
-            <Select
-              value={editCategoryId || undefined}
-              onValueChange={setEditCategoryId}
-              disabled={selectOptions.length === 0}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="تیزر، انیمیشن یا موشن‌گرافیک" />
-              </SelectTrigger>
-              <SelectContent>
-                {selectOptions.map((category) => (
-                  <SelectItem key={category.id} value={category.id}>
-                    {category.title}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <PlanLabelSelect
-            topics={contentTopics}
-            plans={contentPlans}
-            values={editPlanLabels}
-            onChangeMultiple={setEditPlanLabels}
-          />
-          {!isNew && (
-            <ContentScoreControl
-              campaignId={video.campaignId}
-              contentType="video"
-              contentId={video.id}
-              score={editScore}
-              canScore={canScore}
-              onScoreSaved={setEditScore}
-            />
-          )}
-          {highlightMedia && (
-            <p className="text-xs text-destructive">ویدیو هنوز آپلود نشده است.</p>
-          )}
+      <div ref={scrollAreaRef} className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain">
+        <div className="space-y-4 px-6">
           <MediaUpload
-            label="کاور سفارشی (اختیاری — بدون کاور، خودکار از ویدیو ساخته می‌شود)"
-            value={thumbnailUrl}
-            onChange={setThumbnailUrl}
-            dropzone={false}
+            label="ویدیو"
+            kind="video"
+            fileOnly
+            value={videoUrl}
+            onChange={setVideoUrl}
+            onUploadedFile={(file) => {
+              void readVideoDuration(file).then((nextDuration) => {
+                if (nextDuration) setDuration(nextDuration);
+              });
+            }}
+            coverImageUrl={thumbnailUrl}
+            onAutoCoverGenerated={(coverUrl) => {
+              setThumbnailUrl((current) => (current.trim() ? current : coverUrl));
+            }}
+            accept="video/mp4,video/webm,video/quicktime"
             showPreview={false}
+            showLinkInput={false}
+            dropzoneContent={
+              <div
+                className={cn(
+                  "relative aspect-video w-full overflow-hidden rounded-[10px] bg-muted",
+                  highlightMedia && "ring-2 ring-destructive ring-offset-2"
+                )}
+              >
+                {videoUrl ? (
+                  previewCover ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={previewCover} alt={editTitle} className="h-full w-full object-contain" />
+                  ) : (
+                    <VideoThumbnail
+                      videoUrl={videoUrl}
+                      thumbnailUrl={thumbnailUrl || undefined}
+                      alt={editTitle}
+                      className="object-contain"
+                    />
+                  )
+                ) : (
+                  <div className="flex h-full flex-col items-center justify-center gap-2 px-3 text-center text-sm text-muted-foreground">
+                    <VideoIcon className="h-10 w-10" />
+                    <span className="text-sm">ویدیو را بکشید و رها کنید یا انتخاب کنید</span>
+                    <span className="inline-flex items-center gap-1.5 rounded-md border bg-background px-3 py-1.5 text-xs font-medium text-foreground shadow-sm">
+                      <Upload className="h-3.5 w-3.5" />
+                      انتخاب ویدیو
+                    </span>
+                  </div>
+                )}
+                {videoUrl ? (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                    <Play className="h-12 w-12 text-white" />
+                  </div>
+                ) : null}
+              </div>
+            }
           />
-          <div>
-            <Label>یادداشت (اختیاری)</Label>
-            <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
+
+          <div className="space-y-3">
+            <div>
+              <Label className={cn(highlightTitle && "text-destructive")}>عنوان</Label>
+              <Input
+                value={editTitle}
+                maxLength={CONTENT_TITLE_MAX_LENGTH}
+                onChange={(e) => setEditTitle(e.target.value)}
+                placeholder="عنوان ویدیو"
+                className={cn(highlightTitle && "border-destructive focus-visible:ring-destructive")}
+              />
+              {highlightTitle && (
+                <p className="mt-1 text-xs text-destructive">عنوان پیش‌فرض است؛ یک عنوان اختصاصی وارد کنید.</p>
+              )}
+            </div>
+            <div>
+              <Label className={cn(highlightDescription && "text-amber-700 dark:text-amber-300")}>توضیحات</Label>
+              <Textarea
+                value={editDescription}
+                onChange={(e) => setEditDescription(e.target.value)}
+                rows={2}
+                placeholder="توضیحات (اختیاری)"
+                className={cn(
+                  highlightDescription && "border-amber-500 focus-visible:ring-amber-500"
+                )}
+              />
+              {highlightDescription && (
+                <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">توضیحات خالی است؛ بهتر است تکمیل شود.</p>
+              )}
+            </div>
+            <div>
+              <Label>نوع ویدیو</Label>
+              <Select
+                value={editCategoryId || undefined}
+                onValueChange={setEditCategoryId}
+                disabled={selectOptions.length === 0}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="تیزر، انیمیشن یا موشن‌گرافیک" />
+                </SelectTrigger>
+                <SelectContent>
+                  {selectOptions.map((category) => (
+                    <SelectItem key={category.id} value={category.id}>
+                      {category.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <PlanLabelSelect
+              topics={contentTopics}
+              plans={contentPlans}
+              values={editPlanLabels}
+              onChangeMultiple={setEditPlanLabels}
+            />
+            {!isNew && (
+              <ContentScoreControl
+                campaignId={video.campaignId}
+                contentType="video"
+                contentId={video.id}
+                score={editScore}
+                canScore={canScore}
+                onScoreSaved={setEditScore}
+              />
+            )}
+            {highlightMedia && (
+              <p className="text-xs text-destructive">ویدیو هنوز آپلود نشده است.</p>
+            )}
+            <MediaUpload
+              label="کاور سفارشی (اختیاری — بدون کاور، خودکار از ویدیو ساخته می‌شود)"
+              value={thumbnailUrl}
+              onChange={setThumbnailUrl}
+              dropzone={false}
+              showPreview={false}
+            />
+            <div>
+              <Label>یادداشت (اختیاری)</Label>
+              <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
+            </div>
           </div>
         </div>
       </div>
