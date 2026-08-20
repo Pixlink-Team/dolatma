@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -13,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
+import { AdminCompactAddCard } from "@/components/admin/admin-compact-add-card";
 import { AdminItemActions } from "@/components/admin/admin-item-actions";
 import {
   AdminContentFilterBar,
@@ -68,7 +68,19 @@ const schema = z.object({
     .optional(),
   followers: z.coerce.number().min(0),
   posts: z.coerce.number().min(0),
-  profileUrl: z.string().optional(),
+  profileUrl: z
+    .string()
+    .trim()
+    .min(1, "لینک صفحه الزامی است")
+    .refine((value) => {
+      try {
+        const candidate = /^https?:\/\//i.test(value) ? value : `https://${value}`;
+        const parsed = new URL(candidate);
+        return parsed.protocol === "http:" || parsed.protocol === "https:";
+      } catch {
+        return false;
+      }
+    }, "لینک معتبر وارد کنید"),
 });
 
 interface SocialAnalyticsAdminProps {
@@ -141,9 +153,12 @@ export function SocialAnalyticsAdmin({
 
   const onSubmit = form.handleSubmit((data) => {
     startTransition(async () => {
+      const rawUrl = data.profileUrl.trim();
+      const profileUrl = /^https?:\/\//i.test(rawUrl) ? rawUrl : `https://${rawUrl}`;
       const result = await saveSocialPlatformStatAction({
         ...data,
         title: data.title?.trim() || null,
+        profileUrl,
         campaignId,
         id: editingId ?? undefined,
       });
@@ -175,19 +190,13 @@ export function SocialAnalyticsAdmin({
   return (
     <div className="space-y-4" dir="rtl">
       {tutorialModal}
-      <div className="flex items-center justify-between gap-4">
-        <div className="text-right">
-          <h1 className="text-2xl font-bold">شبکه‌های اجتماعی</h1>
-          <p className="text-sm text-muted-foreground">
-            {isFullAdmin
-              ? "هر کاربر می‌تواند چند کانال ثبت کند (حتی چند کانال از یک پلتفرم)"
-              : "می‌توانید چند کانال اضافه کنید — حتی چند کانال از یک پلتفرم"}
-          </p>
-        </div>
-        <Button onClick={openCreate}>
-          <Plus className="h-4 w-4" />
-          افزودن کانال
-        </Button>
+      <div className="text-right">
+        <h1 className="text-2xl font-bold">شبکه‌های اجتماعی</h1>
+        <p className="text-sm text-muted-foreground">
+          {isFullAdmin
+            ? "هر کاربر می‌تواند چند کانال ثبت کند (حتی چند کانال از یک پلتفرم)"
+            : "می‌توانید چند کانال اضافه کنید — حتی چند کانال از یک پلتفرم"}
+        </p>
       </div>
 
       <AdminContentFilterBar
@@ -199,6 +208,11 @@ export function SocialAnalyticsAdmin({
       />
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <AdminCompactAddCard
+          onClick={openCreate}
+          label="افزودن کانال"
+          aspectClass="min-h-[11rem] h-full aspect-auto"
+        />
         {filteredRows.map((item) => {
           const profileUrl = item.profileUrl?.trim() || "";
           const openChannel = () => {
@@ -267,12 +281,6 @@ export function SocialAnalyticsAdmin({
         })}
       </div>
 
-      {filteredRows.length === 0 && (
-        <div className="rounded-lg border px-4 py-8 text-center text-sm text-muted-foreground">
-          موردی یافت نشد.
-        </div>
-      )}
-
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent dir="rtl">
           <DialogHeader className="text-right">
@@ -331,8 +339,11 @@ export function SocialAnalyticsAdmin({
             </div>
 
             <div className="space-y-2">
-              <Label>لینک صفحه (اختیاری)</Label>
-              <Input {...form.register("profileUrl")} dir="ltr" placeholder="https://..." />
+              <Label>لینک صفحه</Label>
+              <Input {...form.register("profileUrl")} dir="ltr" placeholder="https://..." required />
+              {form.formState.errors.profileUrl && (
+                <p className="text-sm text-destructive">{form.formState.errors.profileUrl.message}</p>
+              )}
             </div>
 
             <Button type="submit" disabled={isPending} className="w-full">

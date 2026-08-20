@@ -279,6 +279,10 @@ export async function refreshSocialPostMetricsAction(postId: string) {
 export async function saveSocialPlatformStatAction(data: Partial<SocialPlatformStat> & { id?: string }) {
   const validationError = validateTitlePayload(data);
   if (validationError) return validationError;
+  const profileUrl = typeof data.profileUrl === "string" ? data.profileUrl.trim() : "";
+  if (!profileUrl) {
+    return { success: false, error: "لینک صفحه الزامی است" };
+  }
   const session = await getAuthSession();
   if (!session) return { success: false, error: "Unauthorized" };
 
@@ -310,7 +314,7 @@ export async function saveSocialPlatformStatAction(data: Partial<SocialPlatformS
   );
   if (tutorialDenied) return tutorialDenied;
 
-  const payload = await withSaveOwnerScope(session, data);
+  const payload = await withSaveOwnerScope(session, { ...data, profileUrl });
 
   const result = await pgExt.pgSaveSocialPlatformStat(payload);
   if (result.success && result.id) {
@@ -1162,6 +1166,7 @@ const SECTION_TO_DAILY_CAP_TABLE: Record<
   posters: "posters",
   videos: "videos",
   files: "campaign_files",
+  textContents: "text_contents",
   rawMedia: "raw_media_uploads",
   socialPosts: "social_media_posts",
   sitePublications: "social_media_posts",
@@ -1180,6 +1185,7 @@ const SECTION_TO_CONTENT_TYPE: Record<string, import("@/lib/types").ScoreableCon
   posters: "poster",
   videos: "video",
   files: "file",
+  textContents: "text_content",
   rawMedia: "raw_media",
   sitePublications: "site_publication",
   pressPublications: "social_post",
