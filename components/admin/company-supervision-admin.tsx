@@ -682,6 +682,7 @@ export function CompanySupervisionAdmin({
   canScore,
   canManageReviews,
   canSendMessage,
+  viewMode = "admin",
   initialFilter,
   periodLabel,
   initialContentType = "all",
@@ -697,6 +698,7 @@ export function CompanySupervisionAdmin({
   canScore: boolean;
   canManageReviews: boolean;
   canSendMessage: boolean;
+  viewMode?: "admin" | "self";
   initialFilter?: Partial<OwnerLocationFilter>;
   periodLabel?: string | null;
   initialContentType?: CompanySupervisionContentType | "all";
@@ -723,6 +725,7 @@ export function CompanySupervisionAdmin({
           canScore={canScore}
           canManageReviews={canManageReviews}
           canSendMessage={canSendMessage}
+          viewMode={viewMode}
           periodLabel={periodLabel}
           initialContentType={initialContentType}
         />
@@ -743,6 +746,7 @@ function CompanySupervisionAdminInner({
   canScore,
   canManageReviews,
   canSendMessage,
+  viewMode,
   periodLabel,
   initialContentType,
 }: {
@@ -757,6 +761,7 @@ function CompanySupervisionAdminInner({
   canScore: boolean;
   canManageReviews: boolean;
   canSendMessage: boolean;
+  viewMode: "admin" | "self";
   periodLabel?: string | null;
   initialContentType: CompanySupervisionContentType | "all";
 }) {
@@ -780,9 +785,12 @@ function CompanySupervisionAdminInner({
   const [todayDialogOpen, setTodayDialogOpen] = useState(false);
   const [dayActivity, setDayActivity] = useState<CompanyDayActivityResult | null>(null);
   const [dayActivityLoading, setDayActivityLoading] = useState(false);
-  const canOpenNotes = UUID_RE.test(entry.userKey);
+  const canOpenNotes = viewMode === "admin" && UUID_RE.test(entry.userKey);
+  const canLoadMessages = viewMode === "admin" && UUID_RE.test(entry.userKey);
+  const isSelfView = viewMode === "self";
 
   const backHref = `/admin/performance?campaign=${encodeURIComponent(campaignId)}`;
+  const dashboardHref = `/admin?campaign=${encodeURIComponent(campaignId)}`;
 
   const returnedItems = useMemo(
     () =>
@@ -893,7 +901,7 @@ function CompanySupervisionAdminInner({
   );
 
   const loadMessages = useCallback(() => {
-    if (!canOpenNotes) {
+    if (!canLoadMessages) {
       setMessages([]);
       return;
     }
@@ -910,14 +918,14 @@ function CompanySupervisionAdminInner({
       }
       setMessagesLoading(false);
     });
-  }, [canOpenNotes, entry.userKey]);
+  }, [canLoadMessages, entry.userKey]);
 
   useEffect(() => {
     loadMessages();
   }, [loadMessages]);
 
   useEffect(() => {
-    if (!canOpenNotes) {
+    if (!UUID_RE.test(entry.userKey)) {
       setDayActivity(null);
       return;
     }
@@ -937,7 +945,7 @@ function CompanySupervisionAdminInner({
     return () => {
       cancelled = true;
     };
-  }, [canOpenNotes, entry.userKey]);
+  }, [entry.userKey]);
 
   const openTodayItem = (item: CompanySupervisionItem) => {
     setTodayDialogOpen(false);
@@ -1109,7 +1117,7 @@ function CompanySupervisionAdminInner({
         type: "billboard" as const,
       },
       {
-        title: "پوستر",
+        title: "پوستر و عکس",
         value: scopedSummary.byType.poster ?? 0,
         icon: ImageIcon,
         todayDelta: todayCounts.poster,
@@ -1351,16 +1359,29 @@ function CompanySupervisionAdminInner({
     <div className="space-y-6 text-right" dir="rtl">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="space-y-3">
-          <Button type="button" variant="ghost" size="sm" className="gap-1.5 px-0" asChild>
-            <Link href={backHref}>
-              <ArrowRight className="h-4 w-4" />
-              بازگشت به مشاهده عملکرد
-            </Link>
-          </Button>
+          {isSelfView ? (
+            <Button type="button" variant="ghost" size="sm" className="gap-1.5 px-0" asChild>
+              <Link href={dashboardHref}>
+                <ArrowRight className="h-4 w-4" />
+                بازگشت به داشبورد
+              </Link>
+            </Button>
+          ) : (
+            <Button type="button" variant="ghost" size="sm" className="gap-1.5 px-0" asChild>
+              <Link href={backHref}>
+                <ArrowRight className="h-4 w-4" />
+                بازگشت به مشاهده عملکرد
+              </Link>
+            </Button>
+          )}
           <div className="space-y-1">
-            <h1 className="text-2xl font-bold">نظارت شرکت — {entry.userName}</h1>
+            <h1 className="text-2xl font-bold">
+              {isSelfView ? "گزارش عملکرد" : `نظارت شرکت — ${entry.userName}`}
+            </h1>
             <p className="text-sm text-muted-foreground">
-              گزارش زنده این شرکت در کمپین «{campaignTitle}» با امکان تایید، رد و تاریخچه کارت
+              {isSelfView
+                ? `گزارش عملکرد شما در کمپین «${campaignTitle}»`
+                : `گزارش زنده این شرکت در کمپین «${campaignTitle}» با امکان تایید، رد و تاریخچه کارت`}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -1400,7 +1421,7 @@ function CompanySupervisionAdminInner({
         </div>
         <Button type="button" onClick={handleExport} className="shrink-0 gap-2">
           <Download className="h-4 w-4" />
-          خروجی اکسل شرکت
+          {isSelfView ? "خروجی اکسل" : "خروجی اکسل شرکت"}
         </Button>
       </div>
 
@@ -1421,10 +1442,12 @@ function CompanySupervisionAdminInner({
           <TabsTrigger value="returned">
             برگشتی ({formatPersianNumber(returnedItems.length)})
           </TabsTrigger>
-          <TabsTrigger value="messages">
-            پیام‌ها ({formatPersianNumber(messages.length)})
-          </TabsTrigger>
-          <TabsTrigger value="notes">یادداشت‌ها</TabsTrigger>
+          {!isSelfView && (
+            <TabsTrigger value="messages">
+              پیام‌ها ({formatPersianNumber(messages.length)})
+            </TabsTrigger>
+          )}
+          {!isSelfView && <TabsTrigger value="notes">یادداشت‌ها</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="summary" className="space-y-6">

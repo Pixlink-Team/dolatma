@@ -47,14 +47,16 @@ function toCompanyDayEvent(event: AuditEvent): CompanyDayActivityEvent {
 
 /**
  * Presence, logins and user-facing errors for one company on a Tehran day.
- * Available to admin / کارفرما / رییس (same audience as company supervision).
+ * Available to admin / کارفرما / رییس, or the same user viewing their own report.
  */
 export async function getCompanySupervisionDayActivityAction(
   userId: string,
   dateIso: string
 ): Promise<{ ok: true; data: CompanyDayActivityResult } | { ok: false; error: string }> {
   const session = await getAuthSession();
-  if (!session || !canScoreContent(session)) {
+  const trimmedUserId = userId?.trim() ?? "";
+  const isSelf = Boolean(session?.userId && session.userId === trimmedUserId);
+  if (!session || (!canScoreContent(session) && !isSelf)) {
     return { ok: false, error: "دسترسی مجاز نیست." };
   }
 
@@ -62,8 +64,7 @@ export async function getCompanySupervisionDayActivityAction(
     return { ok: false, error: "پایگاه‌داده پیکربندی نشده است." };
   }
 
-  const trimmed = userId?.trim() ?? "";
-  if (!UUID_RE.test(trimmed)) {
+  if (!UUID_RE.test(trimmedUserId)) {
     return { ok: false, error: "شناسه کاربر نامعتبر است." };
   }
 
@@ -73,7 +74,7 @@ export async function getCompanySupervisionDayActivityAction(
   }
 
   const rawDayEvents = await pgListAuditEvents({
-    actorUserId: trimmed,
+    actorUserId: trimmedUserId,
     from: bounds.from,
     to: bounds.to,
     limit: 2000,

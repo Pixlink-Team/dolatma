@@ -105,6 +105,7 @@ const allNavItems: {
   { href: RETURNED_CONTENT_HREF, label: "محتواهای برگشتی", icon: ClipboardCheck, alwaysVisible: true },
   { href: "/admin/president", label: "صفحه رییس‌جمهور", icon: Radar, adminOrClientOnly: true },
   { href: "/admin/profile", label: "پروفایل من", icon: UserCircle },
+  { href: "/admin/my-performance", label: "گزارش عملکرد", icon: Medal, alwaysVisible: true },
   { href: "/admin/settings", label: "تنظیمات راستا", icon: Settings, permissionKey: "campaignSettings", adminOrClientOnly: true },
   { href: "/admin/capacity-map", label: "دارایی‌ها و نقشه ظرفیت", icon: Map, adminOrClientOnly: true },
   { href: "/admin/calendar", label: "تقویم ملی", icon: CalendarDays, permissionKey: "nationalCalendar", adminOrClientOnly: true },
@@ -151,6 +152,7 @@ const RAPID_RESPONSE_ROOT = "/admin/rapid-response";
 
 const managementNavHrefs = new Set([
   "/admin/profile",
+  "/admin/my-performance",
   "/admin/ministries",
   "/admin/users",
   "/admin/pre-registrations",

@@ -4,33 +4,9 @@ import { CompanySupervisionAdmin } from "@/components/admin/company-supervision-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { resolveAdminCampaignId } from "@/lib/admin-campaign";
-import { listContentReviewsAction } from "@/lib/actions/content-review-actions";
-import {
-  canManageAllContent,
-  canScoreContent,
-  canSendContentMessages,
-} from "@/lib/auth/access";
+import { canScoreContent } from "@/lib/auth/access";
 import { getAuthSession } from "@/lib/auth/get-session";
-import { buildUserLeaderboard, buildUserLeaderboardByMode } from "@/lib/city-leaderboard";
-import {
-  collectCompanySupervisionItems,
-  filterLeaderboardSourceByUser,
-  findUserLeaderboardEntry,
-  toCompanyExcelSource,
-  zeroPeriodLeaderboardEntry,
-  type CompanySupervisionContentType,
-} from "@/lib/company-supervision";
-import { contentPlansFromTopics } from "@/lib/content-topics";
-import { getAdminData } from "@/lib/data-access/admin";
-import { buildLeaderboardSourceFromAdmin } from "@/lib/performance-overview";
-import {
-  filterLeaderboardSourceForPerformance,
-  getPerformancePeriodLabel,
-  isPerformanceLeaderboardFilterActive,
-  parsePerformanceSortMode,
-  performanceFilterFromQuery,
-  type PerformanceContentCategory,
-} from "@/lib/performance-filters";
+import { loadCompanySupervisionPage } from "@/lib/company-supervision-page";
 
 export const dynamic = "force-dynamic";
 
@@ -56,70 +32,31 @@ export default async function CompanySupervisionPage({
   searchParams,
 }: PageProps) {
   const session = await getAuthSession();
-  if (!session || !canScoreContent(session)) {
-    redirect("/admin");
-  }
+  if (!session) redirect("/admin");
 
   const { userKey: rawUserKey } = await params;
   const userKey = decodeURIComponent(rawUserKey || "").trim();
   if (!userKey) notFound();
 
+  const isSelf = Boolean(session.userId && session.userId === userKey);
+  if (!canScoreContent(session) && !isSelf) {
+    redirect("/admin");
+  }
+
   const query = await searchParams;
   const { campaignId } = await resolveAdminCampaignId(query.campaign);
   if (!campaignId) redirect("/admin");
 
-  const [data, reviewsResult] = await Promise.all([
-    getAdminData(campaignId, [
-      "settings",
-      "billboards",
-      "posters",
-      "posterVersions",
-      "videos",
-      "videoVersions",
-      "files",
-      "socialPosts",
-      "activities",
-    ]),
-    listContentReviewsAction({ campaignId }),
-  ]);
-
-  if (!data.settings) redirect("/admin");
-
-  const source = buildLeaderboardSourceFromAdmin({
-    billboards: data.billboards,
-    posters: data.posters,
-    posterVersions: data.posterVersions,
-    videos: data.videos,
-    videoVersions: data.videoVersions,
-    socialPosts: data.socialPosts,
-    activities: data.activities,
-    files: data.files,
+  const result = await loadCompanySupervisionPage({
+    campaignId,
+    userKey,
+    session,
+    query,
+    viewMode: isSelf ? "self" : "admin",
   });
 
-  const rankingFilter = performanceFilterFromQuery(query);
-  const sortMode = parsePerformanceSortMode(query.sort);
-  const periodSource = filterLeaderboardSourceForPerformance(source, rankingFilter);
-  const periodEntries = buildUserLeaderboardByMode(periodSource, sortMode);
-  const allEntries = buildUserLeaderboard(source);
-  const periodEntry = findUserLeaderboardEntry(periodEntries, userKey);
-  const identity = findUserLeaderboardEntry(allEntries, userKey);
-  const filterActive = isPerformanceLeaderboardFilterActive(rankingFilter);
-  const entry = filterActive
-    ? periodEntry
-      ? {
-          ...periodEntry,
-          userName: identity?.userName ?? periodEntry.userName,
-          province: identity?.province || periodEntry.province,
-          city: identity?.city || periodEntry.city,
-          companyType: identity?.companyType ?? periodEntry.companyType,
-          region: identity?.region ?? periodEntry.region,
-        }
-      : identity
-        ? zeroPeriodLeaderboardEntry(identity)
-        : null
-    : (identity ?? periodEntry);
-
-  if (!entry) {
+  if (!result.ok) {
+    if (result.reason === "no_campaign") redirect("/admin");
     const backHref = `/admin/performance?campaign=${encodeURIComponent(campaignId)}`;
     return (
       <Card dir="rtl">
@@ -127,57 +64,15 @@ export default async function CompanySupervisionPage({
           <p className="text-muted-foreground">
             کاربر یا شرکتی با این شناسه در کمپین فعلی یافت نشد.
           </p>
-          <Button asChild>
-            <Link href={backHref}>بازگشت به مشاهده عملکرد</Link>
-          </Button>
+          {!isSelf && (
+            <Button asChild>
+              <Link href={backHref}>بازگشت به مشاهده عملکرد</Link>
+            </Button>
+          )}
         </CardContent>
       </Card>
     );
   }
 
-  const items = collectCompanySupervisionItems({
-    campaignId,
-    userKey,
-    source,
-    reviews: reviewsResult.success ? reviewsResult.reviews ?? [] : [],
-  });
-  const userSource = filterLeaderboardSourceByUser(source, userKey);
-  const contentPlans =
-    data.settings.contentTopics && data.settings.contentTopics.length > 0
-      ? contentPlansFromTopics(data.settings.contentTopics)
-      : data.settings.contentPlans ?? [];
-
-  return (
-    <CompanySupervisionAdmin
-      campaignId={campaignId}
-      campaignTitle={data.settings.title}
-      campaignSlug={data.settings.slug}
-      entry={entry}
-      items={items}
-      excelSource={toCompanyExcelSource(userSource)}
-      contentPlans={contentPlans}
-      contentTopics={data.settings.contentTopics ?? []}
-      canScore={canScoreContent(session)}
-      canManageReviews={canManageAllContent(session)}
-      canSendMessage={canSendContentMessages(session)}
-      periodLabel={getPerformancePeriodLabel(rankingFilter)}
-      initialContentType={contentTypeFromCategory(rankingFilter.contentCategory)}
-      initialFilter={{
-        datePreset: rankingFilter.datePreset,
-        dateFrom: rankingFilter.dateFrom,
-        dateTo: rankingFilter.dateTo,
-        province: rankingFilter.province,
-        city: rankingFilter.city,
-        planLabels: rankingFilter.planLabels,
-        companyType: rankingFilter.companyType,
-      }}
-    />
-  );
-}
-
-function contentTypeFromCategory(
-  category: PerformanceContentCategory
-): CompanySupervisionContentType | "all" {
-  if (category === "all") return "all";
-  return category;
+  return <CompanySupervisionAdmin {...result.props} />;
 }
