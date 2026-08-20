@@ -202,6 +202,10 @@ export function TextContentsAdmin({
       toast.error("عنوان الزامی است");
       return;
     }
+    if (planLabels.length === 0) {
+      toast.error("موضوع الزامی است");
+      return;
+    }
     if (!body.trim()) {
       toast.error("متن محتوا الزامی است");
       return;
