@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { ImageFileDropzone } from "@/components/ui/image-file-dropzone";
 import { PersianDateInput } from "@/components/ui/persian-date-input";
 import { todayISO } from "@/lib/jalali";
+import { CONTENT_TITLE_MAX_LENGTH } from "@/lib/content-constraints";
 import { cn } from "@/lib/utils";
 
 export interface DisplayPeriodDraft {
@@ -95,11 +96,13 @@ export function BillboardDisplayPeriodsEditor({
           </div>
 
           <div className="space-y-2">
-            <Label>عنوان (اختیاری)</Label>
+            <Label>عنوان *</Label>
             <Input
               value={period.title}
               onChange={(event) => updatePeriod(period.id, { title: event.target.value })}
+              maxLength={CONTENT_TITLE_MAX_LENGTH}
               placeholder="مثلاً فاز اول"
+              required
             />
           </div>
 
@@ -152,7 +155,7 @@ export function BillboardDisplayPeriodsEditor({
 export function buildPeriodsFormPayload(periods: DisplayPeriodDraft[]) {
   return periods.map((period, index) => ({
     id: period.id,
-    title: period.title || undefined,
+    title: period.title.trim(),
     startDate: period.startDate,
     endDate: period.endDate,
     sortOrder: index,

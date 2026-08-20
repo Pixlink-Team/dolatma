@@ -40,6 +40,11 @@ function parseRequiredPeriods(formData: FormData): BillboardDisplayPeriodInput[]
   }
 
   return parsed.map((period, index) => {
+    const title = typeof period.title === "string" ? period.title.trim() : "";
+    if (!title) {
+      throw new Error(`عنوان دوره ${index + 1} الزامی است`);
+    }
+
     const billboardImage = period.billboardImageKey
       ? formData.get(period.billboardImageKey)
       : null;
@@ -55,7 +60,7 @@ function parseRequiredPeriods(formData: FormData): BillboardDisplayPeriodInput[]
 
     return {
       id: period.id,
-      title: period.title,
+      title,
       startDate: period.startDate,
       endDate: period.endDate,
       sortOrder: period.sortOrder ?? index,

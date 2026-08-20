@@ -64,8 +64,9 @@ const schema = z.object({
   ]),
   title: z
     .string()
-    .max(CONTENT_TITLE_MAX_LENGTH, CONTENT_TITLE_MAX_LENGTH_MESSAGE)
-    .optional(),
+    .trim()
+    .min(1, "عنوان الزامی است")
+    .max(CONTENT_TITLE_MAX_LENGTH, CONTENT_TITLE_MAX_LENGTH_MESSAGE),
   followers: z.coerce.number().min(0),
   posts: z.coerce.number().min(0),
   profileUrl: z
@@ -157,7 +158,7 @@ export function SocialAnalyticsAdmin({
       const profileUrl = /^https?:\/\//i.test(rawUrl) ? rawUrl : `https://${rawUrl}`;
       const result = await saveSocialPlatformStatAction({
         ...data,
-        title: data.title?.trim() || null,
+        title: data.title.trim(),
         profileUrl,
         campaignId,
         id: editingId ?? undefined,
@@ -319,12 +320,16 @@ export function SocialAnalyticsAdmin({
             </div>
 
             <div className="space-y-2">
-              <Label>نام کانال (اختیاری)</Label>
+              <Label>نام کانال</Label>
               <Input
                 {...form.register("title")}
                 maxLength={CONTENT_TITLE_MAX_LENGTH}
                 placeholder="مثلاً کانال اصلی، کانال خبری، ..."
+                required
               />
+              {form.formState.errors.title && (
+                <p className="text-sm text-destructive">{form.formState.errors.title.message}</p>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-4">

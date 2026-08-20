@@ -345,6 +345,10 @@ export function BillboardCreateAssignmentDialog({
 
     if (hasSystemWidget(fields, "periods")) {
       for (const [index, period] of values.periods.entries()) {
+        if (!period.title.trim()) {
+          toast.error(`عنوان دوره ${index + 1} الزامی است`);
+          return;
+        }
         if (!period.startDate || !period.endDate) {
           toast.error(`تاریخ دوره ${index + 1} الزامی است`);
           return;
