@@ -146,7 +146,8 @@ const CATALOG: CatalogEntry[] = [
     why: "یکی از فیلدهای ضروری خالی مانده یا مقدار معتبری ندارد.",
     whatToDo: "پیام خطا را بخوانید، همان فیلد را پر کنید و دوباره ذخیره کنید.",
     severity: "info",
-    showModal: true,
+    // Toast at top is enough; avoid a redundant modal for missing fields.
+    showModal: false,
   },
   {
     code: "validation_choice",
@@ -163,7 +164,8 @@ const CATALOG: CatalogEntry[] = [
     why: "قبل از ادامه باید یک گزینه مشخص (مثل وزارتخانه یا زیرمجموعه) انتخاب شود.",
     whatToDo: "از فهرست مربوطه مورد درست را انتخاب کنید و دوباره تلاش کنید.",
     severity: "info",
-    showModal: true,
+    // Same as validation_required: toast only, no modal.
+    showModal: false,
   },
   {
     code: "duplicate",
