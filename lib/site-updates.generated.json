@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "002faaac52a9f3746f9b46a78dae856dd0cd4874",
+      "committedAt": "2026-08-20T17:45:26+03:30",
+      "title": "حذف دکمه خواندن اطلاعات از اولین لینک در انتشار سایت",
+      "subject": "Hide first-link fetch button and finish admin editor dialogs"
+    },
+    {
       "hash": "cc6378ef202fbc325940dbd3a0217925fde76eb7",
       "committedAt": "2026-08-20T17:34:11+03:30",
       "title": "حذف پنجره خطای فیلدهای خالی؛ فقط هشدار بالای صفحه نمایش داده می‌شود",

@@ -75,6 +75,18 @@ export async function ensureContentMessagesTable(): Promise<void> {
   await contentMessagesTableReady;
 }
 
+function mapFollowUpStatus(value: unknown): ContentMessageFollowUpStatus | undefined {
+  if (
+    value === "open" ||
+    value === "awaiting_user" ||
+    value === "user_replied" ||
+    value === "resolved"
+  ) {
+    return value;
+  }
+  return undefined;
+}
+
 function mapRow(row: Record<string, unknown>): ContentMessage {
   return {
     id: String(row.id),
@@ -87,6 +99,8 @@ function mapRow(row: Record<string, unknown>): ContentMessage {
     senderName: row.sender_name ? String(row.sender_name) : null,
     senderRole: row.sender_role ? String(row.sender_role) : null,
     body: String(row.body ?? ""),
+    parentMessageId: row.parent_message_id ? String(row.parent_message_id) : null,
+    followUpStatus: mapFollowUpStatus(row.follow_up_status),
     seenAt: row.seen_at ? new Date(String(row.seen_at)).toISOString() : null,
     createdAt: new Date(String(row.created_at)).toISOString(),
   };
