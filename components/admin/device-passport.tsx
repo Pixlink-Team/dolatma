@@ -462,21 +462,6 @@ export function DevicePassportView({
         </div>
       </section>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-        {[
-          { label: "دستورهای دریافتی", value: passport.directiveStats.received },
-          { label: "دیده‌شده", value: passport.directiveStats.seen },
-          { label: "تأییدشده", value: passport.directiveStats.confirmed },
-          { label: "برنامه اقدام", value: passport.directiveStats.actionPlans },
-          { label: "آپلود محتوا", value: passport.contentStats.totalUploads },
-        ].map((item) => (
-          <div key={item.label} className="rounded-lg border bg-card p-4">
-            <p className="text-xs text-muted-foreground">{item.label}</p>
-            <p className="mt-1 text-2xl font-bold">{item.value}</p>
-          </div>
-        ))}
-      </div>
-
       <section className="rounded-xl border bg-card p-5">
         <h2 className="mb-3 text-lg font-semibold">اطلاعات اصلی</h2>
         <dl className="grid gap-3 sm:grid-cols-2">
@@ -875,58 +860,6 @@ export function DevicePassportView({
               </div>
               );
             })}
-          </div>
-        )}
-      </section>
-
-      <section className="rounded-xl border bg-card p-5">
-        <div className="mb-3 flex items-center justify-between gap-2">
-          <h2 className="text-lg font-semibold">سوابق کمپین و دستور</h2>
-          <Button size="sm" variant="outline" asChild>
-            <Link href={adminHref("/admin/directives", campaignId)}>دستورکارها</Link>
-          </Button>
-        </div>
-        <div className="mb-4 grid gap-2 sm:grid-cols-3">
-          <InfoItem label="بیلبورد" value={String(passport.contentStats.billboards)} />
-          <InfoItem label="پوستر / ویدیو" value={`${passport.contentStats.posters} / ${passport.contentStats.videos}`} />
-          <InfoItem label="امتیاز محتوا" value={String(passport.contentStats.score)} />
-        </div>
-        {passport.campaignHistory.length === 0 ? (
-          <p className="text-sm text-muted-foreground">سابقه‌ای ثبت نشده است.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[720px] text-sm">
-              <thead>
-                <tr className="border-b text-muted-foreground">
-                  <th className="p-2 text-right font-medium">کمپین</th>
-                  <th className="p-2 text-right font-medium">دستور</th>
-                  <th className="p-2 text-right font-medium">دیده‌شده</th>
-                  <th className="p-2 text-right font-medium">تأیید</th>
-                  <th className="p-2 text-right font-medium">تعهد</th>
-                  <th className="p-2 text-right font-medium">محتوا</th>
-                </tr>
-              </thead>
-              <tbody>
-                {passport.campaignHistory.map((item) => (
-                  <tr key={item.campaignId} className="border-b last:border-0">
-                    <td className="p-2">
-                      <Link
-                        href={`/campaign/${item.campaignSlug}`}
-                        className="text-primary hover:underline"
-                        target="_blank"
-                      >
-                        {item.campaignTitle}
-                      </Link>
-                    </td>
-                    <td className="p-2">{item.directivesReceived}</td>
-                    <td className="p-2">{item.directivesSeen}</td>
-                    <td className="p-2">{item.directivesConfirmed}</td>
-                    <td className="p-2">{item.actionPlans}</td>
-                    <td className="p-2">{item.contentUploads}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
           </div>
         )}
       </section>
