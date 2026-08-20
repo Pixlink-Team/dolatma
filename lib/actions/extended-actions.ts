@@ -26,7 +26,7 @@ import {
 import type { OrgRole } from "@/lib/org-roles";
 import { isOrgRole } from "@/lib/org-roles";
 import { isOrgUserRole, normalizeAdminRole } from "@/lib/user-roles";
-import { isGroupSocialPost, isSitePublication } from "@/lib/social-posts";
+import { isGroupSocialPost, isWebOutletPublication } from "@/lib/social-posts";
 import { isPostgresConfigured } from "@/lib/utils";
 import { resolveSaveOwnerUserId } from "@/lib/admin-content-owner";
 import { stripFileAccessTokensDeep } from "@/lib/uploads";
@@ -56,6 +56,7 @@ async function revalidateExtended(slug?: string) {
   revalidatePath("/admin/social-posts");
   revalidatePath("/admin/social-analytics");
   revalidatePath("/admin/site-publications");
+  revalidatePath("/admin/news-agencies");
   revalidatePath("/admin/activities");
   revalidatePath("/admin/broadcast");
   revalidatePath("/admin/meetings");
@@ -116,7 +117,7 @@ export async function saveSocialPostAction(data: Partial<SocialMediaPost> & { id
     if (denied) return denied;
   }
 
-  const tutorialKey = isSitePublication({ platform: data.platform ?? "other" })
+  const tutorialKey = isWebOutletPublication({ platform: data.platform ?? "other" })
     ? "sitePublications"
     : "socialPosts";
   const tutorialDenied = await assertTutorialForPossibleCreate(
@@ -132,7 +133,7 @@ export async function saveSocialPostAction(data: Partial<SocialMediaPost> & { id
     ownerUserId: payload.ownerUserId ?? session.userId,
     contentId: data.id,
     table: "social_media_posts",
-    contentType: isSitePublication({ platform: data.platform ?? "other" })
+    contentType: isWebOutletPublication({ platform: data.platform ?? "other" })
       ? "site_publication"
       : "social_post",
   });

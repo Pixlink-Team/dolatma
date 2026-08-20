@@ -298,7 +298,7 @@ export function RawMediaAdmin({
           ? prev.map((row) => (row.id === editingId ? { ...row, ...nextItem } : row))
           : [nextItem, ...prev]
       );
-      toast.success(editingId ? "راش به‌روزرسانی شد" : "راش تصویر ذخیره شد");
+      toast.success(editingId ? "راش به‌روزرسانی شد" : "راش تصاویر ذخیره شد");
       closeDialog();
     });
   };
@@ -317,7 +317,7 @@ export function RawMediaAdmin({
       {tutorialModal}
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">راش تصویر</h1>
+          <h1 className="text-2xl font-bold">راش تصاویر</h1>
           <p className="text-sm text-muted-foreground">
             آپلود عکس و فیلم خام با حجم بالا — قابل دانلود توسط مدیر/کارفرما
           </p>
@@ -345,7 +345,7 @@ export function RawMediaAdmin({
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
             <HardDrive className="h-4 w-4 text-primary" />
-            فضای ذخیره‌سازی راش تصویر
+            فضای ذخیره‌سازی راش تصاویر
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -400,7 +400,7 @@ export function RawMediaAdmin({
 
       {filteredItems.length === 0 ? (
         <div className="rounded-xl border px-4 py-8 text-center text-sm text-muted-foreground">
-          هنوز موردی برای راش تصویر آپلود نشده است.
+          هنوز موردی برای راش تصاویر آپلود نشده است.
           {!bulk.bulkMode && (
             <div className="mt-3 flex justify-center">
               <div className="w-full max-w-[10rem]">
@@ -563,7 +563,7 @@ export function RawMediaAdmin({
       <Dialog open={dialogOpen} onOpenChange={(open) => (open ? setDialogOpen(true) : closeDialog())}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>{editingId ? "ویرایش راش تصویر" : "آپلود راش تصویر"}</DialogTitle>
+            <DialogTitle>{editingId ? "ویرایش راش تصاویر" : "آپلود راش تصاویر"}</DialogTitle>
             <DialogDescription>
               همه فرمت‌های تصویر و ویدیو با حجم بالا — حداکثر هر فایل{" "}
               {formatStorageBytes(RAW_MEDIA_MAX_FILE_BYTES)}

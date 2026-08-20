@@ -88,6 +88,7 @@ export function collectOwnerFilterOptions(data: PublicCampaignData): OwnerFilter
   collectFromGroups(data.meetingGroups, map);
   collectFromGroups(data.socialPostGroups, map);
   collectFromGroups(data.sitePublicationGroups, map);
+  collectFromGroups(data.newsAgencyPublicationGroups, map);
   collectFromGroups(data.broadcastReportGroups, map);
 
   for (const billboard of data.billboards) addOwnerOption(map, billboard);

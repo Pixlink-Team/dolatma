@@ -92,7 +92,7 @@ export function CampaignOverviewSection({ data }: CampaignOverviewSectionProps) 
     compactValue?: boolean;
   }[] = [
     { show: kpiVisibility.billboards, title: "تبلیغات محیطی", value: kpis.totalBillboards, icon: LayoutGrid, sectionId: "billboards", todayDelta: todayDeltas.billboards },
-    { show: kpiVisibility.posters, title: "پوسترها", value: kpis.totalPosters, icon: ImageIcon, sectionId: "posters", todayDelta: todayDeltas.posters },
+    { show: kpiVisibility.posters, title: "پوستر و عکس", value: kpis.totalPosters, icon: ImageIcon, sectionId: "posters", todayDelta: todayDeltas.posters },
     { show: kpiVisibility.videos, title: "ویدیوها", value: kpis.totalVideos, icon: Video, sectionId: "videos", todayDelta: todayDeltas.videos },
     { show: kpiVisibility.analytics, title: "سایت‌ها", value: kpis.totalCompanyWebsites, icon: Globe, sectionId: "company-websites" },
     { show: kpiVisibility.socialAnalytics, title: "فالوور اجتماعی", value: kpis.totalSocialFollowers, icon: Share2, sectionId: "social-analytics", todayDelta: todayDeltas.socialFollowers },

@@ -114,7 +114,14 @@ export default async function ReturnedContentPage({
     });
   }
   for (const row of data.socialPosts ?? []) {
-    const type: ReviewableContentType = row.platform === "site" ? "site_publication" : "social_post";
+    const type: ReviewableContentType =
+      row.platform === "site" || row.platform === "news_agency"
+        ? "site_publication"
+        : "social_post";
+    const adminPath =
+      row.platform === "news_agency"
+        ? `/admin/news-agencies?campaign=${encodeURIComponent(campaignId)}&edit=${encodeURIComponent(row.id)}`
+        : buildContentMessageAdminPath(type, campaignId, row.id);
     index.set(`${type}:${row.id}`, {
       reviewId: "",
       campaignId,
@@ -127,7 +134,7 @@ export default async function ReturnedContentPage({
       status: "needs_revision",
       rejectionReason: null,
       updatedAt: row.updatedAt,
-      adminPath: buildContentMessageAdminPath(type, campaignId, row.id),
+      adminPath,
     });
   }
 

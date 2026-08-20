@@ -61,6 +61,7 @@ function collectAllOwnerGroups(data: PublicCampaignData): DataOwnerGroup<Ownable
     ...data.videoGroups,
     ...data.socialPostGroups,
     ...data.sitePublicationGroups,
+    ...data.newsAgencyPublicationGroups,
     ...data.activityGroups,
     ...data.broadcastReportGroups,
     ...data.meetingGroups,
@@ -174,7 +175,7 @@ function CampaignDashboardBody({
 
         {sections.posters && (
           <DeferredSection minHeight={400} forceRender={forceRender}>
-            <section data-export-section data-export-label="پوسترها">
+            <section data-export-section data-export-label="پوستر و عکس">
               <PostersSection
                 categories={data.posterCategories}
                 posters={data.posters}
@@ -198,12 +199,30 @@ function CampaignDashboardBody({
 
         {sections.sitePublications && (
           <DeferredSection minHeight={240} forceRender={forceRender}>
-            <section data-export-section data-export-label="انتشار در سایت">
-              <SitePublicationsSection
-                publications={data.sitePublications}
-                groups={data.sitePublicationGroups}
-              />
-            </section>
+            <>
+              {data.sitePublications.length > 0 && (
+                <section data-export-section data-export-label="سایت">
+                  <SitePublicationsSection
+                    publications={data.sitePublications}
+                    groups={data.sitePublicationGroups}
+                    sectionId="site-publications"
+                    title="سایت"
+                    description="مطالب منتشرشده در سایت — عنوان هر مورد لینک مستقیم به صفحه است"
+                  />
+                </section>
+              )}
+              {data.newsAgencyPublications.length > 0 && (
+                <section data-export-section data-export-label="خبرگزاری">
+                  <SitePublicationsSection
+                    publications={data.newsAgencyPublications}
+                    groups={data.newsAgencyPublicationGroups}
+                    sectionId="news-agencies"
+                    title="خبرگزاری"
+                    description="مطالب منتشرشده در خبرگزاری — عنوان هر مورد لینک مستقیم به صفحه است"
+                  />
+                </section>
+              )}
+            </>
           </DeferredSection>
         )}
 
@@ -280,7 +299,7 @@ function CampaignDashboardBody({
 
         {sections.rawMedia && (
           <DeferredSection minHeight={240} forceRender={forceRender}>
-            <section data-export-section data-export-label="راش تصویر">
+            <section data-export-section data-export-label="راش تصاویر">
               <RawMediaSection
                 items={data.rawMedia}
                 groups={data.rawMediaGroups}

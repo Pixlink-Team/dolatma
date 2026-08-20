@@ -230,12 +230,12 @@ export async function pgListContentReviews(input: {
       SELECT 'social_post'::text AS content_type, id, owner_user_id
       FROM social_media_posts
       WHERE campaign_id = ${input.campaignId}::uuid
-        AND platform IS DISTINCT FROM 'site'
+        AND platform NOT IN ('site', 'news_agency')
       UNION ALL
       SELECT 'site_publication'::text AS content_type, id, owner_user_id
       FROM social_media_posts
       WHERE campaign_id = ${input.campaignId}::uuid
-        AND platform = 'site'
+        AND platform IN ('site', 'news_agency')
     ) c
       ON c.content_type = cr.content_type
      AND c.id = cr.content_id
@@ -289,12 +289,12 @@ export async function pgCountContentReviews(input: {
       SELECT 'social_post'::text AS content_type, id, owner_user_id
       FROM social_media_posts
       WHERE campaign_id = ${input.campaignId}::uuid
-        AND platform IS DISTINCT FROM 'site'
+        AND platform NOT IN ('site', 'news_agency')
       UNION ALL
       SELECT 'site_publication'::text AS content_type, id, owner_user_id
       FROM social_media_posts
       WHERE campaign_id = ${input.campaignId}::uuid
-        AND platform = 'site'
+        AND platform IN ('site', 'news_agency')
     ) c
       ON c.content_type = cr.content_type
      AND c.id = cr.content_id

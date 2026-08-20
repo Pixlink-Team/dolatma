@@ -58,7 +58,7 @@ export const PERFORMANCE_CONTENT_CATEGORY_OPTIONS: {
 }[] = [
   { value: "all", label: "همه دسته‌ها" },
   { value: "billboard", label: "تبلیغات محیطی" },
-  { value: "poster", label: "پوستر" },
+  { value: "poster", label: "پوستر و عکس" },
   { value: "video", label: "ویدیو" },
   { value: "social_post", label: "شبکه اجتماعی" },
   { value: "site_publication", label: "انتشار سایت" },
@@ -199,6 +199,9 @@ export function filterLeaderboardSourceForPerformance(
     sitePublications: sections.sitePublications
       ? filterList(data.sitePublications, filter)
       : [],
+    newsAgencyPublications: sections.sitePublications
+      ? filterList(data.newsAgencyPublications, filter)
+      : [],
     activities: sections.activities ? filterList(data.activities, filter) : [],
     pressPublications: sections.activities
       ? filterList(data.pressPublications, filter)
@@ -238,6 +241,7 @@ export function collectPerformanceFilterOptions(data: LeaderboardSourceData): {
   for (const item of data.videos) visit(item);
   for (const item of data.socialPosts) visit(item);
   for (const item of data.sitePublications) visit(item);
+  for (const item of data.newsAgencyPublications) visit(item);
   for (const item of data.activities) visit(item);
   for (const item of data.pressPublications) visit(item);
   for (const item of data.files) visit(item);

@@ -1,6 +1,24 @@
 {
   "entries": [
     {
+      "hash": "e96284cf4d68d3fe9b4d5d39f667819d4bf8a76e",
+      "committedAt": "2026-08-20T14:49:44+03:30",
+      "title": "انتقال بهترین اقدامات به زیر داشبورد در منوی پنل",
+      "subject": "Move best practices under dashboard nav group"
+    },
+    {
+      "hash": "7f943ddb2619d1e0ac6d9c45d5f760715224a039",
+      "committedAt": "2026-08-20T14:45:36+03:30",
+      "title": "افزودن صفحه گزارش عملکرد برای مشاهده وضعیت خود کاربر",
+      "subject": "Add self-service performance report for panel users"
+    },
+    {
+      "hash": "f88c66a87980cbd0e6a86bc37389ffafacc7b76a",
+      "committedAt": "2026-08-20T14:35:36+03:30",
+      "title": "نمایش محتواهای برگشتی در منو فقط در صورت وجود، با نشان تعداد",
+      "subject": "Hide returned-content nav when empty and show count badge"
+    },
+    {
       "hash": "057404d86eaf944cdde709284ff14c682769ef7f",
       "committedAt": "2026-08-20T14:30:41+03:30",
       "title": "نمایش همه اعداد با ارقام فارسی",

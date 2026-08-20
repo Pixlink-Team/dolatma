@@ -316,13 +316,13 @@ async function loadContentCountsForUserIds(
       SELECT COUNT(*)::int AS c FROM social_media_posts
       WHERE campaign_id = ${campaignId}::uuid
         AND owner_user_id IN ${sql(userIds)}
-        AND platform = 'site'
+        AND platform IN ('site', 'news_agency')
     `,
     sql`
       SELECT COUNT(*)::int AS c FROM social_media_posts
       WHERE campaign_id = ${campaignId}::uuid
         AND owner_user_id IN ${sql(userIds)}
-        AND platform <> 'site'
+        AND platform NOT IN ('site', 'news_agency')
     `,
     sql`
       SELECT COUNT(*)::int AS c FROM broadcast_reports

@@ -40,6 +40,7 @@ const schema = z.object({
     "soroush",
     "bale",
     "site",
+    "news_agency",
     "other",
   ]),
   title: z.string().min(1).max(CONTENT_TITLE_MAX_LENGTH, CONTENT_TITLE_MAX_LENGTH_MESSAGE),
@@ -69,6 +70,7 @@ const platformOptions: SocialPostPlatform[] = [
   "soroush",
   "bale",
   "site",
+  "news_agency",
   "other",
 ];
 
@@ -110,6 +112,7 @@ interface SocialPostFormDialogProps {
 
 function platformLabel(platform: SocialPostPlatform): string {
   if (platform === "site") return "سایت / پورتال";
+  if (platform === "news_agency") return "خبرگزاری";
   return getSocialPlatformLabel(platform as SocialPlatform);
 }
 

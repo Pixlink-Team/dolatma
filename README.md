@@ -182,7 +182,7 @@ npm run lint     # ESLint
 
 1. خلاصه کمپین — Campaign overview & KPIs
 2. بیلبوردها — Billboards with filters
-3. پوسترها — Posters with version timeline
+3. پوستر و عکس — Posters with version timeline
 4. ویدیوها — Videos with version timeline
 5. آمار بازدید سایت — Analytics charts
 6. مشارکت کاربران — Approved submissions

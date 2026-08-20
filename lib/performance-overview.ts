@@ -67,7 +67,7 @@ function nestVideoVersions(
 export function buildLeaderboardSourceFromAdmin(
   data: AdminPerformanceSourceInput
 ): LeaderboardSourceData {
-  const { sitePublications, socialPosts } = splitSocialPosts(data.socialPosts ?? []);
+  const { sitePublications, newsAgencyPublications, socialPosts } = splitSocialPosts(data.socialPosts ?? []);
   const { pressPublications, fieldActivities } = splitPressActivities(data.activities ?? []);
   const posters = data.posters ?? [];
   const videos = data.videos ?? [];
@@ -94,6 +94,7 @@ export function buildLeaderboardSourceFromAdmin(
     videos: nestVideoVersions(videos, data.videoVersions ?? []),
     socialPosts,
     sitePublications,
+    newsAgencyPublications,
     activities: fieldActivities,
     pressPublications,
     files: data.files ?? [],

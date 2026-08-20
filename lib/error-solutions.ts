@@ -17,7 +17,7 @@ export type ErrorSolutionCategory =
 
 export interface DailyLimitErrorDetails {
   dailyMax: number;
-  /** e.g. پوسترها — null when the cap is the user category, not a content type */
+  /** e.g. پوستر و عکس — null when the cap is the user category, not a content type */
   scopeLabel: string | null;
 }
 

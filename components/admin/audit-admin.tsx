@@ -476,7 +476,7 @@ const CONTENT_COLUMNS: AuditColumnDef<UserContentContribution>[] = [
   },
   {
     key: "posters",
-    label: "پوستر",
+    label: "پوستر و عکس",
     render: (row) => formatPersianNumber(row.posters),
   },
   {
@@ -491,7 +491,7 @@ const CONTENT_COLUMNS: AuditColumnDef<UserContentContribution>[] = [
   },
   {
     key: "raw",
-    label: "راش",
+    label: "راش تصاویر",
     render: (row) => formatPersianNumber(row.rawMedia),
   },
   {

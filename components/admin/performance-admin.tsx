@@ -155,7 +155,7 @@ const METRIC_COLUMNS: {
 }[] = [
   { key: "billboards", label: "تبلیغات محیطی" },
   { key: "totalAreaSqm", label: "متراژ" },
-  { key: "posters", label: "پوستر" },
+  { key: "posters", label: "پوستر و عکس" },
   { key: "videos", label: "ویدیو" },
   { key: "socialPosts", label: "شبکه اجتماعی" },
   { key: "sitePublications", label: "انتشار سایت" },

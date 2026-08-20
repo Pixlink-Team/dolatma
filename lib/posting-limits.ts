@@ -38,6 +38,7 @@ export const POSTING_LIMIT_CONTENT_TYPES: ScoreableContentType[] = [
   "video",
   "file",
   "raw_media",
+  "text_content",
   "social_post",
   "site_publication",
   "activity",
@@ -47,10 +48,11 @@ export const POSTING_LIMIT_CONTENT_TYPES: ScoreableContentType[] = [
 
 export const POSTING_LIMIT_CONTENT_TYPE_LABELS: Record<ScoreableContentType, string> = {
   billboard: "تبلیغات محیطی",
-  poster: "پوسترها",
+  poster: "پوستر و عکس",
   video: "ویدیوها",
   file: "فایل‌ها",
-  raw_media: "راش تصویر",
+  raw_media: "راش تصاویر",
+  text_content: "خبر و متن",
   social_post: "پست شبکه اجتماعی",
   site_publication: "انتشار در سایت",
   activity: "اقدامات",

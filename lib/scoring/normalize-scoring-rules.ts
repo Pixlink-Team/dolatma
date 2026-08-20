@@ -11,6 +11,7 @@ const SCOREABLE_TYPES: ScoreableContentType[] = [
   "video",
   "file",
   "raw_media",
+  "text_content",
   "social_post",
   "site_publication",
   "activity",

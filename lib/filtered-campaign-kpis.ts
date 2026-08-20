@@ -89,6 +89,7 @@ export function computeFilteredCampaignKpis(
   const companyWebsites = filterItemsByOwnerLocation(data.companyWebsites, filter);
   const socialPosts = filterItemsByOwnerLocation(data.socialPosts, filter);
   const sitePublications = filterItemsByOwnerLocation(data.sitePublications, filter);
+  const newsAgencyPublications = filterItemsByOwnerLocation(data.newsAgencyPublications, filter);
   const broadcastReports = filterItemsByOwnerLocation(data.broadcastReports, filter);
   const meetings = filterItemsByOwnerLocation(data.meetings, filter);
   const activities = filterItemsByOwnerLocation(data.activities, filter);
@@ -108,7 +109,9 @@ export function computeFilteredCampaignKpis(
     totalSocialPostViews: sections.socialPosts
       ? socialPosts.reduce((sum, post) => sum + post.views, 0)
       : 0,
-    totalSitePublications: sections.sitePublications ? sitePublications.length : 0,
+    totalSitePublications: sections.sitePublications
+      ? sitePublications.length + newsAgencyPublications.length
+      : 0,
     totalBroadcastReports: sections.broadcastReports ? broadcastReports.length : 0,
     totalMeetings: sections.meetings ? meetings.length : 0,
     totalActivities: sections.activities ? activities.length : 0,

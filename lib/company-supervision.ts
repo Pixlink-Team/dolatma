@@ -320,6 +320,12 @@ export function collectCompanySupervisionItems(input: {
       (item) => item.coverImageUrl,
       (item) => item.mediaUrl || item.coverImageUrl
     );
+    push(
+      source.newsAgencyPublications,
+      "site_publication",
+      (item) => item.coverImageUrl,
+      (item) => item.mediaUrl || item.coverImageUrl
+    );
   }
   if (source.sections.activities) {
     push(
@@ -360,6 +366,7 @@ export function filterLeaderboardSourceByUser(
     videos: keep(source.videos),
     socialPosts: keep(source.socialPosts),
     sitePublications: keep(source.sitePublications),
+    newsAgencyPublications: keep(source.newsAgencyPublications),
     activities: keep(source.activities),
     pressPublications: keep(source.pressPublications),
     files: keep(source.files),
@@ -379,7 +386,7 @@ export const COMPANY_SUPERVISION_TYPE_FILTERS: {
 }[] = [
   { value: "all", label: "همه" },
   { value: "billboard", label: "تبلیغات محیطی" },
-  { value: "poster", label: "پوستر" },
+  { value: "poster", label: "پوستر و عکس" },
   { value: "video", label: "ویدیو" },
   { value: "social_post", label: "شبکه اجتماعی" },
   { value: "site_publication", label: "انتشار سایت" },
@@ -635,7 +642,7 @@ export function buildCompanyContentMixFromCounts(
 ): ContentMixItem[] {
   return [
     { label: "تبلیغات محیطی", count: byType.billboard ?? 0 },
-    { label: "پوستر", count: byType.poster ?? 0 },
+    { label: "پوستر و عکس", count: byType.poster ?? 0 },
     { label: "ویدیو", count: byType.video ?? 0 },
     { label: "پست اجتماعی", count: byType.social_post ?? 0 },
     { label: "انتشار سایت", count: byType.site_publication ?? 0 },
@@ -763,7 +770,7 @@ export function toCompanyExcelSource(source: LeaderboardSourceData): CompanyExce
     posters: source.posters as Poster[],
     videos: source.videos as Video[],
     socialPosts: source.socialPosts,
-    sitePublications: source.sitePublications,
+    sitePublications: [...source.sitePublications, ...source.newsAgencyPublications],
     activities: source.activities,
     pressPublications: source.pressPublications,
     files: source.files,

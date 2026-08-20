@@ -230,8 +230,8 @@ async function bulkUpdatePostgres(
         SET owner_user_id = ${nextOwnerId}, updated_at = ${now}
         WHERE campaign_id = ${campaignId} AND id IN ${sql(ids)}
           AND (
-            (${isSite} = true AND platform = 'site')
-            OR (${isSite} = false AND platform <> 'site')
+            (${isSite} = true AND platform IN ('site', 'news_agency'))
+            OR (${isSite} = false AND platform NOT IN ('site', 'news_agency'))
           )
       `;
       return;
@@ -404,8 +404,8 @@ async function bulkUpdatePostgres(
         SET plan_label = ${planLabel}, plan_labels = ${sql.json(planLabels)}, updated_at = ${now}
         WHERE campaign_id = ${campaignId} AND id IN ${sql(ids)}
           AND (
-            (${isSite} = true AND platform = 'site')
-            OR (${isSite} = false AND platform <> 'site')
+            (${isSite} = true AND platform IN ('site', 'news_agency'))
+            OR (${isSite} = false AND platform NOT IN ('site', 'news_agency'))
           )
           AND (${ownerFilter}::text IS NULL OR owner_user_id = ${ownerFilter})
       `;
@@ -416,8 +416,8 @@ async function bulkUpdatePostgres(
         SET published = ${patch.published}, updated_at = ${now}
         WHERE campaign_id = ${campaignId} AND id IN ${sql(ids)}
           AND (
-            (${isSite} = true AND platform = 'site')
-            OR (${isSite} = false AND platform <> 'site')
+            (${isSite} = true AND platform IN ('site', 'news_agency'))
+            OR (${isSite} = false AND platform NOT IN ('site', 'news_agency'))
           )
           AND (${ownerFilter}::text IS NULL OR owner_user_id = ${ownerFilter})
       `;
@@ -526,8 +526,8 @@ function bulkUpdateMock(
       // Mock store does not persist raw media uploads.
     } else if (contentType === "social_post" || contentType === "site_publication") {
       next.socialPosts = (store.socialPosts ?? []).map((item) => {
-        const isSite = item.platform === "site";
-        const matchesType = contentType === "site_publication" ? isSite : !isSite;
+        const isWebOutlet = item.platform === "site" || item.platform === "news_agency";
+        const matchesType = contentType === "site_publication" ? isWebOutlet : !isWebOutlet;
         if (item.campaignId !== campaignId || !idSet.has(item.id) || !matchesOwner(item) || !matchesType) {
           return item;
         }

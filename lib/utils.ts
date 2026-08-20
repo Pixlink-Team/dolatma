@@ -190,6 +190,7 @@ export function getStatusLabel(status: string): string {
     soroush: "سروش",
     bale: "بله",
     site: "سایت",
+    news_agency: "خبرگزاری",
     image: "تصویر",
     text: "متن",
     video: "ویدیو",

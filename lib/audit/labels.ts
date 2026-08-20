@@ -40,7 +40,7 @@ const ACTION_LABELS: Record<string, string> = {
 const ENTITY_LABELS: Record<string, string> = {
   campaign: "راستا",
   billboard: "بیلبورد",
-  poster: "پوستر",
+  poster: "پوستر و عکس",
   poster_version: "نسخه پوستر",
   video: "ویدیو",
   video_version: "نسخه ویدیو",
@@ -49,7 +49,7 @@ const ENTITY_LABELS: Record<string, string> = {
   company_website: "سایت‌ها",
   submission: "مشارکت",
   file: "فایل",
-  raw_media: "راش تصویر",
+  raw_media: "راش تصاویر",
   social_post: "پست شبکه اجتماعی",
   social_platform_stat: "آمار شبکه اجتماعی",
   broadcast_report: "گزارش پخش",

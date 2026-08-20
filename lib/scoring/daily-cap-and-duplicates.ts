@@ -256,14 +256,14 @@ export async function countTodayContentByType(input: {
                 ? await sql`
                     SELECT COUNT(*)::int AS count FROM social_media_posts
                     WHERE campaign_id = ${campaignId} AND owner_user_id = ${ownerUserId}
-                      AND platform = 'site'
+                      AND platform IN ('site', 'news_agency')
                       AND (created_at AT TIME ZONE 'Asia/Tehran')::date = ${today}::date
                   `
                 : contentType === "social_post"
                   ? await sql`
                       SELECT COUNT(*)::int AS count FROM social_media_posts
                       WHERE campaign_id = ${campaignId} AND owner_user_id = ${ownerUserId}
-                        AND platform IS DISTINCT FROM 'site'
+                        AND platform NOT IN ('site', 'news_agency')
                         AND (created_at AT TIME ZONE 'Asia/Tehran')::date = ${today}::date
                     `
                   : contentType === "activity"

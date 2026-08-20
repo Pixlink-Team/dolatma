@@ -61,10 +61,10 @@ function StatChip({
 
 const CONTENT_LABELS: { key: keyof NonNullable<AuditUserDetail["content"]>; label: string }[] = [
   { key: "billboards", label: "بیلبورد" },
-  { key: "posters", label: "پوستر" },
+  { key: "posters", label: "پوستر و عکس" },
   { key: "videos", label: "ویدیو" },
   { key: "files", label: "فایل" },
-  { key: "rawMedia", label: "راش" },
+  { key: "rawMedia", label: "راش تصاویر" },
   { key: "socialPosts", label: "شبکه اجتماعی" },
   { key: "activities", label: "اقدام" },
   { key: "broadcast", label: "پخش" },

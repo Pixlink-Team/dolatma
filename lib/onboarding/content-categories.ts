@@ -21,7 +21,7 @@ export const ONBOARDING_CONTENT_CATEGORIES: OnboardingContentCategoryDef[] = [
   },
   {
     key: "posters",
-    label: "پوسترها",
+    label: "پوستر و عکس",
     href: "/admin/posters",
     featureKey: "posters",
     permissionKey: "posters",
@@ -42,14 +42,14 @@ export const ONBOARDING_CONTENT_CATEGORIES: OnboardingContentCategoryDef[] = [
   },
   {
     key: "rawMedia",
-    label: "راش تصویر",
+    label: "راش تصاویر",
     href: "/admin/raw-media",
     featureKey: "rawMedia",
     permissionKey: "rawMedia",
   },
   {
     key: "sitePublications",
-    label: "سایت و خبرگزاری",
+    label: "سایت / خبرگزاری",
     href: "/admin/site-publications",
     featureKey: "sitePublications",
     permissionKey: "sitePublications",

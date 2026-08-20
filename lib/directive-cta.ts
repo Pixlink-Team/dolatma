@@ -24,14 +24,14 @@ const INTERNAL_TARGET_META: Record<
   { path: string; label: string }
 > = {
   profile: { path: "/admin/profile", label: "تکمیل پروفایل" },
-  posters: { path: "/admin/posters", label: "ثبت پوستر" },
+  posters: { path: "/admin/posters", label: "ثبت پوستر و عکس" },
   videos: { path: "/admin/videos", label: "ثبت ویدیو" },
   files: { path: "/admin/files", label: "آپلود فایل" },
   billboards: { path: "/admin/billboards", label: "ثبت تبلیغات محیطی" },
   activities: { path: "/admin/activities", label: "ثبت اقدام" },
   social_posts: { path: "/admin/social-posts", label: "ثبت پست شبکه اجتماعی" },
   submissions: { path: "/admin/submissions", label: "مشاهده مشارکت‌ها" },
-  raw_media: { path: "/admin/raw-media", label: "آپلود راش تصویر" },
+  raw_media: { path: "/admin/raw-media", label: "آپلود راش تصاویر" },
   meetings: { path: "/admin/meetings", label: "جلسات و مصوبات" },
   broadcast: { path: "/admin/broadcast", label: "صدا و سیما" },
   press_publications: { path: "/admin/press-publications", label: "مجله و روزنامه" },

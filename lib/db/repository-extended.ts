@@ -1064,7 +1064,7 @@ export async function pgListRefreshableSocialPosts(limit = 300): Promise<SocialM
     LEFT JOIN ministry_organizations oo ON oo.id = u.organization_id
     WHERE COALESCE(TRIM(sp.link), '') <> ''
       AND (
-        sp.platform IN ('eitaa', 'aparat', 'site')
+        sp.platform IN ('eitaa', 'aparat', 'site', 'news_agency')
         OR sp.link ILIKE '%eitaa.com%'
         OR sp.link ILIKE '%aparat.com%'
       )

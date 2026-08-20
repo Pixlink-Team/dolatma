@@ -116,11 +116,11 @@ export function assertMagicMatchesKind(
     if (IMAGE_KINDS.has(detected) || detected === "unknown") {
       // Allow camera RAW / uncommon formats when not clearly an executable payload.
       if (detected === "unknown" && looksLikeExecutable(buffer)) {
-        return { ok: false, error: "نوع فایل برای راش تصویر مجاز نیست" };
+        return { ok: false, error: "نوع فایل برای راش تصاویر مجاز نیست" };
       }
       return { ok: true };
     }
-    return { ok: false, error: "محتوای فایل با راش تصویر هم‌خوانی ندارد" };
+    return { ok: false, error: "محتوای فایل با راش تصاویر هم‌خوانی ندارد" };
   }
 
   if (kind === "raw-video") {

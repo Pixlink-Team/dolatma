@@ -101,7 +101,7 @@ function SocialPostCard({ post }: { post: SocialMediaPost }) {
   const { canScore, campaignId } = useContentScoreAccess();
   const [detailOpen, setDetailOpen] = useState(false);
   const platformLabel =
-    post.platform === "site"
+    post.platform === "site" || post.platform === "news_agency"
       ? getStatusLabel(post.platform)
       : getSocialPlatformLabel(post.platform as SocialPlatform);
   const category = `${platformLabel} — ${getStatusLabel(post.contentType)}`;
@@ -122,7 +122,7 @@ function SocialPostCard({ post }: { post: SocialMediaPost }) {
             <SocialPostCover post={post} />
             <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-2 pt-8">
               <Badge variant="overlay" className="gap-1 px-1.5 py-0 text-[10px]">
-                {post.platform !== "site" ? (
+                {post.platform !== "site" && post.platform !== "news_agency" ? (
                   <SocialPlatformIcon
                     platform={post.platform as SocialPlatform}
                     size="sm"
@@ -138,7 +138,11 @@ function SocialPostCard({ post }: { post: SocialMediaPost }) {
           canScore || post.score != null ? (
             <ContentScoreControl
               campaignId={campaignId || post.campaignId}
-              contentType={post.platform === "site" ? "site_publication" : "social_post"}
+              contentType={
+                post.platform === "site" || post.platform === "news_agency"
+                  ? "site_publication"
+                  : "social_post"
+              }
               contentId={post.id}
               score={post.score}
               autoScore={post.autoScore}

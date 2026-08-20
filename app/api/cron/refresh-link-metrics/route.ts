@@ -29,6 +29,7 @@ async function handleCron(request: Request) {
 
   revalidatePath("/admin/social-posts");
   revalidatePath("/admin/site-publications");
+  revalidatePath("/admin/news-agencies");
   revalidatePath("/admin/press-publications");
   revalidatePath("/campaign");
 

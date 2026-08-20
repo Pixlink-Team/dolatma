@@ -27,8 +27,8 @@ export const DIRECTIVE_WORKSPACE_ASSET_CATEGORIES: Array<{
 }> = [
   {
     value: "poster",
-    label: "پوسترها",
-    description: "پوسترهای آماده انتشار برای دستگاه‌ها",
+    label: "پوستر و عکس",
+    description: "پوستر و عکس‌های آماده انتشار برای دستگاه‌ها",
     supportsText: false,
     supportsPrintSize: true,
     uploadMode: "image",

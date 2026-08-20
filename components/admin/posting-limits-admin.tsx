@@ -191,7 +191,7 @@ export function PostingLimitsAdmin({
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">محدودیت بارگذاری روزانه</h1>
         <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
-          برای هر دسته محتوا (تبلیغات محیطی، پوستر، ویدیو و بقیه)، و همچنین منطقه، استان، نوع شرکت یا خود شرکت،
+          برای هر دسته محتوا (تبلیغات محیطی، پوستر و عکس، ویدیو و بقیه)، و همچنین منطقه، استان، نوع شرکت یا خود شرکت،
           مشخص کنید در هر روز چند مورد می‌تواند ثبت شود. سقف اختصاصی هر شرکت، اگر فعال باشد، بر سقف مجموع
           دسته‌های کاربر اولویت دارد؛ سقف هر نوع محتوا جداگانه حساب می‌شود.
         </p>
@@ -224,7 +224,7 @@ export function PostingLimitsAdmin({
         <CardHeader className="pb-3">
           <CardTitle className="text-base">دسته محتوا</CardTitle>
           <CardDescription>
-            سقف جدا برای هر نوع محتوا؛ مثلاً چند تبلیغات محیطی، پوستر یا ویدیو در روز. این سقف مستقل از سقف
+            سقف جدا برای هر نوع محتوا؛ مثلاً چند تبلیغات محیطی، پوستر و عکس یا ویدیو در روز. این سقف مستقل از سقف
             مجموع کاربر است.
           </CardDescription>
         </CardHeader>

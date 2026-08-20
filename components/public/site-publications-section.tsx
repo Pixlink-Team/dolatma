@@ -31,6 +31,9 @@ const PUBLICATIONS_ITEMS_PER_ROW = 1;
 interface SitePublicationsSectionProps {
   publications: SocialMediaPost[];
   groups: DataOwnerGroup<SocialMediaPost>[];
+  sectionId?: string;
+  title?: string;
+  description?: string;
 }
 
 function PublicationCard({ item }: { item: SocialMediaPost }) {
@@ -147,7 +150,13 @@ function PublicationList({ items }: { items: SocialMediaPost[] }) {
   );
 }
 
-export function SitePublicationsSection({ publications, groups }: SitePublicationsSectionProps) {
+export function SitePublicationsSection({
+  publications,
+  groups,
+  sectionId = "site-publications",
+  title = "سایت",
+  description = "مطالب منتشرشده در سایت راستا — عنوان هر مورد لینک مستقیم به صفحه است",
+}: SitePublicationsSectionProps) {
   const { filter } = useOwnerLocationFilter();
   const locationFilteredGroups = useFilteredOwnerGroups(groups, (item) => item.publishedDate);
   const filteredGroups = useMemo(
@@ -164,7 +173,7 @@ export function SitePublicationsSection({ publications, groups }: SitePublicatio
     filteredPublications.length,
     PUBLICATIONS_ITEMS_PER_ROW,
     3,
-    `site-publications:${filteredPublications.length}`
+    `${sectionId}:${filteredPublications.length}`
   );
 
   const chronological = shouldRenderChronologically(filter.sortOrder);
@@ -186,9 +195,9 @@ export function SitePublicationsSection({ publications, groups }: SitePublicatio
 
   return (
     <CollapsibleSection
-      id="site-publications"
-      title="انتشار در سایت"
-      description="مطالب منتشرشده در سایت راستا — عنوان هر مورد لینک مستقیم به صفحه است"
+      id={sectionId}
+      title={title}
+      description={description}
     >
       <SectionTopCompaniesBox groups={filteredGroups} contentKind="site_publication" />
       {filteredPublications.length === 0 ? (

@@ -64,7 +64,7 @@ export const CONTENT_PACKAGE_TYPE_OPTIONS: {
   label: string;
 }[] = [
   { value: "billboard", label: "تبلیغات محیطی" },
-  { value: "poster", label: "پوستر" },
+  { value: "poster", label: "پوستر و عکس" },
   { value: "video", label: "ویدیو" },
   { value: "site", label: "انتشار در سایت" },
   { value: "social", label: "شبکه اجتماعی" },

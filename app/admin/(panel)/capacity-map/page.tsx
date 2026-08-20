@@ -28,9 +28,9 @@ export default async function CapacityMapPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">دارایی‌ها و نقشه ظرفیت</h1>
+        <h1 className="text-2xl font-bold">دارایی‌های دیجیتال و نقشه ظرفیت</h1>
         <p className="text-sm text-muted-foreground">
-          دارایی‌های رسانه‌ای و میدانی دستگاه‌ها و کاربران؛ منبع واحد برای گزارش‌گیری و صدور دستور.
+          دارایی‌های دیجیتال رسانه‌ای و میدانی دستگاه‌ها و کاربران؛ منبع واحد برای گزارش‌گیری و صدور دستور.
         </p>
       </div>
       <CapacityMapAdmin

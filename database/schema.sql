@@ -564,7 +564,7 @@ CREATE INDEX IF NOT EXISTS idx_meeting_decisions_meeting ON meeting_decisions(me
 -- Expand social platform enum for existing databases
 ALTER TABLE social_media_posts DROP CONSTRAINT IF EXISTS social_media_posts_platform_check;
 ALTER TABLE social_media_posts ADD CONSTRAINT social_media_posts_platform_check
-  CHECK (platform IN ('site', 'instagram', 'x', 'telegram', 'linkedin', 'youtube', 'aparat', 'rubika', 'eitaa', 'soroush', 'bale', 'other'));
+  CHECK (platform IN ('site', 'news_agency', 'instagram', 'x', 'telegram', 'linkedin', 'youtube', 'aparat', 'rubika', 'eitaa', 'soroush', 'bale', 'other'));
 
 ALTER TABLE social_platform_stats DROP CONSTRAINT IF EXISTS social_platform_stats_campaign_id_platform_key;
 DROP INDEX IF EXISTS idx_social_platform_stats_per_owner;
@@ -2614,4 +2614,44 @@ CREATE TABLE IF NOT EXISTS taghvim_notifications (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Text contents / news (production type)
+CREATE TABLE IF NOT EXISTS text_contents (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  campaign_id UUID NOT NULL REFERENCES campaign_settings(id) ON DELETE CASCADE,
+  content_kind TEXT NOT NULL DEFAULT 'text'
+    CHECK (content_kind IN ('news', 'text')),
+  title TEXT NOT NULL,
+  body TEXT NOT NULL DEFAULT '',
+  description TEXT,
+  cover_image_url TEXT,
+  attachment_url TEXT,
+  attachment_file_name TEXT,
+  published BOOLEAN NOT NULL DEFAULT false,
+  sort_order INT NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_text_contents_campaign
+  ON text_contents(campaign_id, published, sort_order);
+
+ALTER TABLE text_contents ADD COLUMN IF NOT EXISTS owner_user_id UUID REFERENCES users(id) ON DELETE SET NULL;
+ALTER TABLE text_contents ADD COLUMN IF NOT EXISTS plan_label TEXT;
+ALTER TABLE text_contents ADD COLUMN IF NOT EXISTS plan_labels JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE text_contents ADD COLUMN IF NOT EXISTS score DOUBLE PRECISION;
+ALTER TABLE text_contents ADD COLUMN IF NOT EXISTS auto_score DOUBLE PRECISION;
+ALTER TABLE text_contents ADD COLUMN IF NOT EXISTS manual_score DOUBLE PRECISION;
+
+-- Publish rows link back to a production (or directive asset) when newly created
+ALTER TABLE broadcast_reports ADD COLUMN IF NOT EXISTS source_production_type TEXT;
+ALTER TABLE broadcast_reports ADD COLUMN IF NOT EXISTS source_production_id UUID;
+ALTER TABLE social_media_posts ADD COLUMN IF NOT EXISTS source_production_type TEXT;
+ALTER TABLE social_media_posts ADD COLUMN IF NOT EXISTS source_production_id UUID;
+ALTER TABLE campaign_activities ADD COLUMN IF NOT EXISTS source_production_type TEXT;
+ALTER TABLE campaign_activities ADD COLUMN IF NOT EXISTS source_production_id UUID;
+ALTER TABLE billboards ADD COLUMN IF NOT EXISTS source_production_type TEXT;
+ALTER TABLE billboards ADD COLUMN IF NOT EXISTS source_production_id UUID;
+ALTER TABLE sms_send_reports ADD COLUMN IF NOT EXISTS source_production_type TEXT;
+ALTER TABLE sms_send_reports ADD COLUMN IF NOT EXISTS source_production_id UUID;
 

@@ -15,12 +15,13 @@ import { formatPersianDateTime, formatPersianNumber } from "@/lib/utils";
 
 const CONTENT_TYPE_LABELS: Record<ScoreableContentType, string> = {
   billboard: "تبلیغات محیطی",
-  poster: "پوستر",
+  poster: "پوستر و عکس",
   video: "ویدیو",
   file: "فایل",
-  raw_media: "راش",
+  raw_media: "راش تصاویر",
   social_post: "پست شبکه اجتماعی",
   site_publication: "انتشار سایت",
+  text_content: "متن",
   activity: "اقدام",
   broadcast: "صدا و سیما",
   meeting: "جلسه",

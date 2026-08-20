@@ -108,7 +108,7 @@ const allNavItems: {
   { href: "/admin/profile", label: "پروفایل من", icon: UserCircle },
   { href: "/admin/my-performance", label: "گزارش عملکرد", icon: Medal, alwaysVisible: true },
   { href: "/admin/settings", label: "تنظیمات راستا", icon: Settings, permissionKey: "campaignSettings", adminOrClientOnly: true },
-  { href: "/admin/capacity-map", label: "دارایی‌ها و نقشه ظرفیت", icon: Map, adminOrClientOnly: true },
+  { href: "/admin/capacity-map", label: "دارایی‌های دیجیتال و نقشه ظرفیت", icon: Map, adminOrClientOnly: true },
   { href: "/admin/calendar", label: "تقویم ملی", icon: CalendarDays, permissionKey: "nationalCalendar", adminOrClientOnly: true },
   { href: "/admin/taghvim", label: "تقویم دفاع و سازندگی", icon: Shield, permissionKey: "defenseCalendar", adminOrClientOnly: true },
   { href: "/admin/performance", label: "مشاهده عملکرد", icon: Medal, adminOrClientOnly: true },
@@ -636,7 +636,7 @@ export function AdminSidebar({ showReisReturn = false }: AdminSidebarProps) {
               )}
             >
               <Building2 className="h-4 w-4 shrink-0" />
-              <span className="flex-1 truncate text-right">دارایی‌ها</span>
+              <span className="flex-1 truncate text-right">دارایی‌های دیجیتال</span>
               <ChevronDown
                 className={cn(
                   "h-4 w-4 shrink-0 transition-transform",

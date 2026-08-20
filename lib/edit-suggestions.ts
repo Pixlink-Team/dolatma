@@ -19,6 +19,7 @@ export type EditSuggestionContentType =
   | "video"
   | "socialPost"
   | "sitePublication"
+  | "newsAgencyPublication"
   | "billboard"
   | "file"
   | "rawMedia"
@@ -104,6 +105,7 @@ const CONTENT_TYPE_PATH: Record<EditSuggestionContentType, string> = {
   video: "/admin/videos",
   socialPost: "/admin/social-posts",
   sitePublication: "/admin/site-publications",
+  newsAgencyPublication: "/admin/news-agencies",
   billboard: "/admin/billboards",
   file: "/admin/files",
   rawMedia: "/admin/raw-media",
@@ -126,13 +128,14 @@ export const editSuggestionFieldLabels: Record<EditSuggestionMissingField, strin
 };
 
 export const editSuggestionContentTypeLabels: Record<EditSuggestionContentType, string> = {
-  poster: "پوستر",
+  poster: "پوستر و عکس",
   video: "ویدیو",
   socialPost: "شبکه اجتماعی",
-  sitePublication: "سایت و خبرگزاری",
+  sitePublication: "سایت",
+  newsAgencyPublication: "خبرگزاری",
   billboard: "تبلیغات محیطی",
   file: "فایل",
-  rawMedia: "راش تصویر",
+  rawMedia: "راش تصاویر",
   broadcast: "صدا و سیما",
   meeting: "جلسه",
   activity: "اقدام",
@@ -521,6 +524,10 @@ export function buildCategoryCompleteness(
     .map((post) => toSuggestion("sitePublication", campaignId, post, getSocialChecks(post)))
     .filter((item): item is EditSuggestionItem => Boolean(item));
 
+  const newsAgencySuggestions = split.newsAgencyPublications
+    .map((post) => toSuggestion("newsAgencyPublication", campaignId, post, getSocialChecks(post)))
+    .filter((item): item is EditSuggestionItem => Boolean(item));
+
   const billboardSuggestions = ownedBillboards
     .map((billboard) =>
       toSuggestion("billboard", campaignId, billboard, getBillboardChecks(billboard))
@@ -560,6 +567,11 @@ export function buildCategoryCompleteness(
     summarizeCategory("file", ownedFiles.length, fileSuggestions),
     summarizeCategory("rawMedia", ownedRawMedia.length, rawMediaSuggestions),
     summarizeCategory("sitePublication", split.sitePublications.length, siteSuggestions),
+    summarizeCategory(
+      "newsAgencyPublication",
+      split.newsAgencyPublications.length,
+      newsAgencySuggestions
+    ),
     summarizeCategory("socialPost", split.socialPosts.length, socialSuggestions),
     summarizeCategory("broadcast", ownedBroadcasts.length, broadcastSuggestions),
     summarizeCategory("meeting", ownedMeetings.length, meetingSuggestions),

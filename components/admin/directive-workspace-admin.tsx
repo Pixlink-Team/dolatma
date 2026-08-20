@@ -833,7 +833,7 @@ export function DirectiveWorkspaceAdmin({
             <div className="flex flex-wrap gap-2">
               {[
                 { value: "all", label: "همه" },
-                { value: "poster", label: "پوستر" },
+                { value: "poster", label: "پوستر و عکس" },
                 { value: "video", label: "ویدیو" },
                 { value: "banner", label: "بنر" },
                 { value: "other", label: "سایر" },

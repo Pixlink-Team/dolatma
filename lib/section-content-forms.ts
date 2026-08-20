@@ -24,10 +24,10 @@ export const CONTENT_FORM_SECTION_KEYS = [
 
 export const contentFormSectionLabels: Record<ContentFormSectionKey, string> = {
   billboards: "تبلیغات محیطی",
-  posters: "پوسترها",
+  posters: "پوستر و عکس",
   videos: "ویدیوها",
   files: "فایل‌ها",
-  rawMedia: "راش تصویر",
+  rawMedia: "راش تصاویر",
   sitePublications: "انتشار در سایت",
   socialPosts: "پست‌های شبکه اجتماعی",
   pressPublications: "مجله و روزنامه",

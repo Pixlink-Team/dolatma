@@ -90,7 +90,7 @@ export function buildPerformanceExcelBuffer(
     Object.assign(row, {
       "تبلیغات محیطی": entry.billboards,
       متراژ: roundArea(entry.totalAreaSqm),
-      پوستر: entry.posters,
+      "پوستر و عکس": entry.posters,
       ویدیو: entry.videos,
       "شبکه اجتماعی": entry.socialPosts,
       "انتشار سایت": entry.sitePublications,

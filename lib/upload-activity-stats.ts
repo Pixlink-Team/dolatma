@@ -69,6 +69,7 @@ export function buildUploadActivityStats(data: PublicCampaignData, days = 14): U
   }
   for (const post of data.socialPosts) add(getSafeCreatedTimestamp(post), "socialPosts");
   for (const post of data.sitePublications) add(getSafeCreatedTimestamp(post), "sitePublications");
+  for (const post of data.newsAgencyPublications) add(getSafeCreatedTimestamp(post), "sitePublications");
   for (const activity of data.activities) add(getSafeCreatedTimestamp(activity), "activities");
   for (const activity of data.pressPublications) add(getSafeCreatedTimestamp(activity), "activities");
   for (const report of data.broadcastReports) add(getSafeCreatedTimestamp(report), "broadcastReports");

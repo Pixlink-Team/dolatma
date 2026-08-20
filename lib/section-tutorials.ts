@@ -21,14 +21,14 @@ export type TutorialSectionKey = (typeof TUTORIAL_SECTION_KEYS)[number];
 
 export const tutorialSectionLabels: Record<TutorialSectionKey, string> = {
   billboards: "تبلیغات محیطی",
-  posters: "پوسترها",
+  posters: "پوستر و عکس",
   videos: "ویدیوها",
   files: "فایل‌ها",
-  rawMedia: "راش تصویر",
+  rawMedia: "راش تصاویر",
   analytics: "سایت‌ها",
   socialAnalytics: "شبکه‌های اجتماعی",
   socialPosts: "پست شبکه اجتماعی",
-  sitePublications: "سایت و خبرگزاری",
+  sitePublications: "سایت / خبرگزاری",
   pressPublications: "مجله و روزنامه",
   activities: "اقدامات",
   broadcast: "صدا و سیما",

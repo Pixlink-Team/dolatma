@@ -111,7 +111,8 @@ export function computeKpiTodayDeltas(
     socialPostViews: 0,
     socialPosts: sections.socialPosts ? countCreatedToday(data.socialPosts, filter) : 0,
     sitePublications: sections.sitePublications
-      ? countCreatedToday(data.sitePublications, filter)
+      ? countCreatedToday(data.sitePublications, filter) +
+        countCreatedToday(data.newsAgencyPublications, filter)
       : 0,
     // Keep activities separate from press so KPI cards do not double-count.
     activities: activitiesToday,

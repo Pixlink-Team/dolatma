@@ -32,13 +32,13 @@ export type SectionContentKind =
 
 export const SECTION_CONTENT_KIND_LABEL: Record<SectionContentKind, string> = {
   billboard: "تبلیغات محیطی",
-  poster: "پوستر",
+  poster: "پوستر و عکس",
   video: "ویدیو",
   social_post: "شبکه اجتماعی",
   site_publication: "انتشار سایت",
   activity: "اقدام",
   file: "فایل",
-  raw_media: "راش تصویر",
+  raw_media: "راش تصاویر",
   broadcast: "گزارش پخش",
 };
 

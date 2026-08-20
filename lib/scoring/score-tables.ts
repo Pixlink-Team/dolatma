@@ -6,6 +6,7 @@ export const SCORE_TABLE_BY_TYPE: Record<ScoreableContentType, string> = {
   video: "videos",
   file: "campaign_files",
   raw_media: "raw_media_uploads",
+  text_content: "text_contents",
   social_post: "social_media_posts",
   site_publication: "social_media_posts",
   activity: "campaign_activities",

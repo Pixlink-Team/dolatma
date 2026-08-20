@@ -199,7 +199,7 @@ export function PostersAdmin({
       {tutorialModal}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold">پوسترها</h1>
+          <h1 className="text-2xl font-bold">پوستر و عکس</h1>
           <p className="text-sm text-muted-foreground">
             نمای فشرده — روی کارت کلیک کنید یا با + پوستر جدید بسازید
           </p>

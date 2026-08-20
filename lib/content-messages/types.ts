@@ -40,19 +40,21 @@ export const CONTENT_MESSAGE_ADMIN_PATHS: Record<ContentMessageContentType, stri
   activity: "/admin/activities",
   broadcast: "/admin/broadcast",
   meeting: "/admin/meetings",
+  text_content: "/admin/text-contents",
 };
 
 export const CONTENT_MESSAGE_TYPE_LABELS: Record<ContentMessageContentType, string> = {
   billboard: "تبلیغات محیطی",
-  poster: "پوستر",
+  poster: "پوستر و عکس",
   video: "ویدیو",
   file: "فایل",
-  raw_media: "راش تصویر",
+  raw_media: "راش تصاویر",
   social_post: "پست شبکه اجتماعی",
-  site_publication: "سایت و خبرگزاری",
+  site_publication: "سایت / خبرگزاری",
   activity: "اقدام",
   broadcast: "صدا و سیما",
   meeting: "جلسه",
+  text_content: "خبر و متن",
 };
 
 export const CONTENT_MESSAGE_CONTENT_TYPES = Object.keys(

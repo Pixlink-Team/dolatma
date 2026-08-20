@@ -22,6 +22,7 @@ export type LeaderboardSourceData = Pick<
   | "videos"
   | "socialPosts"
   | "sitePublications"
+  | "newsAgencyPublications"
   | "activities"
   | "pressPublications"
   | "files"
@@ -400,7 +401,10 @@ function collectLeaderboardItems(
   if (data.sections.posters) add(data.posters, "posters");
   if (data.sections.videos) add(data.videos, "videos");
   if (data.sections.socialPosts) add(data.socialPosts, "socialPosts");
-  if (data.sections.sitePublications) add(data.sitePublications, "sitePublications");
+  if (data.sections.sitePublications) {
+    add(data.sitePublications, "sitePublications");
+    add(data.newsAgencyPublications, "sitePublications");
+  }
   if (data.sections.activities) {
     add(data.activities, "activities");
     add(data.pressPublications, "activities");
@@ -649,7 +653,7 @@ export function collectUserContentItems(
     push(data.billboards, "تبلیغات محیطی", "billboard", (item) => item.thumbnailUrl);
   }
   if (data.sections.posters) {
-    push(data.posters, "پوستر", "poster");
+    push(data.posters, "پوستر و عکس", "poster");
   }
   if (data.sections.videos) {
     push(data.videos, "ویدیو", "video");
@@ -658,7 +662,8 @@ export function collectUserContentItems(
     push(data.socialPosts, "پست اجتماعی", "social_post", (item) => item.coverImageUrl);
   }
   if (data.sections.sitePublications) {
-    push(data.sitePublications, "انتشار سایت", "site_publication", (item) => item.coverImageUrl);
+    push(data.sitePublications, "سایت", "site_publication", (item) => item.coverImageUrl);
+    push(data.newsAgencyPublications, "خبرگزاری", "site_publication", (item) => item.coverImageUrl);
   }
   if (data.sections.activities) {
     push(data.activities, "اقدام", "activity", (item) => item.imageUrl);

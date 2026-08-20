@@ -49,12 +49,45 @@ import { todayISO } from "@/lib/jalali";
 import {
   createEmptySocialPostLinkEntry,
   isGroupSocialPost,
+  isNewsAgencyPublication,
   isSitePublication,
   MAX_SOCIAL_POST_LINK_ENTRIES,
   normalizeSocialPostLinkEntries,
 } from "@/lib/social-posts";
-import type { AdminUser, SocialMediaPost, SocialPostLinkEntry } from "@/lib/types";
+import type {
+  AdminUser,
+  SocialMediaPost,
+  SocialPostLinkEntry,
+  SocialPostPlatform,
+} from "@/lib/types";
 import { cn, formatPersianDate, formatPersianNumber } from "@/lib/utils";
+
+export type WebOutletPlatform = Extract<SocialPostPlatform, "site" | "news_agency">;
+
+const OUTLET_COPY: Record<
+  WebOutletPlatform,
+  { title: string; description: string; createLabel: string; dialogCreateTitle: string }
+> = {
+  site: {
+    title: "سایت",
+    description: "ثبت مطالب منتشرشده در سایت با عنوان لینک‌دار، تاریخ و توضیح",
+    createLabel: "انتشار جدید در سایت",
+    dialogCreateTitle: "انتشار جدید در سایت",
+  },
+  news_agency: {
+    title: "خبرگزاری",
+    description: "ثبت مطالب منتشرشده در خبرگزاری با عنوان لینک‌دار، تاریخ و توضیح",
+    createLabel: "انتشار جدید در خبرگزاری",
+    dialogCreateTitle: "انتشار جدید در خبرگزاری",
+  },
+};
+
+function matchesOutletPlatform(
+  post: Pick<SocialMediaPost, "platform">,
+  outlet: WebOutletPlatform
+): boolean {
+  return outlet === "news_agency" ? isNewsAgencyPublication(post) : isSitePublication(post);
+}
 
 const schema = z.object({
   title: z
@@ -79,6 +112,8 @@ function isValidHttpUrl(value: string): boolean {
 interface SitePublicationsAdminProps {
   campaignId: string;
   initialPosts: SocialMediaPost[];
+  /** Defaults to site; use news_agency for the separate news-agency admin page. */
+  outletPlatform?: WebOutletPlatform;
   contentPlans?: string[];
   contentTopics?: ContentTopic[];
   canScore?: boolean;
@@ -90,6 +125,7 @@ interface SitePublicationsAdminProps {
 export function SitePublicationsAdmin({
   campaignId,
   initialPosts,
+  outletPlatform = "site",
   contentPlans = [],
   contentTopics = [],
   canScore = false,
@@ -97,6 +133,7 @@ export function SitePublicationsAdmin({
   canTransferOwnership = false,
   users = [],
 }: SitePublicationsAdminProps) {
+  const copy = OUTLET_COPY[outletPlatform];
   const { requestCreate, tutorialModal } = useSectionCreateGate("sitePublications", campaignId);
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -106,7 +143,9 @@ export function SitePublicationsAdmin({
     createEmptySocialPostLinkEntry(),
   ]);
   const [contentFilter, setContentFilter] = useState<AdminContentFilterState>(DEFAULT_ADMIN_CONTENT_FILTER);
-  const [rows, setRows] = useState(initialPosts.filter(isSitePublication));
+  const [rows, setRows] = useState(() =>
+    initialPosts.filter((post) => matchesOutletPlatform(post, outletPlatform))
+  );
   const [previewPost, setPreviewPost] = useState<SocialMediaPost | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -178,7 +217,7 @@ export function SitePublicationsAdmin({
   const { highlightFields, setHighlightFields, resetDeepLink } = useAdminEditDeepLink({
     items: rows,
     getId: (row) => row.id,
-    basePath: "/admin/site-publications",
+    basePath: outletPlatform === "news_agency" ? "/admin/news-agencies" : "/admin/site-publications",
     onOpen: (post, fields) => {
       loadPostIntoForm(post, fields, setHighlightFields);
     },
@@ -291,7 +330,7 @@ export function SitePublicationsAdmin({
     }
 
     startTransition(async () => {
-      const result = await fetchSocialLinkMetricsAction({ url: link, platform: "site" });
+      const result = await fetchSocialLinkMetricsAction({ url: link, platform: outletPlatform });
       if (!result.success) {
         toast.error(result.error);
         return;
@@ -356,7 +395,7 @@ export function SitePublicationsAdmin({
       const result = await saveSocialPostAction({
         campaignId,
         id: editingId ?? undefined,
-        platform: "site",
+        platform: outletPlatform,
         contentType: "text",
         title: data.title,
         link: resolvedLink,
@@ -382,7 +421,7 @@ export function SitePublicationsAdmin({
       const nextPost: SocialMediaPost = {
         id: savedId,
         campaignId,
-        platform: "site",
+        platform: outletPlatform,
         title: data.title,
         link: resolvedLink,
         linkEntries: normalizedEntries.length > 0 ? normalizedEntries : undefined,
@@ -427,9 +466,9 @@ export function SitePublicationsAdmin({
       {tutorialModal}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">سایت و خبرگزاری</h1>
+          <h1 className="text-2xl font-bold">{copy.title}</h1>
           <p className="text-sm text-muted-foreground">
-            ثبت مطالب منتشرشده در سایت با عنوان لینک‌دار، تاریخ و توضیح
+            {copy.description}
           </p>
         </div>
       </div>
@@ -458,7 +497,7 @@ export function SitePublicationsAdmin({
       />
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-        {!bulk.bulkMode && <AdminCompactAddCard onClick={openCreate} label="انتشار جدید" />}
+        {!bulk.bulkMode && <AdminCompactAddCard onClick={openCreate} label={copy.createLabel} />}
         {visibleRows.map((post) => (
           <BulkItemShell
             key={post.id}
@@ -573,7 +612,7 @@ export function SitePublicationsAdmin({
       <Dialog open={open} onOpenChange={(nextOpen) => (nextOpen ? setOpen(true) : closeDialog())}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editingId ? "ویرایش انتشار" : "انتشار جدید در سایت"}</DialogTitle>
+            <DialogTitle>{editingId ? "ویرایش انتشار" : copy.dialogCreateTitle}</DialogTitle>
           </DialogHeader>
           <form onSubmit={onSubmit} className="space-y-4">
             <div className="space-y-2">

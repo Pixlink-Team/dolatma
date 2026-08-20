@@ -54,7 +54,7 @@ import {
   createEmptySocialPostLinkEntry,
   getSocialPostLinkEntryPlatforms,
   isGroupSocialPost,
-  isSitePublication,
+  isWebOutletPublication,
   MAX_SOCIAL_POST_LINK_ENTRIES,
   normalizeSocialPostLinkEntries,
   SOCIAL_PLATFORM_OPTIONS,
@@ -87,7 +87,7 @@ const schema = z.object({
 });
 
 function platformsFromPost(post: SocialMediaPost): SocialPlatform[] {
-  if (isSitePublication(post)) return ["instagram"];
+  if (isWebOutletPublication(post)) return ["instagram"];
   const fromEntries = getSocialPostLinkEntryPlatforms(post.linkEntries);
   if (fromEntries.length > 0) return fromEntries;
   return [post.platform as SocialPlatform];
@@ -137,7 +137,7 @@ export function SocialPostsAdmin({
     sortOrder: initialSortOrder,
   });
   const { viewMode, setViewMode } = useAdminViewMode("social-posts");
-  const [rows, setRows] = useState(initialPosts.filter((post) => !isSitePublication(post)));
+  const [rows, setRows] = useState(initialPosts.filter((post) => !isWebOutletPublication(post)));
   const [isPending, startTransition] = useTransition();
 
   const filterUsers = useMemo(() => collectAdminFilterUsers(rows), [rows]);
@@ -163,7 +163,7 @@ export function SocialPostsAdmin({
   const bulk = useSectionBulkEdit(visibleIds);
 
   useEffect(() => {
-    setRows(initialPosts.filter((post) => !isSitePublication(post)));
+    setRows(initialPosts.filter((post) => !isWebOutletPublication(post)));
   }, [initialPosts]);
 
   const clearEditQuery = () => {
@@ -254,7 +254,7 @@ export function SocialPostsAdmin({
   };
 
   const openEdit = (post: SocialMediaPost, fields: EditSuggestionMissingField[] = []) => {
-    if (isSitePublication(post)) return;
+    if (isWebOutletPublication(post)) return;
     setEditingId(post.id);
     setHighlightFields(fields);
     setPlanLabels(normalizePlanLabels(post.planLabels, post.planLabel));

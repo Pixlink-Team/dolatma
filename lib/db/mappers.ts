@@ -25,9 +25,12 @@ import type {
   SmsSendReport,
   SocialMediaPost,
   SocialPlatformStat,
+  TextContent,
+  TextContentKind,
   Video,
   VideoVersion,
 } from "@/lib/types";
+import { mapProductionSourceFromDb } from "@/lib/production-source";
 import type { ContributorPermissions } from "@/lib/contributor-permissions";
 import {
   inferDefaultAuthorityLevel,
@@ -249,6 +252,7 @@ export function mapBillboardFromDb(row: any): Billboard {
     published: row.published,
     sortOrder: row.sort_order,
     ...mapOwnerFromDb(row),
+    ...mapProductionSourceFromDb(row),
     createdAt: toIsoString(row.created_at),
     updatedAt: toIsoString(row.updated_at),
   };
@@ -398,6 +402,7 @@ export function mapSocialPostFromDb(row: any): SocialMediaPost {
     publishedDate: toDateString(row.published_date),
     published: row.published ?? false,
     sortOrder: row.sort_order ?? 0,
+    ...mapProductionSourceFromDb(row),
     createdAt: toIsoString(row.created_at),
     updatedAt: toIsoString(row.updated_at),
   };
@@ -438,6 +443,7 @@ export function mapBroadcastReportFromDb(row: any): BroadcastReport {
     summaryData: summary,
     published: row.published ?? false,
     sortOrder: row.sort_order ?? 0,
+    ...mapProductionSourceFromDb(row),
     createdAt: toIsoString(row.created_at),
     updatedAt: toIsoString(row.updated_at),
   };
@@ -459,6 +465,7 @@ export function mapSmsSendReportFromDb(row: any): SmsSendReport {
     evidenceFileSize: Number(row.evidence_file_size ?? 0),
     published: row.published ?? true,
     sortOrder: row.sort_order ?? 0,
+    ...mapProductionSourceFromDb(row),
     createdAt: toIsoString(row.created_at),
     updatedAt: toIsoString(row.updated_at),
   };
@@ -497,6 +504,7 @@ export function mapCampaignActivityFromDb(row: any): CampaignActivity {
         : null,
     published: row.published ?? false,
     sortOrder: row.sort_order ?? 0,
+    ...mapProductionSourceFromDb(row),
     createdAt: toIsoString(row.created_at),
     updatedAt: toIsoString(row.updated_at),
   };
@@ -686,6 +694,27 @@ export function mapCampaignFileFromDb(row: any): CampaignFile {
     fileName: row.file_name,
     mimeType: row.mime_type,
     fileSize: Number(row.file_size ?? 0),
+    published: row.published ?? false,
+    sortOrder: row.sort_order ?? 0,
+    ...mapOwnerFromDb(row),
+    createdAt: toIsoString(row.created_at),
+    updatedAt: toIsoString(row.updated_at),
+  };
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function mapTextContentFromDb(row: any): TextContent {
+  const kind: TextContentKind = row.content_kind === "news" ? "news" : "text";
+  return {
+    id: row.id,
+    campaignId: row.campaign_id,
+    contentKind: kind,
+    title: row.title,
+    body: row.body ?? "",
+    description: row.description ?? null,
+    coverImageUrl: row.cover_image_url ?? null,
+    attachmentUrl: row.attachment_url ?? null,
+    attachmentFileName: row.attachment_file_name ?? null,
     published: row.published ?? false,
     sortOrder: row.sort_order ?? 0,
     ...mapOwnerFromDb(row),

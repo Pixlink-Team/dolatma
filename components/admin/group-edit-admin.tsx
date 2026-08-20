@@ -93,10 +93,10 @@ const TYPE_OPTIONS: {
     | "activities";
 }[] = [
   { type: "billboard", label: "تبلیغات محیطی", permissionKey: "billboards" },
-  { type: "poster", label: "پوسترها", permissionKey: "posters" },
+  { type: "poster", label: "پوستر و عکس", permissionKey: "posters" },
   { type: "video", label: "ویدیوها", permissionKey: "videos" },
   { type: "file", label: "فایل‌ها", permissionKey: "files" },
-  { type: "raw_media", label: "راش تصویر", permissionKey: "rawMedia" },
+  { type: "raw_media", label: "راش تصاویر", permissionKey: "rawMedia" },
   { type: "social_post", label: "شبکه‌های اجتماعی", permissionKey: "socialPosts" },
   { type: "site_publication", label: "انتشار در سایت", permissionKey: "sitePublications" },
   { type: "activity", label: "اقدامات", permissionKey: "activities" },

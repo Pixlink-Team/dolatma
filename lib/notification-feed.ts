@@ -142,7 +142,7 @@ export function buildNotificationFeed(input: {
           ownerProvince: poster.ownerProvince,
           ownerCity: poster.ownerCity,
           planLabel: poster.planLabel,
-          typeLabel: "پوستر",
+          typeLabel: "پوستر و عکس",
           date: eventAt.slice(0, 10),
           eventAt,
           createdAt: poster.createdAt,
@@ -248,25 +248,35 @@ export function buildNotificationFeed(input: {
   for (const post of input.socialPosts) {
     const eventAt = eventTimestamp(post.createdAt, post.updatedAt);
     const isSite = post.platform === "site";
+    const isNewsAgency = post.platform === "news_agency";
+    const isWebOutlet = isSite || isNewsAgency;
     items.push(
       withEmptyFields(
         {
           key: `social:${post.id}`,
-          contentType: isSite ? "site_publication" : "social_post",
+          contentType: isWebOutlet ? "site_publication" : "social_post",
           contentId: post.id,
           title: post.title,
           ownerName: post.ownerName,
           ownerProvince: post.ownerProvince,
           ownerCity: post.ownerCity,
           planLabel: post.planLabel,
-          typeLabel: isSite ? "انتشار در سایت" : "شبکه اجتماعی",
+          typeLabel: isNewsAgency
+            ? "خبرگزاری"
+            : isSite
+              ? "انتشار در سایت"
+              : "شبکه اجتماعی",
           date: eventAt.slice(0, 10),
           eventAt,
           createdAt: post.createdAt,
           thumbnailUrl: post.coverImageUrl ?? post.mediaUrl,
           published: post.published,
           adminPath: buildAdminEditPath(
-            isSite ? "/admin/site-publications" : "/admin/social-posts",
+            isNewsAgency
+              ? "/admin/news-agencies"
+              : isSite
+                ? "/admin/site-publications"
+                : "/admin/social-posts",
             campaignId,
             post.id
           ),

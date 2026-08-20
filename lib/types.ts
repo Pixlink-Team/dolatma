@@ -25,7 +25,7 @@ export type OrgRole = import("./org-roles").OrgRole;
 /** Upstream authority for directives and user accounts. */
 export type DirectiveAuthorityLevel = import("./directive-authority").DirectiveAuthorityLevel;
 export type SocialPlatform = "instagram" | "x" | "telegram" | "linkedin" | "youtube" | "aparat" | "rubika" | "eitaa" | "soroush" | "bale" | "other";
-export type SocialPostPlatform = SocialPlatform | "site";
+export type SocialPostPlatform = SocialPlatform | "site" | "news_agency";
 /** Genre of a press (magazine/newspaper) publication. */
 export type PressContentType =
   | "news"
@@ -580,11 +580,14 @@ export type ScoreableContentType =
   | "video"
   | "file"
   | "raw_media"
+  | "text_content"
   | "social_post"
   | "site_publication"
   | "activity"
   | "broadcast"
   | "meeting";
+
+export type TextContentKind = "news" | "text";
 
 export type ScoringRuleKind = "filled" | "equals" | "range";
 
@@ -648,6 +651,9 @@ export interface Billboard extends Ownable {
   notes?: string | null;
   /** Custom form-builder field values. */
   metadata?: Record<string, unknown>;
+  /** Linked production used for this publish (poster / …). */
+  sourceProductionType?: import("@/lib/production-source").ProductionSourceType | null;
+  sourceProductionId?: string | null;
   published: boolean;
   sortOrder: number;
   displayPeriods?: BillboardDisplayPeriod[];
@@ -785,6 +791,23 @@ export interface CampaignFile extends Ownable {
   fileName: string;
   mimeType: string;
   fileSize: number;
+  published: boolean;
+  sortOrder: number;
+  planLabel?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TextContent extends Ownable {
+  id: string;
+  campaignId: string;
+  contentKind: TextContentKind;
+  title: string;
+  body: string;
+  description?: string | null;
+  coverImageUrl?: string | null;
+  attachmentUrl?: string | null;
+  attachmentFileName?: string | null;
   published: boolean;
   sortOrder: number;
   planLabel?: string | null;
@@ -1312,6 +1335,8 @@ export interface SocialMediaPost extends Ownable {
   publishedDate: string;
   published: boolean;
   sortOrder: number;
+  sourceProductionType?: import("@/lib/production-source").ProductionSourceType | null;
+  sourceProductionId?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -1366,6 +1391,8 @@ export interface BroadcastReport extends Ownable {
   summaryData: BroadcastReportSummary;
   published: boolean;
   sortOrder: number;
+  sourceProductionType?: import("@/lib/production-source").ProductionSourceType | null;
+  sourceProductionId?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -1384,6 +1411,8 @@ export interface SmsSendReport extends Ownable {
   evidenceFileSize?: number;
   published: boolean;
   sortOrder: number;
+  sourceProductionType?: import("@/lib/production-source").ProductionSourceType | null;
+  sourceProductionId?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -1412,6 +1441,8 @@ export interface CampaignActivity extends Ownable {
   pressContentType?: PressContentType | string | null;
   published: boolean;
   sortOrder: number;
+  sourceProductionType?: import("@/lib/production-source").ProductionSourceType | null;
+  sourceProductionId?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -1588,6 +1619,8 @@ export interface PublicCampaignData {
   socialPostGroups: DataOwnerGroup<SocialMediaPost>[];
   sitePublications: SocialMediaPost[];
   sitePublicationGroups: DataOwnerGroup<SocialMediaPost>[];
+  newsAgencyPublications: SocialMediaPost[];
+  newsAgencyPublicationGroups: DataOwnerGroup<SocialMediaPost>[];
   broadcastReports: BroadcastReport[];
   broadcastReportGroups: DataOwnerGroup<BroadcastReport>[];
   meetings: MeetingPublicPreview[];
@@ -1602,6 +1635,8 @@ export interface PublicCampaignData {
   submissionSummary: SubmissionSummary;
   files: CampaignFile[];
   fileGroups: DataOwnerGroup<CampaignFile>[];
+  textContents: TextContent[];
+  textContentGroups: DataOwnerGroup<TextContent>[];
   rawMedia: RawMediaUpload[];
   rawMediaGroups: DataOwnerGroup<RawMediaUpload>[];
   rawMediaStorage: RawMediaStorageSummary;

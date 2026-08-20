@@ -301,7 +301,7 @@ export function BulkContentImport({
 
           <p className="text-xs text-muted-foreground flex items-center gap-1.5">
             <FileSpreadsheet className="h-3.5 w-3.5" />
-            ستون نوع: تبلیغات محیطی / پوستر / ویدیو / سایت / شبکه اجتماعی / مجله / اقدام
+            ستون نوع: تبلیغات محیطی / پوستر و عکس / ویدیو / سایت / شبکه اجتماعی / مجله / اقدام
           </p>
         </CardContent>
       </Card>

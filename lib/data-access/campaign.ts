@@ -189,6 +189,7 @@ function buildSectionVisibility(
     socialAnalytics: SocialAnalyticsSummary;
     socialPosts: unknown[];
     sitePublications: unknown[];
+    newsAgencyPublications: unknown[];
     broadcastReports: unknown[];
     meetings: unknown[];
     activities: unknown[];
@@ -206,7 +207,9 @@ function buildSectionVisibility(
     socialAnalytics:
       features.socialAnalytics && data.socialAnalytics.hasData,
     socialPosts: (features.socialPosts ?? true) && data.socialPosts.length > 0,
-    sitePublications: (features.sitePublications ?? true) && data.sitePublications.length > 0,
+    sitePublications:
+      (features.sitePublications ?? true) &&
+      (data.sitePublications.length > 0 || data.newsAgencyPublications.length > 0),
     broadcastReports: (features.broadcastReports ?? true) && data.broadcastReports.length > 0,
     meetings: (features.meetings ?? true) && data.meetings.length > 0,
     activities: (features.activities ?? true) && data.activities.length > 0,
@@ -246,6 +249,7 @@ function buildKPIs(
     socialAnalytics: SocialAnalyticsSummary;
     socialPosts: unknown[];
     sitePublications: unknown[];
+    newsAgencyPublications: unknown[];
     broadcastReports: unknown[];
     meetings: unknown[];
     activities: unknown[];
@@ -266,7 +270,9 @@ function buildKPIs(
     totalSocialPostViews: visibility.socialPosts
       ? (data.socialPosts as SocialMediaPost[]).reduce((sum, post) => sum + (post.views ?? 0), 0)
       : 0,
-    totalSitePublications: visibility.sitePublications ? data.sitePublications.length : 0,
+    totalSitePublications: visibility.sitePublications
+      ? data.sitePublications.length + data.newsAgencyPublications.length
+      : 0,
     totalBroadcastReports: visibility.broadcastReports ? data.broadcastReports.length : 0,
     totalMeetings: visibility.meetings ? data.meetings.length : 0,
     totalActivities: visibility.activities ? data.activities.length : 0,
@@ -338,7 +344,7 @@ function assemblePublicData(
   const allSocialPosts = (store.socialPosts ?? [])
     .sort((a, b) => a.sortOrder - b.sortOrder || b.publishedDate.localeCompare(a.publishedDate));
 
-  const { sitePublications, socialPosts } = splitSocialPosts(allSocialPosts);
+  const { sitePublications, newsAgencyPublications, socialPosts } = splitSocialPosts(allSocialPosts);
 
   const broadcastReports = (store.broadcastReports ?? [])
     .sort((a, b) => a.sortOrder - b.sortOrder);
@@ -369,6 +375,7 @@ function assemblePublicData(
     socialAnalytics,
     socialPosts,
     sitePublications,
+    newsAgencyPublications,
     broadcastReports,
     meetings,
     activities,
@@ -386,6 +393,7 @@ function assemblePublicData(
     socialAnalytics,
     socialPosts,
     sitePublications,
+    newsAgencyPublications,
     broadcastReports,
     meetings,
     activities,
@@ -415,6 +423,8 @@ function assemblePublicData(
     socialPostGroups: groupByOwner(socialPosts, adminOwnerLabel),
     sitePublications,
     sitePublicationGroups: groupByOwner(sitePublications, adminOwnerLabel),
+    newsAgencyPublications,
+    newsAgencyPublicationGroups: groupByOwner(newsAgencyPublications, adminOwnerLabel),
     broadcastReports,
     broadcastReportGroups: groupByOwner(broadcastReports, adminOwnerLabel),
     meetings,
@@ -429,6 +439,8 @@ function assemblePublicData(
     submissionSummary,
     files,
     fileGroups: groupByOwner(files, adminOwnerLabel),
+    textContents: [],
+    textContentGroups: [],
     rawMedia,
     rawMediaGroups: groupByOwner(rawMedia, adminOwnerLabel),
     rawMediaStorage,

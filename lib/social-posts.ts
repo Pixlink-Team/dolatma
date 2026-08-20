@@ -26,10 +26,20 @@ export function isSitePublication(post: Pick<SocialMediaPost, "platform">): bool
   return post.platform === "site";
 }
 
+export function isNewsAgencyPublication(post: Pick<SocialMediaPost, "platform">): boolean {
+  return post.platform === "news_agency";
+}
+
+/** Site or news-agency publications (not social network posts). */
+export function isWebOutletPublication(post: Pick<SocialMediaPost, "platform">): boolean {
+  return isSitePublication(post) || isNewsAgencyPublication(post);
+}
+
 export function splitSocialPosts(posts: SocialMediaPost[]) {
   const sitePublications = posts.filter(isSitePublication);
-  const socialPosts = posts.filter((post) => !isSitePublication(post));
-  return { sitePublications, socialPosts };
+  const newsAgencyPublications = posts.filter(isNewsAgencyPublication);
+  const socialPosts = posts.filter((post) => !isWebOutletPublication(post));
+  return { sitePublications, newsAgencyPublications, socialPosts };
 }
 
 /** True when the post is distributed across multiple links (group distribution). */

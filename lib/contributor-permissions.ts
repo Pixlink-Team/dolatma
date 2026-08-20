@@ -4,6 +4,7 @@ export interface ContributorPermissions {
   videos: boolean;
   files: boolean;
   rawMedia: boolean;
+  textContents: boolean;
   analytics: boolean;
   socialPosts: boolean;
   sitePublications: boolean;
@@ -47,6 +48,7 @@ export const defaultContributorPermissions = (): ContributorPermissions => ({
   videos: true,
   files: true,
   rawMedia: true,
+  textContents: true,
   analytics: true,
   socialPosts: true,
   sitePublications: true,
@@ -78,13 +80,14 @@ export const contributorPermissionLabels: Partial<
   Record<ContributorPermissionKey, string>
 > = {
   billboards: "تبلیغات محیطی",
-  posters: "پوسترها",
+  posters: "پوستر و عکس",
   videos: "ویدیوها",
   files: "فایل‌ها",
-  rawMedia: "راش تصویر",
+  rawMedia: "راش تصاویر",
+  textContents: "خبر و متن",
   analytics: "سایت‌ها",
   socialPosts: "پست‌ها و شبکه‌های اجتماعی",
-  sitePublications: "سایت و خبرگزاری",
+  sitePublications: "سایت",
   broadcast: "صدا و سیما",
   meetings: "جلسات و مصوبات",
   activities: "اقدامات",
@@ -137,6 +140,7 @@ export function normalizeContributorPermissions(
     videos: record.videos ?? defaults.videos,
     files: record.files ?? defaults.files,
     rawMedia: record.rawMedia ?? defaults.rawMedia,
+    textContents: record.textContents ?? defaults.textContents,
     analytics: record.analytics ?? defaults.analytics,
     socialPosts: record.socialPosts ?? defaults.socialPosts,
     sitePublications: record.sitePublications ?? defaults.sitePublications,
@@ -179,6 +183,7 @@ export const deniedContributorPermissions = (): ContributorPermissions => ({
   videos: false,
   files: false,
   rawMedia: false,
+  textContents: false,
   analytics: false,
   socialPosts: false,
   sitePublications: false,

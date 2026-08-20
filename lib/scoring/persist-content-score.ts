@@ -99,8 +99,10 @@ async function loadContentItem(
     `;
     if (!rows[0]) return null;
     const mapped = mapSocialPostFromDb(rows[0]);
-    if (contentType === "site_publication" && mapped.platform !== "site") return null;
-    if (contentType === "social_post" && mapped.platform === "site") return null;
+    if (contentType === "site_publication" && mapped.platform !== "site" && mapped.platform !== "news_agency")
+      return null;
+    if (contentType === "social_post" && (mapped.platform === "site" || mapped.platform === "news_agency"))
+      return null;
     return asRecord(mapped);
   }
   if (contentType === "activity") {
@@ -284,7 +286,7 @@ export async function applyAutoScoreToItem(input: {
 
 /** Resolve social row to the correct scoreable type from platform. */
 export function socialPostScoreableType(platform: string | null | undefined): ScoreableContentType {
-  return platform === "site" ? "site_publication" : "social_post";
+  return platform === "site" || platform === "news_agency" ? "site_publication" : "social_post";
 }
 
 /**
@@ -338,14 +340,16 @@ async function listIdsForType(
   if (contentType === "social_post") {
     const rows = await sql`
       SELECT id FROM social_media_posts
-      WHERE campaign_id = ${campaignId} AND platform IS DISTINCT FROM 'site'
+      WHERE campaign_id = ${campaignId}
+        AND platform NOT IN ('site', 'news_agency')
     `;
     return rows.map((r) => String(r.id));
   }
   if (contentType === "site_publication") {
     const rows = await sql`
       SELECT id FROM social_media_posts
-      WHERE campaign_id = ${campaignId} AND platform = 'site'
+      WHERE campaign_id = ${campaignId}
+        AND platform IN ('site', 'news_agency')
     `;
     return rows.map((r) => String(r.id));
   }

@@ -751,7 +751,7 @@ export function DevicePassportView({
       <section className="rounded-xl border-2 border-primary/20 bg-card p-5 shadow-sm">
         <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2 className="text-lg font-semibold">دارایی‌ها و ظرفیت‌ها</h2>
+            <h2 className="text-lg font-semibold">دارایی‌های دیجیتال و ظرفیت‌ها</h2>
             <p className="mt-1 text-sm text-muted-foreground">
               وب‌سایت، اپلیکیشن، شبکه‌های اجتماعی، شبکه‌های تبلیغاتی و خبری و سایر دارایی‌های رسانه‌ای را اینجا ثبت کنید.
             </p>

@@ -30,7 +30,7 @@ export interface RecentActivityItem {
 const SECTION_HREF_BY_LABEL: Record<string, string> = {
   بیلبورد: "#billboards",
   "تبلیغات محیطی": "#billboards",
-  پوستر: "#posters",
+  "پوستر و عکس": "#posters",
   ویدیو: "#videos",
   "پست اجتماعی": "#social-posts",
   "انتشار سایت": "#site-publications",
@@ -102,7 +102,7 @@ export function buildContentMixStats(
 
   return [
     { label: "تبلیغات محیطی", count: kpis.totalBillboards, show: Boolean(sections.billboards) },
-    { label: "پوستر", count: kpis.totalPosters, show: Boolean(sections.posters) },
+    { label: "پوستر و عکس", count: kpis.totalPosters, show: Boolean(sections.posters) },
     { label: "ویدیو", count: kpis.totalVideos, show: Boolean(sections.videos) },
     { label: "پست اجتماعی", count: kpis.totalSocialPosts, show: Boolean(sections.socialPosts) },
     { label: "انتشار سایت", count: kpis.totalSitePublications, show: Boolean(sections.sitePublications) },
@@ -124,6 +124,7 @@ function filterCampaignData(
     videos: filterItemsByOwnerLocation(data.videos, filter),
     socialPosts: filterItemsByOwnerLocation(data.socialPosts, filter),
     sitePublications: filterItemsByOwnerLocation(data.sitePublications, filter),
+    newsAgencyPublications: filterItemsByOwnerLocation(data.newsAgencyPublications, filter),
     activities: filterItemsByOwnerLocation(data.activities, filter),
     pressPublications: filterItemsByOwnerLocation(data.pressPublications, filter),
     broadcastReports: filterItemsByOwnerLocation(data.broadcastReports, filter),
@@ -174,7 +175,7 @@ export function buildRecentActivityFeed(
     );
   }
   if (sections.posters) {
-    pushActivity(entries, filtered.posters, "پوستر", getSafeUploadTimestamp, "poster");
+    pushActivity(entries, filtered.posters, "پوستر و عکس", getSafeUploadTimestamp, "poster");
   }
   if (sections.videos) {
     pushActivity(entries, filtered.videos, "ویدیو", getSafeUploadTimestamp, "video");
@@ -183,7 +184,14 @@ export function buildRecentActivityFeed(
     pushActivity(entries, filtered.socialPosts, "پست اجتماعی", getSafeUploadTimestamp, "social_post");
   }
   if (sections.sitePublications) {
-    pushActivity(entries, filtered.sitePublications, "انتشار سایت", getSafeUploadTimestamp, "site_publication");
+    pushActivity(entries, filtered.sitePublications, "سایت", getSafeUploadTimestamp, "site_publication");
+    pushActivity(
+      entries,
+      filtered.newsAgencyPublications,
+      "خبرگزاری",
+      getSafeUploadTimestamp,
+      "site_publication"
+    );
   }
   if (sections.activities) {
     pushActivity(entries, filtered.activities, "اقدام", getSafeUploadTimestamp, "activity");

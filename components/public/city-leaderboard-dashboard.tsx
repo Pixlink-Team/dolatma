@@ -52,7 +52,7 @@ interface CityLeaderboardDashboardProps {
 }
 
 const SECTION_HREF_BY_METRIC_LABEL: Record<string, string> = {
-  پوستر: "posters",
+  "پوستر و عکس": "posters",
   ویدیو: "videos",
   "شبکه اجتماعی": "social-posts",
   "انتشار سایت": "site-publications",
@@ -82,7 +82,7 @@ function MetricsBreakdown({
   const items = [
     { label: "تبلیغات محیطی", value: entry.billboards },
     { label: "متراژ", value: entry.totalAreaSqm },
-    { label: "پوستر", value: entry.posters },
+    { label: "پوستر و عکس", value: entry.posters },
     { label: "ویدیو", value: entry.videos },
     { label: "شبکه اجتماعی", value: entry.socialPosts },
     { label: "انتشار سایت", value: entry.sitePublications },

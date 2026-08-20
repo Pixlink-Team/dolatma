@@ -66,7 +66,7 @@ export const DASHBOARD_STAT_DEFINITIONS: DashboardStatDefinition[] = [
   {
     permissionKey: "posters",
     featureKey: "posters",
-    label: "پوسترها",
+    label: "پوستر و عکس",
     href: "/admin/posters",
     icon: ImageIcon,
     getCount: (data) => data.posters.length,
@@ -106,10 +106,18 @@ export const DASHBOARD_STAT_DEFINITIONS: DashboardStatDefinition[] = [
   {
     permissionKey: "sitePublications",
     featureKey: "sitePublications",
-    label: "سایت و خبرگزاری",
+    label: "سایت",
     href: "/admin/site-publications",
     icon: Globe,
     getCount: (data) => splitSocialPosts(data.socialPosts ?? []).sitePublications.length,
+  },
+  {
+    permissionKey: "sitePublications",
+    featureKey: "sitePublications",
+    label: "خبرگزاری",
+    href: "/admin/news-agencies",
+    icon: Globe,
+    getCount: (data) => splitSocialPosts(data.socialPosts ?? []).newsAgencyPublications.length,
   },
   {
     permissionKey: "socialPosts",
