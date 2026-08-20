@@ -32,6 +32,7 @@ import {
   Megaphone,
   MessageSquare,
   Newspaper,
+  PackageCheck,
   Radar,
   Radio,
   Rocket,
@@ -119,9 +120,11 @@ const allNavItems: {
   { href: "/admin/onboarding-steps", label: "مراحل راه‌اندازی", icon: ListChecks, adminOnly: true },
   { href: "/admin/group-edit", label: "ویرایش گروهی", icon: Layers, adminOnly: true },
   { href: "/admin/billboards", label: "تبلیغات محیطی", icon: LayoutGrid, permissionKey: "billboards" },
+  { href: "/admin/ready-productions", label: "تولیدات آماده", icon: PackageCheck, alwaysVisible: true },
   { href: "/admin/posters", label: "پوستر و عکس", icon: ImageIcon, permissionKey: "posters" },
   { href: "/admin/videos", label: "ویدیوها", icon: Video, permissionKey: "videos" },
   { href: "/admin/files", label: "فایل‌ها", icon: FileStack, permissionKey: "files" },
+  { href: "/admin/text-contents", label: "خبر و متن", icon: Newspaper, permissionKey: "textContents" },
   { href: "/admin/raw-media", label: "راش تصاویر", icon: HardDrive, permissionKey: "rawMedia" },
   { href: "/admin/analytics", label: "سایت‌ها", icon: Globe, permissionKey: "analytics" },
   { href: "/admin/site-publications", label: "سایت", icon: Globe, permissionKey: "sitePublications" },
@@ -188,9 +191,11 @@ const ASSETS_GROUP_ORDER = [
 ] as const;
 const ASSETS_GROUP_HREFS = new Set<string>(ASSETS_GROUP_ORDER);
 const PRODUCTION_GROUP_HREFS = new Set([
+  "/admin/ready-productions",
   "/admin/posters",
   "/admin/videos",
   "/admin/files",
+  "/admin/text-contents",
   "/admin/raw-media",
 ]);
 /** Ordered list for the publishing group (menu display order). */

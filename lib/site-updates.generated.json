@@ -1,6 +1,114 @@
 {
   "entries": [
     {
+      "hash": "9a51e8a2a43e6c91b65f4386a184f254aacd2281",
+      "committedAt": "2026-08-20T15:43:31+03:30",
+      "title": "افزودن خودکار https به لینک‌هایی که بدون پروتکل وارد می‌شوند",
+      "subject": "Auto-prepend https:// to bare external links"
+    },
+    {
+      "hash": "f64cd498bdb73d59c10376bfe1bc5bb0d754af1c",
+      "committedAt": "2026-08-20T15:41:48+03:30",
+      "title": "حذف نمایش خطاهای امروز از گزارش عملکرد کاربر",
+      "subject": "Hide today errors from user performance report"
+    },
+    {
+      "hash": "318e59b710a970c5cd1f9db7f639b9fb7cad5a61",
+      "committedAt": "2026-08-20T15:38:28+03:30",
+      "title": "تکمیل رفع خطای بیلد داده‌های ادمین",
+      "subject": "Drop leftover textContents mapping from admin data return"
+    },
+    {
+      "hash": "abd008043a36cf2c99afa192061b438bd1e7eaaa",
+      "committedAt": "2026-08-20T15:36:34+03:30",
+      "title": "تکمیل رفع خطای بیلد داده‌های ادمین",
+      "subject": "Drop leftover textContents mapping from admin data return"
+    },
+    {
+      "hash": "8be467ea9efe2c8b39503ab8a7c69068db90cfbe",
+      "committedAt": "2026-08-20T15:35:28+03:30",
+      "title": "رفع خطای بیلد بخش فعالیت‌ها",
+      "subject": "Remove incomplete textContents query shifting admin data types"
+    },
+    {
+      "hash": "6d8a1a8a9fd6e47c86e56498d78b02cd4ce8cf3a",
+      "committedAt": "2026-08-20T15:31:51+03:30",
+      "title": "رفع خطای تایپ بخش فعالیت‌ها",
+      "subject": "Fix admin activities typing from Promise.all widening"
+    },
+    {
+      "hash": "e89d48049930643b4ab52257d3572429e86b27ce",
+      "committedAt": "2026-08-20T15:27:31+03:30",
+      "title": "اصلاح اسکرول کارت ویرایش تا گوشه‌های گرد درست دیده شوند",
+      "subject": "Fix video editor scroll so dialog corners stay rounded"
+    },
+    {
+      "hash": "14eaaad5c029350c800ed53a73d3dba200c26fc9",
+      "committedAt": "2026-08-20T15:26:21+03:30",
+      "title": "دکمه افزودن در کارت‌های دارایی‌ها مثل بخش نشر",
+      "subject": "Add compact add cards to asset inventory sections"
+    },
+    {
+      "hash": "ffe95f79749ab1ccd7f3bc8f63157faa39749b33",
+      "committedAt": "2026-08-20T15:25:20+03:30",
+      "title": "اجباری شدن لینک صفحه در بخش شبکه‌های اجتماعی",
+      "subject": "Require profile URL for social analytics channels"
+    },
+    {
+      "hash": "d6940e410f515a8b9387410e85b234a4ec4d222a",
+      "committedAt": "2026-08-20T15:23:44+03:30",
+      "title": "نزدیک‌تر شدن نوار اسکرول به لبه کارت ویرایش",
+      "subject": "Fix editor dialog scroll padding and unblock build"
+    },
+    {
+      "hash": "06b88e1e3c942f432f18b1dcd2c5d11baec425e3",
+      "committedAt": "2026-08-20T15:21:37+03:30",
+      "title": "نوع فایل پیش‌فرض صدا و سیما به مدیا تغییر کرد",
+      "subject": "Default broadcast create form file type to media"
+    },
+    {
+      "hash": "29159bd2dc7323f4d046b30b8dda93cce54cdd5c",
+      "committedAt": "2026-08-20T15:21:33+03:30",
+      "title": "نزدیک‌تر شدن نوار اسکرول به لبه کارت ویرایش",
+      "subject": "Align poster/video form dialog scroll edge padding"
+    },
+    {
+      "hash": "76efce9f5b1104641564c92804878ddf15d9128c",
+      "committedAt": "2026-08-20T15:18:59+03:30",
+      "title": "مخفی‌سازی کارت دستورکار خالی و فشرده شدن حالت دیده‌شده در داشبورد",
+      "subject": "Hide empty directives card and compact seen state"
+    },
+    {
+      "hash": "17127142ec615bee2c86f2165f39f18f27066a17",
+      "committedAt": "2026-08-20T15:17:22+03:30",
+      "title": "نزدیک‌تر شدن نوار اسکرول به لبه کارت ویرایش",
+      "subject": "Fix editor dialog scrollbar edge padding"
+    },
+    {
+      "hash": "99305e62e141ffa602caafb820e107c702d70642",
+      "committedAt": "2026-08-20T15:16:09+03:30",
+      "title": "انتقال دکمه حذف کنار ذخیره و تأیید قبل از حذف",
+      "subject": "Move delete next to save in poster/video editors"
+    },
+    {
+      "hash": "464dbcb7346bcf8921ca78423528b3f172e305b6",
+      "committedAt": "2026-08-20T15:02:07+03:30",
+      "title": "ترتیب نشر: تبلیغات محیطی، پست شبکه اجتماعی، سایت و خبرگزاری جدا",
+      "subject": "Reorder publishing menu: billboards, social, site, news agency"
+    },
+    {
+      "hash": "099cf4db7bff041ef3a0c9eb258da2149d27b978",
+      "committedAt": "2026-08-20T15:01:30+03:30",
+      "title": "جابه‌جایی دکمه گزارش مشکل بالای چت تا روی هم نیفتند",
+      "subject": "Stack problem-report above chat so floating buttons do not overlap"
+    },
+    {
+      "hash": "a29303ebb9880903e65ef0c8a14b25df830ba33a",
+      "committedAt": "2026-08-20T15:00:43+03:30",
+      "title": "اولویت‌بندی نشر و جدا کردن سایت از خبرگزاری در منو",
+      "subject": "Fix publishing nav order and split site vs news agency"
+    },
+    {
       "hash": "ef97c64d2f3aad6db59c0b35376471a51b991494",
       "committedAt": "2026-08-20T14:55:01+03:30",
       "title": "یکدست‌سازی نام پوستر و عکس و راش تصاویر",

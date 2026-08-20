@@ -10,7 +10,7 @@ import {
   PRODUCTION_SOURCE_TYPES,
   type ProductionSourceType,
   type PublishableProductionItem,
-} from "@/lib/production-source";
+} from "@/lib/production-source-shared";
 import { cn } from "@/lib/utils";
 
 export interface ProductionSourcePickerProps {

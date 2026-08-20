@@ -2,59 +2,21 @@ import { getSql } from "@/lib/db/client";
 import { isFullAdmin } from "@/lib/auth/get-session";
 import type { AuthSession } from "@/lib/types";
 import { isPostgresConfigured } from "@/lib/utils";
+import {
+  isProductionSourceType,
+  type ProductionSourceFields,
+  type ProductionSourceType,
+} from "@/lib/production-source-shared";
 
-/** Production (or directive asset) that a publish record may reference. */
-export type ProductionSourceType =
-  | "poster"
-  | "video"
-  | "file"
-  | "raw_media"
-  | "text_content"
-  | "directive_asset";
-
-export const PRODUCTION_SOURCE_TYPES: ProductionSourceType[] = [
-  "poster",
-  "video",
-  "file",
-  "raw_media",
-  "text_content",
-  "directive_asset",
-];
-
-export const PRODUCTION_SOURCE_TYPE_LABELS: Record<ProductionSourceType, string> = {
-  poster: "پوستر و عکس",
-  video: "ویدیو",
-  file: "فایل",
-  raw_media: "راش تصاویر",
-  text_content: "خبر / متن",
-  directive_asset: "دارایی دستورکار",
-};
-
-export interface ProductionSourceFields {
-  sourceProductionType?: ProductionSourceType | null;
-  sourceProductionId?: string | null;
-}
-
-export interface PublishableProductionItem {
-  id: string;
-  type: ProductionSourceType;
-  title: string;
-  subtitle?: string | null;
-  mediaUrl?: string | null;
-  coverImageUrl?: string | null;
-  body?: string | null;
-  planLabels: string[];
-  contentKind?: "news" | "text" | null;
-  ownerUserId?: string | null;
-  createdAt: string;
-}
-
-export function isProductionSourceType(value: unknown): value is ProductionSourceType {
-  return (
-    typeof value === "string" &&
-    (PRODUCTION_SOURCE_TYPES as string[]).includes(value)
-  );
-}
+export {
+  isProductionSourceType,
+  PRODUCTION_SOURCE_TYPE_LABELS,
+  PRODUCTION_SOURCE_TYPES,
+  READY_DIRECTIVE_ASSET_CATEGORIES,
+  type ProductionSourceFields,
+  type ProductionSourceType,
+  type PublishableProductionItem,
+} from "@/lib/production-source-shared";
 
 export function normalizeProductionSource(
   data: ProductionSourceFields | null | undefined

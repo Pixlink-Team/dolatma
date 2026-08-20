@@ -40,6 +40,18 @@ function mapRow(row: Record<string, unknown>): PublishableProductionItem {
     contentKind: parseContentKind(row.content_kind),
     ownerUserId: row.owner_user_id != null ? String(row.owner_user_id) : null,
     createdAt: toIsoString(row.created_at),
+    directiveId:
+      row.directive_id != null && String(row.directive_id).trim()
+        ? String(row.directive_id)
+        : null,
+    directiveTitle:
+      row.directive_title != null && String(row.directive_title).trim()
+        ? String(row.directive_title)
+        : null,
+    assetCategory:
+      row.asset_category != null && String(row.asset_category).trim()
+        ? String(row.asset_category)
+        : null,
   };
 }
 
@@ -92,7 +104,10 @@ export async function pgListPublishableProductions(
         p.plan_label,
         NULL::text AS content_kind,
         p.owner_user_id,
-        p.created_at
+        p.created_at,
+        NULL::uuid AS directive_id,
+        NULL::text AS directive_title,
+        NULL::text AS asset_category
       FROM posters p
       LEFT JOIN LATERAL (
         SELECT image_url, thumbnail_url
@@ -118,7 +133,10 @@ export async function pgListPublishableProductions(
         v.plan_label,
         NULL::text AS content_kind,
         v.owner_user_id,
-        v.created_at
+        v.created_at,
+        NULL::uuid AS directive_id,
+        NULL::text AS directive_title,
+        NULL::text AS asset_category
       FROM videos v
       LEFT JOIN LATERAL (
         SELECT video_url, thumbnail_url
@@ -144,7 +162,10 @@ export async function pgListPublishableProductions(
         f.plan_label,
         NULL::text AS content_kind,
         f.owner_user_id,
-        f.created_at
+        f.created_at,
+        NULL::uuid AS directive_id,
+        NULL::text AS directive_title,
+        NULL::text AS asset_category
       FROM campaign_files f
       WHERE f.campaign_id = ${campaignId}
       ${fileOwnerFilter}
@@ -163,7 +184,10 @@ export async function pgListPublishableProductions(
         r.plan_label,
         NULL::text AS content_kind,
         r.owner_user_id,
-        r.created_at
+        r.created_at,
+        NULL::uuid AS directive_id,
+        NULL::text AS directive_title,
+        NULL::text AS asset_category
       FROM raw_media_uploads r
       WHERE r.campaign_id = ${campaignId}
       ${rawOwnerFilter}
@@ -182,7 +206,10 @@ export async function pgListPublishableProductions(
         t.plan_label,
         t.content_kind::text AS content_kind,
         t.owner_user_id,
-        t.created_at
+        t.created_at,
+        NULL::uuid AS directive_id,
+        NULL::text AS directive_title,
+        NULL::text AS asset_category
       FROM text_contents t
       WHERE t.campaign_id = ${campaignId}
       ${textOwnerFilter}
@@ -197,11 +224,18 @@ export async function pgListPublishableProductions(
         av.file_url AS media_url,
         NULL::text AS cover_image_url,
         av.content_text AS body,
-        '[]'::jsonb AS plan_labels,
+        CASE
+          WHEN NULLIF(TRIM(d.topic), '') IS NOT NULL
+          THEN jsonb_build_array(TRIM(d.topic))
+          ELSE '[]'::jsonb
+        END AS plan_labels,
         NULL::text AS plan_label,
         NULL::text AS content_kind,
         NULL::uuid AS owner_user_id,
-        a.created_at
+        a.created_at,
+        a.directive_id AS directive_id,
+        d.title AS directive_title,
+        a.category AS asset_category
       FROM directive_workspace_assets a
       INNER JOIN campaign_directives d ON d.id = a.directive_id
       LEFT JOIN LATERAL (
@@ -212,6 +246,7 @@ export async function pgListPublishableProductions(
         LIMIT 1
       ) av ON true
       WHERE d.campaign_id = ${campaignId}
+        AND a.category IN ('poster', 'video', 'banner', 'ready_text', 'social', 'print')
     )
     ORDER BY created_at DESC
     LIMIT 500
