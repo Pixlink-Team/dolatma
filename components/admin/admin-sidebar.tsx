@@ -31,6 +31,7 @@ import {
   Menu,
   Megaphone,
   MessageSquare,
+  Newspaper,
   Radar,
   Radio,
   Rocket,
@@ -123,7 +124,8 @@ const allNavItems: {
   { href: "/admin/files", label: "فایل‌ها", icon: FileStack, permissionKey: "files" },
   { href: "/admin/raw-media", label: "راش تصاویر", icon: HardDrive, permissionKey: "rawMedia" },
   { href: "/admin/analytics", label: "سایت‌ها", icon: Globe, permissionKey: "analytics" },
-  { href: "/admin/site-publications", label: "سایت و خبرگزاری", icon: Globe, permissionKey: "sitePublications" },
+  { href: "/admin/site-publications", label: "سایت", icon: Globe, permissionKey: "sitePublications" },
+  { href: "/admin/news-agencies", label: "خبرگزاری", icon: Newspaper, permissionKey: "sitePublications" },
   { href: "/admin/social-analytics", label: "شبکه‌های اجتماعی", icon: Share2, permissionKey: "socialPosts" },
   { href: "/admin/social-posts", label: "پست شبکه اجتماعی", icon: Images, permissionKey: "socialPosts" },
   { href: "/admin/press-publications", label: "مجله و روزنامه", icon: FileText, permissionKey: "activities" },
@@ -193,10 +195,11 @@ const PRODUCTION_GROUP_HREFS = new Set([
 ]);
 /** Ordered list for the publishing group (menu display order). */
 const PUBLISHING_GROUP_ORDER = [
-  "/admin/broadcast",
   "/admin/billboards",
-  "/admin/site-publications",
   "/admin/social-posts",
+  "/admin/site-publications",
+  "/admin/news-agencies",
+  "/admin/broadcast",
   "/admin/press-publications",
   "/admin/activities",
   "/admin/sms-reports",
