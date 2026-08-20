@@ -83,6 +83,28 @@ function mapCategory(value: unknown): DirectiveWorkspaceAssetCategory {
   return isWorkspaceAssetCategory(value) ? value : "reference";
 }
 
+let workspaceAssetCategorySchemaReady = false;
+
+/** Expand category CHECK to include poster/banner on older databases. */
+export async function ensureDirectiveWorkspaceAssetCategorySchema(): Promise<void> {
+  if (workspaceAssetCategorySchemaReady) return;
+  const sql = getSql();
+  await sql`
+    ALTER TABLE directive_workspace_assets
+      DROP CONSTRAINT IF EXISTS directive_workspace_assets_category_check
+  `;
+  await sql`
+    ALTER TABLE directive_workspace_assets
+      ADD CONSTRAINT directive_workspace_assets_category_check
+      CHECK (category IN (
+        'poster', 'video', 'banner',
+        'reference', 'ready_text', 'print', 'social',
+        'brand_guide', 'training', 'approval'
+      ))
+  `;
+  workspaceAssetCategorySchemaReady = true;
+}
+
 function mapAlertStatus(value: unknown): DirectiveReplacementAlertStatus {
   if (value === "acked" || value === "replaced" || value === "pending") return value;
   return "pending";
@@ -245,6 +267,7 @@ async function loadVersionsForAssets(
 export async function pgListDirectiveWorkspaceAssets(
   directiveId: string
 ): Promise<DirectiveWorkspaceAsset[]> {
+  await ensureDirectiveWorkspaceAssetCategorySchema();
   const sql = getSql();
   const rows = await sql`
     SELECT *
@@ -322,6 +345,7 @@ export async function pgCreateDirectiveWorkspaceAsset(input: {
   changeNote?: string;
   createdByUserId?: string | null;
 }): Promise<{ assetId: string; versionId: string }> {
+  await ensureDirectiveWorkspaceAssetCategorySchema();
   const sql = getSql();
   const now = new Date().toISOString();
   const assetId = generateId();

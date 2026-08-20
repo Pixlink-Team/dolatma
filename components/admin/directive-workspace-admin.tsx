@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DocumentUpload } from "@/components/ui/document-upload";
+import { MediaUpload } from "@/components/ui/media-upload";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -40,6 +41,7 @@ import {
   DIRECTIVE_WORKSPACE_ASSET_CATEGORIES,
   getDirectiveUrgencyLabel,
   getWorkspaceAssetCategoryMeta,
+  type WorkspaceAssetUploadMode,
 } from "@/lib/directive-workspace";
 import { IRAN_PROVINCES } from "@/lib/iran-locations";
 import type {
@@ -92,6 +94,114 @@ function listToLines(values: string[]): string {
   return values.join("\n");
 }
 
+type AssetFileState = {
+  url: string;
+  fileName: string;
+  fileSize: number;
+  mimeType: string;
+};
+
+type AssetFilter = "all" | "poster" | "video" | "banner" | "other";
+
+function emptyAssetFile(): AssetFileState {
+  return { url: "", fileName: "", fileSize: 0, mimeType: "" };
+}
+
+function WorkspaceAssetFileUpload({
+  uploadMode,
+  value,
+  onChange,
+  label,
+}: {
+  uploadMode: WorkspaceAssetUploadMode;
+  value: AssetFileState;
+  onChange: (next: AssetFileState) => void;
+  label: string;
+}) {
+  if (uploadMode === "document") {
+    return (
+      <DocumentUpload
+        value={value.url}
+        fileName={value.fileName}
+        fileSize={value.fileSize}
+        mimeType={value.mimeType}
+        onChange={(payload) =>
+          onChange({
+            url: payload.url,
+            fileName: payload.fileName,
+            fileSize: payload.fileSize,
+            mimeType: payload.mimeType,
+          })
+        }
+        label={label}
+      />
+    );
+  }
+
+  return (
+    <MediaUpload
+      value={value.url}
+      kind={uploadMode}
+      fileOnly
+      showLinkInput={false}
+      label={label}
+      onChange={(url) =>
+        onChange({
+          ...value,
+          url,
+          ...(url ? {} : { fileName: "", fileSize: 0, mimeType: "" }),
+        })
+      }
+      onUploadedMeta={(meta) =>
+        onChange({
+          url: meta.url,
+          fileName: meta.fileName,
+          fileSize: meta.fileSize,
+          mimeType: meta.mimeType,
+        })
+      }
+    />
+  );
+}
+
+function WorkspaceAssetPreview({
+  fileUrl,
+  mimeType,
+  uploadMode,
+}: {
+  fileUrl: string;
+  mimeType?: string | null;
+  uploadMode: WorkspaceAssetUploadMode;
+}) {
+  const mime = (mimeType ?? "").toLowerCase();
+  const isVideo = uploadMode === "video" || mime.startsWith("video/");
+  const isImage =
+    uploadMode === "image" ||
+    mime.startsWith("image/") ||
+    /\.(jpe?g|png|webp|gif|bmp)$/i.test(fileUrl);
+
+  if (isVideo) {
+    return (
+      <video
+        src={fileUrl}
+        controls
+        className="max-h-48 w-full rounded-md border bg-black object-contain"
+      />
+    );
+  }
+  if (isImage) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element -- uploaded asset preview URLs
+      <img
+        src={fileUrl}
+        alt=""
+        className="max-h-48 w-full rounded-md border object-contain bg-muted/30"
+      />
+    );
+  }
+  return null;
+}
+
 export function DirectiveWorkspaceAdmin({
   campaignId,
   canManage,
@@ -138,30 +248,15 @@ export function DirectiveWorkspaceAdmin({
   );
   const [targetCities, setTargetCities] = useState(listToLines(bundle.meta.targetCities));
 
-  const [assetCategory, setAssetCategory] =
-    useState<DirectiveWorkspaceAssetCategory>("reference");
+  const [assetCategory, setAssetCategory] = useState<DirectiveWorkspaceAssetCategory>("poster");
+  const [assetFilter, setAssetFilter] = useState<AssetFilter>("all");
   const [assetTitle, setAssetTitle] = useState("");
   const [assetDescription, setAssetDescription] = useState("");
   const [assetPrintSize, setAssetPrintSize] = useState("");
   const [assetContentText, setAssetContentText] = useState("");
-  const [assetFile, setAssetFile] = useState({
-    url: "",
-    fileName: "",
-    fileSize: 0,
-    mimeType: "",
-  });
+  const [assetFile, setAssetFile] = useState<AssetFileState>(emptyAssetFile);
   const [versionDrafts, setVersionDrafts] = useState<
-    Record<
-      string,
-      {
-        contentText: string;
-        changeNote: string;
-        url: string;
-        fileName: string;
-        fileSize: number;
-        mimeType: string;
-      }
-    >
+    Record<string, AssetFileState & { contentText: string; changeNote: string }>
   >({});
 
   const pendingAlerts = useMemo(
@@ -179,6 +274,14 @@ export function DirectiveWorkspaceAdmin({
     }
     return map;
   }, [bundle.assets]);
+
+  const visibleCategories = useMemo(() => {
+    if (assetFilter === "all") return DIRECTIVE_WORKSPACE_ASSET_CATEGORIES;
+    if (assetFilter === "other") {
+      return DIRECTIVE_WORKSPACE_ASSET_CATEGORIES.filter((item) => !item.isDevicePublish);
+    }
+    return DIRECTIVE_WORKSPACE_ASSET_CATEGORIES.filter((item) => item.value === assetFilter);
+  }, [assetFilter]);
 
   const selectedCategoryMeta = getWorkspaceAssetCategoryMeta(assetCategory);
 
@@ -445,7 +548,7 @@ export function DirectiveWorkspaceAdmin({
         <TabsList className="flex h-auto flex-wrap justify-start gap-1">
           <TabsTrigger value="overview">هدف و مخاطب</TabsTrigger>
           <TabsTrigger value="actions">اقدامات و KPI</TabsTrigger>
-          <TabsTrigger value="assets">فایل‌ها و نسخه‌ها</TabsTrigger>
+          <TabsTrigger value="assets">محتوای قابل انتشار</TabsTrigger>
           <TabsTrigger value="guides">راهنما و FAQ</TabsTrigger>
           <TabsTrigger value="media-command">فرمان رسانه‌ای</TabsTrigger>
           <TabsTrigger value="monitoring">رصد</TabsTrigger>
@@ -720,17 +823,48 @@ export function DirectiveWorkspaceAdmin({
         </TabsContent>
 
         <TabsContent value="assets" className="space-y-4">
+          <section className="rounded-xl border p-4 space-y-3">
+            <div className="space-y-1">
+              <h2 className="font-semibold">محتوای قابل انتشار برای دستگاه‌ها</h2>
+              <p className="text-sm text-muted-foreground">
+                نسخه‌های پوستر، ویدیو، بنر و سایر پیوست‌ها را مدیریت و برای انتشار ثبت کنید.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {[
+                { value: "all", label: "همه" },
+                { value: "poster", label: "پوستر" },
+                { value: "video", label: "ویدیو" },
+                { value: "banner", label: "بنر" },
+                { value: "other", label: "سایر" },
+              ].map((item) => (
+                <Button
+                  key={item.value}
+                  type="button"
+                  size="sm"
+                  variant={assetFilter === item.value ? "default" : "outline"}
+                  onClick={() => setAssetFilter(item.value as AssetFilter)}
+                >
+                  {item.label}
+                </Button>
+              ))}
+            </div>
+          </section>
+
           {canManage && (
             <div className="space-y-3 rounded-xl border p-4">
-              <h2 className="font-semibold">افزودن فایل / متن به Workspace</h2>
+              <h2 className="font-semibold">افزودن محتوای جدید</h2>
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label>دسته</Label>
                   <Select
                     value={assetCategory}
-                    onValueChange={(value) =>
-                      setAssetCategory(value as DirectiveWorkspaceAssetCategory)
-                    }
+                    onValueChange={(value) => {
+                      setAssetCategory(value as DirectiveWorkspaceAssetCategory);
+                      setAssetFile(emptyAssetFile());
+                      setAssetPrintSize("");
+                      setAssetContentText("");
+                    }}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -783,29 +917,20 @@ export function DirectiveWorkspaceAdmin({
                   />
                 </div>
               )}
-              <DocumentUpload
-                value={assetFile.url}
-                fileName={assetFile.fileName}
-                fileSize={assetFile.fileSize}
-                mimeType={assetFile.mimeType}
-                onChange={(payload) =>
-                  setAssetFile({
-                    url: payload.url,
-                    fileName: payload.fileName,
-                    fileSize: payload.fileSize,
-                    mimeType: payload.mimeType,
-                  })
-                }
+              <WorkspaceAssetFileUpload
+                uploadMode={selectedCategoryMeta.uploadMode}
+                value={assetFile}
+                onChange={setAssetFile}
                 label="آپلود فایل"
               />
               <Button type="button" disabled={isPending} onClick={createAsset}>
                 <Upload className="h-4 w-4" />
-                افزودن به Workspace
+                افزودن به اتاق عملیات
               </Button>
             </div>
           )}
 
-          {DIRECTIVE_WORKSPACE_ASSET_CATEGORIES.map((category) => {
+          {visibleCategories.map((category) => {
             const assets = assetsByCategory.get(category.value) ?? [];
             return (
               <section key={category.value} className="space-y-3 rounded-xl border p-4">
@@ -819,12 +944,9 @@ export function DirectiveWorkspaceAdmin({
                   <div className="space-y-3">
                     {assets.map((asset) => {
                       const draft = versionDrafts[asset.id] ?? {
+                        ...emptyAssetFile(),
                         contentText: "",
                         changeNote: "",
-                        url: "",
-                        fileName: "",
-                        fileSize: 0,
-                        mimeType: "",
                       };
                       return (
                         <article key={asset.id} className="rounded-lg border px-3 py-3 space-y-3">
@@ -849,6 +971,7 @@ export function DirectiveWorkspaceAdmin({
                                     href={asset.currentVersion.fileUrl}
                                     target="_blank"
                                     rel="noreferrer"
+                                    download
                                     onClick={() => trackEvent(asset, "downloaded")}
                                   >
                                     <Download className="h-4 w-4" />
@@ -862,7 +985,7 @@ export function DirectiveWorkspaceAdmin({
                                 disabled={isPending || !asset.currentVersion}
                                 onClick={() => trackEvent(asset, "published")}
                               >
-                                ثبت انتشار نسخه جاری
+                                افزودن به اتاق عملیات
                               </Button>
                               {canManage && (
                                 <Button
@@ -876,6 +999,14 @@ export function DirectiveWorkspaceAdmin({
                               )}
                             </div>
                           </div>
+
+                          {asset.currentVersion?.fileUrl && (
+                            <WorkspaceAssetPreview
+                              fileUrl={asset.currentVersion.fileUrl}
+                              mimeType={asset.currentVersion.mimeType}
+                              uploadMode={category.uploadMode}
+                            />
+                          )}
 
                           {asset.currentVersion?.contentText && (
                             <pre className="whitespace-pre-wrap rounded-md bg-muted/40 p-3 text-sm">
@@ -940,20 +1071,15 @@ export function DirectiveWorkspaceAdmin({
                                   }))
                                 }
                               />
-                              <DocumentUpload
-                                value={draft.url}
-                                fileName={draft.fileName}
-                                fileSize={draft.fileSize}
-                                mimeType={draft.mimeType}
-                                onChange={(payload) =>
+                              <WorkspaceAssetFileUpload
+                                uploadMode={category.uploadMode}
+                                value={draft}
+                                onChange={(next) =>
                                   setVersionDrafts((prev) => ({
                                     ...prev,
                                     [asset.id]: {
                                       ...draft,
-                                      url: payload.url,
-                                      fileName: payload.fileName,
-                                      fileSize: payload.fileSize,
-                                      mimeType: payload.mimeType,
+                                      ...next,
                                     },
                                   }))
                                 }

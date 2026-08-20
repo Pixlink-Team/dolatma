@@ -13,19 +13,53 @@ export const DIRECTIVE_URGENCY_OPTIONS: Array<{
   { value: "critical", label: "بحرانی" },
 ];
 
+export type WorkspaceAssetUploadMode = "image" | "video" | "document";
+
 export const DIRECTIVE_WORKSPACE_ASSET_CATEGORIES: Array<{
   value: DirectiveWorkspaceAssetCategory;
   label: string;
   description: string;
   supportsText: boolean;
   supportsPrintSize: boolean;
+  uploadMode: WorkspaceAssetUploadMode;
+  /** Primary publish pack for devices (poster / video / banner). */
+  isDevicePublish: boolean;
 }> = [
+  {
+    value: "poster",
+    label: "پوسترها",
+    description: "پوسترهای آماده انتشار برای دستگاه‌ها",
+    supportsText: false,
+    supportsPrintSize: true,
+    uploadMode: "image",
+    isDevicePublish: true,
+  },
+  {
+    value: "video",
+    label: "ویدیوها",
+    description: "ویدیوهای آماده انتشار برای دستگاه‌ها",
+    supportsText: false,
+    supportsPrintSize: false,
+    uploadMode: "video",
+    isDevicePublish: true,
+  },
+  {
+    value: "banner",
+    label: "بنرها",
+    description: "بنرهای آماده انتشار برای دستگاه‌ها",
+    supportsText: false,
+    supportsPrintSize: true,
+    uploadMode: "image",
+    isDevicePublish: true,
+  },
   {
     value: "reference",
     label: "فایل‌های مرجع و منبع",
     description: "اسناد بالادستی، منبع و پیوست‌های مرجع",
     supportsText: false,
     supportsPrintSize: false,
+    uploadMode: "document",
+    isDevicePublish: false,
   },
   {
     value: "ready_text",
@@ -33,6 +67,8 @@ export const DIRECTIVE_WORKSPACE_ASSET_CATEGORIES: Array<{
     description: "کپی آماده برای سایت، پیامک و شبکه‌های اجتماعی",
     supportsText: true,
     supportsPrintSize: false,
+    uploadMode: "document",
+    isDevicePublish: false,
   },
   {
     value: "print",
@@ -40,13 +76,8 @@ export const DIRECTIVE_WORKSPACE_ASSET_CATEGORIES: Array<{
     description: "نسخه‌های چاپی در ابعاد مختلف",
     supportsText: false,
     supportsPrintSize: true,
-  },
-  {
-    value: "video",
-    label: "نسخه‌های ویدئویی",
-    description: "ویدیوهای آماده انتشار",
-    supportsText: false,
-    supportsPrintSize: false,
+    uploadMode: "image",
+    isDevicePublish: false,
   },
   {
     value: "social",
@@ -54,6 +85,8 @@ export const DIRECTIVE_WORKSPACE_ASSET_CATEGORIES: Array<{
     description: "قالب‌ها و فایل‌های مخصوص شبکه‌های اجتماعی",
     supportsText: false,
     supportsPrintSize: false,
+    uploadMode: "image",
+    isDevicePublish: false,
   },
   {
     value: "brand_guide",
@@ -61,6 +94,8 @@ export const DIRECTIVE_WORKSPACE_ASSET_CATEGORIES: Array<{
     description: "دستورالعمل رنگ، لوگو و هویت بصری",
     supportsText: true,
     supportsPrintSize: false,
+    uploadMode: "document",
+    isDevicePublish: false,
   },
   {
     value: "training",
@@ -68,6 +103,8 @@ export const DIRECTIVE_WORKSPACE_ASSET_CATEGORIES: Array<{
     description: "راهنما و آموزش عملیاتی اجرا",
     supportsText: true,
     supportsPrintSize: false,
+    uploadMode: "document",
+    isDevicePublish: false,
   },
   {
     value: "approval",
@@ -75,6 +112,8 @@ export const DIRECTIVE_WORKSPACE_ASSET_CATEGORIES: Array<{
     description: "مدارک لازم برای تأیید و ارسال",
     supportsText: false,
     supportsPrintSize: false,
+    uploadMode: "document",
+    isDevicePublish: false,
   },
 ];
 
