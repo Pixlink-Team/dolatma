@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "11ad0b781936fba7648862f31ebba842b2eb2cb0",
+      "committedAt": "2026-08-20T10:47:18+03:30",
+      "title": "انتقال پیام‌های من به بخش تنظیمات و مدیریت",
+      "subject": "Move my messages into settings and management nav"
+    },
+    {
       "hash": "37b7d78059e8e2a9e4fec3f07242124730bf9b83",
       "committedAt": "2026-08-20T10:42:02+03:30",
       "title": "انتقال گزارش مشکل به بخش تنظیمات و مدیریت",

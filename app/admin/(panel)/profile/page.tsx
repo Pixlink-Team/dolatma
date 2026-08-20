@@ -57,14 +57,20 @@ export default async function ProfilePage() {
           </CardHeader>
           <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-muted-foreground">
-              اطلاعات سازمانی، مسئولان، کارکنان، دارایی‌ها و ظرفیت‌های «{homeDevice.name}» را در شناسنامه دستگاه تکمیل کنید.
+              اطلاعات سازمانی، مسئولان، کارکنان و دارایی‌های «{homeDevice.name}» را در شناسنامه دستگاه تکمیل کنید.
+              دارایی‌های شخصی‌تان هم از همین مسیر و نقشه دارایی‌ها قابل گزارش‌گیری است.
             </p>
-            <Button asChild className="shrink-0">
-              <Link href={`/admin/devices/${homeDevice.id}`}>
-                <Building2 className="size-4" />
-                تکمیل شناسنامه
-              </Link>
-            </Button>
+            <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
+              <Button asChild>
+                <Link href={`/admin/devices/${homeDevice.id}`}>
+                  <Building2 className="size-4" />
+                  تکمیل شناسنامه
+                </Link>
+              </Button>
+              <Button asChild variant="outline">
+                <Link href="/admin/capacity-map">مشاهده دارایی‌ها</Link>
+              </Button>
+            </div>
           </CardContent>
         </Card>
       ) : null}

@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-export const ADMIN_LIST_PAGE_SIZE = 12;
-export const ADMIN_LIST_LOAD_DELAY_MS = 350;
+export const ADMIN_LIST_PAGE_SIZE = 24;
+export const ADMIN_LIST_LOAD_DELAY_MS = 250;
 
 export function useAdminInfiniteScroll(totalCount: number, resetKey: string) {
   const [visibleCount, setVisibleCount] = useState(ADMIN_LIST_PAGE_SIZE);

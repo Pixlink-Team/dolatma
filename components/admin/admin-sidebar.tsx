@@ -15,6 +15,7 @@ import {
   FileStack,
   FileText,
   FormInput,
+  Gauge,
   GraduationCap,
   HardDrive,
   ImageIcon,
@@ -102,16 +103,17 @@ const allNavItems: {
   { href: "/admin/president", label: "صفحه رییس‌جمهور", icon: Radar, adminOrClientOnly: true },
   { href: "/admin/profile", label: "پروفایل من", icon: UserCircle },
   { href: "/admin/settings", label: "تنظیمات راستا", icon: Settings, permissionKey: "campaignSettings", adminOrClientOnly: true },
-  { href: "/admin/capacity-map", label: "نقشه ملی ظرفیت", icon: Map, adminOrClientOnly: true },
+  { href: "/admin/capacity-map", label: "دارایی‌ها و نقشه ظرفیت", icon: Map, adminOrClientOnly: true },
   { href: "/admin/calendar", label: "تقویم ملی", icon: CalendarDays, permissionKey: "nationalCalendar", adminOrClientOnly: true },
   { href: "/admin/taghvim", label: "تقویم دفاع و سازندگی", icon: Shield, permissionKey: "defenseCalendar", adminOrClientOnly: true },
   { href: "/admin/performance", label: "مشاهده عملکرد", icon: Medal, adminOrClientOnly: true },
   { href: "/admin/scoring", label: "قوانین امتیازدهی", icon: Award, adminOrClientOnly: true },
+  { href: "/admin/posting-limits", label: "محدودیت روزانه", icon: Gauge, adminOrClientOnly: true },
   { href: "/admin/tutorials", label: "آموزش بخش‌ها", icon: GraduationCap, permissionKey: "sectionTutorials", adminOnly: true },
   { href: "/admin/onboarding-steps", label: "مراحل راه‌اندازی", icon: ListChecks, adminOnly: true },
   { href: "/admin/ministries", label: "دستگاه‌ها", icon: Building2, devicesNav: true },
   { href: "/admin/group-edit", label: "ویرایش گروهی", icon: Layers, adminOnly: true },
-  { href: "/admin/billboards", label: "تبلیغات محیطی", icon: LayoutGrid, permissionKey: "billboards" },
+  { href: "/admin/billboards", label: "بیلبوردها (دارایی و نمایش)", icon: LayoutGrid, permissionKey: "billboards" },
   { href: "/admin/posters", label: "پوسترها", icon: ImageIcon, permissionKey: "posters" },
   { href: "/admin/videos", label: "ویدیوها", icon: Video, permissionKey: "videos" },
   { href: "/admin/files", label: "فایل‌ها", icon: FileStack, permissionKey: "files" },
@@ -147,15 +149,14 @@ const RAPID_RESPONSE_ROOT = "/admin/rapid-response";
 const managementNavHrefs = new Set([
   "/admin/users",
   "/admin/pre-registrations",
-  "/admin/ministries",
   "/admin/group-edit",
   "/admin/audit",
   "/admin/settings",
-  "/admin/capacity-map",
   "/admin/calendar",
   "/admin/taghvim",
   "/admin/performance",
   "/admin/scoring",
+  "/admin/posting-limits",
   "/admin/tutorials",
   "/admin/onboarding-steps",
   "/admin/elanha",
@@ -169,6 +170,29 @@ const managementNavHrefs = new Set([
 ]);
 
 const DIRECTIVES_HREF = "/admin/directives";
+const ASSETS_GROUP_HREFS = new Set([
+  "/admin/capacity-map",
+  "/admin/analytics",
+  "/admin/social-analytics",
+  "/admin/billboards",
+  "/admin/ministries",
+]);
+const PRODUCTION_GROUP_HREFS = new Set([
+  "/admin/posters",
+  "/admin/videos",
+  "/admin/files",
+  "/admin/raw-media",
+]);
+const PUBLISHING_GROUP_HREFS = new Set([
+  "/admin/site-publications",
+  "/admin/social-posts",
+  "/admin/press-publications",
+  "/admin/activities",
+  "/admin/broadcast",
+  "/admin/sms-reports",
+  "/admin/meetings",
+  "/admin/submissions",
+]);
 
 /** Survives remounts so the right-side menu keeps its scroll after navigation. */
 let savedSidebarScrollTop = 0;
@@ -190,6 +214,9 @@ export function AdminSidebar({ showReisReturn = false }: AdminSidebarProps) {
   const [permissions, setPermissions] = useState<ContributorPermissions | null>(null);
   const [mediaCommandOpen, setMediaCommandOpen] = useState(false);
   const [monitoringOpen, setMonitoringOpen] = useState(false);
+  const [assetsOpen, setAssetsOpen] = useState(true);
+  const [productionOpen, setProductionOpen] = useState(true);
+  const [publishingOpen, setPublishingOpen] = useState(true);
   const [problemReportsUnread, setProblemReportsUnread] = useState(0);
   const [contentMessagesUnread, setContentMessagesUnread] = useState(0);
   const desktopNavRef = useRef<HTMLElement>(null);
@@ -280,6 +307,9 @@ export function AdminSidebar({ showReisReturn = false }: AdminSidebarProps) {
     if (pathname.startsWith(MONITORING_ROOT) || pathname.startsWith(RAPID_RESPONSE_ROOT)) {
       setMonitoringOpen(true);
     }
+    if (ASSETS_GROUP_HREFS.has(pathname)) setAssetsOpen(true);
+    if (PRODUCTION_GROUP_HREFS.has(pathname)) setProductionOpen(true);
+    if (PUBLISHING_GROUP_HREFS.has(pathname)) setPublishingOpen(true);
   }, [pathname]);
 
   useEffect(() => {
@@ -295,7 +325,7 @@ export function AdminSidebar({ showReisReturn = false }: AdminSidebarProps) {
   useLayoutEffect(() => {
     const el = desktopNavRef.current;
     if (el) el.scrollTop = savedSidebarScrollTop;
-  }, [pathname, mediaCommandOpen, monitoringOpen]);
+  }, [pathname, mediaCommandOpen, monitoringOpen, assetsOpen, productionOpen, publishingOpen]);
 
   const navItems = allNavItems.filter((item) => {
     if (item.alwaysVisible) return true;
@@ -339,6 +369,15 @@ export function AdminSidebar({ showReisReturn = false }: AdminSidebarProps) {
     return true;
   });
   const managementNavItems = navItems.filter((item) => managementNavHrefs.has(item.href));
+  const assetsNavItems = contentNavItems.filter((item) => ASSETS_GROUP_HREFS.has(item.href));
+  const productionNavItems = contentNavItems.filter((item) => PRODUCTION_GROUP_HREFS.has(item.href));
+  const publishingNavItems = contentNavItems.filter((item) => PUBLISHING_GROUP_HREFS.has(item.href));
+  const ungroupedContentNavItems = contentNavItems.filter(
+    (item) =>
+      !ASSETS_GROUP_HREFS.has(item.href) &&
+      !PRODUCTION_GROUP_HREFS.has(item.href) &&
+      !PUBLISHING_GROUP_HREFS.has(item.href)
+  );
 
   const handleLogout = async () => {
     if (isSupabaseConfigured()) {
@@ -398,8 +437,8 @@ export function AdminSidebar({ showReisReturn = false }: AdminSidebarProps) {
           </div>
         )}
 
-        <div className="space-y-1">
-          {contentNavItems.map((item) => {
+        <div className="space-y-3">
+          {ungroupedContentNavItems.map((item) => {
             const Icon = item.icon;
             const href = adminHref(item.href, campaignId);
             const isActive =
@@ -437,6 +476,156 @@ export function AdminSidebar({ showReisReturn = false }: AdminSidebarProps) {
             );
           })}
         </div>
+
+        {assetsNavItems.length > 0 && (
+          <div className="mt-3 space-y-1 border-t pt-3">
+            <button
+              type="button"
+              onClick={() => setAssetsOpen((open) => !open)}
+              className={cn(
+                "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium",
+                assetsNavItems.some((item) => pathname === item.href)
+                  ? "bg-primary/10 text-primary"
+                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+              )}
+            >
+              <Building2 className="h-4 w-4 shrink-0" />
+              <span className="flex-1 truncate text-right">دارایی‌ها</span>
+              <ChevronDown
+                className={cn(
+                  "h-4 w-4 shrink-0 transition-transform",
+                  assetsOpen && "rotate-180"
+                )}
+              />
+            </button>
+            {assetsOpen && (
+              <div className="space-y-0.5 pr-2">
+                {assetsNavItems.map((item) => {
+                  const href = adminHref(item.href, campaignId);
+                  const Icon = item.icon;
+                  const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+                  return (
+                    <Link
+                      key={item.href}
+                      href={href}
+                      prefetch={false}
+                      onClick={() => setMobileOpen(false)}
+                      className={cn(
+                        "flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs",
+                        isActive
+                          ? "bg-primary text-primary-foreground"
+                          : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                      )}
+                    >
+                      <Icon className="h-3.5 w-3.5 shrink-0" />
+                      <span className="truncate">{item.label}</span>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {productionNavItems.length > 0 && (
+          <div className="mt-3 space-y-1 border-t pt-3">
+            <button
+              type="button"
+              onClick={() => setProductionOpen((open) => !open)}
+              className={cn(
+                "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium",
+                productionNavItems.some((item) => pathname === item.href)
+                  ? "bg-primary/10 text-primary"
+                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+              )}
+            >
+              <ImageIcon className="h-4 w-4 shrink-0" />
+              <span className="flex-1 truncate text-right">تولید</span>
+              <ChevronDown
+                className={cn(
+                  "h-4 w-4 shrink-0 transition-transform",
+                  productionOpen && "rotate-180"
+                )}
+              />
+            </button>
+            {productionOpen && (
+              <div className="space-y-0.5 pr-2">
+                {productionNavItems.map((item) => {
+                  const href = adminHref(item.href, campaignId);
+                  const Icon = item.icon;
+                  const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+                  return (
+                    <Link
+                      key={item.href}
+                      href={href}
+                      prefetch={false}
+                      onClick={() => setMobileOpen(false)}
+                      className={cn(
+                        "flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs",
+                        isActive
+                          ? "bg-primary text-primary-foreground"
+                          : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                      )}
+                    >
+                      <Icon className="h-3.5 w-3.5 shrink-0" />
+                      <span className="truncate">{item.label}</span>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {publishingNavItems.length > 0 && (
+          <div className="mt-3 space-y-1 border-t pt-3">
+            <button
+              type="button"
+              onClick={() => setPublishingOpen((open) => !open)}
+              className={cn(
+                "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium",
+                publishingNavItems.some((item) => pathname === item.href)
+                  ? "bg-primary/10 text-primary"
+                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+              )}
+            >
+              <Send className="h-4 w-4 shrink-0" />
+              <span className="flex-1 truncate text-right">نشر و انتشار</span>
+              <ChevronDown
+                className={cn(
+                  "h-4 w-4 shrink-0 transition-transform",
+                  publishingOpen && "rotate-180"
+                )}
+              />
+            </button>
+            {publishingOpen && (
+              <div className="space-y-0.5 pr-2">
+                {publishingNavItems.map((item) => {
+                  const href = adminHref(item.href, campaignId);
+                  const Icon = item.icon;
+                  const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+                  return (
+                    <Link
+                      key={item.href}
+                      href={href}
+                      prefetch={false}
+                      onClick={() => setMobileOpen(false)}
+                      className={cn(
+                        "flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs",
+                        isActive
+                          ? "bg-primary text-primary-foreground"
+                          : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                      )}
+                    >
+                      <Icon className="h-3.5 w-3.5 shrink-0" />
+                      <span className="truncate">{item.label}</span>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
 
         {showMonitoring && (
           <div className="mt-3 space-y-1 border-t pt-3">

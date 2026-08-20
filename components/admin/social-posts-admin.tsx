@@ -19,6 +19,7 @@ import {
   matchesAdminContentFilter,
   sortAdminContentItems,
   type AdminContentFilterState,
+  type AdminContentSort,
 } from "@/components/admin/admin-content-filter-bar";
 import { AdminCompactAddCard } from "@/components/admin/admin-compact-add-card";
 import { adminCreatedAtDetail } from "@/components/admin/admin-created-at";
@@ -103,6 +104,7 @@ interface SocialPostsAdminProps {
   isFullAdmin?: boolean;
   canTransferOwnership?: boolean;
   users?: AdminUser[];
+  initialSortOrder?: AdminContentSort;
 }
 
 export function SocialPostsAdmin({
@@ -114,6 +116,7 @@ export function SocialPostsAdmin({
   isFullAdmin = false,
   canTransferOwnership = false,
   users = [],
+  initialSortOrder = "newest",
 }: SocialPostsAdminProps) {
   const { requestCreate, tutorialModal } = useSectionCreateGate("socialPosts");
   const router = useRouter();
@@ -129,7 +132,10 @@ export function SocialPostsAdmin({
   const [linkEntries, setLinkEntries] = useState<SocialPostLinkEntry[]>([
     createEmptySocialPostLinkEntry("instagram"),
   ]);
-  const [contentFilter, setContentFilter] = useState<AdminContentFilterState>(DEFAULT_ADMIN_CONTENT_FILTER);
+  const [contentFilter, setContentFilter] = useState<AdminContentFilterState>({
+    ...DEFAULT_ADMIN_CONTENT_FILTER,
+    sortOrder: initialSortOrder,
+  });
   const { viewMode, setViewMode } = useAdminViewMode("social-posts");
   const [rows, setRows] = useState(initialPosts.filter((post) => !isSitePublication(post)));
   const [isPending, startTransition] = useTransition();

@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/select";
 import { ProvinceCityFields } from "@/components/admin/province-city-fields";
 import { getNationalCapacityMapAction } from "@/lib/actions/capacity-actions";
+import type { AssetsSortBy, AssetsSortOrder } from "@/lib/assets-report";
 import {
   formatCapacityDetailsSummary,
   getCapacityPrimaryMetric,
@@ -32,15 +33,33 @@ const CapacityMapLeaflet = dynamic(
 
 interface CapacityMapAdminProps {
   initialItems: CapacityMapItem[];
+  initialTotalCount?: number;
+  initialPage?: number;
+  initialPageSize?: number;
+  initialTotalPages?: number;
   devices: Array<{ id: string; name: string }>;
 }
 
-export function CapacityMapAdmin({ initialItems, devices }: CapacityMapAdminProps) {
+export function CapacityMapAdmin({
+  initialItems,
+  initialTotalCount = initialItems.length,
+  initialPage = 1,
+  initialPageSize = 50,
+  initialTotalPages = 1,
+  devices,
+}: CapacityMapAdminProps) {
   const [items, setItems] = useState(initialItems);
+  const [totalCount, setTotalCount] = useState(initialTotalCount);
+  const [page, setPage] = useState(initialPage);
+  const [pageSize] = useState(initialPageSize);
+  const [totalPages, setTotalPages] = useState(initialTotalPages);
   const [province, setProvince] = useState("");
   const [city, setCity] = useState("");
   const [deviceId, setDeviceId] = useState<string>("all");
   const [capacityType, setCapacityType] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<AssetsSortBy>("updatedAt");
+  const [sortOrder, setSortOrder] = useState<AssetsSortOrder>("desc");
+  const [q, setQ] = useState("");
   const [isPending, startTransition] = useTransition();
 
   const typeOptions = useMemo(() => DEVICE_CAPACITY_TYPES, []);
@@ -102,7 +121,7 @@ export function CapacityMapAdmin({ initialItems, devices }: CapacityMapAdminProp
     return points;
   }, [summary.byProvince]);
 
-  const applyFilters = () => {
+  const applyFilters = (nextPage = 1) => {
     startTransition(async () => {
       const result = await getNationalCapacityMapAction({
         province: province || null,
@@ -110,12 +129,20 @@ export function CapacityMapAdmin({ initialItems, devices }: CapacityMapAdminProp
         deviceId: deviceId === "all" ? null : deviceId,
         capacityType:
           capacityType === "all" ? null : (capacityType as DeviceCapacityType),
+        page: nextPage,
+        pageSize,
+        sortBy,
+        sortOrder,
+        q: q || null,
       });
       if (!result.success) {
         toast.error(result.error);
         return;
       }
       setItems(result.items);
+      setTotalCount(result.totalCount);
+      setPage(result.page);
+      setTotalPages(result.totalPages);
     });
   };
 
@@ -211,12 +238,50 @@ export function CapacityMapAdmin({ initialItems, devices }: CapacityMapAdminProp
           </Select>
         </div>
         <div className="flex items-end gap-2">
-          <Button onClick={applyFilters} disabled={isPending} className="flex-1">
+          <Button onClick={() => applyFilters(1)} disabled={isPending} className="flex-1">
             {isPending ? "در حال فیلتر..." : "اعمال فیلتر"}
           </Button>
           <Button type="button" variant="outline" onClick={exportCsv}>
             خروجی CSV
           </Button>
+        </div>
+      </div>
+
+      <div className="grid gap-3 rounded-xl border bg-card p-4 md:grid-cols-4">
+        <div className="space-y-1.5 md:col-span-2">
+          <Label>جستجو</Label>
+          <input
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            value={q}
+            onChange={(event) => setQ(event.target.value)}
+            placeholder="عنوان، مالک، دستگاه، استان..."
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label>مرتب‌سازی</Label>
+          <Select value={sortBy} onValueChange={(value) => setSortBy(value as AssetsSortBy)}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="updatedAt">آخرین به‌روزرسانی</SelectItem>
+              <SelectItem value="title">عنوان</SelectItem>
+              <SelectItem value="type">نوع دارایی</SelectItem>
+              <SelectItem value="source">منبع</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1.5">
+          <Label>ترتیب</Label>
+          <Select value={sortOrder} onValueChange={(value) => setSortOrder(value as AssetsSortOrder)}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="desc">نزولی</SelectItem>
+              <SelectItem value="asc">صعودی</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
@@ -302,6 +367,32 @@ export function CapacityMapAdmin({ initialItems, devices }: CapacityMapAdminProp
             )}
           </tbody>
         </table>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t p-3 text-sm">
+          <p className="text-muted-foreground">
+            {formatPersianNumber(totalCount)} مورد · صفحه {formatPersianNumber(page)} از{" "}
+            {formatPersianNumber(totalPages)}
+          </p>
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={isPending || page <= 1}
+              onClick={() => applyFilters(page - 1)}
+            >
+              قبلی
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={isPending || page >= totalPages}
+              onClick={() => applyFilters(page + 1)}
+            >
+              بعدی
+            </Button>
+          </div>
+        </div>
       </div>
     </div>
   );
