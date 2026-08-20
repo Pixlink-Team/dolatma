@@ -1167,32 +1167,38 @@ function CompanySupervisionAdminInner({
     }[]
   ).filter((item) => item.value > 0 || (item.todayDelta ?? 0) > 0);
 
-  const extraKpiItems = [
-    {
-      title: "برگشتی امروز",
-      value: todayReturnedItems.length,
-      icon: Undo2,
-      onClick: () => {
-        if (todayReturnedItems.length > 0) setTodayDialogOpen(true);
-        else setActiveTab("returned");
+  const extraKpiItems = (
+    [
+      {
+        title: "برگشتی امروز",
+        value: todayReturnedItems.length,
+        icon: Undo2,
+        onClick: () => {
+          if (todayReturnedItems.length > 0) setTodayDialogOpen(true);
+          else setActiveTab("returned");
+        },
       },
-    },
-    {
-      title: "خطاهای امروز",
-      value: dayActivity?.errorCount ?? 0,
-      icon: TriangleAlert,
-      onClick: () => setTodayDialogOpen(true),
-    },
-    {
-      title: "پیام‌های امروز",
-      value: todayMessages.length,
-      icon: MessageSquare,
-      onClick: () => {
-        if (todayMessages.length > 0) setTodayDialogOpen(true);
-        else setActiveTab("messages");
-      },
-    },
-  ] as const;
+      !isSelfView
+        ? {
+            title: "خطاهای امروز",
+            value: dayActivity?.errorCount ?? 0,
+            icon: TriangleAlert,
+            onClick: () => setTodayDialogOpen(true),
+          }
+        : null,
+      !isSelfView
+        ? {
+            title: "پیام‌های امروز",
+            value: todayMessages.length,
+            icon: MessageSquare,
+            onClick: () => {
+              if (todayMessages.length > 0) setTodayDialogOpen(true);
+              else setActiveTab("messages");
+            },
+          }
+        : null,
+    ] as const
+  ).filter((item): item is NonNullable<typeof item> => item != null);
 
   const renderBulkToolbar = () => {
     if (!canManageReviews) return null;
@@ -1544,40 +1550,44 @@ function CompanySupervisionAdminInner({
             {renderSimpleGrid(todayReturnedItems, "امروز محتوای برگشتی ثبت نشده است.")}
           </section>
 
-          <section className="space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 className="text-base font-semibold">خطاهای امروز</h2>
-              <Badge variant="outline">
-                {formatPersianNumber(dayActivity?.errorEvents.length ?? 0)}
-              </Badge>
-            </div>
-            {dayActivityLoading ? (
-              <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                در حال بارگذاری خطاها...
+          {!isSelfView && (
+            <section className="space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h2 className="text-base font-semibold">خطاهای امروز</h2>
+                <Badge variant="outline">
+                  {formatPersianNumber(dayActivity?.errorEvents.length ?? 0)}
+                </Badge>
               </div>
-            ) : (
-              <ErrorEventCards events={dayActivity?.errorEvents ?? []} />
-            )}
-          </section>
+              {dayActivityLoading ? (
+                <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  در حال بارگذاری خطاها...
+                </div>
+              ) : (
+                <ErrorEventCards events={dayActivity?.errorEvents ?? []} />
+              )}
+            </section>
+          )}
 
-          <section className="space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 className="text-base font-semibold">پیام‌های امروز</h2>
-              <Badge variant="secondary">{formatPersianNumber(todayMessages.length)}</Badge>
-            </div>
-            {messagesLoading ? (
-              <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                در حال بارگذاری پیام‌ها...
+          {!isSelfView && (
+            <section className="space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h2 className="text-base font-semibold">پیام‌های امروز</h2>
+                <Badge variant="secondary">{formatPersianNumber(todayMessages.length)}</Badge>
               </div>
-            ) : (
-              <MessageList
-                messages={todayMessages}
-                emptyText="امروز پیامی برای این شرکت ثبت نشده است."
-              />
-            )}
-          </section>
+              {messagesLoading ? (
+                <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  در حال بارگذاری پیام‌ها...
+                </div>
+              ) : (
+                <MessageList
+                  messages={todayMessages}
+                  emptyText="امروز پیامی برای این شرکت ثبت نشده است."
+                />
+              )}
+            </section>
+          )}
         </TabsContent>
 
         <TabsContent value="content" className="space-y-4">
@@ -1712,25 +1722,29 @@ function CompanySupervisionAdminInner({
               </div>
               {renderSimpleGrid(todayReturnedItems, "امروز محتوای برگشتی ثبت نشده است.")}
             </section>
-            <section className="space-y-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <h3 className="text-sm font-semibold">خطاهای امروز</h3>
-                <Badge variant="outline">
-                  {formatPersianNumber(dayActivity?.errorEvents.length ?? 0)}
-                </Badge>
-              </div>
-              <ErrorEventCards events={dayActivity?.errorEvents ?? []} />
-            </section>
-            <section className="space-y-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <h3 className="text-sm font-semibold">پیام‌های امروز</h3>
-                <Badge variant="secondary">{formatPersianNumber(todayMessages.length)}</Badge>
-              </div>
-              <MessageList
-                messages={todayMessages}
-                emptyText="امروز پیامی برای این شرکت ثبت نشده است."
-              />
-            </section>
+            {!isSelfView && (
+              <section className="space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h3 className="text-sm font-semibold">خطاهای امروز</h3>
+                  <Badge variant="outline">
+                    {formatPersianNumber(dayActivity?.errorEvents.length ?? 0)}
+                  </Badge>
+                </div>
+                <ErrorEventCards events={dayActivity?.errorEvents ?? []} />
+              </section>
+            )}
+            {!isSelfView && (
+              <section className="space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h3 className="text-sm font-semibold">پیام‌های امروز</h3>
+                  <Badge variant="secondary">{formatPersianNumber(todayMessages.length)}</Badge>
+                </div>
+                <MessageList
+                  messages={todayMessages}
+                  emptyText="امروز پیامی برای این شرکت ثبت نشده است."
+                />
+              </section>
+            )}
           </div>
         </DialogContent>
       </Dialog>
