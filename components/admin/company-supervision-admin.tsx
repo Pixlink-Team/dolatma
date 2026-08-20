@@ -20,7 +20,6 @@ import {
   MessageSquare,
   Share2,
   TriangleAlert,
-  Undo2,
   Video,
   X,
 } from "lucide-react";
@@ -1169,15 +1168,6 @@ function CompanySupervisionAdminInner({
 
   const extraKpiItems = (
     [
-      {
-        title: "برگشتی امروز",
-        value: todayReturnedItems.length,
-        icon: Undo2,
-        onClick: () => {
-          if (todayReturnedItems.length > 0) setTodayDialogOpen(true);
-          else setActiveTab("returned");
-        },
-      },
       !isSelfView
         ? {
             title: "خطاهای امروز",

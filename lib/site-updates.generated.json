@@ -1,6 +1,24 @@
 {
   "entries": [
     {
+      "hash": "64c79d5da730b7aee541d8fa54e4700db0b8026e",
+      "committedAt": "2026-08-20T17:20:51+03:30",
+      "title": "یکپارچه‌سازی انتخاب و پیش‌نمایش تصویر در یک کارت آپلود",
+      "subject": "Unify image MediaUpload into a single dropzone card"
+    },
+    {
+      "hash": "93d7e8f8386098b231179dd12e4bc50ddbdd6e37",
+      "committedAt": "2026-08-20T17:20:30+03:30",
+      "title": "جابه‌جایی جلسات و مصوبات به تولید و مشارکت‌ها به نشر",
+      "subject": "Move meetings to production and submissions to publishing"
+    },
+    {
+      "hash": "0f43cd5cd21e5ec97a7a88ed439ad018f45ea453",
+      "committedAt": "2026-08-20T17:19:47+03:30",
+      "title": "چیدمان فرم ثبت تبلیغات محیطی و حذف عکس تأییدیه",
+      "subject": "Reorder billboard create form fields"
+    },
+    {
       "hash": "9dd2c308a0270d65fbcf82ebe72e59a23e8e0869",
       "committedAt": "2026-08-20T17:15:41+03:30",
       "title": "چیدمان جدید داشبورد با راه‌اندازی، دستورکار و وضعیت‌های دسته‌بندی‌شده",
