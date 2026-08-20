@@ -30,7 +30,7 @@ export interface ProductionSourcePickerProps {
   label?: string;
 }
 
-type ModalFilter = ProductionSourceType | "all";
+type TypeFilter = ProductionSourceType | "all";
 
 export function ProductionSourcePicker({
   campaignId,
@@ -44,7 +44,8 @@ export function ProductionSourcePicker({
   const [items, setItems] = useState<PublishableProductionItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [modalFilter, setModalFilter] = useState<ModalFilter | null>(null);
+  const [open, setOpen] = useState(false);
+  const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
   const [search, setSearch] = useState("");
 
   useEffect(() => {
@@ -83,33 +84,28 @@ export function ProductionSourcePicker({
   );
 
   const filtered = useMemo(() => {
-    if (!modalFilter) return [];
     const q = search.trim().toLowerCase();
     return items.filter((item) => {
       if (!allowedSet.has(item.type)) return false;
-      if (modalFilter !== "all" && item.type !== modalFilter) return false;
+      if (typeFilter !== "all" && item.type !== typeFilter) return false;
       if (q && !item.title.toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [allowedSet, items, modalFilter, search]);
+  }, [allowedSet, items, search, typeFilter]);
 
   const selected = useMemo(() => {
     if (!valueType || !valueId) return null;
     return items.find((item) => item.type === valueType && item.id === valueId) ?? null;
   }, [items, valueId, valueType]);
 
-  const modalTitle =
-    modalFilter === "all" || modalFilter == null
-      ? "انتخاب تولید"
-      : `انتخاب از ${PRODUCTION_SOURCE_TYPE_LABELS[modalFilter]}`;
-
-  function openModal(filter: ModalFilter) {
+  function openModal() {
+    setTypeFilter(valueType ?? "all");
     setSearch("");
-    setModalFilter(filter);
+    setOpen(true);
   }
 
   function closeModal() {
-    setModalFilter(null);
+    setOpen(false);
     setSearch("");
   }
 
@@ -119,79 +115,44 @@ export function ProductionSourcePicker({
   }
 
   return (
-    <div className="space-y-2 rounded-lg border border-dashed p-3" dir="rtl">
-      <div className="flex items-center justify-between gap-2">
-        <Label>
-          {label}
-          {required ? <span className="mr-1 text-destructive">*</span> : null}
-        </Label>
-        {valueType && valueId ? (
+    <div className="space-y-2" dir="rtl">
+      <Label>
+        {label}
+        {required ? <span className="mr-1 text-destructive">*</span> : null}
+      </Label>
+
+      {selected ? (
+        <div className="flex items-start justify-between gap-2 rounded-md border bg-muted/40 px-3 py-2">
+          <div className="min-w-0 text-sm">
+            <div className="font-medium">{selected.title}</div>
+            <div className="text-xs text-muted-foreground">
+              {PRODUCTION_SOURCE_TYPE_LABELS[selected.type]}
+              {selected.subtitle ? ` — ${selected.subtitle}` : ""}
+            </div>
+          </div>
           <Button
             type="button"
             variant="ghost"
             size="sm"
-            className="h-7 px-2 text-xs text-muted-foreground"
+            className="h-7 shrink-0 px-2 text-xs text-muted-foreground"
             onClick={() => onChange(null)}
           >
             پاک کردن
           </Button>
-        ) : null}
-      </div>
-
-      {selected ? (
-        <div className="rounded-md border bg-muted/40 px-3 py-2 text-sm">
-          <div className="font-medium">{selected.title}</div>
-          <div className="text-xs text-muted-foreground">
-            {PRODUCTION_SOURCE_TYPE_LABELS[selected.type]}
-            {selected.subtitle ? ` — ${selected.subtitle}` : ""}
-          </div>
         </div>
-      ) : (
-        <p className="text-xs text-muted-foreground">
-          یک قسمت را انتخاب کنید تا فهرست تولیدات باز شود
-        </p>
-      )}
-
-      <div className="flex flex-wrap gap-1.5">
-        <button
-          type="button"
-          onClick={() => openModal("all")}
-          className={cn(
-            "rounded-md border px-2 py-1 text-xs transition-colors",
-            "border-border bg-card hover:bg-accent"
-          )}
-        >
-          همه
-        </button>
-        {typeChips.map((type) => (
-          <button
-            key={type}
-            type="button"
-            onClick={() => openModal(type)}
-            className={cn(
-              "rounded-md border px-2 py-1 text-xs transition-colors",
-              valueType === type
-                ? "border-primary bg-primary text-primary-foreground"
-                : "border-border bg-card hover:bg-accent"
-            )}
-          >
-            {PRODUCTION_SOURCE_TYPE_LABELS[type]}
-          </button>
-        ))}
-      </div>
-
-      {error && !modalFilter ? (
-        <p className="text-xs text-destructive">{error}</p>
       ) : null}
 
-      <p className="text-[11px] text-muted-foreground">
-        اگر چیزی نیست، اول در تولیدات ثبت کنید
-      </p>
+      <Button type="button" variant="outline" className="w-full" onClick={openModal}>
+        {selected ? "تغییر تولید" : "انتخاب تولید"}
+      </Button>
+
+      {error && !open ? <p className="text-xs text-destructive">{error}</p> : null}
 
       <Dialog
-        open={modalFilter != null}
-        onOpenChange={(open) => {
-          if (!open) closeModal();
+        open={open}
+        onOpenChange={(nextOpen) => {
+          if (nextOpen) openModal();
+          else closeModal();
         }}
       >
         <DialogContent
@@ -200,11 +161,41 @@ export function ProductionSourcePicker({
           className="z-[100] max-h-[85vh] max-w-lg overflow-hidden !flex flex-col gap-3"
         >
           <DialogHeader>
-            <DialogTitle>{modalTitle}</DialogTitle>
+            <DialogTitle>انتخاب تولید</DialogTitle>
             <DialogDescription>
-              از فهرست زیر یک مورد را انتخاب کنید
+              اول قسمت را مشخص کنید، بعد از فهرست یک مورد را برگزینید
             </DialogDescription>
           </DialogHeader>
+
+          <div className="flex flex-wrap gap-1.5">
+            <button
+              type="button"
+              onClick={() => setTypeFilter("all")}
+              className={cn(
+                "rounded-md border px-2 py-1 text-xs transition-colors",
+                typeFilter === "all"
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-border bg-card hover:bg-accent"
+              )}
+            >
+              همه
+            </button>
+            {typeChips.map((type) => (
+              <button
+                key={type}
+                type="button"
+                onClick={() => setTypeFilter(type)}
+                className={cn(
+                  "rounded-md border px-2 py-1 text-xs transition-colors",
+                  typeFilter === type
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-border bg-card hover:bg-accent"
+                )}
+              >
+                {PRODUCTION_SOURCE_TYPE_LABELS[type]}
+              </button>
+            ))}
+          </div>
 
           <Input
             value={search}
