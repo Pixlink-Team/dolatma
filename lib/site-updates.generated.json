@@ -1,6 +1,18 @@
 {
   "entries": [
     {
+      "hash": "192ece61a996400d40f629ee3822eec7d0101ae3",
+      "committedAt": "2026-08-20T18:12:52+03:30",
+      "title": "افزودن صفحه مدیریت خبر و متن در پنل ادمین",
+      "subject": "Add admin page for news and text contents"
+    },
+    {
+      "hash": "e0fba9991932b3761ca0113d623c597591f7771b",
+      "committedAt": "2026-08-20T18:12:45+03:30",
+      "title": "ساده‌سازی انتخاب تولید با یک دکمه روی فرم",
+      "subject": "Keep production picker as a single button on the form"
+    },
+    {
       "hash": "2a71887fbbfe981061e9e0de8e593ba536acb772",
       "committedAt": "2026-08-20T18:10:08+03:30",
       "title": "انتخاب تولید با باز شدن مودال از هر قسمت",

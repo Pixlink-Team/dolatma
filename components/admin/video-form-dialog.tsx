@@ -127,7 +127,7 @@ export function VideoFormDialog({
             {thumbnailUrl ? " (کاور از تصویر بسته پر شده است)" : ""}.
           </DialogDescription>
         </DialogHeader>
-        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden pb-4 pt-4">
+        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden pt-4">
           {bulkTypeSwitcher ? <div className="px-6">{bulkTypeSwitcher}</div> : null}
           <div className="min-h-0 flex-1 overflow-hidden">
             <AdminVideoEditor

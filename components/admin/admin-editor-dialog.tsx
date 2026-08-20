@@ -26,10 +26,12 @@ export const ADMIN_EDITOR_DIALOG_CLASS =
 export const ADMIN_EDITOR_SCROLL_CLASS =
   "min-h-0 flex-1 overflow-y-auto overscroll-y-contain pl-2";
 
-export const ADMIN_EDITOR_SCROLL_INNER_CLASS = "space-y-4 px-6";
+/** Field stack: space-y-4 between fields; pb-4 so the last field is not flush with the footer. */
+export const ADMIN_EDITOR_SCROLL_INNER_CLASS = "space-y-4 px-6 pb-4";
 
+/** Footer padding matches field gap (space-y-4) and header py-4. */
 export const ADMIN_EDITOR_FOOTER_CLASS =
-  "flex shrink-0 items-center gap-2 border-t bg-card px-6 pt-3";
+  "flex shrink-0 items-center gap-2 border-t bg-card px-6 py-4";
 
 export const ADMIN_EDITOR_HEADER_CLASS =
   "shrink-0 border-b px-6 py-4 pl-12";
@@ -76,14 +78,14 @@ export function AdminEditorDialog({
   const hasExternalFooter = footer !== undefined;
 
   const body = hasExternalFooter ? (
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden pb-4 pt-4">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden pt-4">
       <div className={ADMIN_EDITOR_SCROLL_CLASS}>
         <div className={ADMIN_EDITOR_SCROLL_INNER_CLASS}>{children}</div>
       </div>
       <div className={ADMIN_EDITOR_FOOTER_CLASS}>{footer}</div>
     </div>
   ) : (
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden pb-4 pt-4">{children}</div>
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden pt-4">{children}</div>
   );
 
   return (
