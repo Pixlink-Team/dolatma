@@ -147,6 +147,7 @@ const MONITORING_ROOT = "/admin/monitoring";
 const RAPID_RESPONSE_ROOT = "/admin/rapid-response";
 
 const managementNavHrefs = new Set([
+  "/admin/profile",
   "/admin/users",
   "/admin/pre-registrations",
   "/admin/group-edit",
