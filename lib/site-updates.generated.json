@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "057404d86eaf944cdde709284ff14c682769ef7f",
+      "committedAt": "2026-08-20T14:30:41+03:30",
+      "title": "نمایش همه اعداد با ارقام فارسی",
+      "subject": "Use Vazirmatn FD for Persian digits site-wide"
+    },
+    {
       "hash": "6558a1ffdb40ca005453a1590457ac67dd4bf7be",
       "committedAt": "2026-08-20T14:25:57+03:30",
       "title": "جابه‌جایی محتواهای برگشتی، جلسات و مشارکت‌ها در منوی پنل",

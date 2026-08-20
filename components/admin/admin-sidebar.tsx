@@ -57,10 +57,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { cn, adminHref, isSupabaseConfigured } from "@/lib/utils";
+import { cn, adminHref, formatPersianNumber, isSupabaseConfigured } from "@/lib/utils";
 import { logoutAdminAction } from "@/lib/actions/auth-actions";
 import { getSessionContextAction } from "@/lib/actions/extended-actions";
 import { getMyUnreadContentMessageCountAction } from "@/lib/actions/content-message-actions";
+import { countReturnedContentAction } from "@/lib/actions/content-review-actions";
 import { getMyUnreadProblemReplyCountAction } from "@/lib/actions/problem-report-actions";
 import { createClient } from "@/lib/supabase/client";
 import { useAdminCampaign } from "@/components/admin/admin-campaign-provider";
@@ -84,6 +85,7 @@ import { REIS_HOME_PATH } from "@/lib/reis/sections";
 
 const PROBLEM_REPORTS_HREF = "/admin/problem-reports";
 const MESSAGES_HREF = "/admin/messages";
+const RETURNED_CONTENT_HREF = "/admin/returned-content";
 
 const allNavItems: {
   href: string;
@@ -100,7 +102,7 @@ const allNavItems: {
   permissionKey?: ContributorPermissionKey;
 }[] = [
   { href: "/admin", label: "داشبورد", icon: LayoutDashboard },
-  { href: "/admin/returned-content", label: "محتواهای برگشتی", icon: ClipboardCheck, alwaysVisible: true },
+  { href: RETURNED_CONTENT_HREF, label: "محتواهای برگشتی", icon: ClipboardCheck, alwaysVisible: true },
   { href: "/admin/president", label: "صفحه رییس‌جمهور", icon: Radar, adminOrClientOnly: true },
   { href: "/admin/profile", label: "پروفایل من", icon: UserCircle },
   { href: "/admin/settings", label: "تنظیمات راستا", icon: Settings, permissionKey: "campaignSettings", adminOrClientOnly: true },
@@ -225,6 +227,7 @@ export function AdminSidebar({ showReisReturn = false }: AdminSidebarProps) {
   const [publishingOpen, setPublishingOpen] = useState(true);
   const [problemReportsUnread, setProblemReportsUnread] = useState(0);
   const [contentMessagesUnread, setContentMessagesUnread] = useState(0);
+  const [returnedContentCount, setReturnedContentCount] = useState(0);
   const desktopNavRef = useRef<HTMLElement>(null);
   const { campaignId, campaigns, currentCampaign, setCampaignId } = useAdminCampaign();
 
@@ -264,6 +267,27 @@ export function AdminSidebar({ showReisReturn = false }: AdminSidebarProps) {
       window.removeEventListener(CONTENT_MESSAGES_UNREAD_EVENT, onMessagesUnreadEvent);
     };
   }, []);
+
+  useEffect(() => {
+    if (!campaignId) {
+      setReturnedContentCount(0);
+      return;
+    }
+    let cancelled = false;
+    const refresh = () => {
+      countReturnedContentAction({ campaignId })
+        .then((result) => {
+          if (!cancelled && result.success) setReturnedContentCount(result.count ?? 0);
+        })
+        .catch(() => {});
+    };
+    refresh();
+    const timer = window.setInterval(refresh, 60_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [campaignId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -334,6 +358,8 @@ export function AdminSidebar({ showReisReturn = false }: AdminSidebarProps) {
   }, [pathname, mediaCommandOpen, monitoringOpen, assetsOpen, productionOpen, publishingOpen]);
 
   const navItems = allNavItems.filter((item) => {
+    // Hide returned-content until there is at least one item in the user's scope.
+    if (item.href === RETURNED_CONTENT_HREF && returnedContentCount <= 0) return false;
     if (item.alwaysVisible) return true;
     if (item.usersNav) {
       return seesAllCampaignSections || canViewUsersNav;
@@ -468,6 +494,15 @@ export function AdminSidebar({ showReisReturn = false }: AdminSidebarProps) {
               >
                 <Icon className="h-4 w-4 shrink-0" />
                 <span className="truncate flex-1">{item.label}</span>
+                {item.href === RETURNED_CONTENT_HREF && returnedContentCount > 0 && (
+                  <span
+                    className="ms-auto inline-flex min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white"
+                    title={`${formatPersianNumber(returnedContentCount)} برگشتی`}
+                    aria-label={`${formatPersianNumber(returnedContentCount)} محتوای برگشتی`}
+                  >
+                    {formatPersianNumber(returnedContentCount)}
+                  </span>
+                )}
                 {item.href === PROBLEM_REPORTS_HREF && problemReportsUnread > 0 && (
                   <span
                     className="ms-auto h-2.5 w-2.5 shrink-0 rounded-full bg-red-500"

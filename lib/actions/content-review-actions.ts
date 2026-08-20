@@ -15,6 +15,7 @@ import {
   pgUpdateFollowUpStatusForContent,
 } from "@/lib/db/content-messages-repository";
 import {
+  pgCountContentReviews,
   pgListContentReviews,
   pgGetContentReview,
   pgSetContentPublished,
@@ -510,4 +511,24 @@ export async function listContentReviewsAction(input: {
     ownerUserId: ownerFilter,
   });
   return { success: true, reviews, canManage: canManageAllContent(session) };
+}
+
+/** Active returned items (needs_revision + resubmitted) for the current user's scope. */
+export async function countReturnedContentAction(input: {
+  campaignId: string;
+}): Promise<{ success: boolean; count?: number; error?: string }> {
+  const session = await getAuthSession();
+  if (!session) return { success: false, error: "برای مشاهده این بخش وارد شوید" };
+  if (!isPostgresConfigured()) return { success: true, count: 0 };
+
+  const campaignId = input.campaignId?.trim() || "";
+  if (!campaignId) return { success: false, error: "کمپین نامعتبر است" };
+
+  const ownerFilter = await getOwnerFilter(session);
+  const count = await pgCountContentReviews({
+    campaignId,
+    statuses: ["needs_revision", "resubmitted"],
+    ownerUserId: ownerFilter,
+  });
+  return { success: true, count };
 }

@@ -249,6 +249,63 @@ export async function pgListContentReviews(input: {
   return rows.map((row) => mapRow(row as Record<string, unknown>));
 }
 
+export async function pgCountContentReviews(input: {
+  campaignId: string;
+  statuses?: ContentReviewStatus[];
+  ownerUserId?: OwnerScope;
+}): Promise<number> {
+  if (!isPostgresConfigured()) return 0;
+  await ensureContentReviewsTable();
+  const sql = getSql();
+  const statuses = input.statuses?.length ? input.statuses : null;
+  const ownerIds = normalizeOwnerIds(input.ownerUserId);
+  const ownerFilter =
+    ownerIds === undefined
+      ? sql``
+      : ownerIds.length === 0
+        ? sql`AND FALSE`
+        : sql`AND c.owner_user_id IN ${sql(ownerIds)}`;
+
+  const rows = await sql`
+    SELECT COUNT(*)::int AS count
+    FROM content_reviews cr
+    INNER JOIN (
+      SELECT 'billboard'::text AS content_type, id, owner_user_id
+      FROM billboards
+      WHERE campaign_id = ${input.campaignId}::uuid
+      UNION ALL
+      SELECT 'poster'::text AS content_type, id, owner_user_id
+      FROM posters
+      WHERE campaign_id = ${input.campaignId}::uuid
+      UNION ALL
+      SELECT 'video'::text AS content_type, id, owner_user_id
+      FROM videos
+      WHERE campaign_id = ${input.campaignId}::uuid
+      UNION ALL
+      SELECT 'activity'::text AS content_type, id, owner_user_id
+      FROM campaign_activities
+      WHERE campaign_id = ${input.campaignId}::uuid
+      UNION ALL
+      SELECT 'social_post'::text AS content_type, id, owner_user_id
+      FROM social_media_posts
+      WHERE campaign_id = ${input.campaignId}::uuid
+        AND platform IS DISTINCT FROM 'site'
+      UNION ALL
+      SELECT 'site_publication'::text AS content_type, id, owner_user_id
+      FROM social_media_posts
+      WHERE campaign_id = ${input.campaignId}::uuid
+        AND platform = 'site'
+    ) c
+      ON c.content_type = cr.content_type
+     AND c.id = cr.content_id
+    WHERE cr.campaign_id = ${input.campaignId}::uuid
+      AND (${statuses}::text[] IS NULL OR cr.status = ANY(${statuses}::text[]))
+      ${ownerFilter}
+  `;
+
+  return Number(rows[0]?.count ?? 0);
+}
+
 export async function pgSetContentPublished(input: {
   campaignId: string;
   contentType: ReviewableContentType;
