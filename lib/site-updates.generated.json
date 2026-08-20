@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "dc6660978ac6a56534f3f0eff6e4c89ce6555c66",
+      "committedAt": "2026-08-20T17:55:34+03:30",
+      "title": "یکدست‌سازی فرم‌های ثبت و ویرایش بخش‌های محتوا",
+      "subject": "Unify admin create/edit dialog shells"
+    },
+    {
       "hash": "1b4e94defcd2ec488fe77b3b886d5ccb4127f5c4",
       "committedAt": "2026-08-20T17:50:28+03:30",
       "title": "نمایش پیام‌ها به‌صورت کارت محتوا با گفتگوی ارسالی و دریافتی",
