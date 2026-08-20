@@ -6,6 +6,7 @@ import { requireContributorAccess } from "@/lib/auth/require-contributor-access"
 import { canScoreContent } from "@/lib/auth/access";
 import { getAuthSession } from "@/lib/auth/get-session";
 import { ActivitiesAdmin } from "@/components/admin/activities-admin";
+import type { CampaignActivity } from "@/lib/types";
 
 interface PageProps {
   searchParams: Promise<{ campaign?: string }>;
@@ -25,7 +26,7 @@ export default async function ActivitiesPage({ searchParams }: PageProps) {
   return (
     <ActivitiesAdmin
       campaignId={campaignId}
-      initialActivities={data.activities ?? []}
+      initialActivities={(data.activities ?? []) as CampaignActivity[]}
       contentPlans={data.settings?.contentPlans ?? []}
       contentTopics={data.settings?.contentTopics ?? []}
       canScore={canScore}

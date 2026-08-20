@@ -13,7 +13,8 @@ import {
   mapSettingsFromDb,
   mapSocialPostFromDb,
   mapSocialPlatformStatFromDb,
-  mapSubmissionFromDb,
+  mapSubmissionFromDb,
+
   mapVideoFromDb,
   mapVideoVersionFromDb,
 } from "@/lib/db/mappers";
@@ -30,7 +31,8 @@ import type {
   MediaCategory,
   Poster,
   PosterVersion,
-  RawMediaUpload,
+  RawMediaUpload,
+
   Video,
   VideoVersion,
 } from "@/lib/types";
@@ -438,14 +440,16 @@ export async function pgGetAdminData(
     videoVersions: videoVersions.map(mapVideoVersionFromDb),
     companyWebsites: companyWebsites.map(mapCompanyWebsiteFromDb),
     submissions: submissions.map(mapSubmissionFromDb),
-    files: files.map(mapCampaignFileFromDb),
+    files: files.map(mapCampaignFileFromDb),
+
     socialPosts: socialPosts.map(mapSocialPostFromDb),
     broadcastReports: broadcastReports.map(mapBroadcastReportFromDb),
     socialPlatformStats: socialPlatformStats.map(mapSocialPlatformStatFromDb),
-    meetings,
-    activities,
+    // Promise.all widens long tuples; restore section-specific types.
+    meetings: meetings as Awaited<ReturnType<typeof pgGetMeetingsWithTasks>>,
+    activities: activities as Awaited<ReturnType<typeof pgGetCampaignActivities>>,
     rawMedia: rawMedia.map(mapRawMediaUploadFromDb),
-    smsReports,
+    smsReports: smsReports as Awaited<ReturnType<typeof pgGetSmsSendReports>>,
   };
 }
 
@@ -1312,7 +1316,8 @@ export async function pgGetPublicCampaignData(campaignId: string) {
     videoVersions,
     companyWebsites,
     submissions,
-    files,
+    files,
+
     socialPosts,
     broadcastReports,
     socialPlatformStats,
