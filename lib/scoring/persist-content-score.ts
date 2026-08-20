@@ -10,6 +10,7 @@ import {
   mapRawMediaUploadFromDb,
   mapSettingsFromDb,
   mapSocialPostFromDb,
+  mapTextContentFromDb,
   mapVideoFromDb,
 } from "@/lib/db/mappers";
 import { pgGetContentReview } from "@/lib/db/content-review-repository";
@@ -34,6 +35,7 @@ const ALL_SCOREABLE_TYPES: ScoreableContentType[] = [
   "video",
   "file",
   "raw_media",
+  "text_content",
   "social_post",
   "site_publication",
   "activity",
@@ -86,6 +88,12 @@ async function loadContentItem(
       SELECT * FROM campaign_files WHERE id = ${contentId} AND campaign_id = ${campaignId} LIMIT 1
     `;
     return rows[0] ? asRecord(mapCampaignFileFromDb(rows[0])) : null;
+  }
+  if (contentType === "text_content") {
+    const rows = await sql`
+      SELECT * FROM text_contents WHERE id = ${contentId} AND campaign_id = ${campaignId} LIMIT 1
+    `;
+    return rows[0] ? asRecord(mapTextContentFromDb(rows[0])) : null;
   }
   if (contentType === "raw_media") {
     const rows = await sql`
@@ -159,6 +167,12 @@ async function updateScoreColumns(
   } else if (table === "campaign_files") {
     await sql`
       UPDATE campaign_files
+      SET auto_score = ${autoScore}, manual_score = ${manualScore}, score = ${finalScore}, updated_at = ${now}
+      WHERE id = ${contentId} AND campaign_id = ${campaignId}
+    `;
+  } else if (table === "text_contents") {
+    await sql`
+      UPDATE text_contents
       SET auto_score = ${autoScore}, manual_score = ${manualScore}, score = ${finalScore}, updated_at = ${now}
       WHERE id = ${contentId} AND campaign_id = ${campaignId}
     `;
@@ -331,6 +345,10 @@ async function listIdsForType(
   }
   if (contentType === "file") {
     const rows = await sql`SELECT id FROM campaign_files WHERE campaign_id = ${campaignId}`;
+    return rows.map((r) => String(r.id));
+  }
+  if (contentType === "text_content") {
+    const rows = await sql`SELECT id FROM text_contents WHERE campaign_id = ${campaignId}`;
     return rows.map((r) => String(r.id));
   }
   if (contentType === "raw_media") {

@@ -22,6 +22,7 @@ import {
 import { useSectionCreateGate } from "@/lib/hooks/use-section-create-gate";
 import { CONTENT_TITLE_MAX_LENGTH, CONTENT_TITLE_MAX_LENGTH_MESSAGE } from "@/lib/content-constraints";
 import { stripFileAccessToken } from "@/lib/uploads";
+import { ensureHttpUrl } from "@/lib/utils";
 import type { CompanyWebsite } from "@/lib/types";
 
 const schema = z.object({
@@ -29,8 +30,14 @@ const schema = z.object({
     .string()
     .min(1, "نام سایت الزامی است")
     .max(CONTENT_TITLE_MAX_LENGTH, CONTENT_TITLE_MAX_LENGTH_MESSAGE),
-  url: z.string().url("لینک معتبر وارد کنید"),
-  companyName: z.string().optional(),
+  url: z.string().transform((value, ctx) => {
+    const url = ensureHttpUrl(value);
+    if (!url) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "لینک معتبر وارد کنید" });
+      return z.NEVER;
+    }
+    return url;
+  }),
   description: z.string().optional(),
   logoUrl: z.string().optional(),
 });
@@ -54,7 +61,6 @@ export function CompanyWebsitesAdmin({ campaignId, initialItems }: CompanyWebsit
     defaultValues: {
       title: "",
       url: "",
-      companyName: "",
       description: "",
       logoUrl: "",
     },
@@ -65,7 +71,6 @@ export function CompanyWebsitesAdmin({ campaignId, initialItems }: CompanyWebsit
     form.reset({
       title: "",
       url: "",
-      companyName: "",
       description: "",
       logoUrl: "",
     });
@@ -78,7 +83,7 @@ export function CompanyWebsitesAdmin({ campaignId, initialItems }: CompanyWebsit
         id: editingId ?? undefined,
         title: data.title.trim(),
         url: data.url.trim(),
-        companyName: data.companyName?.trim() || null,
+        companyName: null,
         description: data.description?.trim() || null,
         logoUrl: stripFileAccessToken(data.logoUrl || "") || null,
         published: true,
@@ -108,7 +113,7 @@ export function CompanyWebsitesAdmin({ campaignId, initialItems }: CompanyWebsit
             campaignId,
             title: payload.title,
             url: payload.url,
-            companyName: payload.companyName,
+            companyName: null,
             description: payload.description,
             logoUrl: payload.logoUrl,
             published: true,
@@ -137,7 +142,6 @@ export function CompanyWebsitesAdmin({ campaignId, initialItems }: CompanyWebsit
     form.reset({
       title: item.title,
       url: item.url,
-      companyName: item.companyName ?? "",
       description: item.description ?? "",
       logoUrl: item.logoUrl ?? "",
     });
@@ -209,9 +213,6 @@ export function CompanyWebsitesAdmin({ campaignId, initialItems }: CompanyWebsit
                     )}
                     <div className="min-w-0">
                       <p className="truncate font-semibold">{item.title}</p>
-                      {item.companyName ? (
-                        <p className="truncate text-xs text-muted-foreground">{item.companyName}</p>
-                      ) : null}
                       {item.ownerName ? (
                         <p className="truncate text-xs text-muted-foreground">{item.ownerName}</p>
                       ) : null}
@@ -256,12 +257,12 @@ export function CompanyWebsitesAdmin({ campaignId, initialItems }: CompanyWebsit
       >
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>{editingId ? "ویرایش سایت" : "افزودن سایت شرکت"}</DialogTitle>
+            <DialogTitle>{editingId ? "ویرایش سایت" : "افزودن سایت"}</DialogTitle>
           </DialogHeader>
           <form onSubmit={onSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="cw-title">نام سایت / عنوان</Label>
-              <Input id="cw-title" {...form.register("title")} placeholder="مثلاً سایت رسمی شرکت" />
+              <Input id="cw-title" {...form.register("title")} placeholder="مثلاً سایت رسمی" />
               {form.formState.errors.title && (
                 <p className="text-sm text-destructive">{form.formState.errors.title.message}</p>
               )}
@@ -273,15 +274,11 @@ export function CompanyWebsitesAdmin({ campaignId, initialItems }: CompanyWebsit
                 dir="ltr"
                 className="text-left"
                 {...form.register("url")}
-                placeholder="https://example.com"
+                placeholder="example.com یا https://example.com"
               />
               {form.formState.errors.url && (
                 <p className="text-sm text-destructive">{form.formState.errors.url.message}</p>
               )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="cw-company">نام شرکت (اختیاری)</Label>
-              <Input id="cw-company" {...form.register("companyName")} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="cw-description">توضیح کوتاه (اختیاری)</Label>

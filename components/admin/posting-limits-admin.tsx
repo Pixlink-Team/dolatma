@@ -313,7 +313,7 @@ export function PostingLimitsAdmin({
           <Input
             value={companyQuery}
             onChange={(e) => setCompanyQuery(e.target.value)}
-            placeholder="جستجوی نام شرکت، استان یا نوع..."
+            placeholder="جستجوی نام، استان یا نوع..."
           />
           {sortedCompanies.length === 0 ? (
             <p className="text-sm text-muted-foreground">شرکتی برای این کمپین پیدا نشد.</p>

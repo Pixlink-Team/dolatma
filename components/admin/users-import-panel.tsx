@@ -93,7 +93,7 @@ export function UsersImportPanel({ campaigns, onImported }: UsersImportPanelProp
       </CardHeader>
       <CardContent className="space-y-5">
         <p className="text-sm text-muted-foreground">
-          ستون‌ها: نام شرکت، نام کاربری، رمز ورود. استان و شهر از روی نام شرکت به‌صورت خودکار
+          ستون‌ها: نام، نام کاربری، رمز ورود. استان و شهر از روی نام به‌صورت خودکار
           پر می‌شود. نام کاربری بدون دامنه هم قابل ورود است و در سیستم به‌صورت
           {" "}
           <span dir="ltr">username@example.com</span>

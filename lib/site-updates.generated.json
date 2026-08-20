@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "7287e8bd7b04fd196d06811253295fad3c80eee9",
+      "committedAt": "2026-08-20T15:45:15+03:30",
+      "title": "افزودن بخش تولیدات آماده با دسته‌بندی بر اساس موضوع",
+      "subject": "Add ready productions section grouped by topic"
+    },
+    {
       "hash": "9a51e8a2a43e6c91b65f4386a184f254aacd2281",
       "committedAt": "2026-08-20T15:43:31+03:30",
       "title": "افزودن خودکار https به لینک‌هایی که بدون پروتکل وارد می‌شوند",

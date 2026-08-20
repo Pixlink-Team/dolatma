@@ -42,7 +42,6 @@ function WebsiteCard({ item }: { item: CompanyWebsite }) {
   return (
     <PublicContentCard
       title={item.title}
-      category={item.companyName || "سایت شرکت"}
       ownerUserId={item.ownerUserId}
       ownerName={item.ownerName}
       media={media}
@@ -105,7 +104,7 @@ export function CompanyWebsitesSection({ websites, groups }: CompanyWebsitesSect
     <CollapsibleSection
       id="company-websites"
       title="سایت‌ها"
-      description="معرفی سایت‌هایی که شرکت‌ها در راستا دارند"
+      description="معرفی سایت‌های مرتبط"
     >
       <SectionTopCompaniesBox groups={locationFilteredGroups} />
       {filteredWebsites.length === 0 ? (

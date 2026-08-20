@@ -226,10 +226,10 @@ export const mockCompanyWebsites: CompanyWebsite[] = [
   {
     id: "cw-1",
     campaignId: "campaign-1",
-    title: "سایت رسمی شرکت نمونه",
+    title: "سایت نمونه",
     url: "https://example.com",
-    companyName: "شرکت نمونه",
-    description: "معرفی خدمات و اخبار شرکت",
+    companyName: null,
+    description: "معرفی خدمات و اخبار",
     logoUrl: null,
     published: true,
     sortOrder: 1,

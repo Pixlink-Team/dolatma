@@ -406,7 +406,7 @@ export function PerformanceAdmin({
             <Input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="جستجوی نام شرکت، استان یا شهر..."
+              placeholder="جستجوی نام، استان یا شهر..."
               className="pr-9"
             />
           </div>

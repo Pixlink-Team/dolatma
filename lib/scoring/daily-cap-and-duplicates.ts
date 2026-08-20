@@ -116,6 +116,7 @@ export const DAILY_CAP_TABLES = [
   "posters",
   "videos",
   "campaign_files",
+  "text_contents",
   "raw_media_uploads",
   "social_media_posts",
   "campaign_activities",
@@ -130,6 +131,7 @@ const TABLE_TO_CONTENT_TYPE: Record<DailyCapTable, ScoreableContentType> = {
   posters: "poster",
   videos: "video",
   campaign_files: "file",
+  text_contents: "text_content",
   raw_media_uploads: "raw_media",
   social_media_posts: "social_post",
   campaign_activities: "activity",
@@ -149,6 +151,8 @@ async function contentRowExists(table: DailyCapTable, id?: string | null): Promi
           ? await sql`SELECT 1 FROM videos WHERE id = ${id} LIMIT 1`
           : table === "campaign_files"
             ? await sql`SELECT 1 FROM campaign_files WHERE id = ${id} LIMIT 1`
+            : table === "text_contents"
+              ? await sql`SELECT 1 FROM text_contents WHERE id = ${id} LIMIT 1`
             : table === "raw_media_uploads"
               ? await sql`SELECT 1 FROM raw_media_uploads WHERE id = ${id} LIMIT 1`
               : table === "social_media_posts"
@@ -183,6 +187,10 @@ export async function countTodayContentForOwner(input: {
           AND owner_user_id = ${input.ownerUserId}
           AND (created_at AT TIME ZONE 'Asia/Tehran')::date = ${today}::date)
       + (SELECT COUNT(*) FROM campaign_files
+        WHERE campaign_id = ${input.campaignId}
+          AND owner_user_id = ${input.ownerUserId}
+          AND (created_at AT TIME ZONE 'Asia/Tehran')::date = ${today}::date)
+      + (SELECT COUNT(*) FROM text_contents
         WHERE campaign_id = ${input.campaignId}
           AND owner_user_id = ${input.ownerUserId}
           AND (created_at AT TIME ZONE 'Asia/Tehran')::date = ${today}::date)
@@ -246,6 +254,12 @@ export async function countTodayContentByType(input: {
                 WHERE campaign_id = ${campaignId} AND owner_user_id = ${ownerUserId}
                   AND (created_at AT TIME ZONE 'Asia/Tehran')::date = ${today}::date
               `
+            : contentType === "text_content"
+              ? await sql`
+                  SELECT COUNT(*)::int AS count FROM text_contents
+                  WHERE campaign_id = ${campaignId} AND owner_user_id = ${ownerUserId}
+                    AND (created_at AT TIME ZONE 'Asia/Tehran')::date = ${today}::date
+                `
             : contentType === "raw_media"
               ? await sql`
                   SELECT COUNT(*)::int AS count FROM raw_media_uploads
