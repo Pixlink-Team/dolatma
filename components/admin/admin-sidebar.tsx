@@ -232,9 +232,10 @@ export function AdminSidebar({ showReisReturn = false }: AdminSidebarProps) {
   const [permissions, setPermissions] = useState<ContributorPermissions | null>(null);
   const [mediaCommandOpen, setMediaCommandOpen] = useState(false);
   const [monitoringOpen, setMonitoringOpen] = useState(false);
-  const [assetsOpen, setAssetsOpen] = useState(true);
-  const [productionOpen, setProductionOpen] = useState(true);
-  const [publishingOpen, setPublishingOpen] = useState(true);
+  // Collapsed by default; pathname effect opens the active group.
+  const [assetsOpen, setAssetsOpen] = useState(false);
+  const [productionOpen, setProductionOpen] = useState(false);
+  const [publishingOpen, setPublishingOpen] = useState(false);
   const [problemReportsUnread, setProblemReportsUnread] = useState(0);
   const [contentMessagesUnread, setContentMessagesUnread] = useState(0);
   const [returnedContentCount, setReturnedContentCount] = useState(0);
