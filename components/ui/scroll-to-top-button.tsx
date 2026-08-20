@@ -10,8 +10,8 @@ interface ScrollToTopButtonProps {
   threshold?: number;
   className?: string;
   /**
-   * Lift the button above the fixed "گزارش مشکل" control
-   * so the two never overlap on admin pages.
+   * Lift the button above the stacked chat + "گزارش مشکل" controls
+   * so none of the three overlap on admin pages.
    */
   clearProblemReport?: boolean;
 }
@@ -43,7 +43,7 @@ export function ScrollToTopButton({
       className={cn(
         "apple-soft-pop fixed z-[70] h-11 w-11 rounded-full border shadow-lg hover:-translate-y-1 hover:shadow-xl",
         clearProblemReport
-          ? "bottom-[4.75rem] left-5 lg:left-6"
+          ? "bottom-[8.25rem] left-4 md:bottom-[9.25rem] md:left-6"
           : "bottom-6 left-6",
         className
       )}

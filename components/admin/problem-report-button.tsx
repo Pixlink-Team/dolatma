@@ -40,7 +40,11 @@ import {
   type ProblemReportAttachment,
   type ProblemReportCategory,
 } from "@/lib/audit/problem-types";
-import { formatPersianDateTime } from "@/lib/utils";
+import { cn, formatPersianDateTime } from "@/lib/utils";
+import {
+  CHAT_WIDGET_OPEN_EVENT,
+  readChatWidgetOpenFromEvent,
+} from "@/lib/chat-widget-open";
 import { emitProblemReportsUnreadChanged } from "@/lib/problem-reports-unread";
 
 const CATEGORIES = Object.keys(PROBLEM_REPORT_CATEGORY_LABELS) as ProblemReportCategory[];
@@ -69,6 +73,7 @@ export function ProblemReportButton() {
   const [loadingMine, setLoadingMine] = useState(false);
   const [mineLoaded, setMineLoaded] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [chatOpen, setChatOpen] = useState(false);
 
   const reset = () => {
     setCategory("other");
@@ -138,6 +143,15 @@ export function ProblemReportButton() {
       window.removeEventListener("dolatma:open-problem-report", openFromError);
   }, []);
 
+  useEffect(() => {
+    const onChatOpen = (event: Event) => {
+      const next = readChatWidgetOpenFromEvent(event);
+      if (next !== null) setChatOpen(next);
+    };
+    window.addEventListener(CHAT_WIDGET_OPEN_EVENT, onChatOpen);
+    return () => window.removeEventListener(CHAT_WIDGET_OPEN_EVENT, onChatOpen);
+  }, []);
+
   const handleSubmit = async () => {
     setSubmitting(true);
     try {
@@ -180,7 +194,14 @@ export function ProblemReportButton() {
         type="button"
         variant="outline"
         size="sm"
-        className="fixed bottom-5 left-5 z-[80] gap-2 shadow-md lg:left-6"
+        className={cn(
+          // Sit above the chat launcher (bottom-4 + ~50–56px) so the two never overlap.
+          "fixed bottom-[4.75rem] left-4 z-[80] gap-2 shadow-md md:bottom-[5.5rem] md:left-6",
+          "transition-opacity duration-200",
+          chatOpen && "pointer-events-none opacity-0"
+        )}
+        aria-hidden={chatOpen}
+        tabIndex={chatOpen ? -1 : undefined}
         data-audit-label="گزارش مشکل"
         onClick={() => setOpen(true)}
       >
