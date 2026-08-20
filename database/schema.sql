@@ -268,6 +268,10 @@ CREATE TABLE IF NOT EXISTS social_media_posts (
 );
 
 CREATE INDEX IF NOT EXISTS idx_social_posts_campaign ON social_media_posts(campaign_id, published, sort_order);
+CREATE INDEX IF NOT EXISTS idx_social_posts_campaign_published_date
+  ON social_media_posts(campaign_id, published_date DESC NULLS LAST, updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_social_posts_campaign_owner_date
+  ON social_media_posts(campaign_id, owner_user_id, published_date DESC NULLS LAST);
 
 CREATE TABLE IF NOT EXISTS social_platform_stats (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

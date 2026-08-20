@@ -362,7 +362,7 @@ export async function pgGetAdminData(
       LEFT JOIN ministry_organizations oo ON oo.id = u.organization_id
       WHERE sp.campaign_id = ${campaignId}
       ${socialOwnerFilter}
-      ORDER BY sp.sort_order
+      ORDER BY COALESCE(sp.published_date, sp.updated_at, sp.created_at) DESC, sp.sort_order
     `
       : emptyRows,
     want.has("broadcastReports")
