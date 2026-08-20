@@ -27,7 +27,11 @@ import {
   sortAdminContentItems,
   type AdminContentFilterState,
 } from "@/components/admin/admin-content-filter-bar";
-import { AdminCompactAddCard } from "@/components/admin/admin-compact-add-card";
+import {
+  AdminCompactAddCard,
+  ADMIN_CONTENT_GRID_CLASS,
+  AdminEmptyCreateState,
+} from "@/components/admin/admin-compact-add-card";
 import { adminCreatedAtDetail } from "@/components/admin/admin-created-at";
 import { AdminContentPreviewDialog } from "@/components/admin/admin-content-preview-dialog";
 import { AdminItemActions } from "@/components/admin/admin-item-actions";
@@ -526,18 +530,13 @@ export function SitePublicationsAdmin({
       />
 
       {filteredRows.length === 0 && rows.length === 0 ? (
-        <div className="rounded-xl border px-4 py-8 text-center text-sm text-muted-foreground">
-          هنوز موردی ثبت نشده است.
-          {!bulk.bulkMode && (
-            <div className="mt-3 flex justify-center">
-              <div className="w-full max-w-[10rem]">
-                <AdminCompactAddCard onClick={openCreate} label={copy.createLabel} />
-              </div>
-            </div>
-          )}
-        </div>
+        <AdminEmptyCreateState message="هنوز موردی ثبت نشده است.">
+          {!bulk.bulkMode ? (
+            <AdminCompactAddCard onClick={openCreate} label={copy.createLabel} />
+          ) : null}
+        </AdminEmptyCreateState>
       ) : viewMode === "grid" ? (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+        <div className={ADMIN_CONTENT_GRID_CLASS}>
           {!bulk.bulkMode && <AdminCompactAddCard onClick={openCreate} label={copy.createLabel} />}
           {visibleRows.map((post) => (
             <BulkItemShell

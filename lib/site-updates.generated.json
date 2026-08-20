@@ -1,6 +1,18 @@
 {
   "entries": [
     {
+      "hash": "20e91f0181feb73ceb8173d7bdb4f2916bcdd634",
+      "committedAt": "2026-08-20T18:25:32+03:30",
+      "title": "حذف فیلد یادداشت از فرم‌های ثبت محتوا",
+      "subject": "Remove notes field from content forms"
+    },
+    {
+      "hash": "d15e96304efa65fd523b7943d3cb5bce4e2a1e81",
+      "committedAt": "2026-08-20T18:25:07+03:30",
+      "title": "بازطراحی داشبورد به بنتو گرید با کارت‌های همیشه‌نما برای دستورکار، بهترین اقدامات، امتیازها، محتواهای ردشده و پیام‌ها",
+      "subject": "Redesign admin dashboard as always-visible bento grid"
+    },
+    {
       "hash": "18e42044e84404cae601a524fae167d0b7283356",
       "committedAt": "2026-08-20T18:17:45+03:30",
       "title": "حذف فیلد یادداشت از فرم‌های ثبت محتوا",

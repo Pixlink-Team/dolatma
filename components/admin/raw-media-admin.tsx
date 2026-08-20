@@ -3,7 +3,11 @@
 import { useMemo, useState, useTransition } from "react";
 import { FileArchive, Film, HardDrive, ImageIcon, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { AdminCompactAddCard } from "@/components/admin/admin-compact-add-card";
+import {
+  AdminCompactAddCard,
+  ADMIN_CONTENT_GRID_CLASS,
+  AdminEmptyCreateState,
+} from "@/components/admin/admin-compact-add-card";
 import {
   AdminContentFilterBar,
   collectAdminFilterUsers,
@@ -396,20 +400,15 @@ export function RawMediaAdmin({
       />
 
       {filteredItems.length === 0 ? (
-        <div className="rounded-xl border px-4 py-8 text-center text-sm text-muted-foreground">
-          هنوز موردی برای راش تصاویر آپلود نشده است.
-          {!bulk.bulkMode && (
-            <div className="mt-3 flex justify-center">
-              <div className="w-full max-w-[10rem]">
-                <AdminCompactAddCard
-                  onClick={openCreate}
-                  label="آپلود جدید"
-                  aspectClass="aspect-video"
-                />
-              </div>
-            </div>
-          )}
-        </div>
+        <AdminEmptyCreateState message="هنوز موردی برای راش تصاویر آپلود نشده است.">
+          {!bulk.bulkMode ? (
+            <AdminCompactAddCard
+              onClick={openCreate}
+              label="آپلود جدید"
+              aspectClass="aspect-video"
+            />
+          ) : null}
+        </AdminEmptyCreateState>
       ) : viewMode === "list" ? (
         <div className="space-y-3">
           {!bulk.bulkMode && (
@@ -461,7 +460,7 @@ export function RawMediaAdmin({
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+        <div className={ADMIN_CONTENT_GRID_CLASS}>
           {!bulk.bulkMode && (
             <AdminCompactAddCard
               onClick={openCreate}

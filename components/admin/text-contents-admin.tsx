@@ -3,7 +3,11 @@
 import { useMemo, useState, useTransition } from "react";
 import { FileText, Newspaper } from "lucide-react";
 import { toast } from "sonner";
-import { AdminCompactAddCard } from "@/components/admin/admin-compact-add-card";
+import {
+  AdminCompactAddCard,
+  ADMIN_CONTENT_GRID_CLASS,
+  AdminEmptyCreateState,
+} from "@/components/admin/admin-compact-add-card";
 import { AdminOwnerBadge } from "@/components/admin/admin-owner-badge";
 import { AdminPlanLabelsBadges } from "@/components/admin/admin-plan-labels-badges";
 import { AdminViewModeToggle } from "@/components/admin/admin-view-mode-toggle";
@@ -322,16 +326,17 @@ export function TextContentsAdmin({
       />
 
       {filteredItems.length === 0 ? (
-        <div className="rounded-xl border px-4 py-8 text-center text-sm text-muted-foreground">
-          {items.length === 0 ? "هنوز خبر یا متنی ثبت نشده است." : "موردی با این فیلتر پیدا نشد."}
-          {items.length === 0 && !bulk.bulkMode && (
-            <div className="mt-3 flex justify-center">
-              <div className="w-full max-w-[10rem]">
-                <AdminCompactAddCard onClick={openCreate} label="محتوای جدید" />
-              </div>
-            </div>
-          )}
-        </div>
+        items.length === 0 ? (
+          <AdminEmptyCreateState message="هنوز خبر یا متنی ثبت نشده است.">
+            {!bulk.bulkMode ? (
+              <AdminCompactAddCard onClick={openCreate} label="محتوای جدید" />
+            ) : null}
+          </AdminEmptyCreateState>
+        ) : (
+          <div className="rounded-xl border px-4 py-8 text-center text-sm text-muted-foreground">
+            موردی با این فیلتر پیدا نشد.
+          </div>
+        )
       ) : viewMode === "list" ? (
         <div className="space-y-3">
           {!bulk.bulkMode && (
@@ -383,7 +388,7 @@ export function TextContentsAdmin({
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+        <div className={ADMIN_CONTENT_GRID_CLASS}>
           {!bulk.bulkMode && <AdminCompactAddCard onClick={openCreate} label="محتوای جدید" />}
           {visibleItems.map((item) => {
             const Icon = item.contentKind === "news" ? Newspaper : FileText;

@@ -20,7 +20,7 @@ const SIZE_CLASS: Record<AdminEditorDialogSize, string> = {
 };
 
 export const ADMIN_EDITOR_DIALOG_CLASS =
-  "!flex min-h-0 max-h-[92vh] flex-col gap-0 overflow-hidden rounded-xl p-0";
+  "!flex min-h-0 max-h-[92vh] flex-col gap-0 overflow-hidden rounded-xl p-0 sm:p-0";
 
 /** Scroll body: inset from the left so the RTL scrollbar does not clip the card curve. */
 export const ADMIN_EDITOR_SCROLL_CLASS =
@@ -31,7 +31,7 @@ export const ADMIN_EDITOR_SCROLL_INNER_CLASS = "space-y-4 px-6 pb-4";
 
 /** Footer padding matches field gap (space-y-4) and header py-4. */
 export const ADMIN_EDITOR_FOOTER_CLASS =
-  "flex shrink-0 items-center gap-2 border-t bg-card px-6 py-4";
+  "flex w-full shrink-0 items-center gap-2 border-t bg-card px-6 py-4";
 
 export const ADMIN_EDITOR_HEADER_CLASS =
   "shrink-0 border-b px-6 py-4 pl-12";
@@ -156,13 +156,13 @@ export function AdminEditorDialogActions({
   extra,
 }: AdminEditorDialogActionsProps) {
   return (
-    <>
+    <div className="flex w-full items-center gap-2">
       {extra}
       <Button
         type={submit ? "submit" : "button"}
         onClick={submit ? undefined : onSave}
         disabled={isPending || saveDisabled}
-        className="flex-1"
+        className="min-w-0 flex-1"
       >
         {isPending ? pendingLabel : saveLabel}
       </Button>
@@ -179,6 +179,6 @@ export function AdminEditorDialogActions({
           <Trash2 className="h-4 w-4 text-destructive" />
         </Button>
       ) : null}
-    </>
+    </div>
   );
 }

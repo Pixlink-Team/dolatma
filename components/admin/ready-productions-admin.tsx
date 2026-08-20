@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   ChevronDown,
   ClipboardCheck,
@@ -12,11 +13,26 @@ import {
   Newspaper,
   PackageCheck,
   Search,
+  Send,
   Video,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { AdminPlanLabelsBadges } from "@/components/admin/admin-plan-labels-badges";
+import { useAdminCampaign } from "@/components/admin/admin-campaign-provider";
+import { ActivityFormDialog } from "@/components/admin/activity-form-dialog";
+import { BillboardCreateAssignmentDialog } from "@/components/admin/billboard-create-assignment-dialog";
+import { PressFormDialog } from "@/components/admin/press-form-dialog";
+import { SitePublicationFormDialog } from "@/components/admin/site-publication-form-dialog";
+import { SocialPostFormDialog } from "@/components/admin/social-post-form-dialog";
 import {
   decodePlanLabel,
   formatPlanLabelDisplay,
@@ -38,6 +54,40 @@ import {
 } from "@/lib/utils";
 
 const UNTOPICED_KEY = "__untopiced__";
+
+type PublishDestination = "billboard" | "social" | "site" | "press" | "activity";
+
+const PUBLISH_DESTINATION_OPTIONS: {
+  value: PublishDestination;
+  label: string;
+  description: string;
+}[] = [
+  {
+    value: "billboard",
+    label: "تبلیغات محیطی",
+    description: "بیلبورد و نمایش محیطی",
+  },
+  {
+    value: "social",
+    label: "شبکه اجتماعی",
+    description: "پست در کانال‌های اجتماعی",
+  },
+  {
+    value: "site",
+    label: "سایت",
+    description: "انتشار در سایت / پورتال",
+  },
+  {
+    value: "press",
+    label: "مجله و روزنامه",
+    description: "نشر در مطبوعات",
+  },
+  {
+    value: "activity",
+    label: "اقدامات",
+    description: "ثبت به‌عنوان اقدام میدانی",
+  },
+];
 
 const TYPE_ICONS: Record<ProductionSourceType, typeof ImageIcon> = {
   poster: ImageIcon,
@@ -78,6 +128,10 @@ function isImagePreview(url: string | null): boolean {
   return /\.(png|jpe?g|gif|webp|avif|svg)(\?|$)/i.test(url) || url.includes("image");
 }
 
+function productionMediaUrl(item: PublishableProductionItem): string {
+  return (item.coverImageUrl || item.mediaUrl || "").trim();
+}
+
 export function ReadyProductionsAdmin({
   campaignId,
   items,
@@ -85,9 +139,20 @@ export function ReadyProductionsAdmin({
   campaignId: string;
   items: PublishableProductionItem[];
 }) {
+  const router = useRouter();
+  const { currentCampaign } = useAdminCampaign();
+  const contentPlans = currentCampaign?.contentPlans ?? [];
+  const contentTopics = currentCampaign?.contentTopics ?? [];
+
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<ProductionSourceType | "all">("all");
   const [collapsedTopics, setCollapsedTopics] = useState<Set<string>>(new Set());
+
+  const [destinationItem, setDestinationItem] =
+    useState<PublishableProductionItem | null>(null);
+  const [publishDestination, setPublishDestination] =
+    useState<PublishDestination | null>(null);
+  const [publishItem, setPublishItem] = useState<PublishableProductionItem | null>(null);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -147,6 +212,122 @@ export function ReadyProductionsAdmin({
       return next;
     });
   };
+
+  const openPublishDestinationPicker = (item: PublishableProductionItem) => {
+    setPublishDestination(null);
+    setPublishItem(null);
+    setDestinationItem(item);
+  };
+
+  const selectPublishDestination = (destination: PublishDestination) => {
+    if (!destinationItem) return;
+    setPublishItem(destinationItem);
+    setPublishDestination(destination);
+    setDestinationItem(null);
+  };
+
+  const closePublishForm = () => {
+    setPublishDestination(null);
+    setPublishItem(null);
+  };
+
+  const handlePublishSaved = () => {
+    closePublishForm();
+    router.refresh();
+  };
+
+  const sourcePrefill = useMemo(
+    () =>
+      publishItem
+        ? { type: publishItem.type, id: publishItem.id }
+        : null,
+    [publishItem]
+  );
+  const planLabelsPrefill = useMemo(
+    () => publishItem?.planLabels ?? [],
+    [publishItem]
+  );
+  const mediaPrefill = publishItem ? productionMediaUrl(publishItem) : "";
+  const titlePrefill = publishItem?.title?.trim() || "";
+  const bodyPrefill = publishItem?.body?.trim() || publishItem?.subtitle?.trim() || "";
+  const formKey = publishItem
+    ? `${publishDestination}:${publishItem.type}:${publishItem.id}`
+    : null;
+
+  const billboardInitialValues = useMemo(
+    () =>
+      publishItem
+        ? {
+            axis: titlePrefill,
+            notes: bodyPrefill,
+            periods: mediaPrefill
+              ? [
+                  {
+                    startDate: new Date().toISOString().slice(0, 10),
+                    endDate: new Date().toISOString().slice(0, 10),
+                    existingBillboardImageUrl: mediaPrefill,
+                  },
+                ]
+              : undefined,
+          }
+        : null,
+    [publishItem, titlePrefill, bodyPrefill, mediaPrefill]
+  );
+
+  const socialInitialValues = useMemo(
+    () =>
+      publishItem
+        ? {
+            title: titlePrefill,
+            coverImageUrl: mediaPrefill || undefined,
+            mediaUrl: mediaPrefill || undefined,
+            description: bodyPrefill || undefined,
+            contentType:
+              publishItem.type === "video"
+                ? ("video" as const)
+                : publishItem.type === "text_content"
+                  ? ("text" as const)
+                  : ("image" as const),
+          }
+        : null,
+    [publishItem, titlePrefill, bodyPrefill, mediaPrefill]
+  );
+
+  const siteInitialValues = useMemo(
+    () =>
+      publishItem
+        ? {
+            title: titlePrefill,
+            coverImageUrl: mediaPrefill || undefined,
+            description: bodyPrefill || undefined,
+          }
+        : null,
+    [publishItem, titlePrefill, bodyPrefill, mediaPrefill]
+  );
+
+  const pressInitialValues = useMemo(
+    () =>
+      publishItem
+        ? {
+            title: titlePrefill,
+            description: bodyPrefill || undefined,
+            imageUrl: mediaPrefill || undefined,
+          }
+        : null,
+    [publishItem, titlePrefill, bodyPrefill, mediaPrefill]
+  );
+
+  const activityInitialValues = useMemo(
+    () =>
+      publishItem
+        ? {
+            title: titlePrefill,
+            description: bodyPrefill || undefined,
+            imageUrl: mediaPrefill || undefined,
+          }
+        : null,
+    [publishItem, titlePrefill, bodyPrefill, mediaPrefill]
+  );
 
   return (
     <div className="space-y-6" dir="rtl">
@@ -318,13 +499,25 @@ export function ReadyProductionsAdmin({
                                   ? formatPersianDateTime(item.createdAt)
                                   : "—"}
                               </span>
-                              <Link
-                                href={href}
-                                className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
-                              >
-                                مشاهده
-                                <ExternalLink className="h-3 w-3" />
-                              </Link>
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="default"
+                                  className="h-7 gap-1 px-2 text-xs"
+                                  onClick={() => openPublishDestinationPicker(item)}
+                                >
+                                  <Send className="h-3 w-3" />
+                                  نشر
+                                </Button>
+                                <Link
+                                  href={href}
+                                  className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                                >
+                                  مشاهده
+                                  <ExternalLink className="h-3 w-3" />
+                                </Link>
+                              </div>
                             </div>
                           </div>
                         </article>
@@ -337,6 +530,118 @@ export function ReadyProductionsAdmin({
           })}
         </div>
       )}
+
+      <Dialog
+        open={Boolean(destinationItem)}
+        onOpenChange={(open) => {
+          if (!open) setDestinationItem(null);
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>نشر تولید</DialogTitle>
+            <DialogDescription>
+              می‌خواهید به چه صورت نشر بدهید؟
+              {destinationItem?.title ? (
+                <span className="mt-1 block text-foreground/80">
+                  «{destinationItem.title}»
+                </span>
+              ) : null}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-2">
+            {PUBLISH_DESTINATION_OPTIONS.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => selectPublishDestination(option.value)}
+                className="rounded-lg border bg-card px-3 py-3 text-right transition-colors hover:border-primary hover:bg-accent"
+              >
+                <div className="text-sm font-medium">{option.label}</div>
+                <div className="mt-0.5 text-xs text-muted-foreground">
+                  {option.description}
+                </div>
+              </button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <BillboardCreateAssignmentDialog
+        open={publishDestination === "billboard" && Boolean(publishItem)}
+        onOpenChange={(open) => {
+          if (!open) closePublishForm();
+        }}
+        campaignId={campaignId}
+        contentPlans={contentPlans}
+        contentTopics={contentTopics}
+        mode="admin"
+        initialValues={billboardInitialValues}
+        initialValuesKey={formKey}
+        initialSourceProduction={sourcePrefill}
+        initialPlanLabels={planLabelsPrefill}
+        onCreated={handlePublishSaved}
+      />
+
+      <SocialPostFormDialog
+        open={publishDestination === "social" && Boolean(publishItem)}
+        onOpenChange={(open) => {
+          if (!open) closePublishForm();
+        }}
+        campaignId={campaignId}
+        contentPlans={contentPlans}
+        contentTopics={contentTopics}
+        initialValues={socialInitialValues}
+        initialValuesKey={formKey}
+        initialSourceProduction={sourcePrefill}
+        initialPlanLabels={planLabelsPrefill}
+        onSaved={handlePublishSaved}
+      />
+
+      <SitePublicationFormDialog
+        open={publishDestination === "site" && Boolean(publishItem)}
+        onOpenChange={(open) => {
+          if (!open) closePublishForm();
+        }}
+        campaignId={campaignId}
+        contentPlans={contentPlans}
+        contentTopics={contentTopics}
+        initialValues={siteInitialValues}
+        initialValuesKey={formKey}
+        initialSourceProduction={sourcePrefill}
+        initialPlanLabels={planLabelsPrefill}
+        onSaved={handlePublishSaved}
+      />
+
+      <PressFormDialog
+        open={publishDestination === "press" && Boolean(publishItem)}
+        onOpenChange={(open) => {
+          if (!open) closePublishForm();
+        }}
+        campaignId={campaignId}
+        contentPlans={contentPlans}
+        contentTopics={contentTopics}
+        initialValues={pressInitialValues}
+        initialValuesKey={formKey}
+        initialSourceProduction={sourcePrefill}
+        initialPlanLabels={planLabelsPrefill}
+        onSaved={handlePublishSaved}
+      />
+
+      <ActivityFormDialog
+        open={publishDestination === "activity" && Boolean(publishItem)}
+        onOpenChange={(open) => {
+          if (!open) closePublishForm();
+        }}
+        campaignId={campaignId}
+        contentPlans={contentPlans}
+        contentTopics={contentTopics}
+        initialValues={activityInitialValues}
+        initialValuesKey={formKey}
+        initialSourceProduction={sourcePrefill}
+        initialPlanLabels={planLabelsPrefill}
+        onSaved={handlePublishSaved}
+      />
     </div>
   );
 }

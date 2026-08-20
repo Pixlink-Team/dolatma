@@ -4,6 +4,10 @@ import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { AdminPosterAddCard, AdminPosterCompactCard } from "@/components/admin/admin-poster-compact-card";
+import {
+  ADMIN_CONTENT_GRID_CLASS,
+  AdminEmptyCreateState,
+} from "@/components/admin/admin-compact-add-card";
 import { AdminPosterEditor } from "@/components/admin/admin-poster-editor";
 import { AdminItemActions } from "@/components/admin/admin-item-actions";
 import { SendContentMessageButton } from "@/components/admin/send-content-message-button";
@@ -233,14 +237,11 @@ export function PostersAdmin({
       />
 
       {filteredPosters.length === 0 && posters.length === 0 ? (
-        <div className="rounded-xl border px-4 py-8 text-center text-sm text-muted-foreground">
-          هنوز پوستری ثبت نشده است.
-          <div className="mt-3 flex justify-center">
-            <AdminPosterAddCard compact onClick={handleCreatePoster} />
-          </div>
-        </div>
+        <AdminEmptyCreateState message="هنوز پوستری ثبت نشده است.">
+          <AdminPosterAddCard onClick={handleCreatePoster} />
+        </AdminEmptyCreateState>
       ) : viewMode === "grid" ? (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+        <div className={ADMIN_CONTENT_GRID_CLASS}>
           {!bulk.bulkMode && <AdminPosterAddCard onClick={handleCreatePoster} />}
           {visiblePosters.map((poster) => (
             <BulkItemShell

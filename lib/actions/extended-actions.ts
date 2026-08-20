@@ -405,6 +405,11 @@ export async function saveBroadcastReportAction(data: Partial<BroadcastReport> &
   );
   if (tutorialDenied) return tutorialDenied;
 
+  if (data.id) {
+    const denied = await assertCanMutateOwnedContent(session, "broadcast_reports", data.id);
+    if (denied) return denied;
+  }
+
   const { denyIfCreateQuotaExceeded } = await import("@/lib/scoring/daily-cap-and-duplicates");
   const quota = await denyIfCreateQuotaExceeded({
     campaignId: payload.campaignId ?? data.campaignId ?? "",
@@ -533,6 +538,11 @@ export async function saveCampaignActivityAction(data: Partial<CampaignActivity>
   );
   if (tutorialDenied) return tutorialDenied;
 
+  if (data.id) {
+    const denied = await assertCanMutateOwnedContent(session, "campaign_activities", data.id);
+    if (denied) return denied;
+  }
+
   const { denyIfCreateQuotaExceeded } = await import("@/lib/scoring/daily-cap-and-duplicates");
   const quota = await denyIfCreateQuotaExceeded({
     campaignId: payload.campaignId ?? data.campaignId ?? "",
@@ -596,6 +606,11 @@ export async function saveMeetingAction(
     data.id
   );
   if (tutorialDenied) return tutorialDenied;
+
+  if (data.id) {
+    const denied = await assertCanMutateOwnedContent(session, "campaign_meetings", data.id);
+    if (denied) return denied;
+  }
 
   const { denyIfCreateQuotaExceeded } = await import("@/lib/scoring/daily-cap-and-duplicates");
   const quota = await denyIfCreateQuotaExceeded({

@@ -18,7 +18,11 @@ import {
   AdminEditorDialogActions,
 } from "@/components/admin/admin-editor-dialog";
 import { AdminCreatedAtText } from "@/components/admin/admin-created-at";
-import { AdminCompactAddCard } from "@/components/admin/admin-compact-add-card";
+import {
+  AdminCompactAddCard,
+  ADMIN_CONTENT_GRID_CLASS,
+  AdminEmptyCreateState,
+} from "@/components/admin/admin-compact-add-card";
 import {
   AdminContentFilterBar,
   DEFAULT_ADMIN_CONTENT_FILTER,
@@ -306,16 +310,11 @@ export function SmsReportsAdmin({ campaignId, initialReports }: SmsReportsAdminP
       />
 
       {sortedRows.length === 0 ? (
-        <div className="rounded-xl border px-4 py-8 text-center text-sm text-muted-foreground">
-          هنوز گزارشی از ارسال پیام ثبت نشده است.
-          <div className="mt-3 flex justify-center">
-            <div className="w-full max-w-[10rem]">
-              <AdminCompactAddCard onClick={openCreate} label="ثبت ارسال جدید" />
-            </div>
-          </div>
-        </div>
+        <AdminEmptyCreateState message="هنوز گزارشی از ارسال پیام ثبت نشده است.">
+          <AdminCompactAddCard onClick={openCreate} label="ثبت ارسال جدید" />
+        </AdminEmptyCreateState>
       ) : viewMode === "grid" ? (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+        <div className={ADMIN_CONTENT_GRID_CLASS}>
           <AdminCompactAddCard onClick={openCreate} label="ثبت ارسال جدید" />
           {sortedRows.map((report) => (
             <button

@@ -30,7 +30,10 @@ import {
   type AdminContentFilterState,
 } from "@/components/admin/admin-content-filter-bar";
 import { AdminActivityCompactCard } from "@/components/admin/admin-activity-compact-card";
-import { AdminCompactAddCard } from "@/components/admin/admin-compact-add-card";
+import {
+  AdminCompactAddCard,
+  ADMIN_CONTENT_GRID_CLASS,
+} from "@/components/admin/admin-compact-add-card";
 import { AdminItemActions } from "@/components/admin/admin-item-actions";
 import { AdminContentPreviewDialog } from "@/components/admin/admin-content-preview-dialog";
 import { AdminViewModeToggle } from "@/components/admin/admin-view-mode-toggle";
@@ -439,7 +442,7 @@ export function ActivitiesAdmin({
       />
 
       {viewMode === "grid" ? (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+        <div className={ADMIN_CONTENT_GRID_CLASS}>
           {!bulk.bulkMode && <AdminCompactAddCard onClick={openCreate} label="اقدام جدید" />}
           {visibleRows.map((activity) => (
             <BulkItemShell

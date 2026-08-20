@@ -4,6 +4,10 @@ import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { AdminVideoAddCard, AdminVideoCompactCard } from "@/components/admin/admin-video-compact-card";
+import {
+  ADMIN_CONTENT_GRID_CLASS,
+  AdminEmptyCreateState,
+} from "@/components/admin/admin-compact-add-card";
 import { AdminVideoEditor } from "@/components/admin/admin-video-editor";
 import { AdminItemActions } from "@/components/admin/admin-item-actions";
 import { SendContentMessageButton } from "@/components/admin/send-content-message-button";
@@ -261,14 +265,11 @@ export function VideosAdmin({
       />
 
       {filteredVideos.length === 0 && videos.length === 0 ? (
-        <div className="rounded-xl border px-4 py-8 text-center text-sm text-muted-foreground">
-          هنوز ویدیویی ثبت نشده است.
-          <div className="mt-3 flex justify-center">
-            <AdminVideoAddCard compact onClick={handleCreateVideo} />
-          </div>
-        </div>
+        <AdminEmptyCreateState message="هنوز ویدیویی ثبت نشده است.">
+          <AdminVideoAddCard onClick={handleCreateVideo} />
+        </AdminEmptyCreateState>
       ) : viewMode === "grid" ? (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+        <div className={ADMIN_CONTENT_GRID_CLASS}>
           {!bulk.bulkMode && <AdminVideoAddCard onClick={handleCreateVideo} />}
           {visibleVideos.map((video) => (
             <BulkItemShell

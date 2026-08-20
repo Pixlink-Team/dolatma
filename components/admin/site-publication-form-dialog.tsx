@@ -41,6 +41,8 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>;
 
+const EMPTY_PLAN_LABELS: string[] = [];
+
 export interface SitePublicationFormInitialValues {
   title?: string;
   link?: string;
@@ -62,6 +64,9 @@ interface SitePublicationFormDialogProps {
   onSaved?: () => void;
   onSkip?: () => void;
   bulkTypeSwitcher?: ReactNode;
+  /** Prefill production source (e.g. publish from ready-productions card). */
+  initialSourceProduction?: { type: ProductionSourceType; id: string } | null;
+  initialPlanLabels?: string[];
 }
 
 export function SitePublicationFormDialog({
@@ -77,6 +82,8 @@ export function SitePublicationFormDialog({
   onSaved,
   onSkip,
   bulkTypeSwitcher,
+  initialSourceProduction = null,
+  initialPlanLabels = EMPTY_PLAN_LABELS,
 }: SitePublicationFormDialogProps) {
   const [planLabels, setPlanLabels] = useState<string[]>([]);
   const [sourceProductionType, setSourceProductionType] = useState<ProductionSourceType | null>(null);
@@ -103,10 +110,18 @@ export function SitePublicationFormDialog({
       description: initialValues?.description || "",
       publishedDate: initialValues?.publishedDate || todayISO(),
     });
-    setPlanLabels([]);
-    setSourceProductionType(null);
-    setSourceProductionId(null);
-  }, [open, initialValues, initialValuesKey, form]);
+    setPlanLabels(initialPlanLabels);
+    setSourceProductionType(initialSourceProduction?.type ?? null);
+    setSourceProductionId(initialSourceProduction?.id ?? null);
+  }, [
+    open,
+    initialValues,
+    initialValuesKey,
+    form,
+    initialSourceProduction?.type,
+    initialSourceProduction?.id,
+    initialPlanLabels,
+  ]);
 
   const onSubmit = form.handleSubmit((data) => {
     if (!data.link.trim()) {
@@ -160,7 +175,9 @@ export function SitePublicationFormDialog({
       description={
         queueLabel
           ? `${queueLabel} — داده‌های Excel پر شده‌اند؛ لینک مطلب را تکمیل کنید.`
-          : "داده‌های Excel پر شده‌اند؛ لینک مطلب را تکمیل کنید."
+          : initialSourceProduction
+            ? "تولید انتخاب‌شده از قبل پر شده؛ جزئیات نشر را تکمیل کنید."
+            : "جزئیات لینک مطلب را وارد کنید."
       }
       descriptionVisible
       formProps={{ onSubmit }}

@@ -6,6 +6,7 @@ import {
   matchBillboardCategoryKey,
   type BillboardCategory,
 } from "@/lib/billboard-categories";
+import { stripFileAccessToken, stripFileAccessTokensDeep } from "@/lib/uploads";
 
 export interface BillboardDisplayPeriodInput {
   id?: string;
@@ -83,9 +84,9 @@ async function resolvePeriodImage(
     return saveUploadedImageFile(period.billboardImage);
   }
   if (typeof period.billboardImageUrl === "string" && period.billboardImageUrl.trim()) {
-    return period.billboardImageUrl.trim();
+    return stripFileAccessToken(period.billboardImageUrl.trim());
   }
-  if (existingUrl?.trim()) return existingUrl.trim();
+  if (existingUrl?.trim()) return stripFileAccessToken(existingUrl.trim());
   throw new Error("عکس بیلبورد در دوره نمایش الزامی است");
 }
 
@@ -97,9 +98,9 @@ async function resolveConfirmationImage(
     return saveUploadedImageFile(period.image);
   }
   if (typeof period.confirmationImageUrl === "string" && period.confirmationImageUrl.trim()) {
-    return period.confirmationImageUrl.trim();
+    return stripFileAccessToken(period.confirmationImageUrl.trim());
   }
-  return existingUrl ?? null;
+  return existingUrl ? stripFileAccessToken(existingUrl) : null;
 }
 
 export async function saveLocalBillboard(params: CreateLocalBillboardInput): Promise<string> {
@@ -189,7 +190,7 @@ export async function saveLocalBillboard(params: CreateLocalBillboardInput): Pro
     published: params.published ?? false,
     planLabel: params.planLabel ?? null,
     planLabels: params.planLabels ?? undefined,
-    metadata: params.metadata ?? {},
+    metadata: params.metadata ? stripFileAccessTokensDeep(params.metadata) : {},
     ownerUserId: params.ownerUserId ?? null,
     sourceProductionType: params.sourceProductionType ?? null,
     sourceProductionId: params.sourceProductionId ?? null,

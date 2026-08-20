@@ -1,10 +1,15 @@
-import { mkdir, writeFile } from "fs/promises";
+import { createWriteStream } from "fs";
+import { mkdir } from "fs/promises";
 import { randomUUID } from "crypto";
+import { Readable } from "stream";
+import { pipeline } from "stream/promises";
 import { NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth/get-session";
 import { assertMagicMatchesKind } from "@/lib/security/file-magic";
 import { consumeRateLimit, getRequestClientIp } from "@/lib/security/rate-limit";
 import { getUploadPublicUrl, getUploadsDir, withFileAccessToken } from "@/lib/uploads";
+
+const MAGIC_HEAD_BYTES = 4096;
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -285,8 +290,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "حجم فایل بیش از حد مجاز است" }, { status: 400 });
   }
 
-  const buffer = Buffer.from(await file.arrayBuffer());
-  const magic = assertMagicMatchesKind(buffer, kind);
+  // Only inspect a small head for magic bytes — avoid buffering multi-GB raw uploads in RAM.
+  const head = Buffer.from(await file.slice(0, MAGIC_HEAD_BYTES).arrayBuffer());
+  const magic = assertMagicMatchesKind(head, kind);
   if (!magic.ok) {
     return NextResponse.json({ error: magic.error }, { status: 400 });
   }
@@ -299,10 +305,13 @@ export async function POST(request: Request) {
   }
   const filename = `${randomUUID()}${extension}`;
   const uploadsDir = getUploadsDir();
+  const filePath = `${uploadsDir}/${filename}`;
 
   await mkdir(uploadsDir, { recursive: true });
 
-  await writeFile(`${uploadsDir}/${filename}`, buffer);
+  const webStream = file.stream();
+  const nodeStream = Readable.fromWeb(webStream as import("stream/web").ReadableStream);
+  await pipeline(nodeStream, createWriteStream(filePath));
 
   return NextResponse.json({
     url: withFileAccessToken(getUploadPublicUrl(filename)),

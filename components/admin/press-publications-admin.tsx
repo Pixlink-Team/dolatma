@@ -20,7 +20,11 @@ import {
   AdminEditorDialogActions,
 } from "@/components/admin/admin-editor-dialog";
 import { AdminActivityCompactCard } from "@/components/admin/admin-activity-compact-card";
-import { AdminCompactAddCard } from "@/components/admin/admin-compact-add-card";
+import {
+  AdminCompactAddCard,
+  ADMIN_CONTENT_GRID_CLASS,
+  AdminEmptyCreateState,
+} from "@/components/admin/admin-compact-add-card";
 import {
   AdminContentFilterBar,
   collectAdminFilterUsers,
@@ -422,18 +426,13 @@ export function PressPublicationsAdmin({
       />
 
       {filteredRows.length === 0 && rows.length === 0 ? (
-        <div className="rounded-xl border px-4 py-8 text-center text-sm text-muted-foreground">
-          هنوز موردی ثبت نشده است.
-          {!bulk.bulkMode && (
-            <div className="mt-3 flex justify-center">
-              <div className="w-full max-w-[10rem]">
-                <AdminCompactAddCard onClick={openCreate} label="ثبت جدید" />
-              </div>
-            </div>
-          )}
-        </div>
+        <AdminEmptyCreateState message="هنوز موردی ثبت نشده است.">
+          {!bulk.bulkMode ? (
+            <AdminCompactAddCard onClick={openCreate} label="ثبت جدید" />
+          ) : null}
+        </AdminEmptyCreateState>
       ) : viewMode === "grid" ? (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+        <div className={ADMIN_CONTENT_GRID_CLASS}>
           {!bulk.bulkMode && <AdminCompactAddCard onClick={openCreate} label="ثبت جدید" />}
           {visibleRows.map((activity) => (
             <BulkItemShell

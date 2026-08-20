@@ -54,6 +54,8 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>;
 
+const EMPTY_PLAN_LABELS: string[] = [];
+
 export interface ActivityFormInitialValues {
   title?: string;
   activityType?: ActivityType;
@@ -77,6 +79,9 @@ interface ActivityFormDialogProps {
   queueLabel?: string;
   /** Optional control for bulk import (e.g. switch content section). */
   bulkTypeSwitcher?: ReactNode;
+  /** Prefill production source (e.g. publish from ready-productions card). */
+  initialSourceProduction?: { type: ProductionSourceType; id: string } | null;
+  initialPlanLabels?: string[];
 }
 
 export function ActivityFormDialog({
@@ -92,6 +97,8 @@ export function ActivityFormDialog({
   onSkip,
   queueLabel,
   bulkTypeSwitcher,
+  initialSourceProduction = null,
+  initialPlanLabels = EMPTY_PLAN_LABELS,
 }: ActivityFormDialogProps) {
   const [mediaItems, setMediaItems] = useState<ActivityMediaItem[]>([]);
   const [planLabels, setPlanLabels] = useState<string[]>([]);
@@ -119,16 +126,24 @@ export function ActivityFormDialog({
       location: initialValues?.location || "",
       description: initialValues?.description || "",
     });
-    setPlanLabels([]);
-    setSourceProductionType(null);
-    setSourceProductionId(null);
+    setPlanLabels(initialPlanLabels);
+    setSourceProductionType(initialSourceProduction?.type ?? null);
+    setSourceProductionId(initialSourceProduction?.id ?? null);
     const imageUrl = initialValues?.imageUrl?.trim();
     setMediaItems(
       imageUrl
         ? [{ id: crypto.randomUUID(), type: "image", url: imageUrl }]
         : []
     );
-  }, [open, initialValues, initialValuesKey, form]);
+  }, [
+    open,
+    initialValues,
+    initialValuesKey,
+    form,
+    initialSourceProduction?.type,
+    initialSourceProduction?.id,
+    initialPlanLabels,
+  ]);
 
   const onSubmit = form.handleSubmit((data) => {
     if (!sourceProductionType || !sourceProductionId) {
@@ -182,7 +197,9 @@ export function ActivityFormDialog({
       description={
         queueLabel
           ? `${queueLabel} — داده‌های Excel پر شده‌اند؛ بقیه را اصلاح یا تکمیل کنید.`
-          : "داده‌های Excel پر شده‌اند؛ بقیه را اصلاح یا تکمیل کنید."
+          : initialSourceProduction
+            ? "تولید انتخاب‌شده از قبل پر شده؛ جزئیات نشر را تکمیل کنید."
+            : "جزئیات اقدام را وارد کنید."
       }
       descriptionVisible
       formProps={{ onSubmit }}
@@ -262,32 +279,45 @@ export function ActivityFormDialog({
       </div>
 
       <div className="space-y-3">
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <Label>رسانه‌ها</Label>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              if (mediaItems.length >= MAX_MEDIA_ITEMS) {
-                toast.error(`حداکثر ${MAX_MEDIA_ITEMS} فایل مجاز است`);
-                return;
-              }
-              setMediaItems((prev) => [
-                ...prev,
-                { id: crypto.randomUUID(), type: "image", url: "" },
-              ]);
-            }}
-          >
-            <Upload className="h-3.5 w-3.5" />
-            + تصویر
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            {(
+              [
+                ["image", "تصویر"],
+                ["video", "ویدیو"],
+                ["audio", "صوت"],
+              ] as const
+            ).map(([type, label]) => (
+              <Button
+                key={type}
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  if (mediaItems.length >= MAX_MEDIA_ITEMS) {
+                    toast.error(`حداکثر ${MAX_MEDIA_ITEMS} فایل مجاز است`);
+                    return;
+                  }
+                  setMediaItems((prev) => [
+                    ...prev,
+                    { id: crypto.randomUUID(), type, url: "" },
+                  ]);
+                }}
+              >
+                <Upload className="h-3.5 w-3.5" />
+                + {label}
+              </Button>
+            ))}
+          </div>
         </div>
 
         {mediaItems.map((item) => (
           <div key={item.id} className={cn("space-y-2 rounded-lg border p-3")}>
             <div className="flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">تصویر</span>
+              <span className="text-xs text-muted-foreground">
+                {item.type === "image" ? "تصویر" : item.type === "audio" ? "صوت" : "ویدیو"}
+              </span>
               <Button
                 type="button"
                 variant="ghost"
@@ -306,8 +336,13 @@ export function ActivityFormDialog({
                   prev.map((media) => (media.id === item.id ? { ...media, url } : media))
                 )
               }
-              label="تصویر"
-              kind="image"
+              label={item.type === "image" ? "تصویر" : item.type === "audio" ? "صوت" : "ویدیو"}
+              kind={item.type === "image" ? "image" : item.type === "audio" ? "audio" : "video"}
+              uploadKind={
+                item.type === "image" ? "image" : item.type === "audio" ? "audio" : "activity-video"
+              }
+              fileOnly={item.type === "video" || item.type === "audio"}
+              maxFileSizeBytes={item.type === "video" ? 50 * 1024 * 1024 : undefined}
             />
           </div>
         ))}

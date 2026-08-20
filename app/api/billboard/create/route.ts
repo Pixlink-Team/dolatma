@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
+import { assertCanMutateOwnedContent } from "@/lib/auth/assert-content-ownership";
 import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
 import { assertTutorialForPossibleCreate } from "@/lib/auth/require-tutorial-completion";
 import { resolveDefaultAdminOwnerUserId } from "@/lib/admin-content-owner";
@@ -14,6 +15,7 @@ import {
   assertProductionSourceAllowed,
   isProductionSourceType,
 } from "@/lib/production-source";
+import { stripFileAccessTokensDeep } from "@/lib/uploads";
 
 function parseRequiredPeriods(formData: FormData): BillboardDisplayPeriodInput[] {
   const raw = formData.get("periods");
@@ -135,10 +137,17 @@ export async function POST(request: Request) {
     try {
       const parsed = JSON.parse(metadataRaw) as unknown;
       if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-        metadata = parsed as Record<string, unknown>;
+        metadata = stripFileAccessTokensDeep(parsed as Record<string, unknown>);
       }
     } catch {
       metadata = {};
+    }
+  }
+
+  if (billboardId) {
+    const denied = await assertCanMutateOwnedContent(session, "billboards", billboardId);
+    if (denied) {
+      return NextResponse.json({ error: denied.error }, { status: 403 });
     }
   }
 

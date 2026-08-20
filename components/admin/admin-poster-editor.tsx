@@ -2,9 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,6 +21,7 @@ import {
   ADMIN_EDITOR_FOOTER_CLASS,
   ADMIN_EDITOR_SCROLL_CLASS,
   ADMIN_EDITOR_SCROLL_INNER_CLASS,
+  AdminEditorDialogActions,
 } from "@/components/admin/admin-editor-dialog";
 import {
   deletePosterAction,
@@ -273,20 +272,13 @@ export function AdminPosterEditor({
       </div>
 
       <div className={ADMIN_EDITOR_FOOTER_CLASS}>
-        <Button onClick={handleSaveAll} disabled={isPending || !fieldsLoaded} className="flex-1">
-          {isPending ? "در حال ذخیره..." : "ذخیره"}
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          onClick={handleDeletePoster}
-          disabled={isPending}
-          aria-label={isNew ? "بستن" : "حذف پوستر"}
-          title={isNew ? "بستن" : "حذف"}
-        >
-          <Trash2 className="h-4 w-4 text-destructive" />
-        </Button>
+        <AdminEditorDialogActions
+          onSave={handleSaveAll}
+          isPending={isPending}
+          saveDisabled={!fieldsLoaded}
+          onDelete={handleDeletePoster}
+          deleteLabel={isNew ? "بستن" : "حذف پوستر"}
+        />
       </div>
 
       <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>

@@ -89,6 +89,8 @@ const contentTypeOptions: SocialContentType[] = [
   "audio",
 ];
 
+const EMPTY_PLAN_LABELS: string[] = [];
+
 export interface SocialPostFormInitialValues {
   platform?: SocialPostPlatform;
   title?: string;
@@ -97,6 +99,7 @@ export interface SocialPostFormInitialValues {
   description?: string;
   publishedDate?: string;
   link?: string;
+  contentType?: SocialContentType;
 }
 
 interface SocialPostFormDialogProps {
@@ -113,6 +116,9 @@ interface SocialPostFormDialogProps {
   queueLabel?: string;
   /** Optional control for bulk import (e.g. switch content section). */
   bulkTypeSwitcher?: ReactNode;
+  /** Prefill production source (e.g. publish from ready-productions card). */
+  initialSourceProduction?: { type: ProductionSourceType; id: string } | null;
+  initialPlanLabels?: string[];
 }
 
 function platformLabel(platform: SocialPostPlatform): string {
@@ -134,6 +140,8 @@ export function SocialPostFormDialog({
   onSkip,
   queueLabel,
   bulkTypeSwitcher,
+  initialSourceProduction = null,
+  initialPlanLabels = EMPTY_PLAN_LABELS,
 }: SocialPostFormDialogProps) {
   const [planLabels, setPlanLabels] = useState<string[]>([]);
   const [sourceProductionType, setSourceProductionType] = useState<ProductionSourceType | null>(null);
@@ -170,15 +178,23 @@ export function SocialPostFormDialog({
       comments: 0,
       shares: 0,
       link: initialValues?.link || "",
-      contentType: "image",
+      contentType: initialValues?.contentType || "image",
       mediaUrl: imageUrl,
       description: initialValues?.description || "",
       publishedDate: initialValues?.publishedDate || todayISO(),
     });
-    setPlanLabels([]);
-    setSourceProductionType(null);
-    setSourceProductionId(null);
-  }, [open, initialValues, initialValuesKey, form]);
+    setPlanLabels(initialPlanLabels);
+    setSourceProductionType(initialSourceProduction?.type ?? null);
+    setSourceProductionId(initialSourceProduction?.id ?? null);
+  }, [
+    open,
+    initialValues,
+    initialValuesKey,
+    form,
+    initialSourceProduction?.type,
+    initialSourceProduction?.id,
+    initialPlanLabels,
+  ]);
 
   const onSubmit = form.handleSubmit((data) => {
     if (!sourceProductionType || !sourceProductionId) {
@@ -230,7 +246,9 @@ export function SocialPostFormDialog({
       description={
         queueLabel
           ? `${queueLabel} — داده‌های Excel پر شده‌اند؛ بقیه را اصلاح یا تکمیل کنید.`
-          : "داده‌های Excel پر شده‌اند؛ بقیه را اصلاح یا تکمیل کنید."
+          : initialSourceProduction
+            ? "تولید انتخاب‌شده از قبل پر شده؛ جزئیات نشر را تکمیل کنید."
+            : "جزئیات پست را وارد کنید."
       }
       descriptionVisible
       formProps={{ onSubmit }}
@@ -361,12 +379,53 @@ export function SocialPostFormDialog({
         }}
       />
 
-      <MediaUpload
-        label="رسانه"
-        kind="image"
-        value={form.watch("mediaUrl") || ""}
-        onChange={(url) => form.setValue("mediaUrl", url)}
-      />
+      {form.watch("contentType") === "audio" ? (
+        <MediaUpload
+          label="رسانه (صوت)"
+          kind="audio"
+          uploadKind="audio"
+          accept="audio/*"
+          fileOnly
+          value={form.watch("mediaUrl") || ""}
+          onChange={(url) => form.setValue("mediaUrl", url)}
+        />
+      ) : form.watch("contentType") === "video" || form.watch("contentType") === "reel" ? (
+        <MediaUpload
+          label="رسانه (ویدیو)"
+          kind="video"
+          accept="video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov"
+          maxFileSizeBytes={100 * 1024 * 1024}
+          coverImageUrl={form.watch("coverImageUrl")}
+          onAutoCoverGenerated={(coverUrl) => {
+            const currentCover = form.getValues("coverImageUrl")?.trim() ?? "";
+            if (!currentCover) form.setValue("coverImageUrl", coverUrl);
+          }}
+          value={form.watch("mediaUrl") || ""}
+          onChange={(url) => form.setValue("mediaUrl", url)}
+        />
+      ) : (
+        <MediaUpload
+          label="رسانه"
+          kind="image"
+          accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov"
+          maxFileSizeBytes={100 * 1024 * 1024}
+          coverImageUrl={form.watch("coverImageUrl")}
+          onAutoCoverGenerated={(coverUrl) => {
+            const currentCover = form.getValues("coverImageUrl")?.trim() ?? "";
+            if (!currentCover) form.setValue("coverImageUrl", coverUrl);
+          }}
+          onUploadedFile={(file) => {
+            if (file.type.startsWith("video/")) {
+              const currentType = form.getValues("contentType");
+              if (currentType === "image" || currentType === "text") {
+                form.setValue("contentType", "video");
+              }
+            }
+          }}
+          value={form.watch("mediaUrl") || ""}
+          onChange={(url) => form.setValue("mediaUrl", url)}
+        />
+      )}
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="space-y-2">

@@ -13,6 +13,7 @@ export type DetectedFileKind =
   | "pdf"
   | "zip"
   | "rar"
+  | "ole"
   | "ogg"
   | "wav"
   | "mp3"
@@ -34,10 +35,7 @@ export function detectFileKind(buffer: Buffer): DetectedFileKind {
   ) {
     return "webp";
   }
-  if (
-    buffer.length >= 12 &&
-    buffer.toString("ascii", 4, 8) === "ftyp"
-  ) {
+  if (buffer.length >= 12 && buffer.toString("ascii", 4, 8) === "ftyp") {
     return "mp4";
   }
   if (startsWithBytes(buffer, [0x1a, 0x45, 0xdf, 0xa3])) return "webm";
@@ -45,6 +43,8 @@ export function detectFileKind(buffer: Buffer): DetectedFileKind {
   if (startsWithBytes(buffer, [0x50, 0x4b, 0x03, 0x04])) return "zip"; // docx/xlsx/etc.
   // RAR 1.5+ (`Rar!\x1a\x07\x00`) and RAR 5 (`Rar!\x1a\x07\x01\x00`)
   if (startsWithBytes(buffer, [0x52, 0x61, 0x72, 0x21, 0x1a, 0x07])) return "rar";
+  // Legacy .doc / .xls OLE Compound File
+  if (startsWithBytes(buffer, [0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1])) return "ole";
   if (startsWithBytes(buffer, [0x4f, 0x67, 0x67, 0x53])) return "ogg";
   if (
     buffer.length >= 12 &&
@@ -71,8 +71,19 @@ export function looksLikeSvg(buffer: Buffer): boolean {
 
 const IMAGE_KINDS = new Set<DetectedFileKind>(["jpeg", "png", "gif", "webp"]);
 const VIDEO_KINDS = new Set<DetectedFileKind>(["mp4", "webm"]);
-const AUDIO_KINDS = new Set<DetectedFileKind>(["mp3", "wav", "ogg"]);
-const DOCUMENT_KINDS = new Set<DetectedFileKind>(["pdf", "zip", "rar"]);
+const AUDIO_KINDS = new Set<DetectedFileKind>(["mp3", "wav", "ogg", "mp4", "webm"]);
+const DOCUMENT_KINDS = new Set<DetectedFileKind>(["pdf", "zip", "rar", "ole"]);
+
+function rejectIfExecutable(
+  buffer: Buffer,
+  detected: DetectedFileKind,
+  error: string
+): { ok: true } | { ok: false; error: string } {
+  if (detected === "unknown" && looksLikeExecutable(buffer)) {
+    return { ok: false, error };
+  }
+  return { ok: true };
+}
 
 export function assertMagicMatchesKind(
   buffer: Buffer,
@@ -99,36 +110,31 @@ export function assertMagicMatchesKind(
   }
 
   if (kind === "audio") {
-    if (!AUDIO_KINDS.has(detected)) {
-      return { ok: false, error: "محتوای فایل با نوع صدا هم‌خوانی ندارد" };
+    // m4a/aac often present as ftyp/mp4; plain txt-like payloads are unknown.
+    if (AUDIO_KINDS.has(detected) || detected === "unknown") {
+      return rejectIfExecutable(buffer, detected, "نوع فایل برای صدا مجاز نیست");
     }
-    return { ok: true };
+    return { ok: false, error: "محتوای فایل با نوع صدا هم‌خوانی ندارد" };
   }
 
   if (kind === "document") {
-    if (!DOCUMENT_KINDS.has(detected)) {
-      return { ok: false, error: "محتوای فایل با نوع سند هم‌خوانی ندارد" };
+    // .txt has no reliable magic; allow unknown when not an executable.
+    if (DOCUMENT_KINDS.has(detected) || detected === "unknown") {
+      return rejectIfExecutable(buffer, detected, "نوع فایل برای سند مجاز نیست");
     }
-    return { ok: true };
+    return { ok: false, error: "محتوای فایل با نوع سند هم‌خوانی ندارد" };
   }
 
   if (kind === "raw-image") {
     if (IMAGE_KINDS.has(detected) || detected === "unknown") {
-      // Allow camera RAW / uncommon formats when not clearly an executable payload.
-      if (detected === "unknown" && looksLikeExecutable(buffer)) {
-        return { ok: false, error: "نوع فایل برای راش تصاویر مجاز نیست" };
-      }
-      return { ok: true };
+      return rejectIfExecutable(buffer, detected, "نوع فایل برای راش تصاویر مجاز نیست");
     }
     return { ok: false, error: "محتوای فایل با راش تصاویر هم‌خوانی ندارد" };
   }
 
   if (kind === "raw-video") {
     if (VIDEO_KINDS.has(detected) || detected === "unknown") {
-      if (detected === "unknown" && looksLikeExecutable(buffer)) {
-        return { ok: false, error: "نوع فایل برای راش ویدیو مجاز نیست" };
-      }
-      return { ok: true };
+      return rejectIfExecutable(buffer, detected, "نوع فایل برای راش ویدیو مجاز نیست");
     }
     return { ok: false, error: "محتوای فایل با راش ویدیو هم‌خوانی ندارد" };
   }

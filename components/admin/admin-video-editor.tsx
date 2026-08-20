@@ -76,6 +76,14 @@ function formatVideoDuration(seconds: number): string {
   return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
 }
 
+function getActionErrorMessage(result: unknown, fallback: string): string {
+  if (result && typeof result === "object" && "error" in result) {
+    const message = (result as { error?: unknown }).error;
+    if (typeof message === "string" && message.trim()) return message;
+  }
+  return fallback;
+}
+
 function readVideoDuration(file: File): Promise<string> {
   return new Promise((resolve) => {
     const objectUrl = URL.createObjectURL(file);
@@ -196,11 +204,7 @@ export function AdminVideoEditor({
 
       const videoResult = await saveVideoAction(savedVideo);
       if (!videoResult?.success) {
-        toast.error(
-          "error" in (videoResult ?? {}) && typeof videoResult?.error === "string"
-            ? videoResult.error
-            : "ذخیره ویدیو ناموفق بود"
-        );
+        toast.error(getActionErrorMessage(videoResult, "ذخیره ویدیو ناموفق بود"));
         return;
       }
 
@@ -219,11 +223,7 @@ export function AdminVideoEditor({
         status: "final",
       });
       if (!versionResult?.success) {
-        toast.error(
-          "error" in (versionResult ?? {}) && typeof versionResult?.error === "string"
-            ? versionResult.error
-            : "ذخیره نسخه ویدیو ناموفق بود"
-        );
+        toast.error(getActionErrorMessage(versionResult, "ذخیره نسخه ویدیو ناموفق بود"));
         return;
       }
 
@@ -256,11 +256,7 @@ export function AdminVideoEditor({
     startTransition(async () => {
       const result = await deleteVideoAction(video.id);
       if (!result?.success) {
-        toast.error(
-          "error" in (result ?? {}) && typeof result?.error === "string"
-            ? result.error
-            : "حذف ویدیو ناموفق بود"
-        );
+        toast.error(getActionErrorMessage(result, "حذف ویدیو ناموفق بود"));
         return;
       }
       toast.success("ویدیو حذف شد");

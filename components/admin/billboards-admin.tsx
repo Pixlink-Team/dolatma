@@ -17,6 +17,10 @@ import {
   AdminBillboardAddCard,
   AdminBillboardCompactCard,
 } from "@/components/admin/admin-billboard-compact-card";
+import {
+  ADMIN_CONTENT_GRID_CLASS,
+  AdminEmptyCreateState,
+} from "@/components/admin/admin-compact-add-card";
 import { BillboardCreateAssignmentDialog } from "@/components/admin/billboard-create-assignment-dialog";
 import { AdminViewModeToggle } from "@/components/admin/admin-view-mode-toggle";
 import { AdminItemActions } from "@/components/admin/admin-item-actions";
@@ -304,18 +308,11 @@ export function BillboardsAdmin({
       />
 
       {filteredBillboards.length === 0 ? (
-        <div className="rounded-xl border px-4 py-8 text-center text-sm text-muted-foreground">
-          هنوز تبلیغات محیطی ثبت نشده است.
-          {!bulk.bulkMode && (
-            <div className="mt-3 flex justify-center">
-              <div className="w-full max-w-[10rem]">
-                <AdminBillboardAddCard onClick={openCreate} />
-              </div>
-            </div>
-          )}
-        </div>
+        <AdminEmptyCreateState message="هنوز تبلیغات محیطی ثبت نشده است.">
+          {!bulk.bulkMode ? <AdminBillboardAddCard onClick={openCreate} /> : null}
+        </AdminEmptyCreateState>
       ) : viewMode === "grid" ? (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+        <div className={ADMIN_CONTENT_GRID_CLASS}>
           {!bulk.bulkMode && <AdminBillboardAddCard onClick={openCreate} />}
           {visibleBillboards.map((billboard) => (
             <BulkItemShell

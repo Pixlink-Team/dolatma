@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 interface AdminCompactAddCardProps {
@@ -7,6 +8,26 @@ interface AdminCompactAddCardProps {
   disabled?: boolean;
   label?: string;
   aspectClass?: string;
+}
+
+export const ADMIN_CONTENT_GRID_CLASS =
+  "grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6";
+
+export function AdminEmptyCreateState({
+  message,
+  children,
+}: {
+  message: string;
+  children?: ReactNode;
+}) {
+  return (
+    <div className="space-y-3">
+      <div className="rounded-xl border px-4 py-6 text-center text-sm text-muted-foreground">
+        {message}
+      </div>
+      {children ? <div className={ADMIN_CONTENT_GRID_CLASS}>{children}</div> : null}
+    </div>
+  );
 }
 
 export function AdminCompactAddCard({
