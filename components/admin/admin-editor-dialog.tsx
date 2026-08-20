@@ -95,6 +95,17 @@ export function AdminEditorDialog({
           pinTop && PIN_TOP_CLASS,
           contentClassName
         )}
+        onPointerDownOutside={(event) => {
+          // Nested pickers portal above this form; ignore outside events while they are open.
+          if (document.querySelector("[data-nested-dialog-content]")) {
+            event.preventDefault();
+          }
+        }}
+        onInteractOutside={(event) => {
+          if (document.querySelector("[data-nested-dialog-content]")) {
+            event.preventDefault();
+          }
+        }}
       >
         <DialogHeader className={ADMIN_EDITOR_HEADER_CLASS}>
           <DialogTitle>{title}</DialogTitle>
