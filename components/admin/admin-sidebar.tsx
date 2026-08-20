@@ -100,6 +100,7 @@ const allNavItems: {
   permissionKey?: ContributorPermissionKey;
 }[] = [
   { href: "/admin", label: "داشبورد", icon: LayoutDashboard },
+  { href: "/admin/returned-content", label: "محتواهای برگشتی", icon: ClipboardCheck, alwaysVisible: true },
   { href: "/admin/president", label: "صفحه رییس‌جمهور", icon: Radar, adminOrClientOnly: true },
   { href: "/admin/profile", label: "پروفایل من", icon: UserCircle },
   { href: "/admin/settings", label: "تنظیمات راستا", icon: Settings, permissionKey: "campaignSettings", adminOrClientOnly: true },
@@ -124,7 +125,6 @@ const allNavItems: {
   { href: "/admin/press-publications", label: "مجله و روزنامه", icon: FileText, permissionKey: "activities" },
   { href: "/admin/activities", label: "اقدامات", icon: Sparkles, permissionKey: "activities" },
   { href: "/admin/elanha", label: "اعلان‌ها", icon: Bell, adminOrClientOnly: true },
-  { href: "/admin/returned-content", label: "محتواهای برگشتی", icon: ClipboardCheck, alwaysVisible: true },
   { href: MESSAGES_HREF, label: "پیام‌های من", icon: MessageSquare, alwaysVisible: true },
   { href: "/admin/directives", label: "دستورکارها", icon: ClipboardCheck, permissionKey: "directives" },
   { href: PROBLEM_REPORTS_HREF, label: "گزارش مشکل", icon: TriangleAlert, alwaysVisible: true },
@@ -173,11 +173,15 @@ const managementNavHrefs = new Set([
 ]);
 
 const DIRECTIVES_HREF = "/admin/directives";
-const ASSETS_GROUP_HREFS = new Set([
+/** Ordered list for the assets group (menu display order). */
+const ASSETS_GROUP_ORDER = [
   "/admin/capacity-map",
   "/admin/analytics",
   "/admin/social-analytics",
-]);
+  "/admin/meetings",
+  "/admin/submissions",
+] as const;
+const ASSETS_GROUP_HREFS = new Set<string>(ASSETS_GROUP_ORDER);
 const PRODUCTION_GROUP_HREFS = new Set([
   "/admin/posters",
   "/admin/videos",
@@ -371,7 +375,9 @@ export function AdminSidebar({ showReisReturn = false }: AdminSidebarProps) {
     return true;
   });
   const managementNavItems = navItems.filter((item) => managementNavHrefs.has(item.href));
-  const assetsNavItems = contentNavItems.filter((item) => ASSETS_GROUP_HREFS.has(item.href));
+  const assetsNavItems = ASSETS_GROUP_ORDER.map((href) =>
+    contentNavItems.find((item) => item.href === href)
+  ).filter((item): item is (typeof contentNavItems)[number] => Boolean(item));
   const productionNavItems = contentNavItems.filter((item) => PRODUCTION_GROUP_HREFS.has(item.href));
   const publishingNavItems = PUBLISHING_GROUP_ORDER.map((href) =>
     contentNavItems.find((item) => item.href === href)
