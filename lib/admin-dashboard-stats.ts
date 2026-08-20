@@ -106,7 +106,7 @@ export const DASHBOARD_STAT_DEFINITIONS: DashboardStatDefinition[] = [
   {
     permissionKey: "sitePublications",
     featureKey: "sitePublications",
-    label: "انتشار در سایت",
+    label: "سایت و خبرگزاری",
     href: "/admin/site-publications",
     icon: Globe,
     getCount: (data) => splitSocialPosts(data.socialPosts ?? []).sitePublications.length,
@@ -122,7 +122,7 @@ export const DASHBOARD_STAT_DEFINITIONS: DashboardStatDefinition[] = [
   {
     permissionKey: "socialPosts",
     featureKey: "socialPosts",
-    label: "پست‌های شبکه اجتماعی",
+    label: "پست شبکه اجتماعی",
     href: "/admin/social-posts",
     icon: Images,
     getCount: (data) => splitSocialPosts(data.socialPosts ?? []).socialPosts.length,
@@ -130,7 +130,7 @@ export const DASHBOARD_STAT_DEFINITIONS: DashboardStatDefinition[] = [
   {
     permissionKey: "broadcast",
     featureKey: "broadcastReports",
-    label: "پخش صدا و سیما",
+    label: "صدا و سیما",
     href: "/admin/broadcast",
     icon: Radio,
     getCount: (data) => (data.broadcastReports ?? []).length,
@@ -138,7 +138,7 @@ export const DASHBOARD_STAT_DEFINITIONS: DashboardStatDefinition[] = [
   {
     permissionKey: "smsReports",
     featureKey: "smsReports",
-    label: "ارسال پیام",
+    label: "ارسال پیام انبوه",
     href: "/admin/sms-reports",
     icon: Send,
     getCount: (data) => (data.smsReports ?? []).length,

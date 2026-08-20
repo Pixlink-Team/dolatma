@@ -1,6 +1,7 @@
 import type { ScoreableContentType } from "@/lib/types";
 
 export type ContentMessageContentType = ScoreableContentType;
+export type ContentMessageFollowUpStatus = "open" | "awaiting_user" | "user_replied" | "resolved";
 
 export interface ContentMessage {
   id: string;
@@ -13,8 +14,11 @@ export interface ContentMessage {
   senderName: string | null;
   senderRole: string | null;
   body: string;
+  parentMessageId?: string | null;
+  followUpStatus?: ContentMessageFollowUpStatus;
   seenAt: string | null;
   createdAt: string;
+  replies?: ContentMessage[];
 }
 
 export interface SendContentMessageInput {
@@ -45,9 +49,9 @@ export const CONTENT_MESSAGE_TYPE_LABELS: Record<ContentMessageContentType, stri
   file: "فایل",
   raw_media: "راش تصویر",
   social_post: "پست شبکه اجتماعی",
-  site_publication: "انتشار در سایت",
+  site_publication: "سایت و خبرگزاری",
   activity: "اقدام",
-  broadcast: "پخش صدا و سیما",
+  broadcast: "صدا و سیما",
   meeting: "جلسه",
 };
 

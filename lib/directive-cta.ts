@@ -33,7 +33,7 @@ const INTERNAL_TARGET_META: Record<
   submissions: { path: "/admin/submissions", label: "مشاهده مشارکت‌ها" },
   raw_media: { path: "/admin/raw-media", label: "آپلود راش تصویر" },
   meetings: { path: "/admin/meetings", label: "جلسات و مصوبات" },
-  broadcast: { path: "/admin/broadcast", label: "پخش صدا و سیما" },
+  broadcast: { path: "/admin/broadcast", label: "صدا و سیما" },
   press_publications: { path: "/admin/press-publications", label: "مجله و روزنامه" },
 };
 

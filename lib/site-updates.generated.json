@@ -1,6 +1,24 @@
 {
   "entries": [
     {
+      "hash": "6514547cd1e121de9f94bed7a194991ba31f77d2",
+      "committedAt": "2026-08-20T12:24:55+03:30",
+      "title": "انتقال پروفایل من به بخش تنظیمات و مدیریت",
+      "subject": "Move profile link into settings and management nav"
+    },
+    {
+      "hash": "177ce2ded9e545f628cd42b56826770c5d58bbec",
+      "committedAt": "2026-08-20T12:18:26+03:30",
+      "title": "حذف گزارش‌گیری سه‌ستونه از داشبورد",
+      "subject": "Remove three-column reporting from dashboard"
+    },
+    {
+      "hash": "9a4e88207e6003708bcc268fc8d5fccfa0b97d7e",
+      "committedAt": "2026-08-20T12:17:39+03:30",
+      "title": "انتقال گروه دارایی‌ها به زیر نشر و انتشار در منو",
+      "subject": "Move assets nav group below publishing"
+    },
+    {
       "hash": "a60bd90dbc21b9b4c36694501edc41663fc7a5e5",
       "committedAt": "2026-08-20T11:40:27+03:30",
       "title": "افزودن نوار دایره‌ای پیشرفت و نمایش موارد ناقص در شناسنامه دستگاه",

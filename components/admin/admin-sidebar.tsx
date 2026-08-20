@@ -113,23 +113,24 @@ const allNavItems: {
   { href: "/admin/onboarding-steps", label: "مراحل راه‌اندازی", icon: ListChecks, adminOnly: true },
   { href: "/admin/ministries", label: "دستگاه‌ها", icon: Building2, devicesNav: true },
   { href: "/admin/group-edit", label: "ویرایش گروهی", icon: Layers, adminOnly: true },
-  { href: "/admin/billboards", label: "بیلبوردها (دارایی و نمایش)", icon: LayoutGrid, permissionKey: "billboards" },
+  { href: "/admin/billboards", label: "تبلیغات محیطی", icon: LayoutGrid, permissionKey: "billboards" },
   { href: "/admin/posters", label: "پوسترها", icon: ImageIcon, permissionKey: "posters" },
   { href: "/admin/videos", label: "ویدیوها", icon: Video, permissionKey: "videos" },
   { href: "/admin/files", label: "فایل‌ها", icon: FileStack, permissionKey: "files" },
   { href: "/admin/raw-media", label: "راش تصویر", icon: HardDrive, permissionKey: "rawMedia" },
   { href: "/admin/analytics", label: "سایت‌ها", icon: Globe, permissionKey: "analytics" },
-  { href: "/admin/site-publications", label: "انتشار در سایت", icon: Globe, permissionKey: "sitePublications" },
+  { href: "/admin/site-publications", label: "سایت و خبرگزاری", icon: Globe, permissionKey: "sitePublications" },
   { href: "/admin/social-analytics", label: "شبکه‌های اجتماعی", icon: Share2, permissionKey: "socialPosts" },
-  { href: "/admin/social-posts", label: "پست‌های شبکه اجتماعی", icon: Images, permissionKey: "socialPosts" },
+  { href: "/admin/social-posts", label: "پست شبکه اجتماعی", icon: Images, permissionKey: "socialPosts" },
   { href: "/admin/press-publications", label: "مجله و روزنامه", icon: FileText, permissionKey: "activities" },
   { href: "/admin/activities", label: "اقدامات", icon: Sparkles, permissionKey: "activities" },
   { href: "/admin/elanha", label: "اعلان‌ها", icon: Bell, adminOrClientOnly: true },
+  { href: "/admin/returned-content", label: "محتواهای برگشتی", icon: ClipboardCheck, alwaysVisible: true },
   { href: MESSAGES_HREF, label: "پیام‌های من", icon: MessageSquare, alwaysVisible: true },
   { href: "/admin/directives", label: "دستورکارها", icon: ClipboardCheck, permissionKey: "directives" },
   { href: PROBLEM_REPORTS_HREF, label: "گزارش مشکل", icon: TriangleAlert, alwaysVisible: true },
-  { href: "/admin/broadcast", label: "پخش صدا و سیما", icon: Radio, permissionKey: "broadcast" },
-  { href: "/admin/sms-reports", label: "ارسال پیام", icon: Send, permissionKey: "smsReports" },
+  { href: "/admin/broadcast", label: "صدا و سیما", icon: Radio, permissionKey: "broadcast" },
+  { href: "/admin/sms-reports", label: "ارسال پیام انبوه", icon: Send, permissionKey: "smsReports" },
   { href: "/admin/meetings", label: "جلسات و مصوبات", icon: ClipboardList, permissionKey: "meetings" },
   { href: "/admin/submissions", label: "مشارکت‌ها", icon: FileText, permissionKey: "submissions" },
   { href: "/admin/forms", label: "فرم‌ها", icon: FormInput, permissionKey: "forms", adminOrClientOnly: true },
@@ -175,7 +176,6 @@ const ASSETS_GROUP_HREFS = new Set([
   "/admin/capacity-map",
   "/admin/analytics",
   "/admin/social-analytics",
-  "/admin/billboards",
   "/admin/ministries",
 ]);
 const PRODUCTION_GROUP_HREFS = new Set([
@@ -184,16 +184,15 @@ const PRODUCTION_GROUP_HREFS = new Set([
   "/admin/files",
   "/admin/raw-media",
 ]);
-const PUBLISHING_GROUP_HREFS = new Set([
+/** Ordered list for the publishing group (menu display order). */
+const PUBLISHING_GROUP_ORDER = [
+  "/admin/broadcast",
+  "/admin/billboards",
   "/admin/site-publications",
   "/admin/social-posts",
-  "/admin/press-publications",
-  "/admin/activities",
-  "/admin/broadcast",
   "/admin/sms-reports",
-  "/admin/meetings",
-  "/admin/submissions",
-]);
+] as const;
+const PUBLISHING_GROUP_HREFS = new Set<string>(PUBLISHING_GROUP_ORDER);
 
 /** Survives remounts so the right-side menu keeps its scroll after navigation. */
 let savedSidebarScrollTop = 0;
@@ -372,7 +371,9 @@ export function AdminSidebar({ showReisReturn = false }: AdminSidebarProps) {
   const managementNavItems = navItems.filter((item) => managementNavHrefs.has(item.href));
   const assetsNavItems = contentNavItems.filter((item) => ASSETS_GROUP_HREFS.has(item.href));
   const productionNavItems = contentNavItems.filter((item) => PRODUCTION_GROUP_HREFS.has(item.href));
-  const publishingNavItems = contentNavItems.filter((item) => PUBLISHING_GROUP_HREFS.has(item.href));
+  const publishingNavItems = PUBLISHING_GROUP_ORDER.map((href) =>
+    contentNavItems.find((item) => item.href === href)
+  ).filter((item): item is (typeof contentNavItems)[number] => Boolean(item));
   const ungroupedContentNavItems = contentNavItems.filter(
     (item) =>
       !ASSETS_GROUP_HREFS.has(item.href) &&

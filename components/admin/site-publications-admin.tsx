@@ -427,7 +427,7 @@ export function SitePublicationsAdmin({
       {tutorialModal}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">انتشار در سایت</h1>
+          <h1 className="text-2xl font-bold">سایت و خبرگزاری</h1>
           <p className="text-sm text-muted-foreground">
             ثبت مطالب منتشرشده در سایت با عنوان لینک‌دار، تاریخ و توضیح
           </p>

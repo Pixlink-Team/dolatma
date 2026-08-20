@@ -215,9 +215,9 @@ export const SCOREABLE_CONTENT_TYPE_LABELS: Record<ScoreableContentType, string>
   file: "فایل‌ها",
   raw_media: "راش تصویر",
   social_post: "پست شبکه اجتماعی",
-  site_publication: "انتشار در سایت",
+  site_publication: "سایت و خبرگزاری",
   activity: "اقدامات",
-  broadcast: "پخش صدا و سیما",
+  broadcast: "صدا و سیما",
   meeting: "جلسات و مصوبات",
 };
 

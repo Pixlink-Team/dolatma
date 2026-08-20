@@ -270,7 +270,7 @@ export function BroadcastAdmin({ campaignId, initialReports }: BroadcastAdminPro
       {tutorialModal}
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">گزارش پخش صدا و سیما</h1>
+          <h1 className="text-2xl font-bold">صدا و سیما</h1>
           <p className="text-sm text-muted-foreground">
             آپلود و انتشار گزارش PDF یا مدیا (تصویر، صوت، ویدیو) — روی کارت کلیک کنید یا با + گزارش جدید بسازید
           </p>

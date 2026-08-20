@@ -219,9 +219,9 @@ export function SmsReportsAdmin({ campaignId, initialReports }: SmsReportsAdminP
       {tutorialModal}
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">ارسال پیام</h1>
+          <h1 className="text-2xl font-bold">ارسال پیام انبوه</h1>
           <p className="text-sm text-muted-foreground">
-            ثبت گزارش ارسال پیامک به مخاطبان — عنوان، تعداد گیرندگان، متن پیام و مستند اختیاری
+            ثبت گزارش ارسال پیام انبوه (پیامک، بله و سایر کانال‌ها) — عنوان، تعداد گیرندگان، متن پیام و مستند اختیاری
           </p>
         </div>
         <div className="flex items-center gap-2">

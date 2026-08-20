@@ -27,15 +27,15 @@ export const tutorialSectionLabels: Record<TutorialSectionKey, string> = {
   rawMedia: "راش تصویر",
   analytics: "سایت‌ها",
   socialAnalytics: "شبکه‌های اجتماعی",
-  socialPosts: "پست‌های شبکه اجتماعی",
-  sitePublications: "انتشار در سایت",
+  socialPosts: "پست شبکه اجتماعی",
+  sitePublications: "سایت و خبرگزاری",
   pressPublications: "مجله و روزنامه",
   activities: "اقدامات",
-  broadcast: "پخش صدا و سیما",
+  broadcast: "صدا و سیما",
   meetings: "جلسات و مصوبات",
   submissions: "مشارکت‌ها",
   subsidiaries: "زیرمجموعه‌ها",
-  smsReports: "ارسال پیام",
+  smsReports: "ارسال پیام انبوه",
 };
 
 export interface TutorialStep {
