@@ -8,6 +8,7 @@ export async function pgIdExists(
     | "billboards"
     | "campaign_files"
     | "raw_media_uploads"
+    | "text_contents"
     | "analytics_metrics"
     | "company_websites"
     | "social_media_posts"
@@ -39,6 +40,10 @@ export async function pgIdExists(
     }
     case "raw_media_uploads": {
       const rows = await sql`SELECT 1 FROM raw_media_uploads WHERE id = ${id} LIMIT 1`;
+      return rows.length > 0;
+    }
+    case "text_contents": {
+      const rows = await sql`SELECT 1 FROM text_contents WHERE id = ${id} LIMIT 1`;
       return rows.length > 0;
     }
     case "analytics_metrics": {

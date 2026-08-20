@@ -16,6 +16,7 @@ import type {
   Poster,
   PosterVersion,
   RawMediaUpload,
+  TextContent,
   Video,
   VideoVersion,
 } from "@/lib/types";
@@ -86,6 +87,9 @@ export async function getAdminData(campaignId: string, sections?: AdminDataSecti
       rawMedia: filterByOwner([...((store as { rawMedia?: RawMediaUpload[] }).rawMedia ?? [])]).sort(
         (a, b) => a.sortOrder - b.sortOrder || b.createdAt.localeCompare(a.createdAt)
       ),
+      textContents: filterByOwner([
+        ...((store as { textContents?: TextContent[] }).textContents ?? []),
+      ]).sort((a, b) => a.sortOrder - b.sortOrder || b.createdAt.localeCompare(a.createdAt)),
       smsReports: filterByOwner([...(store.smsReports ?? [])]).sort(
         (a, b) => a.sortOrder - b.sortOrder || b.sendDate.localeCompare(a.sendDate)
       ),
@@ -130,6 +134,7 @@ export async function getAdminData(campaignId: string, sections?: AdminDataSecti
       meetings: [],
       activities: [],
       rawMedia: [],
+      textContents: [],
       smsReports: [],
     });
   } catch {
@@ -149,6 +154,7 @@ export async function getAdminData(campaignId: string, sections?: AdminDataSecti
       meetings: filterByOwner(mock.meetings ?? []),
       activities: filterByOwner(mock.activities ?? []),
       rawMedia: filterByOwner(mock.rawMedia ?? []),
+      textContents: filterByOwner(mock.textContents ?? []),
       smsReports: filterByOwner(mock.smsReports ?? []),
     });
   }
@@ -179,6 +185,9 @@ function getAdminDataMock(campaignId: string) {
       (a, b) => b.activityDate.localeCompare(a.activityDate) || a.sortOrder - b.sortOrder
     ),
     rawMedia: [...((store as { rawMedia?: RawMediaUpload[] }).rawMedia ?? [])].sort(
+      (a, b) => a.sortOrder - b.sortOrder || b.createdAt.localeCompare(a.createdAt)
+    ),
+    textContents: [...((store as { textContents?: TextContent[] }).textContents ?? [])].sort(
       (a, b) => a.sortOrder - b.sortOrder || b.createdAt.localeCompare(a.createdAt)
     ),
     smsReports: [...(store.smsReports ?? [])].sort(
@@ -880,6 +889,69 @@ export async function deleteRawMediaUpload(id: string) {
     updateMockStore((store) => ({
       ...store,
       rawMedia: ((store as { rawMedia?: RawMediaUpload[] }).rawMedia ?? []).filter(
+        (item) => item.id !== id
+      ),
+    }));
+    return { success: true };
+  }
+  return { success: true };
+}
+
+export async function saveTextContent(data: Partial<TextContent> & { id?: string }) {
+  if (isPostgresConfigured()) return pg.pgSaveTextContent(data);
+  const now = new Date().toISOString();
+  if (!isSupabaseConfigured()) {
+    const newId = data.id ?? generateId();
+    updateMockStore((store) => {
+      const campaignItems = ((store as { textContents?: TextContent[] }).textContents ?? []).filter(
+        (item) => item.campaignId === data.campaignId
+      );
+      if (data.id) {
+        return {
+          ...store,
+          textContents: ((store as { textContents?: TextContent[] }).textContents ?? []).map((item) =>
+            item.id === data.id ? ({ ...item, ...data, updatedAt: now } as TextContent) : item
+          ),
+        };
+      }
+      const newItem: TextContent = {
+        id: newId,
+        campaignId: data.campaignId ?? "",
+        contentKind: data.contentKind === "news" ? "news" : "text",
+        title: data.title ?? "",
+        body: data.body ?? "",
+        description: data.description,
+        coverImageUrl: data.coverImageUrl ?? null,
+        attachmentUrl: data.attachmentUrl ?? null,
+        attachmentFileName: data.attachmentFileName ?? null,
+        published: data.published ?? true,
+        sortOrder: data.sortOrder ?? campaignItems.length + 1,
+        planLabel: data.planLabel ?? null,
+        planLabels: data.planLabels,
+        ownerUserId: data.ownerUserId ?? null,
+        ownerName: data.ownerName ?? null,
+        createdAt: now,
+        updatedAt: now,
+      };
+      return {
+        ...store,
+        textContents: [
+          ...((store as { textContents?: TextContent[] }).textContents ?? []),
+          newItem,
+        ],
+      };
+    });
+    return { success: true, id: newId };
+  }
+  return { success: true };
+}
+
+export async function deleteTextContent(id: string) {
+  if (isPostgresConfigured()) return pg.pgDeleteTextContent(id);
+  if (!isSupabaseConfigured()) {
+    updateMockStore((store) => ({
+      ...store,
+      textContents: ((store as { textContents?: TextContent[] }).textContents ?? []).filter(
         (item) => item.id !== id
       ),
     }));

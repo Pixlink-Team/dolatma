@@ -17,6 +17,7 @@ import {
   deletePosterVersion,
   deleteRawMediaUpload,
   deleteSubmission,
+  deleteTextContent,
   deleteVideo,
   deleteVideoVersion,
   resubmitSubmission,
@@ -28,6 +29,7 @@ import {
   savePoster,
   savePosterVersion,
   saveRawMediaUpload,
+  saveTextContent,
   saveVideo,
   saveVideoVersion,
   updateCampaignSettings,
@@ -43,6 +45,7 @@ import type {
   Poster,
   PosterVersion,
   RawMediaUpload,
+  TextContent,
   Video,
   VideoVersion,
 } from "@/lib/types";
@@ -108,6 +111,7 @@ async function revalidateAll(slug?: string) {
   revalidatePath("/admin/broadcast");
   revalidatePath("/admin/submissions");
   revalidatePath("/admin/files");
+  revalidatePath("/admin/text-contents");
   revalidatePath("/admin/settings");
   revalidatePath("/admin/users");
   revalidatePath("/campaign");
@@ -686,6 +690,58 @@ export async function deleteRawMediaUploadAction(id: string) {
   if (denied) return denied;
   const result = await deleteRawMediaUpload(id);
   await auditContentDelete({ entityType: "raw_media", entityId: id });
+  await revalidateAll();
+  return result;
+}
+
+export async function saveTextContentAction(data: Partial<TextContent> & { id?: string }) {
+  const auth = await requireSession();
+  if (isAuthError(auth)) return auth;
+  const sectionDenied = await assertSectionPermission(auth, data.campaignId, "textContents");
+  if (sectionDenied) return sectionDenied;
+  const validationError = validateTitlePayload(data);
+  if (validationError) return validationError;
+  if (!data.body?.trim()) {
+    return { success: false as const, error: "متن محتوا الزامی است" };
+  }
+  if (data.id) {
+    const denied = await assertCanMutateOwnedContent(auth, "text_contents", data.id);
+    if (denied) return denied;
+  }
+  const tutorialDenied = await assertTutorialForPossibleCreate(
+    "textContents",
+    "text_contents",
+    data.id
+  );
+  if (tutorialDenied) return tutorialDenied;
+  const scoped = await withOwnerScope(auth, data);
+  const { denyIfCreateQuotaExceeded } = await import("@/lib/scoring/daily-cap-and-duplicates");
+  const quota = await denyIfCreateQuotaExceeded({
+    campaignId: scoped.campaignId ?? data.campaignId ?? "",
+    ownerUserId: scoped.ownerUserId ?? auth.userId,
+    contentId: data.id,
+    table: "text_contents",
+  });
+  if (quota) return quota;
+  const result = await saveTextContent(scoped);
+  await auditContentChange({
+    isUpdate: Boolean(data.id),
+    entityType: "text_content",
+    entityId: data.id,
+    campaignId: data.campaignId,
+    label: data.title,
+  });
+  await revalidateAll();
+  return result;
+}
+
+export async function deleteTextContentAction(id: string) {
+  const auth = await requireSession();
+  if (isAuthError(auth)) return auth;
+  const denied = await assertCanMutateOwnedContent(auth, "text_contents", id);
+  if (denied) return denied;
+  const result = await deleteTextContent(id);
+  await auditContentDelete({ entityType: "text_content", entityId: id });
   await revalidateAll();
   return result;
 }

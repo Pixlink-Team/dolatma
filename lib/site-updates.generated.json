@@ -1,6 +1,18 @@
 {
   "entries": [
     {
+      "hash": "2a71887fbbfe981061e9e0de8e593ba536acb772",
+      "committedAt": "2026-08-20T18:10:08+03:30",
+      "title": "انتخاب تولید با باز شدن مودال از هر قسمت",
+      "subject": "Open production picker list in a modal by type"
+    },
+    {
+      "hash": "b0e7e57e7849eb7b5178e9cb63ae668c130201f8",
+      "committedAt": "2026-08-20T17:57:53+03:30",
+      "title": "به‌روزرسانی فهرست آپدیت‌های سایت",
+      "subject": "Update site-updates generated list"
+    },
+    {
       "hash": "dc6660978ac6a56534f3f0eff6e4c89ce6555c66",
       "committedAt": "2026-08-20T17:55:34+03:30",
       "title": "یکدست‌سازی فرم‌های ثبت و ویرایش بخش‌های محتوا",

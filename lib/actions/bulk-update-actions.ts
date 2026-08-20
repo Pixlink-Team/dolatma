@@ -18,6 +18,7 @@ export type BulkEditableContentType =
   | "video"
   | "file"
   | "raw_media"
+  | "text_content"
   | "social_post"
   | "site_publication"
   | "activity"
@@ -41,6 +42,7 @@ const PERMISSION_BY_TYPE: Record<BulkEditableContentType, ContributorPermissionK
   video: "videos",
   file: "files",
   raw_media: "rawMedia",
+  text_content: "textContents",
   social_post: "socialPosts",
   site_publication: "sitePublications",
   activity: "activities",
@@ -223,6 +225,14 @@ async function bulkUpdatePostgres(
       `;
       return;
     }
+    if (contentType === "text_content") {
+      await sql`
+        UPDATE text_contents
+        SET owner_user_id = ${nextOwnerId}, updated_at = ${now}
+        WHERE campaign_id = ${campaignId} AND id IN ${sql(ids)}
+      `;
+      return;
+    }
     if (contentType === "social_post" || contentType === "site_publication") {
       const isSite = contentType === "site_publication";
       await sql`
@@ -395,6 +405,28 @@ async function bulkUpdatePostgres(
     return;
   }
 
+  if (contentType === "text_content") {
+    if (patch.planLabels !== undefined) {
+      const { planLabel, planLabels } = resolvePlanColumns(patch.planLabels);
+      await sql`
+        UPDATE text_contents
+        SET plan_label = ${planLabel}, plan_labels = ${sql.json(planLabels)}, updated_at = ${now}
+        WHERE campaign_id = ${campaignId} AND id IN ${sql(ids)}
+          AND (${ownerFilter}::text IS NULL OR owner_user_id = ${ownerFilter})
+      `;
+    }
+    if (patch.published !== undefined) {
+      await sql`
+        UPDATE text_contents
+        SET published = ${patch.published}, updated_at = ${now}
+        WHERE campaign_id = ${campaignId} AND id IN ${sql(ids)}
+          AND (${ownerFilter}::text IS NULL OR owner_user_id = ${ownerFilter})
+      `;
+    }
+    await applyOwnerTransfer();
+    return;
+  }
+
   if (contentType === "social_post" || contentType === "site_publication") {
     const isSite = contentType === "site_publication";
     if (patch.planLabels !== undefined) {
@@ -524,6 +556,8 @@ function bulkUpdateMock(
       next.files = patchList(store.files ?? []);
     } else if (contentType === "raw_media") {
       // Mock store does not persist raw media uploads.
+    } else if (contentType === "text_content") {
+      // Mock store may not persist text contents; skip when absent.
     } else if (contentType === "social_post" || contentType === "site_publication") {
       next.socialPosts = (store.socialPosts ?? []).map((item) => {
         const isWebOutlet = item.platform === "site" || item.platform === "news_agency";
@@ -564,6 +598,7 @@ const TOPIC_BULK_TYPES_BY_SOURCE: Record<string, BulkEditableContentType[]> = {
   video: ["video"],
   file: ["file"],
   raw_media: ["raw_media"],
+  text_content: ["text_content"],
   social_post: ["social_post"],
   site_publication: ["site_publication"],
   activity: ["activity"],

@@ -14,6 +14,7 @@ import {
   mapSocialPostFromDb,
   mapSocialPlatformStatFromDb,
   mapSubmissionFromDb,
+  mapTextContentFromDb,
   mapVideoFromDb,
   mapVideoVersionFromDb,
 } from "@/lib/db/mappers";
@@ -111,6 +112,7 @@ export type AdminDataSection =
   | "analytics"
   | "submissions"
   | "files"
+  | "textContents"
   | "socialPosts"
   | "broadcastReports"
   | "socialPlatformStats"
@@ -132,6 +134,7 @@ const ALL_ADMIN_DATA_SECTIONS: AdminDataSection[] = [
   "analytics",
   "submissions",
   "files",
+  "textContents",
   "socialPosts",
   "broadcastReports",
   "socialPlatformStats",
@@ -214,6 +217,7 @@ export async function pgGetAdminData(
     meetings,
     activities,
     rawMedia,
+    textContents,
     smsReports,
   ] = await Promise.all([
     want.has("campaigns")
@@ -411,6 +415,20 @@ export async function pgGetAdminData(
       ORDER BY r.sort_order, r.created_at DESC
     `
       : emptyRows,
+    want.has("textContents")
+      ? sql`
+      SELECT t.*, u.name AS owner_name, u.province AS owner_province, u.city AS owner_city, u.ministry_id AS owner_ministry_id, om.name AS owner_ministry_name, u.organization_id AS owner_organization_id, oo.name AS owner_organization_name
+      FROM text_contents t
+      LEFT JOIN users u ON u.id = t.owner_user_id
+
+      LEFT JOIN ministries om ON om.id = u.ministry_id
+
+      LEFT JOIN ministry_organizations oo ON oo.id = u.organization_id
+      WHERE t.campaign_id = ${campaignId}
+      ${ownerFilter}
+      ORDER BY t.sort_order, t.created_at DESC
+    `
+      : emptyRows,
     want.has("smsReports") ? pgGetSmsSendReports(campaignId, ownerUserId) : emptySmsReports,
   ]);
 
@@ -434,6 +452,7 @@ export async function pgGetAdminData(
     meetings: meetings as Awaited<ReturnType<typeof pgGetMeetingsWithTasks>>,
     activities: activities as Awaited<ReturnType<typeof pgGetCampaignActivities>>,
     rawMedia: rawMedia.map(mapRawMediaUploadFromDb),
+    textContents: textContents.map(mapTextContentFromDb),
     smsReports: smsReports as Awaited<ReturnType<typeof pgGetSmsSendReports>>,
   };
 }
