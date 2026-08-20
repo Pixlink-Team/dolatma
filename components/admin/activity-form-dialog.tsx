@@ -144,6 +144,10 @@ export function ActivityFormDialog({
       toast.error("برای ثبت نشر باید یک تولید (یا دارایی دستورکار) انتخاب شود");
       return;
     }
+    if (planLabels.length === 0) {
+      toast.error("موضوع الزامی است");
+      return;
+    }
 
     const filledMedia = mediaItems
       .filter((item) => item.url.trim())

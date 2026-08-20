@@ -1060,6 +1060,10 @@ function CompanySupervisionAdminInner({
       toast.error("حداقل یک مورد را انتخاب کنید");
       return;
     }
+    if (planLabels.length === 0) {
+      toast.error("موضوع الزامی است");
+      return;
+    }
     startTransition(async () => {
       const result = await bulkUpdatePlanLabelsAction({
         campaignId,

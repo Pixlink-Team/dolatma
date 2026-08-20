@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { BadgeCheck } from "lucide-react";
+import { toast } from "sonner";
 import { PlanLabelSelect } from "@/components/admin/plan-label-select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -94,7 +95,13 @@ export function BulkTopicEditPanel({
             type="button"
             size="sm"
             disabled={pending}
-            onClick={() => onApply(planLabels)}
+            onClick={() => {
+              if (planLabels.length === 0) {
+                toast.error("موضوع الزامی است");
+                return;
+              }
+              onApply(planLabels);
+            }}
           >
             {pending
               ? "در حال اعمال..."

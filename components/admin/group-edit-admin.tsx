@@ -362,6 +362,10 @@ export function GroupEditAdmin(props: GroupEditAdminProps) {
   );
 
   const handleApply = () => {
+    if (changeTopic && planLabels.length === 0) {
+      toast.error("موضوع الزامی است");
+      return;
+    }
     const patch = buildPatch();
     if (!patch) {
       toast.error("حداقل یک فیلد برای تغییر انتخاب کنید");
