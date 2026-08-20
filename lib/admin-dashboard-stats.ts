@@ -1,5 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import {
+  Award,
   ClipboardList,
   FileStack,
   FileText,
@@ -43,16 +44,31 @@ export interface AdminDashboardData {
   meetings?: CampaignMeeting[];
   activities?: CampaignActivity[];
   smsReports?: SmsSendReport[];
+  /** Approved best-practice cards count (optional; filled on dashboard). */
+  bestPracticesCount?: number;
 }
+
+export type DashboardStatGroupKey = "content" | "actions" | "reports";
+
+export const DASHBOARD_STAT_GROUP_LABELS: Record<DashboardStatGroupKey, string> = {
+  content: "محتوا و رسانه",
+  actions: "اقدامات و جلسات",
+  reports: "گزارش‌ها و سایر",
+};
 
 export interface DashboardStatDefinition {
   permissionKey: ContributorPermissionKey;
-  featureKey: keyof CampaignFeatures;
+  /**
+   * Campaign feature gate for full admins.
+   * When omitted, the card is always shown for admins (permission-only sections).
+   */
+  featureKey?: keyof CampaignFeatures;
   label: string;
   href: string;
   icon: LucideIcon;
   /** Lower = more important in dashboard sort/layout (1 = highest). */
   priority: number;
+  group: DashboardStatGroupKey;
   getCount: (data: AdminDashboardData, billboards: Billboard[]) => number;
 }
 
@@ -64,6 +80,7 @@ export const DASHBOARD_STAT_DEFINITIONS: DashboardStatDefinition[] = [
     href: "/admin/billboards",
     icon: LayoutGrid,
     priority: 1,
+    group: "content",
     getCount: (_, billboards) => billboards.length,
   },
   {
@@ -73,6 +90,7 @@ export const DASHBOARD_STAT_DEFINITIONS: DashboardStatDefinition[] = [
     href: "/admin/posters",
     icon: ImageIcon,
     priority: 2,
+    group: "content",
     getCount: (data) => data.posters.length,
   },
   {
@@ -82,6 +100,7 @@ export const DASHBOARD_STAT_DEFINITIONS: DashboardStatDefinition[] = [
     href: "/admin/videos",
     icon: Video,
     priority: 3,
+    group: "content",
     getCount: (data) => data.videos.length,
   },
   {
@@ -91,6 +110,7 @@ export const DASHBOARD_STAT_DEFINITIONS: DashboardStatDefinition[] = [
     href: "/admin/social-posts",
     icon: Images,
     priority: 4,
+    group: "content",
     getCount: (data) => splitSocialPosts(data.socialPosts ?? []).socialPosts.length,
   },
   {
@@ -100,6 +120,7 @@ export const DASHBOARD_STAT_DEFINITIONS: DashboardStatDefinition[] = [
     href: "/admin/site-publications",
     icon: Globe,
     priority: 5,
+    group: "content",
     getCount: (data) => splitSocialPosts(data.socialPosts ?? []).sitePublications.length,
   },
   {
@@ -109,6 +130,7 @@ export const DASHBOARD_STAT_DEFINITIONS: DashboardStatDefinition[] = [
     href: "/admin/news-agencies",
     icon: Globe,
     priority: 6,
+    group: "content",
     getCount: (data) => splitSocialPosts(data.socialPosts ?? []).newsAgencyPublications.length,
   },
   {
@@ -118,7 +140,17 @@ export const DASHBOARD_STAT_DEFINITIONS: DashboardStatDefinition[] = [
     href: "/admin/broadcast",
     icon: Radio,
     priority: 7,
+    group: "content",
     getCount: (data) => (data.broadcastReports ?? []).length,
+  },
+  {
+    permissionKey: "bestPractices",
+    label: "بهترین اقدامات",
+    href: "/admin/best-practices",
+    icon: Award,
+    priority: 8,
+    group: "actions",
+    getCount: (data) => data.bestPracticesCount ?? 0,
   },
   {
     permissionKey: "activities",
@@ -126,7 +158,8 @@ export const DASHBOARD_STAT_DEFINITIONS: DashboardStatDefinition[] = [
     label: "اقدامات",
     href: "/admin/activities",
     icon: Sparkles,
-    priority: 8,
+    priority: 9,
+    group: "actions",
     getCount: (data) => (data.activities ?? []).length,
   },
   {
@@ -135,7 +168,8 @@ export const DASHBOARD_STAT_DEFINITIONS: DashboardStatDefinition[] = [
     label: "جلسات و مصوبات",
     href: "/admin/meetings",
     icon: ClipboardList,
-    priority: 9,
+    priority: 10,
+    group: "actions",
     getCount: (data) => (data.meetings ?? []).length,
   },
   {
@@ -144,7 +178,8 @@ export const DASHBOARD_STAT_DEFINITIONS: DashboardStatDefinition[] = [
     label: "شبکه‌های اجتماعی",
     href: "/admin/social-analytics",
     icon: Share2,
-    priority: 10,
+    priority: 11,
+    group: "reports",
     getCount: (data) => (data.socialPlatformStats ?? []).length,
   },
   {
@@ -153,7 +188,8 @@ export const DASHBOARD_STAT_DEFINITIONS: DashboardStatDefinition[] = [
     label: "فایل‌ها",
     href: "/admin/files",
     icon: FileStack,
-    priority: 11,
+    priority: 12,
+    group: "reports",
     getCount: (data) => (data.files ?? []).length,
   },
   {
@@ -162,7 +198,8 @@ export const DASHBOARD_STAT_DEFINITIONS: DashboardStatDefinition[] = [
     label: "مشارکت‌ها",
     href: "/admin/submissions",
     icon: FileText,
-    priority: 12,
+    priority: 13,
+    group: "reports",
     getCount: (data) => data.submissions.length,
   },
   {
@@ -171,7 +208,8 @@ export const DASHBOARD_STAT_DEFINITIONS: DashboardStatDefinition[] = [
     label: "سایت‌ها",
     href: "/admin/analytics",
     icon: Globe,
-    priority: 13,
+    priority: 14,
+    group: "reports",
     getCount: (data) => (data.companyWebsites ?? []).length,
   },
   {
@@ -180,7 +218,8 @@ export const DASHBOARD_STAT_DEFINITIONS: DashboardStatDefinition[] = [
     label: "ارسال پیام انبوه",
     href: "/admin/sms-reports",
     icon: Send,
-    priority: 14,
+    priority: 15,
+    group: "reports",
     getCount: (data) => (data.smsReports ?? []).length,
   },
 ];

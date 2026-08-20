@@ -22,6 +22,7 @@ import {
   type ContributorPermissionKey,
   type ContributorPermissions,
 } from "@/lib/contributor-permissions";
+import { pgListBestPractices } from "@/lib/db/repository-best-practices";
 import { pgListDirectivesForUserInbox } from "@/lib/db/repository-directives";
 import { pgGetUserPermissionsForCampaign } from "@/lib/db/repository-extended";
 import {
@@ -134,18 +135,28 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
       })
     : [];
 
+  const bestPracticesCount =
+    isPostgresConfigured() &&
+    (canManageAll || hasContributorPermission(contributorPermissions, "bestPractices"))
+      ? (await pgListBestPractices(campaignId, "approved")).length
+      : 0;
+  const dashboardData = { ...data, bestPracticesCount };
+
   const stats = DASHBOARD_STAT_DEFINITIONS.filter((definition) =>
     canManageAll
-      ? features[definition.featureKey]
+      ? definition.featureKey
+        ? features[definition.featureKey]
+        : true
       : hasContributorPermission(contributorPermissions, definition.permissionKey)
   ).map((definition) => {
     const contentType = PERMISSION_TO_CONTENT_TYPE[definition.permissionKey];
     return {
       label: definition.label,
-      value: definition.getCount(data, billboards),
+      value: definition.getCount(dashboardData, billboards),
       href: adminHref(definition.href, campaignId),
       icon: definition.icon,
       priority: definition.priority,
+      group: definition.group,
       completeness: contentType ? completenessByType.get(contentType) : undefined,
       showOwnerHint: !canManageAll,
     };
@@ -217,6 +228,16 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
         )}
       </div>
 
+      {onboardingProgress && onboardingProgress.totalCount > 0 ? (
+        <OnboardingProgressCard progress={onboardingProgress} />
+      ) : null}
+
+      <DashboardDirectivesPanel
+        campaignId={campaignId}
+        canManage={canManageDirectivesForUser}
+        inboxDirectives={inboxDirectives}
+      />
+
       <div className="grid gap-4 lg:grid-cols-12 lg:items-start">
         {session ? (
           <div className="lg:col-span-4 xl:col-span-3 lg:sticky lg:top-4">
@@ -248,7 +269,7 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
                 <div>
                   <h2 className="text-base font-semibold sm:text-lg">وضعیت بخش‌ها</h2>
                   <p className="text-xs text-muted-foreground sm:text-sm">
-                    مرتب‌شده بر اساس اهمیت؛ ناقص‌ها بزرگ‌تر و بالاتر دیده می‌شوند.
+                    دسته‌بندی‌شده؛ ناقص‌ها در هر گروه بالاتر دیده می‌شوند.
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
@@ -276,16 +297,6 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
           )}
         </div>
       </div>
-
-      {onboardingProgress && onboardingProgress.totalCount > 0 ? (
-        <OnboardingProgressCard progress={onboardingProgress} />
-      ) : null}
-
-      <DashboardDirectivesPanel
-        campaignId={campaignId}
-        canManage={canManageDirectivesForUser}
-        inboxDirectives={inboxDirectives}
-      />
 
       <EditSuggestionsPanel
         suggestions={editSuggestions}

@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "ba20bb640a20689d11d289927148fa752a24e3fb",
+      "committedAt": "2026-08-20T16:25:53+03:30",
+      "title": "بهبود ثبت سایت‌ها و پشتیبانی امتیازدهی برای محتواهای متنی",
+      "subject": "Improve company websites UX and text_contents scoring"
+    },
+    {
       "hash": "7287e8bd7b04fd196d06811253295fad3c80eee9",
       "committedAt": "2026-08-20T15:45:15+03:30",
       "title": "افزودن بخش تولیدات آماده با دسته‌بندی بر اساس موضوع",
