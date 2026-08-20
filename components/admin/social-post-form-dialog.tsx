@@ -4,16 +4,19 @@ import { useEffect, useState, useTransition, type ReactNode } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2, SkipForward } from "lucide-react";
+import { SkipForward } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MediaUpload } from "@/components/ui/media-upload";
 import { PersianDateField } from "@/components/ui/persian-date-input";
+import {
+  AdminEditorDialog,
+  AdminEditorDialogActions,
+} from "@/components/admin/admin-editor-dialog";
 import { PlanLabelSelect } from "@/components/admin/plan-label-select";
 import { ProductionSourcePicker } from "@/components/admin/production-source-picker";
 import { SocialPlatformIcon, getSocialPlatformLabel } from "@/components/public/social-platform-icon";
@@ -220,167 +223,169 @@ export function SocialPostFormDialog({
   });
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" dir="rtl">
-        <DialogHeader className="text-right">
-          <DialogTitle>پست جدید</DialogTitle>
-          <p className="text-sm text-muted-foreground">
-            {queueLabel ? `${queueLabel} — ` : ""}
-            داده‌های Excel پر شده‌اند؛ بقیه را اصلاح یا تکمیل کنید.
-          </p>
-        </DialogHeader>
-
-        {bulkTypeSwitcher}
-
-        <form onSubmit={onSubmit} className="space-y-4 text-right">
-          <ProductionSourcePicker
-            campaignId={campaignId}
-            valueType={sourceProductionType}
-            valueId={sourceProductionId}
-            required
-            label="کدام تولید را نشر می‌کنید؟"
-            onChange={(item) => {
-              setSourceProductionType(item?.type ?? null);
-              setSourceProductionId(item?.id ?? null);
-            }}
-          />
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>کانال</Label>
-              <Select
-                value={form.watch("platform")}
-                onValueChange={(value) =>
-                  form.setValue("platform", value as FormValues["platform"])
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue>
-                    <span className="flex items-center gap-2">
-                      {form.watch("platform") !== "site" ? (
-                        <SocialPlatformIcon
-                          platform={form.watch("platform") as SocialPlatform}
-                          size="sm"
-                          className="h-5 w-5 rounded-md"
-                        />
-                      ) : null}
-                      {platformLabel(form.watch("platform"))}
-                    </span>
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {platformOptions.map((platform) => (
-                    <SelectItem key={platform} value={platform}>
-                      <span className="flex items-center gap-2">
-                        {platform !== "site" ? (
-                          <SocialPlatformIcon
-                            platform={platform as SocialPlatform}
-                            size="sm"
-                            className="h-5 w-5 rounded-md"
-                          />
-                        ) : null}
-                        {platformLabel(platform)}
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>نوع محتوا</Label>
-              <Select
-                value={form.watch("contentType")}
-                onValueChange={(value) =>
-                  form.setValue("contentType", value as SocialContentType)
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {contentTypeOptions.map((type) => (
-                    <SelectItem key={type} value={type}>
-                      {getStatusLabel(type)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label>عنوان / نام کاور</Label>
-            <Input {...form.register("title")} maxLength={CONTENT_TITLE_MAX_LENGTH} />
-          </div>
-
-          <PlanLabelSelect
-            topics={contentTopics}
-            plans={contentPlans}
-            values={planLabels}
-            onChangeMultiple={setPlanLabels}
-          />
-
-          <PersianDateField control={form.control} name="publishedDate" label="تاریخ انتشار" />
-
-          <div className="space-y-2">
-            <Label>لینک</Label>
-            <Input {...form.register("link")} dir="ltr" placeholder="https://" />
-          </div>
-
-          <div className="space-y-2">
-            <Label>توضیح</Label>
-            <Textarea {...form.register("description")} rows={3} />
-          </div>
-
-          <MediaUpload
-            label="کاور"
-            kind="image"
-            value={form.watch("coverImageUrl") || ""}
-            onChange={(url) => {
-              form.setValue("coverImageUrl", url);
-              if (!form.getValues("mediaUrl")) form.setValue("mediaUrl", url);
-            }}
-          />
-
-          <MediaUpload
-            label="رسانه"
-            kind="image"
-            value={form.watch("mediaUrl") || ""}
-            onChange={(url) => form.setValue("mediaUrl", url)}
-          />
-
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="space-y-2">
-              <Label>بازدید</Label>
-              <Input type="number" min={0} {...form.register("views")} />
-            </div>
-            <div className="space-y-2">
-              <Label>لایک</Label>
-              <Input type="number" min={0} {...form.register("likes")} />
-            </div>
-            <div className="space-y-2">
-              <Label>کامنت</Label>
-              <Input type="number" min={0} {...form.register("comments")} />
-            </div>
-            <div className="space-y-2">
-              <Label>اشتراک</Label>
-              <Input type="number" min={0} {...form.register("shares")} />
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-2 sm:flex-row">
-            {onSkip ? (
+    <AdminEditorDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title="پست جدید"
+      description={
+        queueLabel
+          ? `${queueLabel} — داده‌های Excel پر شده‌اند؛ بقیه را اصلاح یا تکمیل کنید.`
+          : "داده‌های Excel پر شده‌اند؛ بقیه را اصلاح یا تکمیل کنید."
+      }
+      descriptionVisible
+      formProps={{ onSubmit }}
+      footer={
+        <AdminEditorDialogActions
+          submit
+          isPending={isPending}
+          saveLabel="ثبت پست"
+          pendingLabel="در حال ذخیره..."
+          extra={
+            onSkip ? (
               <Button type="button" variant="outline" disabled={isPending} onClick={onSkip}>
                 <SkipForward className="h-4 w-4" />
                 رد کردن
               </Button>
-            ) : null}
-            <Button type="submit" className="w-full" disabled={isPending}>
-              {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-              ثبت پست
-            </Button>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
+            ) : null
+          }
+        />
+      }
+    >
+      {bulkTypeSwitcher}
+
+      <ProductionSourcePicker
+        campaignId={campaignId}
+        valueType={sourceProductionType}
+        valueId={sourceProductionId}
+        required
+        label="کدام تولید را نشر می‌کنید؟"
+        onChange={(item) => {
+          setSourceProductionType(item?.type ?? null);
+          setSourceProductionId(item?.id ?? null);
+        }}
+      />
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label>کانال</Label>
+          <Select
+            value={form.watch("platform")}
+            onValueChange={(value) =>
+              form.setValue("platform", value as FormValues["platform"])
+            }
+          >
+            <SelectTrigger>
+              <SelectValue>
+                <span className="flex items-center gap-2">
+                  {form.watch("platform") !== "site" ? (
+                    <SocialPlatformIcon
+                      platform={form.watch("platform") as SocialPlatform}
+                      size="sm"
+                      className="h-5 w-5 rounded-md"
+                    />
+                  ) : null}
+                  {platformLabel(form.watch("platform"))}
+                </span>
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {platformOptions.map((platform) => (
+                <SelectItem key={platform} value={platform}>
+                  <span className="flex items-center gap-2">
+                    {platform !== "site" ? (
+                      <SocialPlatformIcon
+                        platform={platform as SocialPlatform}
+                        size="sm"
+                        className="h-5 w-5 rounded-md"
+                      />
+                    ) : null}
+                    {platformLabel(platform)}
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label>نوع محتوا</Label>
+          <Select
+            value={form.watch("contentType")}
+            onValueChange={(value) =>
+              form.setValue("contentType", value as SocialContentType)
+            }
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {contentTypeOptions.map((type) => (
+                <SelectItem key={type} value={type}>
+                  {getStatusLabel(type)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label>عنوان / نام کاور</Label>
+        <Input {...form.register("title")} maxLength={CONTENT_TITLE_MAX_LENGTH} />
+      </div>
+
+      <PlanLabelSelect
+        topics={contentTopics}
+        plans={contentPlans}
+        values={planLabels}
+        onChangeMultiple={setPlanLabels}
+      />
+
+      <PersianDateField control={form.control} name="publishedDate" label="تاریخ انتشار" />
+
+      <div className="space-y-2">
+        <Label>لینک</Label>
+        <Input {...form.register("link")} dir="ltr" placeholder="https://" />
+      </div>
+
+      <div className="space-y-2">
+        <Label>توضیح</Label>
+        <Textarea {...form.register("description")} rows={3} />
+      </div>
+
+      <MediaUpload
+        label="کاور"
+        kind="image"
+        value={form.watch("coverImageUrl") || ""}
+        onChange={(url) => {
+          form.setValue("coverImageUrl", url);
+          if (!form.getValues("mediaUrl")) form.setValue("mediaUrl", url);
+        }}
+      />
+
+      <MediaUpload
+        label="رسانه"
+        kind="image"
+        value={form.watch("mediaUrl") || ""}
+        onChange={(url) => form.setValue("mediaUrl", url)}
+      />
+
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="space-y-2">
+          <Label>بازدید</Label>
+          <Input type="number" min={0} {...form.register("views")} />
+        </div>
+        <div className="space-y-2">
+          <Label>لایک</Label>
+          <Input type="number" min={0} {...form.register("likes")} />
+        </div>
+        <div className="space-y-2">
+          <Label>کامنت</Label>
+          <Input type="number" min={0} {...form.register("comments")} />
+        </div>
+        <div className="space-y-2">
+          <Label>اشتراک</Label>
+          <Input type="number" min={0} {...form.register("shares")} />
+        </div>
+      </div>
+    </AdminEditorDialog>
   );
 }

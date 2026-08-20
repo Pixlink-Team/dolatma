@@ -1,6 +1,18 @@
 {
   "entries": [
     {
+      "hash": "1b4e94defcd2ec488fe77b3b886d5ccb4127f5c4",
+      "committedAt": "2026-08-20T17:50:28+03:30",
+      "title": "نمایش پیام‌ها به‌صورت کارت محتوا با گفتگوی ارسالی و دریافتی",
+      "subject": "Show content messages as expandable card chats"
+    },
+    {
+      "hash": "4543a32687593ee343a403decbcba0c1025637f3",
+      "committedAt": "2026-08-20T17:50:00+03:30",
+      "title": "بسته‌بودن پیش‌فرض گروه‌های تولید، نشر و دارایی در منو",
+      "subject": "Collapse production, publishing, and assets nav by default"
+    },
+    {
       "hash": "002faaac52a9f3746f9b46a78dae856dd0cd4874",
       "committedAt": "2026-08-20T17:45:26+03:30",
       "title": "حذف دکمه خواندن اطلاعات از اولین لینک در انتشار سایت",

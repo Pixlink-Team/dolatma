@@ -22,6 +22,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { MediaUpload } from "@/components/ui/media-upload";
 import { VideoThumbnail } from "@/components/media/video-thumbnail";
 import { PlanLabelSelect } from "@/components/admin/plan-label-select";
+import {
+  ADMIN_EDITOR_FOOTER_CLASS,
+  ADMIN_EDITOR_SCROLL_CLASS,
+  ADMIN_EDITOR_SCROLL_INNER_CLASS,
+} from "@/components/admin/admin-editor-dialog";
 import { ContentScoreControl } from "@/components/admin/content-score-control";
 import {
   deleteVideoAction,
@@ -247,8 +252,8 @@ export function AdminVideoEditor({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div ref={scrollAreaRef} className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain">
-        <div className="space-y-4 px-6">
+      <div ref={scrollAreaRef} className={ADMIN_EDITOR_SCROLL_CLASS}>
+        <div className={ADMIN_EDITOR_SCROLL_INNER_CLASS}>
           <MediaUpload
             label="ویدیو"
             kind="video"
@@ -319,6 +324,12 @@ export function AdminVideoEditor({
                 <p className="mt-1 text-xs text-destructive">عنوان پیش‌فرض است؛ یک عنوان اختصاصی وارد کنید.</p>
               )}
             </div>
+            <PlanLabelSelect
+              topics={contentTopics}
+              plans={contentPlans}
+              values={editPlanLabels}
+              onChangeMultiple={setEditPlanLabels}
+            />
             <div>
               <Label className={cn(highlightDescription && "text-amber-700 dark:text-amber-300")}>توضیحات</Label>
               <Textarea
@@ -353,12 +364,6 @@ export function AdminVideoEditor({
                 </SelectContent>
               </Select>
             </div>
-            <PlanLabelSelect
-              topics={contentTopics}
-              plans={contentPlans}
-              values={editPlanLabels}
-              onChangeMultiple={setEditPlanLabels}
-            />
             {!isNew && (
               <ContentScoreControl
                 campaignId={video.campaignId}
@@ -387,7 +392,7 @@ export function AdminVideoEditor({
         </div>
       </div>
 
-      <div className="flex shrink-0 items-center gap-2 border-t bg-card px-6 pt-3">
+      <div className={ADMIN_EDITOR_FOOTER_CLASS}>
         <Button onClick={handleSaveAll} disabled={isPending} className="flex-1">
           {isPending ? "در حال ذخیره..." : "ذخیره"}
         </Button>

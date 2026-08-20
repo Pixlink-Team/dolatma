@@ -628,6 +628,12 @@ export function ActivitiesAdmin({
                 <p className="text-xs text-destructive">عنوان پیش‌فرض یا خالی است؛ یک عنوان اختصاصی وارد کنید.</p>
               )}
             </div>
+            <PlanLabelSelect
+              topics={contentTopics}
+              plans={contentPlans}
+              values={planLabels}
+              onChangeMultiple={setPlanLabels}
+            />
             <div className="space-y-2">
               <Label>نوع اقدام</Label>
               <Select
@@ -679,12 +685,6 @@ export function ActivitiesAdmin({
                 <p className="text-xs text-destructive">مکان خالی است؛ بهتر است تکمیل شود.</p>
               )}
             </div>
-            <PlanLabelSelect
-              topics={contentTopics}
-              plans={contentPlans}
-              values={planLabels}
-              onChangeMultiple={setPlanLabels}
-            />
             {editingId && (
               <ContentScoreControl
                 campaignId={campaignId}

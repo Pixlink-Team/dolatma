@@ -624,6 +624,12 @@ export function PressPublicationsAdmin({
                 <p className="text-xs text-destructive">عنوان پیش‌فرض یا خالی است؛ یک عنوان اختصاصی وارد کنید.</p>
               )}
             </div>
+            <PlanLabelSelect
+              topics={contentTopics}
+              plans={contentPlans}
+              values={planLabels}
+              onChangeMultiple={setPlanLabels}
+            />
             <div className="space-y-2">
               <Label>نوع</Label>
               <Select
@@ -658,7 +664,7 @@ export function PressPublicationsAdmin({
                 </SelectContent>
               </Select>
             </div>
-            <div className={cn(highlightDate && "rounded-lg border border-destructive bg-destructive/5 p-3")}>
+            <div className={cn("space-y-2", highlightDate && "rounded-lg border border-destructive bg-destructive/5 p-3")}>
               <PersianDateField control={form.control} name="activityDate" label="تاریخ" />
               {highlightDate && (
                 <p className="mt-1 text-xs text-destructive">تاریخ انتشار خالی است؛ لطفاً انتخاب کنید.</p>
@@ -787,12 +793,6 @@ export function PressPublicationsAdmin({
                 </p>
               )}
             </div>
-            <PlanLabelSelect
-              topics={contentTopics}
-              plans={contentPlans}
-              values={planLabels}
-              onChangeMultiple={setPlanLabels}
-            />
       </AdminEditorDialog>
     </div>
   );

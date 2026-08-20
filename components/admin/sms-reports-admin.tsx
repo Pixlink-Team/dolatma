@@ -409,7 +409,6 @@ export function SmsReportsAdmin({ campaignId, initialReports }: SmsReportsAdminP
         onOpenChange={(nextOpen) => (nextOpen ? setOpen(true) : closeDialog())}
         title={editingId ? "ویرایش گزارش ارسال" : "ثبت ارسال پیام"}
         description="ثبت گزارش ارسال پیام انبوه با عنوان، رسانه ارسال، تعداد گیرندگان و مستند اختیاری"
-        size="xl"
         formProps={{ onSubmit }}
         footer={
           <AdminEditorDialogActions submit isPending={isPending} />

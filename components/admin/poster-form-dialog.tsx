@@ -10,11 +10,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  ADMIN_EDITOR_DIALOG_CLASS,
+  ADMIN_EDITOR_HEADER_CLASS,
+} from "@/components/admin/admin-editor-dialog";
 import { AdminPosterEditor } from "@/components/admin/admin-poster-editor";
 import type { ContentTopic } from "@/lib/content-topics";
 import { todayISO } from "@/lib/jalali";
 import { stripFileAccessToken } from "@/lib/uploads";
 import type { MediaCategory, Poster, PosterVersion } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 export interface PosterFormInitialValues {
   title?: string;
@@ -40,8 +45,7 @@ interface PosterFormDialogProps {
   bulkTypeSwitcher?: ReactNode;
 }
 
-const editorDialogClass =
-  "!flex min-h-0 max-h-[92vh] max-w-2xl flex-col gap-0 overflow-hidden rounded-xl p-0";
+const editorDialogClass = cn(ADMIN_EDITOR_DIALOG_CLASS, "max-w-2xl");
 
 export function PosterFormDialog({
   open,
@@ -108,7 +112,7 @@ export function PosterFormDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className={editorDialogClass}>
-        <DialogHeader className="shrink-0 border-b px-6 py-4 pr-12">
+        <DialogHeader className={ADMIN_EDITOR_HEADER_CLASS}>
           <DialogTitle>پوستر جدید</DialogTitle>
           <DialogDescription>
             {queueLabel ? `${queueLabel} — ` : ""}

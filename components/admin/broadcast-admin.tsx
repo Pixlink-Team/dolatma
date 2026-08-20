@@ -408,7 +408,6 @@ export function BroadcastAdmin({ campaignId, initialReports }: BroadcastAdminPro
         onOpenChange={(nextOpen) => (nextOpen ? setOpen(true) : closeDialog())}
         title={editingId ? "ویرایش گزارش" : "گزارش جدید"}
         description="آپلود و انتشار گزارش PDF یا مدیا برای صدا و سیما"
-        size="xl"
         pinTop
         formProps={{ onSubmit }}
         footer={<AdminEditorDialogActions submit isPending={isPending} />}

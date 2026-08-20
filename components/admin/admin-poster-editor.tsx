@@ -20,6 +20,11 @@ import {
   type PosterSectionFormValues,
 } from "@/components/admin/content-section-form-renderer";
 import {
+  ADMIN_EDITOR_FOOTER_CLASS,
+  ADMIN_EDITOR_SCROLL_CLASS,
+  ADMIN_EDITOR_SCROLL_INNER_CLASS,
+} from "@/components/admin/admin-editor-dialog";
+import {
   deletePosterAction,
   deletePosterVersionAction,
   savePosterAction,
@@ -226,8 +231,8 @@ export function AdminPosterEditor({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div ref={scrollAreaRef} className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain">
-        <div className="space-y-4 px-6">
+      <div ref={scrollAreaRef} className={ADMIN_EDITOR_SCROLL_CLASS}>
+        <div className={ADMIN_EDITOR_SCROLL_INNER_CLASS}>
           {!fieldsLoaded ? (
             <p className="text-sm text-muted-foreground">در حال بارگذاری فرم...</p>
           ) : (
@@ -267,7 +272,7 @@ export function AdminPosterEditor({
         </div>
       </div>
 
-      <div className="flex shrink-0 items-center gap-2 border-t bg-card px-6 pt-3">
+      <div className={ADMIN_EDITOR_FOOTER_CLASS}>
         <Button onClick={handleSaveAll} disabled={isPending || !fieldsLoaded} className="flex-1">
           {isPending ? "در حال ذخیره..." : "ذخیره"}
         </Button>

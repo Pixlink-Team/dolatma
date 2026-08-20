@@ -123,14 +123,15 @@ export const contentSystemWidgetLabels: Record<ContentSystemWidget, string> = {
 const POSTER_SYSTEM_WIDGETS: ContentSystemWidget[] = [
   "image",
   "title",
-  "description",
   "planLabels",
+  "description",
   "notes",
   "score",
 ];
 
 const BILLBOARD_SYSTEM_WIDGETS: ContentSystemWidget[] = [
   "category",
+  "planLabels",
   "provinceCity",
   "map",
   "axis",
@@ -138,7 +139,6 @@ const BILLBOARD_SYSTEM_WIDGETS: ContentSystemWidget[] = [
   "locationType",
   "areaSqm",
   "notes",
-  "planLabels",
   "score",
   "periods",
 ];
@@ -146,9 +146,9 @@ const BILLBOARD_SYSTEM_WIDGETS: ContentSystemWidget[] = [
 const VIDEO_SYSTEM_WIDGETS: ContentSystemWidget[] = [
   "video",
   "title",
+  "planLabels",
   "description",
   "videoType",
-  "planLabels",
   "score",
   "cover",
   "notes",
@@ -156,24 +156,24 @@ const VIDEO_SYSTEM_WIDGETS: ContentSystemWidget[] = [
 
 const FILE_SYSTEM_WIDGETS: ContentSystemWidget[] = [
   "title",
-  "description",
   "planLabels",
+  "description",
   "document",
 ];
 
 const RAW_MEDIA_SYSTEM_WIDGETS: ContentSystemWidget[] = [
   "title",
+  "planLabels",
   "description",
   "mediaKind",
-  "planLabels",
   "rawFile",
 ];
 
 const SITE_PUBLICATION_SYSTEM_WIDGETS: ContentSystemWidget[] = [
   "title",
+  "planLabels",
   "link",
   "publishedDate",
-  "planLabels",
   "score",
   "cover",
   "description",
@@ -195,22 +195,22 @@ const SOCIAL_POST_SYSTEM_WIDGETS: ContentSystemWidget[] = [
 
 const PRESS_SYSTEM_WIDGETS: ContentSystemWidget[] = [
   "title",
+  "planLabels",
   "activityType",
   "activityDate",
   "link",
   "location",
   "mediaItems",
   "description",
-  "planLabels",
 ];
 
 const ACTIVITY_SYSTEM_WIDGETS: ContentSystemWidget[] = [
   "title",
+  "planLabels",
   "activityType",
   "isCreative",
   "activityDate",
   "location",
-  "planLabels",
   "score",
   "mediaItems",
   "description",
@@ -293,13 +293,14 @@ const DEFAULT_FIELDS: Record<ContentFormSectionKey, () => ContentFormField[]> = 
   posters: () => [
     systemField("image", "تصویر پوستر", true),
     systemField("title", "عنوان", false),
-    systemField("description", "توضیحات", false),
     systemField("planLabels", "موضوع", false),
+    systemField("description", "توضیحات", false),
     systemField("notes", "یادداشت", false),
     systemField("score", "امتیاز", false),
   ],
   billboards: () => [
     systemField("category", "دسته‌بندی", true),
+    systemField("planLabels", "موضوع", false),
     systemField("provinceCity", "استان و شهر", false),
     systemField("map", "موقعیت روی نقشه", true),
     systemField("axis", "محور / خیابان / بزرگراه", true),
@@ -307,38 +308,37 @@ const DEFAULT_FIELDS: Record<ContentFormSectionKey, () => ContentFormField[]> = 
     systemField("locationType", "محل", true),
     systemField("areaSqm", "متراژ (متر مربع)", false),
     systemField("notes", "یادداشت داخلی", false),
-    systemField("planLabels", "موضوع", false),
     systemField("score", "امتیاز", false),
     systemField("periods", "دوره‌های نمایش", true),
   ],
   videos: () => [
     systemField("video", "ویدیو", true),
     systemField("title", "عنوان", true),
+    systemField("planLabels", "موضوع", false),
     systemField("description", "توضیحات", false),
     systemField("videoType", "نوع ویدیو", false),
-    systemField("planLabels", "موضوع", false),
     systemField("score", "امتیاز", false),
     systemField("cover", "کاور سفارشی", false),
     systemField("notes", "یادداشت", false),
   ],
   files: () => [
     systemField("title", "عنوان", true),
-    systemField("description", "توضیحات", false),
     systemField("planLabels", "موضوع", false),
+    systemField("description", "توضیحات", false),
     systemField("document", "فایل", true),
   ],
   rawMedia: () => [
     systemField("title", "عنوان", true),
+    systemField("planLabels", "موضوع", false),
     systemField("description", "توضیحات", false),
     systemField("mediaKind", "نوع فایل", true),
-    systemField("planLabels", "موضوع", false),
     systemField("rawFile", "فایل خام", true),
   ],
   sitePublications: () => [
     systemField("title", "عنوان", true),
+    systemField("planLabels", "موضوع", false),
     systemField("link", "لینک مطلب", true),
     systemField("publishedDate", "تاریخ انتشار", false),
-    systemField("planLabels", "موضوع", false),
     systemField("score", "امتیاز", false),
     systemField("cover", "تصویر شاخص", false),
     systemField("description", "توضیح", false),
@@ -358,21 +358,21 @@ const DEFAULT_FIELDS: Record<ContentFormSectionKey, () => ContentFormField[]> = 
   ],
   pressPublications: () => [
     systemField("title", "عنوان", true),
+    systemField("planLabels", "موضوع", false),
     systemField("activityType", "نوع (مجله / روزنامه)", true),
     systemField("activityDate", "تاریخ", true),
     systemField("link", "لینک مطلب", false),
     systemField("location", "مکان", false),
     systemField("mediaItems", "رسانه‌ها", false),
     systemField("description", "توضیحات", false),
-    systemField("planLabels", "موضوع", false),
   ],
   activities: () => [
     systemField("title", "عنوان", true),
+    systemField("planLabels", "موضوع", false),
     systemField("activityType", "نوع اقدام", true),
     systemField("isCreative", "اقدام خلاقانه", false),
     systemField("activityDate", "تاریخ", true),
     systemField("location", "مکان", false),
-    systemField("planLabels", "موضوع", false),
     systemField("score", "امتیاز", false),
     systemField("mediaItems", "رسانه‌ها", false),
     systemField("description", "توضیحات", false),
@@ -516,11 +516,40 @@ export function normalizeContentFormFields(
 
   if (fields.length === 0) return defaultContentFormFields(sectionKey);
 
-  if (sectionKey === "billboards") {
-    return applyBillboardFieldOrder(fields);
+  const ordered =
+    sectionKey === "billboards" ? applyBillboardFieldOrder(fields) : fields;
+  return pinPlanLabelsAfterTitle(ordered);
+}
+
+/**
+ * Always place موضوع (planLabels) immediately after عنوان (title) when both exist.
+ * Billboard forms have no title widget; planLabels stays near the top after category.
+ */
+export function pinPlanLabelsAfterTitle(fields: ContentFormField[]): ContentFormField[] {
+  const planIndex = fields.findIndex(
+    (field) => field.kind === "system" && field.widget === "planLabels"
+  );
+  if (planIndex < 0) return fields;
+
+  const titleIndex = fields.findIndex(
+    (field) => field.kind === "system" && field.widget === "title"
+  );
+  const planField = fields[planIndex];
+  const withoutPlan = fields.filter((_, index) => index !== planIndex);
+
+  if (titleIndex >= 0) {
+    const adjustedTitleIndex = titleIndex > planIndex ? titleIndex - 1 : titleIndex;
+    const next = [...withoutPlan];
+    next.splice(adjustedTitleIndex + 1, 0, planField);
+    return next;
   }
 
-  return fields;
+  // No title: keep planLabels early (after first system field when present).
+  const firstSystemIndex = withoutPlan.findIndex((field) => field.kind === "system");
+  const insertAt = firstSystemIndex >= 0 ? firstSystemIndex + 1 : 0;
+  const next = [...withoutPlan];
+  next.splice(insertAt, 0, planField);
+  return next;
 }
 
 /** Keep billboard system widgets in the product order; inject محل if missing. */

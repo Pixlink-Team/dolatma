@@ -4,15 +4,18 @@ import { useEffect, useState, useTransition, type ReactNode } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2, SkipForward } from "lucide-react";
+import { SkipForward } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { MediaUpload } from "@/components/ui/media-upload";
 import { PersianDateField } from "@/components/ui/persian-date-input";
+import {
+  AdminEditorDialog,
+  AdminEditorDialogActions,
+} from "@/components/admin/admin-editor-dialog";
 import { PlanLabelSelect } from "@/components/admin/plan-label-select";
 import { ProductionSourcePicker } from "@/components/admin/production-source-picker";
 import { saveSocialPostAction } from "@/lib/actions/extended-actions";
@@ -150,69 +153,72 @@ export function SitePublicationFormDialog({
   });
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>انتشار جدید در سایت</DialogTitle>
-          <p className="text-sm text-muted-foreground">
-            {queueLabel ? `${queueLabel} — ` : ""}
-            داده‌های Excel پر شده‌اند؛ لینک مطلب را تکمیل کنید.
-          </p>
-        </DialogHeader>
-
-        {bulkTypeSwitcher}
-
-        <form onSubmit={onSubmit} className="space-y-4">
-          <ProductionSourcePicker
-            campaignId={campaignId}
-            valueType={sourceProductionType}
-            valueId={sourceProductionId}
-            required
-            label="کدام تولید را نشر می‌کنید؟"
-            onChange={(item) => {
-              setSourceProductionType(item?.type ?? null);
-              setSourceProductionId(item?.id ?? null);
-            }}
-          />
-          <div className="space-y-2">
-            <Label>عنوان</Label>
-            <Input {...form.register("title")} maxLength={CONTENT_TITLE_MAX_LENGTH} />
-          </div>
-          <div className="space-y-2">
-            <Label>لینک مطلب</Label>
-            <Input {...form.register("link")} dir="ltr" placeholder="https://" />
-          </div>
-          <PersianDateField control={form.control} name="publishedDate" label="تاریخ انتشار" />
-          <PlanLabelSelect
-            topics={contentTopics}
-            plans={contentPlans}
-            values={planLabels}
-            onChangeMultiple={setPlanLabels}
-          />
-          <div className="space-y-2">
-            <Label>توضیح</Label>
-            <Textarea {...form.register("description")} rows={3} />
-          </div>
-          <MediaUpload
-            label="تصویر شاخص"
-            kind="image"
-            value={form.watch("coverImageUrl") || ""}
-            onChange={(url) => form.setValue("coverImageUrl", url)}
-          />
-          <div className="flex flex-col gap-2 sm:flex-row">
-            {onSkip ? (
+    <AdminEditorDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title="انتشار جدید در سایت"
+      description={
+        queueLabel
+          ? `${queueLabel} — داده‌های Excel پر شده‌اند؛ لینک مطلب را تکمیل کنید.`
+          : "داده‌های Excel پر شده‌اند؛ لینک مطلب را تکمیل کنید."
+      }
+      descriptionVisible
+      formProps={{ onSubmit }}
+      footer={
+        <AdminEditorDialogActions
+          submit
+          isPending={isPending}
+          saveLabel="ثبت انتشار"
+          pendingLabel="در حال ذخیره..."
+          extra={
+            onSkip ? (
               <Button type="button" variant="outline" disabled={isPending} onClick={onSkip}>
                 <SkipForward className="h-4 w-4" />
                 رد کردن
               </Button>
-            ) : null}
-            <Button type="submit" className="w-full" disabled={isPending}>
-              {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-              ثبت انتشار
-            </Button>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
+            ) : null
+          }
+        />
+      }
+    >
+      {bulkTypeSwitcher}
+
+      <ProductionSourcePicker
+        campaignId={campaignId}
+        valueType={sourceProductionType}
+        valueId={sourceProductionId}
+        required
+        label="کدام تولید را نشر می‌کنید؟"
+        onChange={(item) => {
+          setSourceProductionType(item?.type ?? null);
+          setSourceProductionId(item?.id ?? null);
+        }}
+      />
+      <div className="space-y-2">
+        <Label>عنوان</Label>
+        <Input {...form.register("title")} maxLength={CONTENT_TITLE_MAX_LENGTH} />
+      </div>
+      <PlanLabelSelect
+        topics={contentTopics}
+        plans={contentPlans}
+        values={planLabels}
+        onChangeMultiple={setPlanLabels}
+      />
+      <div className="space-y-2">
+        <Label>لینک مطلب</Label>
+        <Input {...form.register("link")} dir="ltr" placeholder="https://" />
+      </div>
+      <PersianDateField control={form.control} name="publishedDate" label="تاریخ انتشار" />
+      <div className="space-y-2">
+        <Label>توضیح</Label>
+        <Textarea {...form.register("description")} rows={3} />
+      </div>
+      <MediaUpload
+        label="تصویر شاخص"
+        kind="image"
+        value={form.watch("coverImageUrl") || ""}
+        onChange={(url) => form.setValue("coverImageUrl", url)}
+      />
+    </AdminEditorDialog>
   );
 }

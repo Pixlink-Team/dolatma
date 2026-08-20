@@ -10,12 +10,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  ADMIN_EDITOR_DIALOG_CLASS,
+  ADMIN_EDITOR_HEADER_CLASS,
+} from "@/components/admin/admin-editor-dialog";
 import { AdminVideoEditor } from "@/components/admin/admin-video-editor";
 import type { ContentTopic } from "@/lib/content-topics";
 import { todayISO } from "@/lib/jalali";
 import { pickDefaultVideoCategoryId } from "@/lib/video-types";
 import { stripFileAccessToken } from "@/lib/uploads";
 import type { MediaCategory, Video, VideoVersion } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 export interface VideoFormInitialValues {
   title?: string;
@@ -42,8 +47,11 @@ interface VideoFormDialogProps {
   bulkTypeSwitcher?: ReactNode;
 }
 
-const editorDialogClass =
-  "!flex min-h-0 max-h-[92vh] max-w-2xl flex-col gap-0 overflow-hidden rounded-xl p-0 !top-4 !translate-x-[-50%] !translate-y-0 sm:!top-6";
+const editorDialogClass = cn(
+  ADMIN_EDITOR_DIALOG_CLASS,
+  "max-w-2xl",
+  "!top-4 !translate-x-[-50%] !translate-y-0 sm:!top-6"
+);
 
 export function VideoFormDialog({
   open,
@@ -111,7 +119,7 @@ export function VideoFormDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className={editorDialogClass}>
-        <DialogHeader className="shrink-0 border-b px-6 py-4 pr-12">
+        <DialogHeader className={ADMIN_EDITOR_HEADER_CLASS}>
           <DialogTitle>ویدیو جدید</DialogTitle>
           <DialogDescription>
             {queueLabel ? `${queueLabel} — ` : ""}

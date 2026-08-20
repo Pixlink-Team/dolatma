@@ -741,6 +741,13 @@ export function SitePublicationsAdmin({
               )}
             </div>
 
+            <PlanLabelSelect
+              topics={contentTopics}
+              plans={contentPlans}
+              values={planLabels}
+              onChangeMultiple={setPlanLabels}
+            />
+
             <div className="flex items-center justify-between gap-3 rounded-lg border p-3">
               <div className="space-y-1 text-right">
                 <Label htmlFor="site-group-distribution">پخش گروهی</Label>
@@ -844,12 +851,6 @@ export function SitePublicationsAdmin({
             )}
 
             <PersianDateField control={form.control} name="publishedDate" label="تاریخ انتشار" />
-            <PlanLabelSelect
-              topics={contentTopics}
-              plans={contentPlans}
-              values={planLabels}
-              onChangeMultiple={setPlanLabels}
-            />
             {editingId && (
               <ContentScoreControl
                 campaignId={campaignId}

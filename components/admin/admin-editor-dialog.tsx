@@ -104,7 +104,13 @@ export function AdminEditorDialog({
             </DialogDescription>
           ) : null}
         </DialogHeader>
-        {formProps ? <form {...formProps}>{body}</form> : body}
+        {formProps ? (
+          <form {...formProps} className={cn("flex min-h-0 flex-1 flex-col", formProps.className)}>
+            {body}
+          </form>
+        ) : (
+          body
+        )}
       </DialogContent>
     </Dialog>
   );

@@ -431,7 +431,6 @@ export function FilesAdmin({
         onOpenChange={(open) => (open ? setDialogOpen(true) : closeDialog())}
         title={editingId ? "ویرایش فایل" : "افزودن فایل"}
         description="آپلود فایل PDF، Word، Excel یا متنی برای راستا"
-        size="lg"
         footer={
           <AdminEditorDialogActions
             saveLabel="ذخیره فایل"
@@ -464,6 +463,12 @@ export function FilesAdmin({
             </p>
           )}
         </div>
+        <PlanLabelSelect
+          topics={contentTopics}
+          plans={contentPlans}
+          values={planLabels}
+          onChangeMultiple={setPlanLabels}
+        />
         <div className="space-y-2">
           <Label className={cn(highlightDescription && "text-amber-700 dark:text-amber-300")}>
             توضیحات (اختیاری)
@@ -482,12 +487,6 @@ export function FilesAdmin({
             </p>
           )}
         </div>
-        <PlanLabelSelect
-          topics={contentTopics}
-          plans={contentPlans}
-          values={planLabels}
-          onChangeMultiple={setPlanLabels}
-        />
         <div
           className={cn(
             highlightFile && "rounded-lg border border-destructive bg-destructive/5 p-3"

@@ -16,10 +16,7 @@ import {
   matchesAdminContentFilter,
   type AdminContentFilterState,
 } from "@/components/admin/admin-content-filter-bar";
-import {
-  AdminEditorDialog,
-  AdminEditorDialogActions,
-} from "@/components/admin/admin-editor-dialog";
+import { AdminEditorDialog } from "@/components/admin/admin-editor-dialog";
 import {
   BulkItemShell,
   SectionBulkEditBar,

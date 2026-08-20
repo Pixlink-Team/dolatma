@@ -563,7 +563,6 @@ export function RawMediaAdmin({
         title={editingId ? "ویرایش راش تصاویر" : "آپلود راش تصاویر"}
         description={`همه فرمت‌های تصویر و ویدیو با حجم بالا — حداکثر هر فایل ${formatStorageBytes(RAW_MEDIA_MAX_FILE_BYTES)}`}
         descriptionVisible
-        size="lg"
         footer={
           <AdminEditorDialogActions
             isPending={isPending}
@@ -593,6 +592,7 @@ export function RawMediaAdmin({
             <p className="text-xs text-destructive">عنوان خالی است؛ لطفاً تکمیل کنید.</p>
           )}
         </div>
+        <PlanLabelSelect topics={contentTopics} plans={contentPlans} values={planLabels} onChangeMultiple={setPlanLabels} />
         <div className="space-y-2">
           <Label className={cn(highlightDescription && "text-amber-700 dark:text-amber-300")}>توضیحات</Label>
           <Textarea
@@ -628,7 +628,6 @@ export function RawMediaAdmin({
             </SelectContent>
           </Select>
         </div>
-        <PlanLabelSelect topics={contentTopics} plans={contentPlans} values={planLabels} onChangeMultiple={setPlanLabels} />
         <div
           className={cn(
             highlightFile && "rounded-lg border border-destructive bg-destructive/5 p-3"
