@@ -1,6 +1,18 @@
 {
   "entries": [
     {
+      "hash": "ef97c64d2f3aad6db59c0b35376471a51b991494",
+      "committedAt": "2026-08-20T14:55:01+03:30",
+      "title": "یکدست‌سازی نام پوستر و عکس و راش تصاویر",
+      "subject": "Rename poster and raw-media labels for consistency"
+    },
+    {
+      "hash": "6f4cfdcac74aaeae093a0ef3120a3407304043af",
+      "committedAt": "2026-08-20T14:51:58+03:30",
+      "title": "جداسازی سایت و خبرگزاری و اولویت‌بندی تبلیغات محیطی و پست شبکه اجتماعی در نشر",
+      "subject": "Split site and news agency publishing channels"
+    },
+    {
       "hash": "e96284cf4d68d3fe9b4d5d39f667819d4bf8a76e",
       "committedAt": "2026-08-20T14:49:44+03:30",
       "title": "انتقال بهترین اقدامات به زیر داشبورد در منوی پنل",
