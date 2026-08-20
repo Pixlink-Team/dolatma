@@ -477,56 +477,6 @@ export function AdminSidebar({ showReisReturn = false }: AdminSidebarProps) {
           })}
         </div>
 
-        {assetsNavItems.length > 0 && (
-          <div className="mt-3 space-y-1 border-t pt-3">
-            <button
-              type="button"
-              onClick={() => setAssetsOpen((open) => !open)}
-              className={cn(
-                "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium",
-                assetsNavItems.some((item) => pathname === item.href)
-                  ? "bg-primary/10 text-primary"
-                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-              )}
-            >
-              <Building2 className="h-4 w-4 shrink-0" />
-              <span className="flex-1 truncate text-right">دارایی‌ها</span>
-              <ChevronDown
-                className={cn(
-                  "h-4 w-4 shrink-0 transition-transform",
-                  assetsOpen && "rotate-180"
-                )}
-              />
-            </button>
-            {assetsOpen && (
-              <div className="space-y-0.5 pr-2">
-                {assetsNavItems.map((item) => {
-                  const href = adminHref(item.href, campaignId);
-                  const Icon = item.icon;
-                  const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
-                  return (
-                    <Link
-                      key={item.href}
-                      href={href}
-                      prefetch={false}
-                      onClick={() => setMobileOpen(false)}
-                      className={cn(
-                        "flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs",
-                        isActive
-                          ? "bg-primary text-primary-foreground"
-                          : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-                      )}
-                    >
-                      <Icon className="h-3.5 w-3.5 shrink-0" />
-                      <span className="truncate">{item.label}</span>
-                    </Link>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
-
         {productionNavItems.length > 0 && (
           <div className="mt-3 space-y-1 border-t pt-3">
             <button
@@ -601,6 +551,56 @@ export function AdminSidebar({ showReisReturn = false }: AdminSidebarProps) {
             {publishingOpen && (
               <div className="space-y-0.5 pr-2">
                 {publishingNavItems.map((item) => {
+                  const href = adminHref(item.href, campaignId);
+                  const Icon = item.icon;
+                  const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+                  return (
+                    <Link
+                      key={item.href}
+                      href={href}
+                      prefetch={false}
+                      onClick={() => setMobileOpen(false)}
+                      className={cn(
+                        "flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs",
+                        isActive
+                          ? "bg-primary text-primary-foreground"
+                          : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                      )}
+                    >
+                      <Icon className="h-3.5 w-3.5 shrink-0" />
+                      <span className="truncate">{item.label}</span>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {assetsNavItems.length > 0 && (
+          <div className="mt-3 space-y-1 border-t pt-3">
+            <button
+              type="button"
+              onClick={() => setAssetsOpen((open) => !open)}
+              className={cn(
+                "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium",
+                assetsNavItems.some((item) => pathname === item.href)
+                  ? "bg-primary/10 text-primary"
+                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+              )}
+            >
+              <Building2 className="h-4 w-4 shrink-0" />
+              <span className="flex-1 truncate text-right">دارایی‌ها</span>
+              <ChevronDown
+                className={cn(
+                  "h-4 w-4 shrink-0 transition-transform",
+                  assetsOpen && "rotate-180"
+                )}
+              />
+            </button>
+            {assetsOpen && (
+              <div className="space-y-0.5 pr-2">
+                {assetsNavItems.map((item) => {
                   const href = adminHref(item.href, campaignId);
                   const Icon = item.icon;
                   const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
