@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { DashboardCompletenessCards } from "@/components/admin/dashboard-completeness-cards";
 import { DashboardDirectivesPanel } from "@/components/admin/dashboard-directives-panel";
+import { DashboardUserCard } from "@/components/admin/dashboard-user-card";
 import { EditSuggestionsPanel } from "@/components/admin/edit-suggestions-panel";
 import { getAdminData } from "@/lib/data-access/admin";
 import { resolveAdminCampaignId } from "@/lib/admin-campaign";
@@ -32,8 +33,8 @@ import {
 import { evaluateDeviceOnboarding } from "@/lib/onboarding/progress";
 import type { OnboardingProgress } from "@/lib/onboarding/types";
 import { withFileAccessTokensDeep } from "@/lib/uploads";
-import { isOrgUserRole } from "@/lib/user-roles";
-import { formatPersianNumber, adminHref, isPostgresConfigured } from "@/lib/utils";
+import { getUserRoleDisplayLabel, isOrgUserRole } from "@/lib/user-roles";
+import { cn, formatPersianNumber, adminHref, isPostgresConfigured } from "@/lib/utils";
 
 const PERMISSION_TO_CONTENT_TYPE: Partial<
   Record<ContributorPermissionKey, EditSuggestionContentType>
@@ -144,6 +145,7 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
       value: definition.getCount(data, billboards),
       href: adminHref(definition.href, campaignId),
       icon: definition.icon,
+      priority: definition.priority,
       completeness: contentType ? completenessByType.get(contentType) : undefined,
       showOwnerHint: !canManageAll,
     };
@@ -197,7 +199,7 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 lg:space-y-8">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-2xl font-bold">داشبورد</h1>
@@ -215,16 +217,68 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
         )}
       </div>
 
+      <div className="grid gap-4 lg:grid-cols-12 lg:items-start">
+        {session ? (
+          <div className="lg:col-span-4 xl:col-span-3 lg:sticky lg:top-4">
+            <DashboardUserCard
+              name={session.name}
+              email={session.email}
+              roleLabel={getUserRoleDisplayLabel({
+                role: session.role,
+                orgRole: session.orgRole,
+              })}
+              campaignTitle={data.settings.title}
+              campaignId={campaignId}
+              subtitle={
+                canManageAll ? undefined : "نمای شخصی محتوا و وضعیت تکمیل بخش‌ها"
+              }
+            />
+          </div>
+        ) : null}
+
+        <div
+          className={cn(
+            "min-w-0 space-y-3",
+            session ? "lg:col-span-8 xl:col-span-9" : "lg:col-span-12"
+          )}
+        >
+          {stats.length > 0 ? (
+            <>
+              <div className="flex flex-wrap items-end justify-between gap-3">
+                <div>
+                  <h2 className="text-base font-semibold sm:text-lg">وضعیت بخش‌ها</h2>
+                  <p className="text-xs text-muted-foreground sm:text-sm">
+                    مرتب‌شده بر اساس اهمیت؛ ناقص‌ها بزرگ‌تر و بالاتر دیده می‌شوند.
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                  <span className="rounded-full bg-emerald-500/15 px-2 py-1 text-emerald-700">
+                    کامل
+                  </span>
+                  <span className="rounded-full bg-amber-400/20 px-2 py-1 text-amber-800">
+                    ناقص جزئی
+                  </span>
+                  <span className="rounded-full bg-red-500/15 px-2 py-1 text-red-700">
+                    ناقص
+                  </span>
+                </div>
+              </div>
+              <DashboardCompletenessCards cards={stats} />
+            </>
+          ) : (
+            <Card>
+              <CardContent className="p-6 text-sm text-muted-foreground">
+                {canManageAll
+                  ? "هیچ بخشی برای این راستا فعال نیست. از تنظیمات راستا بخش‌های مورد نظر را فعال کنید."
+                  : "هیچ بخشی برای شما در این راستا فعال نیست. با مدیر تماس بگیرید."}
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </div>
+
       {onboardingProgress && onboardingProgress.totalCount > 0 ? (
         <OnboardingProgressCard progress={onboardingProgress} />
-      ) : null}
-
-      {session && isFullAdmin(session) ? (
-        <BulkContentImport
-          users={bulkImportUsers}
-          posterCategories={data.posterCategories ?? []}
-          videoCategories={data.videoCategories ?? []}
-        />
       ) : null}
 
       <DashboardDirectivesPanel
@@ -238,26 +292,7 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
         storageKey={editSuggestionsStorageKey}
       />
 
-      {stats.length > 0 ? (
-        <div className="space-y-3">
-          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-            <span className="rounded-full bg-emerald-500/15 px-2 py-1 text-emerald-700">کامل = سبز</span>
-            <span className="rounded-full bg-amber-400/20 px-2 py-1 text-amber-800">ناقص جزئی = زرد</span>
-            <span className="rounded-full bg-red-500/15 px-2 py-1 text-red-700">ناقص کامل = قرمز</span>
-          </div>
-          <DashboardCompletenessCards cards={stats} />
-        </div>
-      ) : (
-        <Card>
-          <CardContent className="p-6 text-sm text-muted-foreground">
-            {canManageAll
-              ? "هیچ بخشی برای این راستا فعال نیست. از تنظیمات راستا بخش‌های مورد نظر را فعال کنید."
-              : "هیچ بخشی برای شما در این راستا فعال نیست. با مدیر تماس بگیرید."}
-          </CardContent>
-        </Card>
-      )}
-
-      {showSubmissionsAlert && pendingSubmissions > 0 && (
+      {showSubmissionsAlert && pendingSubmissions > 0 ? (
         <Card className="border-warning/30 bg-warning/10">
           <CardContent className="p-4 flex items-center justify-between">
             <p className="text-sm">
@@ -270,7 +305,15 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
             </Link>
           </CardContent>
         </Card>
-      )}
+      ) : null}
+
+      {session && isFullAdmin(session) ? (
+        <BulkContentImport
+          users={bulkImportUsers}
+          posterCategories={data.posterCategories ?? []}
+          videoCategories={data.videoCategories ?? []}
+        />
+      ) : null}
     </div>
   );
 }

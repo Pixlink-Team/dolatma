@@ -72,7 +72,7 @@ function emptyFormValues(): FormValues {
   return {
     title: "",
     reportDate: todayISO(),
-    mediaType: "media",
+    mediaType: "pdf",
     pdfUrl: "",
     fileName: "",
     coverImageUrl: "",
