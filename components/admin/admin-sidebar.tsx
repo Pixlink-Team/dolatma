@@ -111,7 +111,6 @@ const allNavItems: {
   { href: "/admin/posting-limits", label: "محدودیت روزانه", icon: Gauge, adminOrClientOnly: true },
   { href: "/admin/tutorials", label: "آموزش بخش‌ها", icon: GraduationCap, permissionKey: "sectionTutorials", adminOnly: true },
   { href: "/admin/onboarding-steps", label: "مراحل راه‌اندازی", icon: ListChecks, adminOnly: true },
-  { href: "/admin/ministries", label: "دستگاه‌ها", icon: Building2, devicesNav: true },
   { href: "/admin/group-edit", label: "ویرایش گروهی", icon: Layers, adminOnly: true },
   { href: "/admin/billboards", label: "تبلیغات محیطی", icon: LayoutGrid, permissionKey: "billboards" },
   { href: "/admin/posters", label: "پوسترها", icon: ImageIcon, permissionKey: "posters" },
@@ -134,6 +133,7 @@ const allNavItems: {
   { href: "/admin/meetings", label: "جلسات و مصوبات", icon: ClipboardList, permissionKey: "meetings" },
   { href: "/admin/submissions", label: "مشارکت‌ها", icon: FileText, permissionKey: "submissions" },
   { href: "/admin/forms", label: "فرم‌ها", icon: FormInput, permissionKey: "forms", adminOrClientOnly: true },
+  { href: "/admin/ministries", label: "دستگاه‌ها", icon: Building2, devicesNav: true },
   { href: "/admin/users", label: "کاربران", icon: Users, usersNav: true },
   { href: "/admin/pre-registrations", label: "پیش‌ثبت‌نام‌ها", icon: UserPlus, adminOnly: true },
   { href: "/admin/best-practices", label: "بهترین اقدامات", icon: Award, permissionKey: "bestPractices" },
@@ -149,6 +149,7 @@ const RAPID_RESPONSE_ROOT = "/admin/rapid-response";
 
 const managementNavHrefs = new Set([
   "/admin/profile",
+  "/admin/ministries",
   "/admin/users",
   "/admin/pre-registrations",
   "/admin/group-edit",
@@ -176,7 +177,6 @@ const ASSETS_GROUP_HREFS = new Set([
   "/admin/capacity-map",
   "/admin/analytics",
   "/admin/social-analytics",
-  "/admin/ministries",
 ]);
 const PRODUCTION_GROUP_HREFS = new Set([
   "/admin/posters",
@@ -190,6 +190,8 @@ const PUBLISHING_GROUP_ORDER = [
   "/admin/billboards",
   "/admin/site-publications",
   "/admin/social-posts",
+  "/admin/press-publications",
+  "/admin/activities",
   "/admin/sms-reports",
 ] as const;
 const PUBLISHING_GROUP_HREFS = new Set<string>(PUBLISHING_GROUP_ORDER);
