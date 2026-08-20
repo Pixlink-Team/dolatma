@@ -1397,7 +1397,8 @@ CREATE TABLE IF NOT EXISTS directive_workspace_assets (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   directive_id UUID NOT NULL REFERENCES campaign_directives(id) ON DELETE CASCADE,
   category TEXT NOT NULL CHECK (category IN (
-    'reference', 'ready_text', 'print', 'video', 'social',
+    'poster', 'video', 'banner',
+    'reference', 'ready_text', 'print', 'social',
     'brand_guide', 'training', 'approval'
   )),
   title TEXT NOT NULL,
@@ -1407,6 +1408,16 @@ CREATE TABLE IF NOT EXISTS directive_workspace_assets (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+ALTER TABLE directive_workspace_assets
+  DROP CONSTRAINT IF EXISTS directive_workspace_assets_category_check;
+ALTER TABLE directive_workspace_assets
+  ADD CONSTRAINT directive_workspace_assets_category_check
+  CHECK (category IN (
+    'poster', 'video', 'banner',
+    'reference', 'ready_text', 'print', 'social',
+    'brand_guide', 'training', 'approval'
+  ));
 
 CREATE INDEX IF NOT EXISTS idx_directive_workspace_assets_directive
   ON directive_workspace_assets(directive_id, category, sort_order);

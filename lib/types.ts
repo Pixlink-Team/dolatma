@@ -1118,10 +1118,12 @@ export interface CampaignDirective {
 export type DirectiveUrgency = "low" | "normal" | "high" | "critical";
 
 export type DirectiveWorkspaceAssetCategory =
+  | "poster"
+  | "video"
+  | "banner"
   | "reference"
   | "ready_text"
   | "print"
-  | "video"
   | "social"
   | "brand_guide"
   | "training"

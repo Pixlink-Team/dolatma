@@ -49,13 +49,14 @@ import {
 } from "@/lib/capacity-details";
 import {
   DEVICE_CAPACITY_TYPE_LABELS,
-  DEVICE_READINESS_LABELS,
   DEVICE_SCOPE_LABELS,
   DEVICE_STAFF_EDUCATION_LABELS,
   DEVICE_STAFF_GENDER_LABELS,
   DEVICE_STATUS_LABELS,
   DEVICE_TYPE_LABELS,
 } from "@/lib/device-labels";
+import { computePassportCompletion } from "@/lib/device-passport-completion";
+import { DevicePassportCompletionRing } from "@/components/admin/device-passport-completion-ring";
 import { ORG_ROLES, type OrgRole } from "@/lib/org-roles";
 import {
   DEVICE_CAPACITY_TYPES,
@@ -158,19 +159,6 @@ const capacitySchema = z.object({
   details: z.record(z.string(), z.unknown()).optional(),
   isActive: z.boolean(),
 });
-
-function readinessBadgeClass(status: DevicePassport["readiness"]["status"]) {
-  switch (status) {
-    case "ready":
-      return "bg-emerald-600 text-white hover:bg-emerald-600";
-    case "needs_completion":
-      return "bg-amber-500 text-white hover:bg-amber-500";
-    case "high_risk":
-      return "bg-destructive text-destructive-foreground";
-    default:
-      return "bg-muted text-muted-foreground";
-  }
-}
 
 const CHILD_DEVICE_TYPES = (Object.keys(DEVICE_TYPE_LABELS) as DeviceType[]).filter(
   (key) => key !== "ministry"
@@ -276,6 +264,7 @@ export function DevicePassportView({
       ),
     [passport.users, device.id]
   );
+  const completion = useMemo(() => computePassportCompletion(passport), [passport]);
   const staffMembers = passport.staff ?? [];
 
   const openStaffDialog = (item?: DeviceStaff) => {
@@ -439,22 +428,20 @@ export function DevicePassportView({
               </div>
             </div>
           </div>
-          <div className="max-w-md space-y-2 text-left sm:text-right">
-            <Badge className={readinessBadgeClass(passport.readiness.status)}>
-              آمادگی: {DEVICE_READINESS_LABELS[passport.readiness.status]}
-              {" · "}
-              {passport.readiness.score}
-            </Badge>
-            <p className="text-sm leading-relaxed text-muted-foreground">
-              {passport.readiness.reason}
-            </p>
+          <div className="w-full max-w-sm space-y-3 sm:ms-auto">
+            <DevicePassportCompletionRing completion={completion} />
             {canEditProfile ? (
-              <Button size="sm" variant="outline" onClick={() => setProfileOpen(true)}>
+              <Button
+                size="sm"
+                variant="outline"
+                className="w-full"
+                onClick={() => setProfileOpen(true)}
+              >
                 <Pencil className="ml-1 h-4 w-4" />
                 ویرایش اطلاعات
               </Button>
             ) : (
-              <p className="text-xs text-muted-foreground">
+              <p className="text-center text-xs text-muted-foreground sm:text-right">
                 فقط مشاهده — تکمیل شناسنامه با مسئول همین دستگاه است.
               </p>
             )}

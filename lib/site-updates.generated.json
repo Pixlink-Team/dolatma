@@ -1,6 +1,24 @@
 {
   "entries": [
     {
+      "hash": "a319b81224d3ab7bf0658c3da4471332553ee98d",
+      "committedAt": "2026-08-20T11:26:40+03:30",
+      "title": "حذف آمار دستور و سوابق کمپین از صفحه تکمیل شناسنامه",
+      "subject": "Hide campaign stats from device passport"
+    },
+    {
+      "hash": "495f314296da18f939e0c474291abc5b4d53d8d4",
+      "committedAt": "2026-08-20T11:19:16+03:30",
+      "title": "بهبود مرتب‌سازی و سرعت لیست پست‌های شبکه اجتماعی",
+      "subject": "Improve social posts list sort and indexes for large data"
+    },
+    {
+      "hash": "94fe3b0c090e7a895522122ac1f958a51ca19941",
+      "committedAt": "2026-08-20T11:17:54+03:30",
+      "title": "بازچینش پنل به سه بخش دارایی‌ها، تولید و نشر برای گزارش‌گیری بهتر",
+      "subject": "Reorganize admin into assets, production, and publishing"
+    },
+    {
       "hash": "11ad0b781936fba7648862f31ebba842b2eb2cb0",
       "committedAt": "2026-08-20T10:47:18+03:30",
       "title": "انتقال پیام‌های من به بخش تنظیمات و مدیریت",
