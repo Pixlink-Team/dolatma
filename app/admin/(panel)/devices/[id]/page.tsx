@@ -8,6 +8,7 @@ import {
 } from "@/lib/auth/device-access";
 import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
 import { pgGetDevicePassport } from "@/lib/db/repository-devices";
+import { withFileAccessTokensDeep } from "@/lib/uploads";
 import { isPostgresConfigured } from "@/lib/utils";
 
 interface PageProps {
@@ -44,7 +45,8 @@ export default async function DevicePassportPage({ params }: PageProps) {
   if (!passport) notFound();
 
   const visibleUsers = await filterUsersVisibleToSession(session, passport.users);
-  passport = { ...passport, users: visibleUsers };
+  // Signed media URLs are required for non-admin sessions to load /api/files/*.
+  passport = withFileAccessTokensDeep({ ...passport, users: visibleUsers });
 
   const fullAdmin = isFullAdmin(session);
   const canEdit = fullAdmin ? true : await canEditDevicePassport(session, id);

@@ -32,6 +32,7 @@ import {
 } from "@/lib/db/repository-devices";
 import { hashPassword } from "@/lib/auth/password";
 import { isPostgresConfigured } from "@/lib/utils";
+import { stripFileAccessToken, withFileAccessTokensDeep } from "@/lib/uploads";
 import type {
   DeviceActivityScope,
   DeviceCapacityType,
@@ -109,7 +110,10 @@ export async function getDevicePassportAction(deviceId: string) {
   const passport = await pgGetDevicePassport(deviceId);
   if (!passport) return { success: false as const, error: "دستگاه یافت نشد", passport: null };
   const users = await filterUsersVisibleToSession(session, passport.users);
-  return { success: true as const, passport: { ...passport, users } };
+  return {
+    success: true as const,
+    passport: withFileAccessTokensDeep({ ...passport, users }),
+  };
 }
 
 export async function saveDeviceAction(data: {
@@ -137,9 +141,16 @@ export async function saveDeviceAction(data: {
 
   const parentId = data.parentId?.trim() || null;
   const isUpdate = Boolean(data.id);
+  const logoUrl =
+    data.logoUrl === undefined
+      ? undefined
+      : data.logoUrl?.trim()
+        ? stripFileAccessToken(data.logoUrl) || null
+        : null;
+  const payload = { ...data, logoUrl };
 
   if (isFullAdmin(session)) {
-    const result = await pgSaveDevice(data);
+    const result = await pgSaveDevice(payload);
     if (result.success) await revalidateDevicePages(result.id);
     return result;
   }
@@ -213,7 +224,7 @@ export async function saveDeviceAction(data: {
     const result = await pgSaveDevice(
       canEditPassport
         ? {
-            ...data,
+            ...payload,
             parentId: nextParentId,
             type: nextType,
           }
@@ -251,7 +262,7 @@ export async function saveDeviceAction(data: {
   if (tutorialDenied) return tutorialDenied;
 
   const result = await pgSaveDevice({
-    ...data,
+    ...payload,
     parentId,
     type: data.type === "ministry" ? "organization" : data.type,
   });

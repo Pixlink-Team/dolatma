@@ -910,7 +910,7 @@ export function DevicePassportView({
                 value={profileForm.watch("logoUrl") || ""}
                 onChange={(url) => profileForm.setValue("logoUrl", url)}
                 kind="image"
-                accept="image/jpeg,image/png,image/webp"
+                accept="image/jpeg,image/png,image/webp,image/gif"
                 showLinkInput={false}
                 optimizeBeforeUpload={{ maxEdge: 512, targetMaxBytes: 150 * 1024 }}
               />
