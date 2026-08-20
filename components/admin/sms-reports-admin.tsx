@@ -4,7 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { FileText, MessageSquare, Plus, Users } from "lucide-react";
+import { FileText, MessageSquare, Users } from "lucide-react";
 import { toast } from "sonner";
 import {
   CONTENT_TITLE_MAX_LENGTH,
@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AdminCreatedAtText } from "@/components/admin/admin-created-at";
+import { AdminCompactAddCard } from "@/components/admin/admin-compact-add-card";
 import {
   AdminContentFilterBar,
   DEFAULT_ADMIN_CONTENT_FILTER,
@@ -215,21 +216,17 @@ export function SmsReportsAdmin({ campaignId, initialReports }: SmsReportsAdminP
   });
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {tutorialModal}
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">ارسال پیام انبوه</h1>
           <p className="text-sm text-muted-foreground">
             ثبت گزارش ارسال پیام انبوه (پیامک، بله و سایر کانال‌ها) — عنوان، تعداد گیرندگان، متن پیام و مستند اختیاری
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <AdminViewModeToggle value={viewMode} onChange={setViewMode} />
-          <Button onClick={openCreate}>
-            <Plus className="h-4 w-4" />
-            ثبت ارسال جدید
-          </Button>
         </div>
       </div>
 
@@ -245,14 +242,14 @@ export function SmsReportsAdmin({ campaignId, initialReports }: SmsReportsAdminP
         <div className="rounded-xl border px-4 py-8 text-center text-sm text-muted-foreground">
           هنوز گزارشی از ارسال پیام ثبت نشده است.
           <div className="mt-3 flex justify-center">
-            <Button variant="outline" onClick={openCreate}>
-              <Plus className="h-4 w-4" />
-              اولین گزارش را ثبت کنید
-            </Button>
+            <div className="w-full max-w-[10rem]">
+              <AdminCompactAddCard onClick={openCreate} label="ثبت ارسال جدید" />
+            </div>
           </div>
         </div>
       ) : viewMode === "grid" ? (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+          <AdminCompactAddCard onClick={openCreate} label="ثبت ارسال جدید" />
           {sortedRows.map((report) => (
             <button
               key={report.id}
@@ -296,7 +293,11 @@ export function SmsReportsAdmin({ campaignId, initialReports }: SmsReportsAdminP
           ))}
         </div>
       ) : (
-        <div className="overflow-hidden rounded-xl border">
+        <div className="space-y-3">
+          <div className="max-w-[10rem]">
+            <AdminCompactAddCard onClick={openCreate} label="ثبت ارسال جدید" />
+          </div>
+          <div className="overflow-hidden rounded-xl border">
           {sortedRows.map((report) => (
             <div
               key={report.id}
@@ -330,6 +331,7 @@ export function SmsReportsAdmin({ campaignId, initialReports }: SmsReportsAdminP
               />
             </div>
           ))}
+          </div>
         </div>
       )}
 

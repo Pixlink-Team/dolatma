@@ -265,14 +265,14 @@ export function FilesAdmin({
   return (
     <div className="space-y-6">
       {tutorialModal}
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">فایل‌های راستا</h1>
           <p className="text-sm text-muted-foreground">
             PDF، Word، Excel و سایر فایل‌های قابل دانلود — با + فایل جدید آپلود کنید
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <AdminViewModeToggle value={viewMode} onChange={setViewMode} />
         </div>
       </div>
@@ -357,12 +357,8 @@ export function FilesAdmin({
           </div>
         </div>
       ) : (
-        <div className="space-y-3">
-          {!bulk.bulkMode && (
-            <div className="max-w-[10rem]">
-              <AdminCompactAddCard onClick={openCreate} label="فایل جدید" />
-            </div>
-          )}
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+          {!bulk.bulkMode && <AdminCompactAddCard onClick={openCreate} label="فایل جدید" />}
           {visibleFiles.map((file) => {
             const Icon = fileIcon(file.mimeType);
             return (
@@ -372,55 +368,53 @@ export function FilesAdmin({
                 selected={bulk.isSelected(file.id)}
                 onToggle={() => bulk.toggle(file.id)}
               >
-                <div className="flex flex-col gap-3 rounded-xl border bg-card p-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="flex items-start gap-3">
-                    <div className="rounded-lg bg-muted p-2">
-                      <Icon className="h-5 w-5 text-primary" />
+                <div className="relative overflow-hidden rounded-xl border bg-card">
+                  <button
+                    type="button"
+                    onClick={() => openEdit(file)}
+                    className="flex w-full flex-col gap-2 p-3 text-right"
+                  >
+                    <div className="flex aspect-[4/3] items-center justify-center rounded-lg bg-muted">
+                      <Icon className="h-8 w-8 text-primary" />
                     </div>
-                    <div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className="font-medium">{file.title}</p>
-                        <AdminOwnerBadge ownerUserId={file.ownerUserId} ownerName={file.ownerName} />
-                      </div>
-                      <p className="text-xs text-muted-foreground">{file.fileName}</p>
-                      <AdminPlanLabelsBadges
-                        planLabels={file.planLabels}
-                        planLabel={file.planLabel}
-                        className="mt-1"
-                      />
-                      {file.description && (
-                        <p className="mt-1 text-sm text-muted-foreground">{file.description}</p>
-                      )}
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {formatFileSize(file.fileSize)}
-                      </p>
-                      <div className="mt-2">
-                        <ContentScoreControl
-                          campaignId={campaignId}
-                          contentType="file"
-                          contentId={file.id}
-                          score={file.score}
-                          autoScore={file.autoScore}
-                          manualScore={file.manualScore}
-                          canScore={canScore}
-                          compact
-                          onScoreSaved={(score) =>
-                            setFiles((prev) =>
-                              prev.map((item) => (item.id === file.id ? { ...item, score } : item))
-                            )
-                          }
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {!bulk.bulkMode && (
-                    <AdminItemActions
-                      onView={() => window.open(file.fileUrl, "_blank")}
-                      onEdit={() => openEdit(file)}
-                      onDelete={() => handleDelete(file)}
-                      deleteLabel="این فایل"
+                    <p className="truncate text-sm font-medium">{file.title}</p>
+                    <p className="truncate text-[10px] text-muted-foreground">{file.fileName}</p>
+                    <p className="text-[10px] text-muted-foreground">{formatFileSize(file.fileSize)}</p>
+                    <AdminPlanLabelsBadges
+                      planLabels={file.planLabels}
+                      planLabel={file.planLabel}
                     />
+                    <AdminOwnerBadge ownerUserId={file.ownerUserId} ownerName={file.ownerName} />
+                  </button>
+                  {(canScore || file.score != null) && (
+                    <div className="px-3 pb-2">
+                      <ContentScoreControl
+                        campaignId={campaignId}
+                        contentType="file"
+                        contentId={file.id}
+                        score={file.score}
+                        autoScore={file.autoScore}
+                        manualScore={file.manualScore}
+                        canScore={canScore}
+                        compact
+                        onScoreSaved={(score) =>
+                          setFiles((prev) =>
+                            prev.map((item) => (item.id === file.id ? { ...item, score } : item))
+                          )
+                        }
+                      />
+                    </div>
+                  )}
+                  {!bulk.bulkMode && (
+                    <div className="absolute bottom-2 left-2 z-10">
+                      <AdminItemActions
+                        compact
+                        onView={() => window.open(file.fileUrl, "_blank")}
+                        onEdit={() => openEdit(file)}
+                        onDelete={() => handleDelete(file)}
+                        deleteLabel="این فایل"
+                      />
+                    </div>
                   )}
                 </div>
               </BulkItemShell>

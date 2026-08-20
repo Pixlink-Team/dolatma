@@ -224,14 +224,14 @@ export function BillboardsAdmin({
   return (
     <div className="space-y-6">
       {tutorialModal}
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">تبلیغات محیطی</h1>
           <p className="text-sm text-muted-foreground">
             بیلبورد، استرابورد، عرشه پل، تلویزیون شهری و سایر رسانه‌های محیطی
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {isFullAdmin && (
             <Button
               type="button"
@@ -341,7 +341,13 @@ export function BillboardsAdmin({
           ))}
         </div>
       ) : (
-        <div className="overflow-hidden rounded-xl border">
+        <div className="space-y-3">
+          {!bulk.bulkMode && (
+            <div className="max-w-[10rem]">
+              <AdminBillboardAddCard onClick={openCreate} />
+            </div>
+          )}
+          <div className="overflow-hidden rounded-xl border">
           {visibleBillboards.map((billboard) => (
             <div
               key={billboard.id}
@@ -380,6 +386,7 @@ export function BillboardsAdmin({
               )}
             </div>
           ))}
+          </div>
         </div>
       )}
 

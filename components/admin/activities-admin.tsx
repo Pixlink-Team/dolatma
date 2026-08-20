@@ -377,16 +377,16 @@ export function ActivitiesAdmin({
   });
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {tutorialModal}
-      <div className="flex flex-wrap items-start justify-between gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">اقدامات</h1>
           <p className="text-sm text-muted-foreground">
             ثبت فعالیت‌های میدانی: تراکت، غرفه، شعرخوانی، نقاشی و ... (تا {MAX_MEDIA_ITEMS} رسانه)
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <AdminViewModeToggle value={viewMode} onChange={setViewMode} />
         </div>
       </div>

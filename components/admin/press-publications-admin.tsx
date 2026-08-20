@@ -18,6 +18,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AdminActivityCompactCard } from "@/components/admin/admin-activity-compact-card";
 import { AdminCompactAddCard } from "@/components/admin/admin-compact-add-card";
+import {
+  AdminContentFilterBar,
+  collectAdminFilterUsers,
+  DEFAULT_ADMIN_CONTENT_FILTER,
+  matchesAdminContentFilter,
+  type AdminContentFilterState,
+} from "@/components/admin/admin-content-filter-bar";
 import { AdminContentPreviewDialog } from "@/components/admin/admin-content-preview-dialog";
 import { AdminItemActions } from "@/components/admin/admin-item-actions";
 import { AdminViewModeToggle } from "@/components/admin/admin-view-mode-toggle";
@@ -117,12 +124,18 @@ export function PressPublicationsAdmin({
   );
   const [previewActivity, setPreviewActivity] = useState<CampaignActivity | null>(null);
   const [isPending, startTransition] = useTransition();
-  const paginationResetKey = `press:${viewMode}`;
+  const [contentFilter, setContentFilter] = useState<AdminContentFilterState>(DEFAULT_ADMIN_CONTENT_FILTER);
+  const filterUsers = useMemo(() => collectAdminFilterUsers(rows), [rows]);
+  const filteredRows = useMemo(
+    () => rows.filter((item) => matchesAdminContentFilter(item, contentFilter)),
+    [rows, contentFilter]
+  );
+  const paginationResetKey = `press:${contentFilter.userKey}:${contentFilter.planLabels.join(",")}:${viewMode}`;
   const { visibleCount, hasMore, isLoadingMore, loadMore } = useAdminInfiniteScroll(
-    rows.length,
+    filteredRows.length,
     paginationResetKey
   );
-  const visibleRows = useMemo(() => rows.slice(0, visibleCount), [rows, visibleCount]);
+  const visibleRows = useMemo(() => filteredRows.slice(0, visibleCount), [filteredRows, visibleCount]);
   const visibleIds = useMemo(() => visibleRows.map((item) => item.id), [visibleRows]);
   const bulk = useSectionBulkEdit(visibleIds);
 
@@ -352,17 +365,25 @@ export function PressPublicationsAdmin({
   });
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {tutorialModal}
-      <div className="flex flex-wrap items-start justify-between gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">مجله و روزنامه</h1>
           <p className="text-sm text-muted-foreground">ثبت آگهی‌های مجله و روزنامه با چند رسانه</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <AdminViewModeToggle value={viewMode} onChange={setViewMode} />
         </div>
       </div>
+
+      <AdminContentFilterBar
+        filter={contentFilter}
+        onChange={setContentFilter}
+        users={isFullAdmin ? filterUsers : []}
+        plans={contentPlans}
+        items={rows}
+      />
 
       <SectionBulkEditBar
         campaignId={campaignId}
@@ -380,7 +401,18 @@ export function PressPublicationsAdmin({
         users={users}
       />
 
-      {viewMode === "grid" ? (
+      {filteredRows.length === 0 && rows.length === 0 ? (
+        <div className="rounded-xl border px-4 py-8 text-center text-sm text-muted-foreground">
+          هنوز موردی ثبت نشده است.
+          {!bulk.bulkMode && (
+            <div className="mt-3 flex justify-center">
+              <div className="w-full max-w-[10rem]">
+                <AdminCompactAddCard onClick={openCreate} label="ثبت جدید" />
+              </div>
+            </div>
+          )}
+        </div>
+      ) : viewMode === "grid" ? (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
           {!bulk.bulkMode && <AdminCompactAddCard onClick={openCreate} label="ثبت جدید" />}
           {visibleRows.map((activity) => (
@@ -438,7 +470,7 @@ export function PressPublicationsAdmin({
                 )}
               </div>
             ))}
-            {rows.length === 0 && (
+            {filteredRows.length === 0 && (
               <div className="px-4 py-8 text-center text-sm text-muted-foreground">موردی یافت نشد.</div>
             )}
           </div>
@@ -449,7 +481,7 @@ export function PressPublicationsAdmin({
         hasMore={hasMore}
         isLoadingMore={isLoadingMore}
         onLoadMore={loadMore}
-        remaining={rows.length - visibleCount}
+        remaining={filteredRows.length - visibleCount}
       />
 
       <AdminContentPreviewDialog

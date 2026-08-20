@@ -304,7 +304,13 @@ export function VideosAdmin({
           ))}
         </div>
       ) : (
-        <div className="overflow-hidden rounded-xl border">
+        <div className="space-y-3">
+          {!bulk.bulkMode && (
+            <div className="max-w-[10rem]">
+              <AdminVideoAddCard compact onClick={handleCreateVideo} />
+            </div>
+          )}
+          <div className="overflow-hidden rounded-xl border">
           {visibleVideos.map((video) => {
             const displayVersion = resolveDisplayVersion(versionsByVideoId.get(video.id) ?? []);
             return (
@@ -342,6 +348,7 @@ export function VideosAdmin({
           {filteredVideos.length === 0 && (
             <div className="px-4 py-8 text-center text-sm text-muted-foreground">موردی یافت نشد.</div>
           )}
+          </div>
         </div>
       )}
 

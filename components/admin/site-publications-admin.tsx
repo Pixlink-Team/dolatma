@@ -27,7 +27,9 @@ import {
 import { AdminCompactAddCard } from "@/components/admin/admin-compact-add-card";
 import { adminCreatedAtDetail } from "@/components/admin/admin-created-at";
 import { AdminContentPreviewDialog } from "@/components/admin/admin-content-preview-dialog";
+import { AdminItemActions } from "@/components/admin/admin-item-actions";
 import { AdminSitePublicationCompactCard } from "@/components/admin/admin-site-publication-compact-card";
+import { AdminViewModeToggle } from "@/components/admin/admin-view-mode-toggle";
 import { PlanLabelSelect } from "@/components/admin/plan-label-select";
 import { ContentScoreControl } from "@/components/admin/content-score-control";
 import {
@@ -42,6 +44,7 @@ import { RefreshCw, Trash2 } from "lucide-react";
 import { normalizePlanLabels, type ContentTopic } from "@/lib/content-topics";
 import { type EditSuggestionMissingField } from "@/lib/edit-suggestions";
 import { useAdminEditDeepLink } from "@/lib/hooks/use-admin-edit-deep-link";
+import { useAdminViewMode } from "@/lib/hooks/use-admin-view-mode";
 import { useSectionCreateGate } from "@/lib/hooks/use-section-create-gate";
 import { useAdminInfiniteScroll } from "@/lib/hooks/use-admin-infinite-scroll";
 import { AdminInfiniteScrollSentinel } from "@/components/admin/admin-infinite-scroll-sentinel";
@@ -60,7 +63,7 @@ import type {
   SocialPostLinkEntry,
   SocialPostPlatform,
 } from "@/lib/types";
-import { cn, formatPersianDate, formatPersianNumber } from "@/lib/utils";
+import { cn, formatPersianDate, formatPersianNumber, getStatusLabel } from "@/lib/utils";
 
 export type WebOutletPlatform = Extract<SocialPostPlatform, "site" | "news_agency">;
 
@@ -135,6 +138,7 @@ export function SitePublicationsAdmin({
 }: SitePublicationsAdminProps) {
   const copy = OUTLET_COPY[outletPlatform];
   const { requestCreate, tutorialModal } = useSectionCreateGate("sitePublications", campaignId);
+  const { viewMode, setViewMode } = useAdminViewMode(`site-publications-${outletPlatform}`);
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [planLabels, setPlanLabels] = useState<string[]>([]);
@@ -159,7 +163,7 @@ export function SitePublicationsAdmin({
       ),
     [rows, contentFilter]
   );
-  const paginationResetKey = `${contentFilter.userKey}:${contentFilter.planLabels.join(",")}:${contentFilter.sortOrder}`;
+  const paginationResetKey = `${contentFilter.userKey}:${contentFilter.planLabels.join(",")}:${contentFilter.sortOrder}:${viewMode}`;
   const { visibleCount, hasMore, isLoadingMore, loadMore } = useAdminInfiniteScroll(
     filteredRows.length,
     paginationResetKey
@@ -462,14 +466,17 @@ export function SitePublicationsAdmin({
   });
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {tutorialModal}
-      <div className="flex flex-wrap items-start justify-between gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">{copy.title}</h1>
           <p className="text-sm text-muted-foreground">
             {copy.description}
           </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <AdminViewModeToggle value={viewMode} onChange={setViewMode} />
         </div>
       </div>
 
@@ -496,25 +503,81 @@ export function SitePublicationsAdmin({
         users={users}
       />
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-        {!bulk.bulkMode && <AdminCompactAddCard onClick={openCreate} label={copy.createLabel} />}
-        {visibleRows.map((post) => (
-          <BulkItemShell
-            key={post.id}
-            enabled={bulk.bulkMode}
-            selected={bulk.isSelected(post.id)}
-            onToggle={() => bulk.toggle(post.id)}
-          >
-            <AdminSitePublicationCompactCard
-              post={post}
-              onClick={() => openEdit(post)}
-              onView={() => setPreviewPost(post)}
-              onEdit={() => openEdit(post)}
-              onDelete={() => handleDelete(post)}
-            />
-          </BulkItemShell>
-        ))}
-      </div>
+      {filteredRows.length === 0 && rows.length === 0 ? (
+        <div className="rounded-xl border px-4 py-8 text-center text-sm text-muted-foreground">
+          هنوز موردی ثبت نشده است.
+          {!bulk.bulkMode && (
+            <div className="mt-3 flex justify-center">
+              <div className="w-full max-w-[10rem]">
+                <AdminCompactAddCard onClick={openCreate} label={copy.createLabel} />
+              </div>
+            </div>
+          )}
+        </div>
+      ) : viewMode === "grid" ? (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+          {!bulk.bulkMode && <AdminCompactAddCard onClick={openCreate} label={copy.createLabel} />}
+          {visibleRows.map((post) => (
+            <BulkItemShell
+              key={post.id}
+              enabled={bulk.bulkMode}
+              selected={bulk.isSelected(post.id)}
+              onToggle={() => bulk.toggle(post.id)}
+            >
+              <AdminSitePublicationCompactCard
+                post={post}
+                onClick={() => openEdit(post)}
+                onView={() => setPreviewPost(post)}
+                onEdit={() => openEdit(post)}
+                onDelete={() => handleDelete(post)}
+              />
+            </BulkItemShell>
+          ))}
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {!bulk.bulkMode && (
+            <div className="max-w-[10rem]">
+              <AdminCompactAddCard onClick={openCreate} label={copy.createLabel} />
+            </div>
+          )}
+          <div className="overflow-hidden rounded-xl border">
+            {visibleRows.map((post) => (
+              <div
+                key={post.id}
+                className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3 last:border-b-0"
+              >
+                <div className="flex min-w-0 items-start gap-3">
+                  {bulk.bulkMode && (
+                    <input
+                      type="checkbox"
+                      className="mt-1 h-4 w-4"
+                      checked={bulk.isSelected(post.id)}
+                      onChange={() => bulk.toggle(post.id)}
+                    />
+                  )}
+                  <div className="min-w-0">
+                    <p className="truncate font-medium">{post.title}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {getStatusLabel(post.platform)} · {post.ownerName ?? "—"}
+                    </p>
+                  </div>
+                </div>
+                {!bulk.bulkMode && (
+                  <AdminItemActions
+                    onView={() => setPreviewPost(post)}
+                    onEdit={() => openEdit(post)}
+                    onDelete={() => handleDelete(post)}
+                  />
+                )}
+              </div>
+            ))}
+            {filteredRows.length === 0 && (
+              <div className="px-4 py-8 text-center text-sm text-muted-foreground">موردی یافت نشد.</div>
+            )}
+          </div>
+        </div>
+      )}
 
       <AdminInfiniteScrollSentinel
         hasMore={hasMore}

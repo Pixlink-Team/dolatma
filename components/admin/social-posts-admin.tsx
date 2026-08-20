@@ -647,14 +647,14 @@ export function SocialPostsAdmin({
   });
 
   return (
-    <div className="space-y-4" dir="rtl">
+    <div className="space-y-6" dir="rtl">
       {tutorialModal}
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="text-right">
           <h1 className="text-2xl font-bold">پست‌های شبکه اجتماعی</h1>
           <p className="text-sm text-muted-foreground">ثبت پست‌ها، بازدید، لینک و نوع محتوا</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <GenerateMissingVideoCoversButton targets={missingCoverTargets} />
           <AdminViewModeToggle value={viewMode} onChange={setViewMode} />
         </div>

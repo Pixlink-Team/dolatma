@@ -315,14 +315,14 @@ export function RawMediaAdmin({
   return (
     <div className="space-y-6">
       {tutorialModal}
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">راش تصاویر</h1>
           <p className="text-sm text-muted-foreground">
             آپلود عکس و فیلم خام با حجم بالا — قابل دانلود توسط مدیر/کارفرما
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <AdminViewModeToggle value={viewMode} onChange={setViewMode} />
           {items.length > 0 && (
             <Button
@@ -464,7 +464,7 @@ export function RawMediaAdmin({
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
           {!bulk.bulkMode && (
             <AdminCompactAddCard
               onClick={openCreate}

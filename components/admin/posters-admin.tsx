@@ -269,7 +269,13 @@ export function PostersAdmin({
           ))}
         </div>
       ) : (
-        <div className="overflow-hidden rounded-xl border">
+        <div className="space-y-3">
+          {!bulk.bulkMode && (
+            <div className="max-w-[10rem]">
+              <AdminPosterAddCard compact onClick={handleCreatePoster} />
+            </div>
+          )}
+          <div className="overflow-hidden rounded-xl border">
           {visiblePosters.map((poster) => {
             const displayVersion = resolveDisplayVersion(versionsByPosterId.get(poster.id) ?? []);
             return (
@@ -307,6 +313,7 @@ export function PostersAdmin({
           {filteredPosters.length === 0 && (
             <div className="px-4 py-8 text-center text-sm text-muted-foreground">موردی یافت نشد.</div>
           )}
+          </div>
         </div>
       )}
 

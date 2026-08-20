@@ -8,7 +8,7 @@ import {
   CONTENT_TITLE_MAX_LENGTH,
   CONTENT_TITLE_MAX_LENGTH_MESSAGE,
 } from "@/lib/content-constraints";
-import { FileText, ImageIcon, Music, Play, Plus, Upload, Video } from "lucide-react";
+import { FileText, ImageIcon, Music, Play, Upload, Video } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -266,21 +266,17 @@ export function BroadcastAdmin({ campaignId, initialReports }: BroadcastAdminPro
     previewReport && previewKind === "video" ? toBroadcastVideoVersion(previewReport) : null;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {tutorialModal}
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">صدا و سیما</h1>
           <p className="text-sm text-muted-foreground">
             آپلود و انتشار گزارش PDF یا مدیا (تصویر، صوت، ویدیو) — روی کارت کلیک کنید یا با + گزارش جدید بسازید
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <AdminViewModeToggle value={viewMode} onChange={setViewMode} />
-          <Button onClick={openCreate}>
-            <Plus className="h-4 w-4" />
-            افزودن گزارش
-          </Button>
         </div>
       </div>
 
@@ -313,7 +309,11 @@ export function BroadcastAdmin({ campaignId, initialReports }: BroadcastAdminPro
           ))}
         </div>
       ) : (
-        <div className="overflow-hidden rounded-xl border">
+        <div className="space-y-3">
+          <div className="max-w-[10rem]">
+            <AdminBroadcastAddCard compact onClick={openCreate} />
+          </div>
+          <div className="overflow-hidden rounded-xl border">
           {sortedRows.map((report) => {
             const type = resolveBroadcastMediaType(report);
             const fileKind = resolveBroadcastFileKind(report);
@@ -371,6 +371,7 @@ export function BroadcastAdmin({ campaignId, initialReports }: BroadcastAdminPro
               </div>
             );
           })}
+          </div>
         </div>
       )}
 

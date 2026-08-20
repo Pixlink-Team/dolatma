@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "7d41ca20cb49563885b466c4d36ca23685acaa50",
+      "committedAt": "2026-08-20T17:23:29+03:30",
+      "title": "حذف کارت برگشتی امروز از گزارش عملکرد",
+      "subject": "Remove today-returned KPI card from performance report"
+    },
+    {
       "hash": "64c79d5da730b7aee541d8fa54e4700db0b8026e",
       "committedAt": "2026-08-20T17:20:51+03:30",
       "title": "یکپارچه‌سازی انتخاب و پیش‌نمایش تصویر در یک کارت آپلود",
