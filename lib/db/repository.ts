@@ -31,7 +31,6 @@ import type {
   Poster,
   PosterVersion,
   RawMediaUpload,
-  TextContent,
   Video,
   VideoVersion,
 } from "@/lib/types";
@@ -110,7 +109,6 @@ export type AdminDataSection =
   | "analytics"
   | "submissions"
   | "files"
-  | "textContents"
   | "socialPosts"
   | "broadcastReports"
   | "socialPlatformStats"
@@ -132,7 +130,6 @@ const ALL_ADMIN_DATA_SECTIONS: AdminDataSection[] = [
   "analytics",
   "submissions",
   "files",
-  "textContents",
   "socialPosts",
   "broadcastReports",
   "socialPlatformStats",
