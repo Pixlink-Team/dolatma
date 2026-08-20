@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useRef } from "react";
 import type { Map as LeafletMap } from "leaflet";
-import { buildBillboardMapTooltipHtml } from "@/lib/billboard-map-popup";
 import { hasBillboardCoordinates } from "@/lib/billboards";
 import { addLeafletTileLayer } from "@/lib/leaflet-tiles";
 import type { Billboard } from "@/lib/types";
@@ -73,23 +72,12 @@ export function BillboardMap({
           fillOpacity: 0.85,
         });
 
-        marker.bindTooltip(buildBillboardMapTooltipHtml(billboard), {
-          direction: "top",
-          offset: [0, -18],
-          opacity: 1,
-          className: "billboard-map-tooltip",
-          interactive: false,
-          sticky: true,
-        });
-
         marker.on("mouseover", () => {
           marker.setStyle({ radius: 10, weight: 3 });
-          marker.openTooltip();
           marker.bringToFront();
         });
         marker.on("mouseout", () => {
           marker.setStyle({ radius: 8, weight: 2 });
-          marker.closeTooltip();
         });
 
         marker.on("click", () => onSelectRef.current(billboard));

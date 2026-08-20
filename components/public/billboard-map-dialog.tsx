@@ -25,8 +25,9 @@ export function BillboardMapDialog({
   onSelect,
 }: BillboardMapDialogProps) {
   const handleSelect = (billboard: Billboard) => {
-    onSelect(billboard);
+    // Close the map dialog first so its overlay does not flash under the detail card.
     onOpenChange(false);
+    window.setTimeout(() => onSelect(billboard), 180);
   };
 
   return (
@@ -35,7 +36,7 @@ export function BillboardMapDialog({
         <DialogHeader className="border-b px-6 py-4 text-right">
           <DialogTitle>نقشه بیلبوردها</DialogTitle>
           <DialogDescription>
-            با اسکرول ماوس زوم کنید. برای دیدن تصویر و جزئیات، روی هر نقطه بایستید.
+            با اسکرول ماوس زوم کنید. برای دیدن جزئیات، روی هر نقطه کلیک کنید.
           </DialogDescription>
         </DialogHeader>
         <div className="min-h-0 flex-1 p-4">

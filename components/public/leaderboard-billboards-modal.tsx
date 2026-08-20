@@ -35,13 +35,7 @@ export function LeaderboardBillboardsModal({
 
   return (
     <>
-      <Dialog
-        open={open}
-        onOpenChange={(next) => {
-          if (!next) setSelected(null);
-          onOpenChange(next);
-        }}
-      >
+      <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto overflow-x-hidden">
           <DialogHeader>
             <DialogTitle className="break-words">
@@ -63,7 +57,11 @@ export function LeaderboardBillboardsModal({
                     <button
                       type="button"
                       className="apple-press flex w-full max-w-full items-center gap-3 rounded-lg border p-3 text-right hover:border-primary/50 hover:bg-muted/40 hover:shadow-sm"
-                      onClick={() => setSelected(billboard)}
+                      onClick={() => {
+                        // Close the list first to avoid a nested-dialog flash, then open details.
+                        onOpenChange(false);
+                        window.setTimeout(() => setSelected(billboard), 180);
+                      }}
                     >
                       <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-md bg-muted">
                         {canShowImage ? (
