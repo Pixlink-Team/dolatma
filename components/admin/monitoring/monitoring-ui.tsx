@@ -1,6 +1,6 @@
 "use client";
 
-import { cn, formatPersianNumber } from "@/lib/utils";
+import { cn, formatPersianNumber, toPersianDigits } from "@/lib/utils";
 import type { RiskLevel, UrgencyLevel } from "@/lib/monitoring/types";
 import { RISK_COLORS, RISK_LABELS, URGENCY_COLORS, URGENCY_LABELS } from "@/lib/monitoring/labels";
 
@@ -27,7 +27,7 @@ export function MonitoringStatCard({
     <div className={cn("rounded-xl border p-4 shadow-sm", toneClass)}>
       <p className="text-xs text-muted-foreground">{label}</p>
       <p className="mt-2 text-2xl font-bold tracking-tight">
-        {typeof value === "number" ? formatPersianNumber(value) : value}
+        {typeof value === "number" ? formatPersianNumber(value) : toPersianDigits(value)}
       </p>
       {hint ? <p className="mt-1 text-xs text-muted-foreground">{hint}</p> : null}
     </div>

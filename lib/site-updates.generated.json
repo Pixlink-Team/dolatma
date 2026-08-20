@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "hash": "6558a1ffdb40ca005453a1590457ac67dd4bf7be",
+      "committedAt": "2026-08-20T14:25:57+03:30",
+      "title": "جابه‌جایی محتواهای برگشتی، جلسات و مشارکت‌ها در منوی پنل",
+      "subject": "Reorder admin sidebar: returned content, meetings, submissions"
+    },
+    {
       "hash": "4f8d44ea013c06a286717d7db9d6f3b26e2c9fa9",
       "committedAt": "2026-08-20T14:08:30+03:30",
       "title": "انتقال بخش دستگاه‌ها از دارایی‌ها به تنظیمات",

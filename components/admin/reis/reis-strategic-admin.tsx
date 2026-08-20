@@ -33,7 +33,7 @@ import type {
   CampaignSubmission,
   Ministry,
 } from "@/lib/types";
-import { cn, formatPersianNumber } from "@/lib/utils";
+import { cn, formatPersianNumber, toPersianDigits } from "@/lib/utils";
 
 type CampaignUserOption = {
   id: string;
@@ -108,7 +108,7 @@ function StatCard({
         <div className="min-w-0 space-y-1">
           <p className="text-xs text-muted-foreground">{label}</p>
           <p className="text-2xl font-bold tracking-tight tabular-nums">
-            {typeof value === "number" ? formatPersianNumber(value) : value}
+            {typeof value === "number" ? formatPersianNumber(value) : toPersianDigits(value)}
           </p>
           {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
         </div>

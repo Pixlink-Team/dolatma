@@ -6,6 +6,13 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+const PERSIAN_DIGIT_MAP = "۰۱۲۳۴۵۶۷۸۹";
+
+/** Convert ASCII digits in any string to Persian digits (۰-۹). */
+export function toPersianDigits(value: string | number): string {
+  return String(value).replace(/\d/g, (digit) => PERSIAN_DIGIT_MAP[Number(digit)] ?? digit);
+}
+
 export function formatPersianNumber(value: number): string {
   return new Intl.NumberFormat("fa-IR").format(value);
 }
@@ -88,16 +95,14 @@ export function formatTehranClock(iso: string): string {
   if (!iso?.trim()) return "-";
   const parsed = new Date(iso);
   if (!isValidDate(parsed)) return "-";
-  return tehranHourMinuteFormatter
-    .format(parsed)
-    .replace(/\d/g, (digit) => "۰۱۲۳۴۵۶۷۸۹"[Number(digit)] ?? digit);
+  return toPersianDigits(tehranHourMinuteFormatter.format(parsed));
 }
 
 export function formatDuration(seconds: number): string {
   const mins = Math.floor(seconds / 60);
   const secs = seconds % 60;
   const secsStr = secs.toString().padStart(2, "0");
-  return `${formatPersianNumber(mins)}:${secsStr}`;
+  return toPersianDigits(`${mins}:${secsStr}`);
 }
 
 /** Human-readable Persian duration for online sessions / presence totals. */

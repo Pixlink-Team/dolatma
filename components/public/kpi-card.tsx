@@ -1,6 +1,6 @@
 import { LucideIcon } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { cn, formatPersianNumber } from "@/lib/utils";
+import { cn, formatPersianNumber, toPersianDigits } from "@/lib/utils";
 
 interface KPICardProps {
   title: string;
@@ -26,7 +26,8 @@ export function KPICard({
   todayDelta,
   compactValue = false,
 }: KPICardProps) {
-  const displayValue = typeof value === "number" ? formatPersianNumber(value) : value;
+  const displayValue =
+    typeof value === "number" ? formatPersianNumber(value) : toPersianDigits(value);
   const showTodayDelta = todayDelta != null && todayDelta > 0;
 
   return (
