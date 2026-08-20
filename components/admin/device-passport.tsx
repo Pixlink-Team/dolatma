@@ -429,7 +429,48 @@ export function DevicePassportView({
             </div>
           </div>
           <div className="w-full max-w-sm space-y-3 sm:ms-auto">
-            <DevicePassportCompletionRing completion={completion} />
+            <DevicePassportCompletionRing
+              completion={completion}
+              onMissingItemClick={
+                canEditProfile
+                  ? (key) => {
+                      if (
+                        key === "mission" ||
+                        key === "address" ||
+                        key === "phones" ||
+                        key === "location"
+                      ) {
+                        setProfileOpen(true);
+                        return;
+                      }
+                      if (key === "staff" && canManageStaff) {
+                        openStaffDialog();
+                        return;
+                      }
+                      if (key === "capacity" && canManageAdminSections) {
+                        setEditingCapacityId(null);
+                        capacityForm.reset({
+                          capacityType: "website",
+                          title: "",
+                          description: "",
+                          ownerName: "",
+                          coverageScope: "",
+                          province: "",
+                          city: "",
+                          address: "",
+                          details: resetDetailsForType("website") as Record<string, unknown>,
+                          isActive: true,
+                        });
+                        setCapacityOpen(true);
+                        return;
+                      }
+                      if (key === "primary") {
+                        window.location.assign(adminHref("/admin/users", campaignId));
+                      }
+                    }
+                  : undefined
+              }
+            />
             {canEditProfile ? (
               <Button
                 size="sm"

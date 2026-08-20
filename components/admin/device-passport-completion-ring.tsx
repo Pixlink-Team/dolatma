@@ -74,24 +74,30 @@ function CircularProgress({
 interface DevicePassportCompletionRingProps {
   completion: PassportCompletion;
   className?: string;
+  /** Called when user taps a missing checklist item (e.g. open the right editor). */
+  onMissingItemClick?: (key: string) => void;
 }
 
 export function DevicePassportCompletionRing({
   completion,
   className,
+  onMissingItemClick,
 }: DevicePassportCompletionRingProps) {
   const { percent, complete, completedCount, totalCount, missingLabels, items } = completion;
 
   return (
     <div
       className={cn(
-        "flex w-full max-w-sm flex-col items-center gap-3 rounded-xl border p-4 sm:items-end sm:text-right",
+        "flex w-full max-w-sm flex-col items-center gap-3 rounded-xl border p-4",
         complete
           ? "border-emerald-200 bg-emerald-50/60"
           : "border-amber-200/80 bg-amber-50/40",
         className
       )}
     >
+      <p className="w-full text-center text-xs font-medium text-muted-foreground">
+        پیشرفت تکمیل شناسنامه
+      </p>
       <CircularProgress percent={percent} complete={complete} />
 
       <div className="w-full space-y-2 text-center sm:text-right">
@@ -113,37 +119,66 @@ export function DevicePassportCompletionRing({
         ) : (
           <div className="space-y-2">
             <p className="text-xs text-muted-foreground">هنوز وارد نشده:</p>
-            <ul className="flex flex-wrap justify-center gap-1.5 sm:justify-end">
-              {missingLabels.map((label) => (
-                <li
-                  key={label}
-                  className="rounded-md border border-amber-300/70 bg-background/80 px-2 py-0.5 text-xs font-medium text-amber-900"
-                >
-                  {label}
-                </li>
-              ))}
+            <ul className="flex flex-wrap justify-center gap-1.5 sm:justify-start">
+              {items
+                .filter((item) => !item.done)
+                .map((item) => {
+                  const clickable = Boolean(onMissingItemClick);
+                  const Tag = clickable ? "button" : "span";
+                  return (
+                    <li key={item.key}>
+                      <Tag
+                        type={clickable ? "button" : undefined}
+                        onClick={
+                          clickable ? () => onMissingItemClick?.(item.key) : undefined
+                        }
+                        className={cn(
+                          "rounded-md border border-amber-300/70 bg-background/80 px-2 py-0.5 text-xs font-medium text-amber-900",
+                          clickable && "hover:border-amber-500 hover:bg-amber-100/80"
+                        )}
+                      >
+                        {item.label}
+                      </Tag>
+                    </li>
+                  );
+                })}
             </ul>
             <ul className="hidden space-y-1.5 pt-1 sm:block">
-              {items.map((item) => (
-                <li
-                  key={item.key}
-                  className={cn(
-                    "flex items-center gap-2 text-xs",
-                    item.done ? "text-emerald-700" : "text-muted-foreground"
-                  )}
-                >
-                  <span
-                    className={cn(
-                      "flex h-4 w-4 shrink-0 items-center justify-center rounded-full",
-                      item.done ? "bg-emerald-500 text-white" : "border border-dashed border-muted-foreground/50"
-                    )}
-                  >
-                    {item.done ? <Check className="h-2.5 w-2.5" strokeWidth={3} /> : null}
-                  </span>
-                  <span>{item.label}</span>
-                </li>
-              ))}
+              {items.map((item) => {
+                const clickable = !item.done && Boolean(onMissingItemClick);
+                return (
+                  <li key={item.key}>
+                    <button
+                      type="button"
+                      disabled={!clickable}
+                      onClick={() => onMissingItemClick?.(item.key)}
+                      className={cn(
+                        "flex w-full items-center gap-2 text-xs",
+                        item.done ? "text-emerald-700" : "text-muted-foreground",
+                        clickable && "hover:text-amber-900"
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "flex h-4 w-4 shrink-0 items-center justify-center rounded-full",
+                          item.done
+                            ? "bg-emerald-500 text-white"
+                            : "border border-dashed border-muted-foreground/50"
+                        )}
+                      >
+                        {item.done ? <Check className="h-2.5 w-2.5" strokeWidth={3} /> : null}
+                      </span>
+                      <span>{item.label}</span>
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
+            {missingLabels.length > 0 ? (
+              <p className="text-[11px] leading-relaxed text-muted-foreground">
+                با تکمیل موارد بالا، نوار دایره‌ای پر می‌شود و سبز می‌شود.
+              </p>
+            ) : null}
           </div>
         )}
       </div>
