@@ -18,9 +18,11 @@ import { DirectiveCtaButton } from "@/components/admin/directive-cta-button";
 
 interface DashboardDirectivesPanelProps {
   campaignId: string;
-  /** Kept for call-site compatibility; empty inbox is hidden regardless. */
   canManage?: boolean;
   inboxDirectives: CampaignDirective[];
+  /** When true, always render the card (including empty state) for bento layouts. */
+  alwaysVisible?: boolean;
+  className?: string;
 }
 
 type InboxTab = "new" | "seen";
@@ -85,7 +87,10 @@ function sortPreview(rows: CampaignDirective[]): CampaignDirective[] {
 
 export function DashboardDirectivesPanel({
   campaignId,
+  canManage = false,
   inboxDirectives: initialInbox,
+  alwaysVisible = false,
+  className,
 }: DashboardDirectivesPanelProps) {
   const [inboxRows, setInboxRows] = useState(initialInbox);
   const [inboxTab, setInboxTab] = useState<InboxTab>("new");
@@ -149,12 +154,16 @@ export function DashboardDirectivesPanel({
     [inboxRows]
   );
 
-  if (!hasInbox && aiSuggestions.length === 0) {
+  if (!alwaysVisible && !hasInbox && aiSuggestions.length === 0) {
     return null;
   }
 
+  const emptyMessage = canManage
+    ? "هنوز دستورکاری برای شما نیست — از صفحه دستورکارها می‌توانید ایجاد کنید"
+    : "هنوز دستورکاری برای شما ارسال نشده است";
+
   return (
-    <>
+    <div className={cn("space-y-3", className)}>
       {aiSuggestions.length > 0 ? (
         <Card className="border-primary/20 bg-primary/[0.03]">
           <CardHeader className="pb-3">
@@ -188,173 +197,215 @@ export function DashboardDirectivesPanel({
         </Card>
       ) : null}
 
-      {hasInbox ? (
-        isCompactSeenOnly ? (
-          <Card>
-            <CardContent className="flex flex-col gap-2 p-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="min-w-0 flex flex-wrap items-center gap-2">
-                <ClipboardCheck className="h-4 w-4 shrink-0 text-muted-foreground" />
-                <span className="text-sm font-medium">دستورکارها</span>
-                <Badge variant="secondary">
-                  {formatPersianNumber(seenCount)} دیده‌شده
-                </Badge>
-                {compactPreview.some((item) => !item.hasActionPlan) ? (
-                  <Badge variant="destructive">نیاز به برنامه اقدام</Badge>
-                ) : null}
-                <span className="truncate text-xs text-muted-foreground">
-                  {compactPreview[0]?.title}
-                  {seenCount > 1
-                    ? ` و ${formatPersianNumber(seenCount - 1)} مورد دیگر`
-                    : null}
-                </span>
-              </div>
-              <div className="flex shrink-0 gap-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8"
-                  onClick={() => setDetailItem(compactPreview[0] ?? null)}
-                  disabled={!compactPreview[0]}
-                >
-                  <Eye className="h-4 w-4" />
-                  جزئیات
-                </Button>
-                <Button size="sm" variant="outline" className="h-8" asChild>
-                  <Link href={directivesHref}>مشاهده همه</Link>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ) : (
-          <Card className="border-red-500/40 bg-red-500/[0.04]">
-            <CardHeader className="flex flex-col gap-3 space-y-0 pb-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-              <div className="min-w-0 space-y-1">
-                <CardTitle className="flex flex-wrap items-center gap-2 text-base">
-                  <ClipboardCheck className="h-5 w-5 shrink-0 text-red-600" />
-                  دستورکارها
+      {!hasInbox ? (
+        <Card className="h-full">
+          <CardHeader className="flex flex-col gap-3 space-y-0 pb-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+            <div className="min-w-0 space-y-1">
+              <CardTitle className="flex flex-wrap items-center gap-2 text-base">
+                <ClipboardCheck className="h-5 w-5 shrink-0 text-muted-foreground" />
+                دستورکارها
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">{emptyMessage}</p>
+            </div>
+            <Link href={directivesHref} className="w-full sm:w-auto">
+              <Button variant="outline" size="sm" className="w-full sm:w-auto">
+                مشاهده همه
+              </Button>
+            </Link>
+          </CardHeader>
+          <CardContent>
+            <div className="rounded-xl border border-dashed px-4 py-8 text-center text-sm text-muted-foreground">
+              موردی برای نمایش نیست
+            </div>
+          </CardContent>
+        </Card>
+      ) : isCompactSeenOnly && !alwaysVisible ? (
+        <Card>
+          <CardContent className="flex flex-col gap-2 p-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0 flex flex-wrap items-center gap-2">
+              <ClipboardCheck className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <span className="text-sm font-medium">دستورکارها</span>
+              <Badge variant="secondary">
+                {formatPersianNumber(seenCount)} دیده‌شده
+              </Badge>
+              {compactPreview.some((item) => !item.hasActionPlan) ? (
+                <Badge variant="destructive">نیاز به برنامه اقدام</Badge>
+              ) : null}
+              <span className="truncate text-xs text-muted-foreground">
+                {compactPreview[0]?.title}
+                {seenCount > 1
+                  ? ` و ${formatPersianNumber(seenCount - 1)} مورد دیگر`
+                  : null}
+              </span>
+            </div>
+            <div className="flex shrink-0 gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8"
+                onClick={() => setDetailItem(compactPreview[0] ?? null)}
+                disabled={!compactPreview[0]}
+              >
+                <Eye className="h-4 w-4" />
+                جزئیات
+              </Button>
+              <Button size="sm" variant="outline" className="h-8" asChild>
+                <Link href={directivesHref}>مشاهده همه</Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card
+          className={cn(
+            "h-full",
+            unreadCount > 0 && "border-red-500/40 bg-red-500/[0.04]"
+          )}
+        >
+          <CardHeader className="flex flex-col gap-3 space-y-0 pb-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+            <div className="min-w-0 space-y-1">
+              <CardTitle className="flex flex-wrap items-center gap-2 text-base">
+                <ClipboardCheck
+                  className={cn(
+                    "h-5 w-5 shrink-0",
+                    unreadCount > 0 ? "text-red-600" : "text-muted-foreground"
+                  )}
+                />
+                دستورکارها
+                {unreadCount > 0 ? (
                   <Badge variant="destructive">
                     {formatPersianNumber(unreadCount)} جدید
                   </Badge>
-                </CardTitle>
-                <p className="text-sm text-muted-foreground">
-                  دستورکارهای جدید را ببینید، تأیید مشاهده و برنامه اقدام ثبت کنید
-                </p>
-              </div>
-              <Link href={directivesHref} className="w-full sm:w-auto">
-                <Button size="sm" className="w-full sm:w-auto">
-                  مشاهده همه
-                </Button>
-              </Link>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {seenCount > 0 ? (
-                <Tabs
-                  value={inboxTab}
-                  onValueChange={(value) => setInboxTab(value as InboxTab)}
-                >
-                  <TabsList>
-                    <TabsTrigger value="new">
-                      جدید ({formatPersianNumber(unreadCount)})
-                    </TabsTrigger>
-                    <TabsTrigger value="seen">
-                      دیده‌شده ({formatPersianNumber(seenCount)})
-                    </TabsTrigger>
-                  </TabsList>
-                </Tabs>
-              ) : null}
+                ) : (
+                  <Badge variant="secondary">
+                    {formatPersianNumber(seenCount)} دیده‌شده
+                  </Badge>
+                )}
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                {unreadCount > 0
+                  ? "دستورکارهای جدید را ببینید، تأیید مشاهده و برنامه اقدام ثبت کنید"
+                  : "همه دستورکارهای شما دیده‌شده‌اند — برنامه اقدام را تکمیل کنید"}
+              </p>
+            </div>
+            <Link href={directivesHref} className="w-full sm:w-auto">
+              <Button
+                size="sm"
+                variant={unreadCount > 0 ? "default" : "outline"}
+                className="w-full sm:w-auto"
+              >
+                مشاهده همه
+              </Button>
+            </Link>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {seenCount > 0 && unreadCount > 0 ? (
+              <Tabs
+                value={inboxTab}
+                onValueChange={(value) => setInboxTab(value as InboxTab)}
+              >
+                <TabsList>
+                  <TabsTrigger value="new">
+                    جدید ({formatPersianNumber(unreadCount)})
+                  </TabsTrigger>
+                  <TabsTrigger value="seen">
+                    دیده‌شده ({formatPersianNumber(seenCount)})
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            ) : null}
 
-              {previewRows.length === 0 ? (
-                <div className="rounded-xl border border-dashed px-4 py-8 text-center text-sm text-muted-foreground">
-                  {inboxTab === "new"
-                    ? "دستورکار جدیدی نیست"
-                    : "هنوز دستورکار دیده‌شده‌ای ندارید"}
-                </div>
-              ) : (
-                previewRows.map((item) => (
-                  <article
-                    key={item.id}
-                    className={cn(
-                      "rounded-xl border bg-background p-4",
-                      item.priority === "urgent" && "border-destructive/40",
-                      !item.confirmed && "border-red-500/30"
-                    )}
-                  >
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                      <div className="min-w-0 flex-1 space-y-2">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="min-w-0 break-words font-semibold">{item.title}</h3>
-                          {item.creationMode === "smart" ? (
-                            <Badge variant="outline">هوشمند</Badge>
-                          ) : null}
-                          {item.priority === "urgent" && (
-                            <Badge variant="destructive">فوری</Badge>
-                          )}
-                          {!item.confirmed ? (
-                            <Badge>جدید</Badge>
-                          ) : !item.hasActionPlan ? (
-                            <Badge variant="destructive">نیاز به برنامه اقدام</Badge>
-                          ) : (
-                            <Badge variant="secondary">تعهد ثبت‌شده</Badge>
-                          )}
-                        </div>
-                        <p className="line-clamp-2 whitespace-pre-wrap text-sm text-muted-foreground">
-                          {item.body}
-                        </p>
-                        <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-                          <span>
-                            انتشار:{" "}
-                            {formatPersianDateTime(item.publishedAt ?? item.createdAt)}
-                          </span>
-                          <DirectiveDateRange item={item} />
-                        </div>
-                      </div>
-                      <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:justify-end">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="flex-1 sm:flex-none"
-                          onClick={() => setDetailItem(item)}
-                        >
-                          <Eye className="h-4 w-4" />
-                          جزئیات
-                        </Button>
+            {previewRows.length === 0 ? (
+              <div className="rounded-xl border border-dashed px-4 py-8 text-center text-sm text-muted-foreground">
+                {inboxTab === "new"
+                  ? "دستورکار جدیدی نیست"
+                  : "هنوز دستورکار دیده‌شده‌ای ندارید"}
+              </div>
+            ) : (
+              previewRows.map((item) => (
+                <article
+                  key={item.id}
+                  className={cn(
+                    "rounded-xl border bg-background p-4",
+                    item.priority === "urgent" && "border-destructive/40",
+                    !item.confirmed && "border-red-500/30"
+                  )}
+                >
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="min-w-0 flex-1 space-y-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="min-w-0 break-words font-semibold">{item.title}</h3>
+                        {item.creationMode === "smart" ? (
+                          <Badge variant="outline">هوشمند</Badge>
+                        ) : null}
+                        {item.priority === "urgent" && (
+                          <Badge variant="destructive">فوری</Badge>
+                        )}
                         {!item.confirmed ? (
-                          <Button
-                            size="sm"
-                            className="flex-1 sm:flex-none"
-                            disabled={isPending}
-                            onClick={() => confirmSeen(item)}
-                          >
-                            <Check className="h-4 w-4" />
-                            تأیید مشاهده
-                          </Button>
+                          <Badge>جدید</Badge>
+                        ) : !item.hasActionPlan ? (
+                          <Badge variant="destructive">نیاز به برنامه اقدام</Badge>
                         ) : (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="flex-1 sm:flex-none"
-                            asChild
-                          >
-                            <Link href={directivesHref}>برنامه اقدام</Link>
-                          </Button>
+                          <Badge variant="secondary">تعهد ثبت‌شده</Badge>
                         )}
                       </div>
+                      <p className="line-clamp-2 whitespace-pre-wrap text-sm text-muted-foreground">
+                        {item.body}
+                      </p>
+                      <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+                        <span>
+                          انتشار:{" "}
+                          {formatPersianDateTime(item.publishedAt ?? item.createdAt)}
+                        </span>
+                        <DirectiveDateRange item={item} />
+                      </div>
                     </div>
-                  </article>
-                ))
-              )}
+                    <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:justify-end">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 sm:flex-none"
+                        onClick={() => setDetailItem(item)}
+                      >
+                        <Eye className="h-4 w-4" />
+                        جزئیات
+                      </Button>
+                      {!item.confirmed ? (
+                        <Button
+                          size="sm"
+                          className="flex-1 sm:flex-none"
+                          disabled={isPending}
+                          onClick={() => confirmSeen(item)}
+                        >
+                          <Check className="h-4 w-4" />
+                          تأیید مشاهده
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="flex-1 sm:flex-none"
+                          asChild
+                        >
+                          <Link href={directivesHref}>برنامه اقدام</Link>
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </article>
+              ))
+            )}
 
-              {tabRows.length > PREVIEW_LIMIT && (
-                <p className="text-center text-xs text-muted-foreground">
-                  و{" "}
-                  {formatPersianNumber(tabRows.length - PREVIEW_LIMIT)} مورد دیگر در صفحه
-                  دستورکارها
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        )
-      ) : null}
+            {tabRows.length > PREVIEW_LIMIT && (
+              <p className="text-center text-xs text-muted-foreground">
+                و{" "}
+                {formatPersianNumber(tabRows.length - PREVIEW_LIMIT)} مورد دیگر در صفحه
+                دستورکارها
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <Dialog open={Boolean(detailItem)} onOpenChange={(open) => !open && setDetailItem(null)}>
         <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
@@ -397,6 +448,6 @@ export function DashboardDirectivesPanel({
           )}
         </DialogContent>
       </Dialog>
-    </>
+    </div>
   );
 }

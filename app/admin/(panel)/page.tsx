@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Settings } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { DashboardBentoGrid } from "@/components/admin/dashboard-bento-grid";
 import { DashboardCompletenessCards } from "@/components/admin/dashboard-completeness-cards";
 import { DashboardDirectivesPanel } from "@/components/admin/dashboard-directives-panel";
 import { DashboardUserCard } from "@/components/admin/dashboard-user-card";
@@ -17,11 +18,22 @@ import { canManageAllContent, canManageDirectives } from "@/lib/auth/access";
 import { getSessionHomeDeviceId } from "@/lib/auth/device-access";
 import { getAuthSession, getOwnerFilter, isFullAdmin } from "@/lib/auth/get-session";
 import { getAllUsers } from "@/lib/data-access/admin";
+import { buildUserLeaderboard } from "@/lib/city-leaderboard";
+import { findUserLeaderboardEntry } from "@/lib/company-supervision";
 import {
   hasContributorPermission,
   type ContributorPermissionKey,
   type ContributorPermissions,
 } from "@/lib/contributor-permissions";
+import {
+  CONTENT_MESSAGE_TYPE_LABELS,
+} from "@/lib/content-messages/types";
+import type { ReviewableContentType } from "@/lib/content-review/types";
+import {
+  pgCountUnreadContentMessages,
+  pgListReceivedContentMessages,
+} from "@/lib/db/content-messages-repository";
+import { pgListContentReviews, pgCountContentReviews } from "@/lib/db/content-review-repository";
 import { pgListBestPractices } from "@/lib/db/repository-best-practices";
 import { pgListDirectivesForUserInbox } from "@/lib/db/repository-directives";
 import { pgGetUserPermissionsForCampaign } from "@/lib/db/repository-extended";
@@ -33,9 +45,44 @@ import {
 } from "@/lib/edit-suggestions";
 import { evaluateDeviceOnboarding } from "@/lib/onboarding/progress";
 import type { OnboardingProgress } from "@/lib/onboarding/types";
+import { buildLeaderboardSourceFromAdmin } from "@/lib/performance-overview";
 import { withFileAccessTokensDeep } from "@/lib/uploads";
 import { getUserRoleDisplayLabel, isOrgUserRole } from "@/lib/user-roles";
 import { formatPersianNumber, adminHref, isPostgresConfigured } from "@/lib/utils";
+
+const REVIEW_TYPE_LABELS: Record<ReviewableContentType, string> = {
+  billboard: "تبلیغات محیطی",
+  poster: "پوستر و عکس",
+  video: "ویدیو",
+  activity: "اقدام",
+  social_post: "شبکه اجتماعی",
+  site_publication: "انتشار سایت",
+};
+
+function resolveContentTitle(
+  contentType: string,
+  contentId: string,
+  data: Awaited<ReturnType<typeof getAdminData>>
+): string {
+  const matchTitle = (rows: Array<{ id: string; title?: string }> | undefined) =>
+    rows?.find((row) => row.id === contentId)?.title?.trim() || null;
+
+  switch (contentType) {
+    case "billboard":
+      return matchTitle(data.billboards) ?? "تبلیغات محیطی";
+    case "poster":
+      return matchTitle(data.posters) ?? "پوستر";
+    case "video":
+      return matchTitle(data.videos) ?? "ویدیو";
+    case "activity":
+      return matchTitle(data.activities) ?? "اقدام";
+    case "social_post":
+    case "site_publication":
+      return matchTitle(data.socialPosts) ?? "محتوا";
+    default:
+      return "محتوا";
+  }
+}
 
 const PERMISSION_TO_CONTENT_TYPE: Partial<
   Record<ContributorPermissionKey, EditSuggestionContentType>
@@ -135,11 +182,10 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
       })
     : [];
 
-  const bestPracticesCount =
-    isPostgresConfigured() &&
-    (canManageAll || hasContributorPermission(contributorPermissions, "bestPractices"))
-      ? (await pgListBestPractices(campaignId, "approved")).length
-      : 0;
+  const bestPractices = isPostgresConfigured()
+    ? await pgListBestPractices(campaignId, "approved")
+    : [];
+  const bestPracticesCount = bestPractices.length;
   const dashboardData = { ...data, bestPracticesCount };
 
   const stats = DASHBOARD_STAT_DEFINITIONS.filter((definition) =>
@@ -180,6 +226,56 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
         )
       : [];
   const bulkImportUsers = session && isFullAdmin(session) ? await getAllUsers() : [];
+
+  const scoreEntry =
+    session?.userId
+      ? findUserLeaderboardEntry(
+          buildUserLeaderboard(
+            buildLeaderboardSourceFromAdmin({
+              billboards,
+              posters: data.posters,
+              posterVersions: data.posterVersions,
+              videos: data.videos,
+              videoVersions: data.videoVersions,
+              socialPosts: data.socialPosts,
+              activities: data.activities,
+              files: data.files,
+            })
+          ),
+          session.userId
+        )
+      : null;
+
+  const [returnedReviews, returnedContentCount] = isPostgresConfigured()
+    ? await Promise.all([
+        pgListContentReviews({
+          campaignId,
+          statuses: ["needs_revision", "resubmitted"],
+          ownerUserId,
+          limit: 5,
+        }),
+        pgCountContentReviews({
+          campaignId,
+          statuses: ["needs_revision", "resubmitted"],
+          ownerUserId,
+        }),
+      ])
+    : [[], 0];
+
+  const [receivedMessages, unreadMessageCount] =
+    session?.userId && isPostgresConfigured()
+      ? await Promise.all([
+          pgListReceivedContentMessages({
+            recipientUserId: session.userId,
+            limit: 40,
+          }),
+          pgCountUnreadContentMessages(session.userId),
+        ])
+      : [[], 0];
+
+  const campaignMessages = receivedMessages.filter(
+    (message) => message.campaignId === campaignId
+  );
 
   let onboardingProgress: OnboardingProgress | null = null;
   if (
@@ -232,10 +328,65 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
         <OnboardingProgressCard progress={onboardingProgress} />
       ) : null}
 
-      <DashboardDirectivesPanel
+      <DashboardBentoGrid
         campaignId={campaignId}
-        canManage={canManageDirectivesForUser}
-        inboxDirectives={inboxDirectives}
+        directivesSlot={
+          <DashboardDirectivesPanel
+            campaignId={campaignId}
+            canManage={canManageDirectivesForUser}
+            inboxDirectives={inboxDirectives}
+            alwaysVisible
+            className="h-full"
+          />
+        }
+        bestPractices={{
+          count: bestPracticesCount,
+          items: bestPractices.slice(0, 3).map((item) => ({
+            id: item.id,
+            title: item.title || "اقدام برتر",
+            meta: item.suggestedScore != null
+              ? `امتیاز پیشنهادی: ${formatPersianNumber(item.suggestedScore)}`
+              : null,
+          })),
+        }}
+        scores={
+          scoreEntry
+            ? {
+                activityScore: scoreEntry.score,
+                ratingScore: scoreEntry.ratingScore,
+                totalUploads: scoreEntry.totalUploads,
+                rank: scoreEntry.rank > 0 ? scoreEntry.rank : null,
+              }
+            : {
+                activityScore: 0,
+                ratingScore: 0,
+                totalUploads: 0,
+                rank: null,
+              }
+        }
+        returnedContent={{
+          count: returnedContentCount,
+          items: returnedReviews.slice(0, 3).map((review) => ({
+            id: review.id,
+            title: resolveContentTitle(review.contentType, review.contentId, data),
+            meta:
+              review.rejectionReason?.trim() ||
+              REVIEW_TYPE_LABELS[review.contentType] ||
+              null,
+          })),
+        }}
+        messages={{
+          unreadCount: unreadMessageCount,
+          totalCount: campaignMessages.length,
+          items: campaignMessages.slice(0, 3).map((message) => ({
+            id: message.id,
+            title: message.contentTitle || "پیام",
+            meta:
+              message.body.trim() ||
+              CONTENT_MESSAGE_TYPE_LABELS[message.contentType] ||
+              null,
+          })),
+        }}
       />
 
       <div className="min-w-0 space-y-3">
