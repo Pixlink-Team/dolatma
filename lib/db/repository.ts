@@ -31,6 +31,7 @@ import type {
   Poster,
   PosterVersion,
   RawMediaUpload,
+  TextContent,
   Video,
   VideoVersion,
 } from "@/lib/types";
