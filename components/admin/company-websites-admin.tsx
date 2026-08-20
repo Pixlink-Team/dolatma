@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { ExternalLink, Globe, Plus } from "lucide-react";
+import { ExternalLink, Globe } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,8 +12,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { MediaUpload } from "@/components/ui/media-upload";
-import { AdminDataTable } from "@/components/admin/admin-data-table";
-import { adminOwnerTableColumn } from "@/components/admin/admin-owner-badge";
+import { Card, CardContent } from "@/components/ui/card";
+import { AdminCompactAddCard } from "@/components/admin/admin-compact-add-card";
+import { AdminItemActions } from "@/components/admin/admin-item-actions";
 import {
   deleteCompanyWebsiteAction,
   saveCompanyWebsiteAction,
@@ -143,75 +144,108 @@ export function CompanyWebsitesAdmin({ campaignId, initialItems }: CompanyWebsit
     setOpen(true);
   };
 
+  const handleDelete = (item: CompanyWebsite) => {
+    startTransition(async () => {
+      const result = await deleteCompanyWebsiteAction(item.id);
+      if (!result?.success) {
+        toast.error("error" in result && result.error ? String(result.error) : "خطا در حذف");
+        return;
+      }
+      setRows((prev) => prev.filter((row) => row.id !== item.id));
+      toast.success("حذف شد");
+    });
+  };
+
   return (
     <div className="space-y-6">
       {tutorialModal}
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold">سایت‌ها</h1>
-          <p className="text-sm text-muted-foreground">
-            معرفی سایت‌ها با نام و لینک — جدا از بخش انتشار مطلب در سایت
-          </p>
-        </div>
-        <Button onClick={openCreate} disabled={isPending}>
-          <Plus className="h-4 w-4" />
-          افزودن سایت
-        </Button>
+      <div>
+        <h1 className="text-2xl font-bold">سایت‌ها</h1>
+        <p className="text-sm text-muted-foreground">
+          معرفی سایت‌ها با نام و لینک — جدا از بخش انتشار مطلب در سایت
+        </p>
       </div>
 
-      <AdminDataTable
-        data={rows}
-        searchKeys={["title", "companyName", "url"]}
-        columns={[
-          {
-            key: "logo",
-            label: "لوگو",
-            render: (item) =>
-              item.logoUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={item.logoUrl} alt="" className="h-10 w-10 rounded object-cover" />
-              ) : (
-                <div className="flex h-10 w-10 items-center justify-center rounded bg-muted">
-                  <Globe className="h-5 w-5 text-muted-foreground" />
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <AdminCompactAddCard
+          onClick={openCreate}
+          disabled={isPending}
+          label="افزودن سایت"
+          aspectClass="min-h-[11rem] h-full aspect-auto"
+        />
+        {rows.map((item) => {
+          const openSite = () => {
+            if (item.url) window.open(item.url, "_blank", "noopener,noreferrer");
+            else openEdit(item);
+          };
+          return (
+            <Card
+              key={item.id}
+              className="cursor-pointer overflow-hidden transition hover:border-primary/40 hover:shadow-sm"
+              onClick={openSite}
+              role="link"
+              tabIndex={0}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  openSite();
+                }
+              }}
+            >
+              <CardContent className="space-y-4 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex min-w-0 items-center gap-3">
+                    {item.logoUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={item.logoUrl}
+                        alt=""
+                        className="h-12 w-12 shrink-0 rounded-lg object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-muted">
+                        <Globe className="h-6 w-6 text-muted-foreground" />
+                      </div>
+                    )}
+                    <div className="min-w-0">
+                      <p className="truncate font-semibold">{item.title}</p>
+                      {item.companyName ? (
+                        <p className="truncate text-xs text-muted-foreground">{item.companyName}</p>
+                      ) : null}
+                      {item.ownerName ? (
+                        <p className="truncate text-xs text-muted-foreground">{item.ownerName}</p>
+                      ) : null}
+                    </div>
+                  </div>
+                  <div onClick={(event) => event.stopPropagation()}>
+                    <AdminItemActions
+                      onView={openSite}
+                      onEdit={() => openEdit(item)}
+                      onDelete={() => handleDelete(item)}
+                    />
+                  </div>
                 </div>
-              ),
-          },
-          { key: "title", label: "نام سایت", render: (item) => item.title },
-          {
-            key: "company",
-            label: "شرکت",
-            render: (item) => item.companyName || "—",
-          },
-          {
-            key: "url",
-            label: "لینک",
-            render: (item) => (
-              <a
-                href={item.url}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1 text-primary hover:underline"
-              >
-                <ExternalLink className="h-3.5 w-3.5" />
-                باز کردن
-              </a>
-            ),
-          },
-          adminOwnerTableColumn<CompanyWebsite>(),
-        ]}
-        onEdit={openEdit}
-        onDelete={(item) => {
-          startTransition(async () => {
-            const result = await deleteCompanyWebsiteAction(item.id);
-            if (!result?.success) {
-              toast.error("error" in result && result.error ? String(result.error) : "خطا در حذف");
-              return;
-            }
-            setRows((prev) => prev.filter((row) => row.id !== item.id));
-            toast.success("حذف شد");
-          });
-        }}
-      />
+
+                {item.description ? (
+                  <p className="line-clamp-2 text-sm text-muted-foreground">{item.description}</p>
+                ) : null}
+
+                <a
+                  href={item.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex max-w-full items-center gap-1 truncate text-xs text-primary hover:underline"
+                  dir="ltr"
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate">{item.url}</span>
+                </a>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
 
       <Dialog
         open={open}
