@@ -133,6 +133,22 @@ const SCOREABLE_FIELDS: Record<ScoreableContentType, ScoreableFieldDef[]> = {
     { key: "fileName", label: "نام فایل", valueType: "text", kinds: ["filled"] },
     { key: "planLabels", label: "موضوع / طرح", valueType: "text", kinds: ["filled"] },
   ],
+  text_content: [
+    ...commonTitleDesc,
+    {
+      key: "contentKind",
+      label: "نوع",
+      valueType: "select",
+      kinds: ["filled", "equals"],
+      options: [
+        { value: "news", label: "خبر" },
+        { value: "text", label: "محتوای متنی" },
+      ],
+    },
+    { key: "body", label: "متن", valueType: "text", kinds: ["filled"] },
+    { key: "coverImageUrl", label: "کاور", valueType: "media", kinds: ["filled"] },
+    { key: "planLabels", label: "موضوع / طرح", valueType: "text", kinds: ["filled"] },
+  ],
   raw_media: [
     ...commonTitleDesc,
     {
@@ -243,12 +259,13 @@ const SCOREABLE_FIELDS: Record<ScoreableContentType, ScoreableFieldDef[]> = {
 
 export const SCOREABLE_CONTENT_TYPE_LABELS: Record<ScoreableContentType, string> = {
   billboard: "تبلیغات محیطی",
-  poster: "پوسترها",
+  poster: "پوستر و عکس",
   video: "ویدیوها",
   file: "فایل‌ها",
-  raw_media: "راش تصویر",
+  raw_media: "راش تصاویر",
+  text_content: "خبر و متن",
   social_post: "پست شبکه اجتماعی",
-  site_publication: "سایت و خبرگزاری",
+  site_publication: "سایت / خبرگزاری",
   activity: "اقدامات",
   broadcast: "صدا و سیما",
   meeting: "جلسات و مصوبات",

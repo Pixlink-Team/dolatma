@@ -22,10 +22,10 @@ export const PRODUCTION_SOURCE_TYPES: ProductionSourceType[] = [
 ];
 
 export const PRODUCTION_SOURCE_TYPE_LABELS: Record<ProductionSourceType, string> = {
-  poster: "پوستر",
+  poster: "پوستر و عکس",
   video: "ویدیو",
   file: "فایل",
-  raw_media: "راش",
+  raw_media: "راش تصاویر",
   text_content: "خبر / متن",
   directive_asset: "دارایی دستورکار",
 };
