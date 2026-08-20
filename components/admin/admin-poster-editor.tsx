@@ -192,6 +192,11 @@ export function AdminPosterEditor({
       onClose();
       return;
     }
+    setConfirmDeleteOpen(true);
+  };
+
+  const confirmDeletePoster = () => {
+    setConfirmDeleteOpen(false);
     startTransition(async () => {
       await deletePosterAction(poster.id);
       toast.success("پوستر حذف شد");
@@ -212,63 +217,83 @@ export function AdminPosterEditor({
     <div className="flex min-h-0 flex-1 flex-col">
       <div
         ref={scrollAreaRef}
-        className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-y-contain pr-1"
+        className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-y-contain px-6"
       >
         {!fieldsLoaded ? (
           <p className="text-sm text-muted-foreground">در حال بارگذاری فرم...</p>
         ) : (
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0 flex-1">
-              <ContentSectionFormRenderer
-                sectionKey="posters"
-                fields={fields}
-                values={values}
-                onChange={patchValues}
-                contentTopics={contentTopics}
-                contentPlans={contentPlans}
-                campaignId={poster.campaignId}
-                contentId={poster.id}
-                canScore={canScore}
-                isNew={isNew}
-                highlightTitle={highlightTitle}
-                highlightDescription={highlightDescription}
-                highlightMedia={highlightMedia}
-              />
-              {highlightMedia ? (
-                <p className="mt-2 text-xs text-destructive">
-                  تصویر پوستر هنوز آپلود نشده است.
-                </p>
-              ) : null}
-              {highlightTitle ? (
-                <p className="mt-2 text-xs text-destructive">
-                  عنوان پیش‌فرض است؛ یک عنوان اختصاصی وارد کنید.
-                </p>
-              ) : null}
-              {highlightDescription ? (
-                <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">
-                  توضیحات خالی است؛ بهتر است تکمیل شود.
-                </p>
-              ) : null}
-            </div>
-            <div className="flex flex-col items-center gap-2 pt-6">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleDeletePoster}
-                disabled={isPending}
-              >
-                <Trash2 className="h-4 w-4 text-destructive" />
-              </Button>
-            </div>
+          <div className="min-w-0">
+            <ContentSectionFormRenderer
+              sectionKey="posters"
+              fields={fields}
+              values={values}
+              onChange={patchValues}
+              contentTopics={contentTopics}
+              contentPlans={contentPlans}
+              campaignId={poster.campaignId}
+              contentId={poster.id}
+              canScore={canScore}
+              isNew={isNew}
+              highlightTitle={highlightTitle}
+              highlightDescription={highlightDescription}
+              highlightMedia={highlightMedia}
+            />
+            {highlightMedia ? (
+              <p className="mt-2 text-xs text-destructive">
+                تصویر پوستر هنوز آپلود نشده است.
+              </p>
+            ) : null}
+            {highlightTitle ? (
+              <p className="mt-2 text-xs text-destructive">
+                عنوان پیش‌فرض است؛ یک عنوان اختصاصی وارد کنید.
+              </p>
+            ) : null}
+            {highlightDescription ? (
+              <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">
+                توضیحات خالی است؛ بهتر است تکمیل شود.
+              </p>
+            ) : null}
           </div>
         )}
       </div>
 
-      <div className="mt-3 flex shrink-0 gap-2 border-t bg-card pt-3">
+      <div className="flex shrink-0 items-center gap-2 border-t bg-card px-6 pt-3">
         <Button onClick={handleSaveAll} disabled={isPending || !fieldsLoaded} className="flex-1">
           {isPending ? "در حال ذخیره..." : "ذخیره"}
         </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={handleDeletePoster}
+          disabled={isPending}
+          aria-label={isNew ? "بستن" : "حذف پوستر"}
+          title={isNew ? "بستن" : "حذف"}
+        >
+          <Trash2 className="h-4 w-4 text-destructive" />
+        </Button>
       </div>
+
+      <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>حذف پوستر</AlertDialogTitle>
+            <AlertDialogDescription>
+              آیا از حذف «{poster.title || "این پوستر"}» مطمئن هستید؟ این عمل قابل بازگشت نیست.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isPending}>انصراف</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDeletePoster}
+              disabled={isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              حذف
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

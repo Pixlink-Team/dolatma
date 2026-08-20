@@ -137,7 +137,7 @@ export function VideoFormDialog({
             />
           </div>
           {onSkip ? (
-            <Button type="button" variant="outline" onClick={onSkip} className="shrink-0 self-start">
+            <Button type="button" variant="outline" onClick={onSkip} className="mx-6 shrink-0 self-start">
               <SkipForward className="h-4 w-4" />
               رد کردن
             </Button>

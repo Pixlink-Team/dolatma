@@ -214,6 +214,11 @@ export function AdminVideoEditor({
       onClose();
       return;
     }
+    setConfirmDeleteOpen(true);
+  };
+
+  const confirmDeleteVideo = () => {
+    setConfirmDeleteOpen(false);
     startTransition(async () => {
       await deleteVideoAction(video.id);
       toast.success("ویدیو حذف شد");
@@ -231,7 +236,10 @@ export function AdminVideoEditor({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div ref={scrollAreaRef} className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-y-contain pr-1">
+      <div
+        ref={scrollAreaRef}
+        className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-y-contain px-6"
+      >
         <MediaUpload
           label="ویدیو"
           kind="video"
@@ -288,99 +296,124 @@ export function AdminVideoEditor({
           }
         />
 
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex-1 space-y-3">
-            <div>
-              <Label className={cn(highlightTitle && "text-destructive")}>عنوان</Label>
-              <Input
-                value={editTitle}
-                maxLength={CONTENT_TITLE_MAX_LENGTH}
-                onChange={(e) => setEditTitle(e.target.value)}
-                placeholder="عنوان ویدیو"
-                className={cn(highlightTitle && "border-destructive focus-visible:ring-destructive")}
-              />
-              {highlightTitle && (
-                <p className="mt-1 text-xs text-destructive">عنوان پیش‌فرض است؛ یک عنوان اختصاصی وارد کنید.</p>
-              )}
-            </div>
-            <div>
-              <Label className={cn(highlightDescription && "text-amber-700 dark:text-amber-300")}>توضیحات</Label>
-              <Textarea
-                value={editDescription}
-                onChange={(e) => setEditDescription(e.target.value)}
-                rows={2}
-                placeholder="توضیحات (اختیاری)"
-                className={cn(
-                  highlightDescription && "border-amber-500 focus-visible:ring-amber-500"
-                )}
-              />
-              {highlightDescription && (
-                <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">توضیحات خالی است؛ بهتر است تکمیل شود.</p>
-              )}
-            </div>
-            <div>
-              <Label>نوع ویدیو</Label>
-              <Select
-                value={editCategoryId || undefined}
-                onValueChange={setEditCategoryId}
-                disabled={selectOptions.length === 0}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="تیزر، انیمیشن یا موشن‌گرافیک" />
-                </SelectTrigger>
-                <SelectContent>
-                  {selectOptions.map((category) => (
-                    <SelectItem key={category.id} value={category.id}>
-                      {category.title}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <PlanLabelSelect
-              topics={contentTopics}
-              plans={contentPlans}
-              values={editPlanLabels}
-              onChangeMultiple={setEditPlanLabels}
+        <div className="space-y-3">
+          <div>
+            <Label className={cn(highlightTitle && "text-destructive")}>عنوان</Label>
+            <Input
+              value={editTitle}
+              maxLength={CONTENT_TITLE_MAX_LENGTH}
+              onChange={(e) => setEditTitle(e.target.value)}
+              placeholder="عنوان ویدیو"
+              className={cn(highlightTitle && "border-destructive focus-visible:ring-destructive")}
             />
-            {!isNew && (
-              <ContentScoreControl
-                campaignId={video.campaignId}
-                contentType="video"
-                contentId={video.id}
-                score={editScore}
-                canScore={canScore}
-                onScoreSaved={setEditScore}
-              />
+            {highlightTitle && (
+              <p className="mt-1 text-xs text-destructive">عنوان پیش‌فرض است؛ یک عنوان اختصاصی وارد کنید.</p>
             )}
-            {highlightMedia && (
-              <p className="text-xs text-destructive">ویدیو هنوز آپلود نشده است.</p>
-            )}
-            <MediaUpload
-              label="کاور سفارشی (اختیاری — بدون کاور، خودکار از ویدیو ساخته می‌شود)"
-              value={thumbnailUrl}
-              onChange={setThumbnailUrl}
-              dropzone={false}
-              showPreview={false}
-            />
-            <div>
-              <Label>یادداشت (اختیاری)</Label>
-              <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
-            </div>
           </div>
-          <div className="flex flex-col items-center gap-2 pt-6">
-            <Button variant="ghost" size="icon" onClick={handleDeleteVideo} disabled={isPending}>
-              <Trash2 className="h-4 w-4 text-destructive" />
-            </Button>
+          <div>
+            <Label className={cn(highlightDescription && "text-amber-700 dark:text-amber-300")}>توضیحات</Label>
+            <Textarea
+              value={editDescription}
+              onChange={(e) => setEditDescription(e.target.value)}
+              rows={2}
+              placeholder="توضیحات (اختیاری)"
+              className={cn(
+                highlightDescription && "border-amber-500 focus-visible:ring-amber-500"
+              )}
+            />
+            {highlightDescription && (
+              <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">توضیحات خالی است؛ بهتر است تکمیل شود.</p>
+            )}
+          </div>
+          <div>
+            <Label>نوع ویدیو</Label>
+            <Select
+              value={editCategoryId || undefined}
+              onValueChange={setEditCategoryId}
+              disabled={selectOptions.length === 0}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="تیزر، انیمیشن یا موشن‌گرافیک" />
+              </SelectTrigger>
+              <SelectContent>
+                {selectOptions.map((category) => (
+                  <SelectItem key={category.id} value={category.id}>
+                    {category.title}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <PlanLabelSelect
+            topics={contentTopics}
+            plans={contentPlans}
+            values={editPlanLabels}
+            onChangeMultiple={setEditPlanLabels}
+          />
+          {!isNew && (
+            <ContentScoreControl
+              campaignId={video.campaignId}
+              contentType="video"
+              contentId={video.id}
+              score={editScore}
+              canScore={canScore}
+              onScoreSaved={setEditScore}
+            />
+          )}
+          {highlightMedia && (
+            <p className="text-xs text-destructive">ویدیو هنوز آپلود نشده است.</p>
+          )}
+          <MediaUpload
+            label="کاور سفارشی (اختیاری — بدون کاور، خودکار از ویدیو ساخته می‌شود)"
+            value={thumbnailUrl}
+            onChange={setThumbnailUrl}
+            dropzone={false}
+            showPreview={false}
+          />
+          <div>
+            <Label>یادداشت (اختیاری)</Label>
+            <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
           </div>
         </div>
       </div>
 
-      <div className="mt-3 flex shrink-0 gap-2 border-t bg-card pt-3">
+      <div className="flex shrink-0 items-center gap-2 border-t bg-card px-6 pt-3">
         <Button onClick={handleSaveAll} disabled={isPending} className="flex-1">
           {isPending ? "در حال ذخیره..." : "ذخیره"}
         </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={handleDeleteVideo}
+          disabled={isPending}
+          aria-label={isNew ? "بستن" : "حذف ویدیو"}
+          title={isNew ? "بستن" : "حذف"}
+        >
+          <Trash2 className="h-4 w-4 text-destructive" />
+        </Button>
       </div>
+
+      <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>حذف ویدیو</AlertDialogTitle>
+            <AlertDialogDescription>
+              آیا از حذف «{editTitle || "این ویدیو"}» مطمئن هستید؟ این عمل قابل بازگشت نیست.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isPending}>انصراف</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDeleteVideo}
+              disabled={isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              حذف
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

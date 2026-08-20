@@ -360,7 +360,7 @@ export function VideosAdmin({
               ویرایش عنوان و وضعیت انتشار ویدیو
             </DialogDescription>
           </DialogHeader>
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-6 pb-4 pt-4">
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden pb-4 pt-4">
             {activeVideo ? (
               <AdminVideoEditor
                 video={activeVideo}
