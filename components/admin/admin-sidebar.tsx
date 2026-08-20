@@ -186,8 +186,6 @@ const ASSETS_GROUP_ORDER = [
   "/admin/capacity-map",
   "/admin/analytics",
   "/admin/social-analytics",
-  "/admin/meetings",
-  "/admin/submissions",
 ] as const;
 const ASSETS_GROUP_HREFS = new Set<string>(ASSETS_GROUP_ORDER);
 const PRODUCTION_GROUP_HREFS = new Set([
@@ -197,6 +195,7 @@ const PRODUCTION_GROUP_HREFS = new Set([
   "/admin/files",
   "/admin/text-contents",
   "/admin/raw-media",
+  "/admin/meetings",
 ]);
 /** Ordered list for the publishing group (menu display order). */
 const PUBLISHING_GROUP_ORDER = [
@@ -208,6 +207,7 @@ const PUBLISHING_GROUP_ORDER = [
   "/admin/press-publications",
   "/admin/activities",
   "/admin/sms-reports",
+  "/admin/submissions",
 ] as const;
 const PUBLISHING_GROUP_HREFS = new Set<string>(PUBLISHING_GROUP_ORDER);
 
