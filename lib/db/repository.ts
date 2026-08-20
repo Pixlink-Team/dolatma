@@ -14,8 +14,6 @@ import {
   mapSocialPostFromDb,
   mapSocialPlatformStatFromDb,
   mapSubmissionFromDb,
-  mapTextContentFromDb,
-
   mapVideoFromDb,
   mapVideoVersionFromDb,
 } from "@/lib/db/mappers";
@@ -33,7 +31,7 @@ import type {
   Poster,
   PosterVersion,
   RawMediaUpload,
-
+  TextContent,
   Video,
   VideoVersion,
 } from "@/lib/types";
@@ -430,7 +428,6 @@ export async function pgGetAdminData(
     companyWebsites: companyWebsites.map(mapCompanyWebsiteFromDb),
     submissions: submissions.map(mapSubmissionFromDb),
     files: files.map(mapCampaignFileFromDb),
-    textContents: textContents.map(mapTextContentFromDb),
     socialPosts: socialPosts.map(mapSocialPostFromDb),
     broadcastReports: broadcastReports.map(mapBroadcastReportFromDb),
     socialPlatformStats: socialPlatformStats.map(mapSocialPlatformStatFromDb),
@@ -1543,6 +1540,69 @@ export async function pgSaveCampaignFile(data: Partial<CampaignFile> & { id?: st
 export async function pgDeleteCampaignFile(id: string) {
   const sql = getSql();
   await sql`DELETE FROM campaign_files WHERE id = ${id}`;
+  return { success: true };
+}
+
+export async function pgSaveTextContent(data: Partial<TextContent> & { id?: string }) {
+  const sql = getSql();
+  const now = new Date().toISOString();
+  const id = data.id ?? generateId();
+  const { planLabel, planLabels } = resolvePlanFields(data);
+  const contentKind = data.contentKind === "news" ? "news" : "text";
+
+  await sql`
+    INSERT INTO text_contents (
+      id, campaign_id, content_kind, title, body, description,
+      cover_image_url, attachment_url, attachment_file_name,
+      published, sort_order, owner_user_id, plan_label, plan_labels, score, created_at, updated_at
+    ) VALUES (
+      ${id},
+      ${data.campaignId ?? ""},
+      ${contentKind},
+      ${data.title ?? ""},
+      ${data.body ?? ""},
+      ${data.description ?? null},
+      ${data.coverImageUrl ?? null},
+      ${data.attachmentUrl ?? null},
+      ${data.attachmentFileName ?? null},
+      ${data.published ?? true},
+      ${data.sortOrder ?? 0},
+      ${data.ownerUserId ?? null},
+      ${planLabel},
+      ${sql.json(planLabels)},
+      ${data.score ?? null},
+      ${now},
+      ${now}
+    )
+    ON CONFLICT (id) DO UPDATE SET
+      content_kind = EXCLUDED.content_kind,
+      title = EXCLUDED.title,
+      body = EXCLUDED.body,
+      description = EXCLUDED.description,
+      cover_image_url = EXCLUDED.cover_image_url,
+      attachment_url = EXCLUDED.attachment_url,
+      attachment_file_name = EXCLUDED.attachment_file_name,
+      published = EXCLUDED.published,
+      sort_order = EXCLUDED.sort_order,
+      owner_user_id = COALESCE(EXCLUDED.owner_user_id, text_contents.owner_user_id),
+      plan_label = EXCLUDED.plan_label,
+      plan_labels = EXCLUDED.plan_labels,
+      score = COALESCE(EXCLUDED.score, text_contents.score),
+      updated_at = EXCLUDED.updated_at
+  `;
+
+  await recalculateScoreAfterSave({
+    campaignId: data.campaignId ?? "",
+    contentType: "text_content",
+    contentId: id,
+  });
+
+  return { success: true, id };
+}
+
+export async function pgDeleteTextContent(id: string) {
+  const sql = getSql();
+  await sql`DELETE FROM text_contents WHERE id = ${id}`;
   return { success: true };
 }
 
