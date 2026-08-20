@@ -16,6 +16,10 @@ import {
   type AdminContentFilterState,
 } from "@/components/admin/admin-content-filter-bar";
 import {
+  AdminEditorDialog,
+  AdminEditorDialogActions,
+} from "@/components/admin/admin-editor-dialog";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -53,9 +57,6 @@ interface PostersAdminProps {
   isFullAdmin?: boolean;
   users?: AdminUser[];
 }
-
-const editorDialogClass =
-  "!flex min-h-0 max-h-[92vh] max-w-2xl flex-col gap-0 overflow-hidden rounded-xl p-0";
 
 export function PostersAdmin({
   campaignId,
@@ -324,15 +325,13 @@ export function PostersAdmin({
         remaining={filteredPosters.length - visibleCount}
       />
 
-      <Dialog open={editorOpen} onOpenChange={(open) => (open ? setEditorOpen(true) : closeEditor())}>
-        <DialogContent className={editorDialogClass}>
-          <DialogHeader className="shrink-0 border-b px-6 py-4 pr-12">
-            <DialogTitle>{activePoster?.title ?? "ویرایش پوستر"}</DialogTitle>
-            <DialogDescription className="sr-only">
-              ویرایش عنوان و وضعیت انتشار پوستر
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden pb-4 pt-4">
+      <AdminEditorDialog
+        open={editorOpen}
+        onOpenChange={(open) => (open ? setEditorOpen(true) : closeEditor())}
+        title={activePoster?.title ?? "ویرایش پوستر"}
+        description="ویرایش عنوان و وضعیت انتشار پوستر"
+        size="2xl"
+      >
             {activePoster ? (
               <AdminPosterEditor
                 poster={activePoster}
@@ -361,9 +360,7 @@ export function PostersAdmin({
                 در حال بارگذاری...
               </div>
             )}
-          </div>
-        </DialogContent>
-      </Dialog>
+      </AdminEditorDialog>
 
       <Dialog open={Boolean(previewPoster)} onOpenChange={(open) => !open && setPreviewPoster(null)}>
         <DialogContent className="max-w-lg">

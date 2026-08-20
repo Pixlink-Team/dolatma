@@ -10,8 +10,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  AdminEditorDialog,
+  AdminEditorDialogActions,
+} from "@/components/admin/admin-editor-dialog";
 import {
   AdminContentFilterBar,
   collectAdminFilterUsers,
@@ -29,12 +32,14 @@ import { AdminSocialPostCompactCard } from "@/components/admin/admin-social-post
 import { AdminViewModeToggle } from "@/components/admin/admin-view-mode-toggle";
 import { PlanLabelSelect } from "@/components/admin/plan-label-select";
 import { ContentScoreControl } from "@/components/admin/content-score-control";
+import { ProductionSourcePicker } from "@/components/admin/production-source-picker";
 import {
   BulkItemShell,
   SectionBulkEditBar,
   useSectionBulkEdit,
 } from "@/components/admin/section-bulk-edit";
 import { normalizePlanLabels, type ContentTopic } from "@/lib/content-topics";
+import type { ProductionSourceType } from "@/lib/production-source-shared";
 import { MediaUpload } from "@/components/ui/media-upload";
 import { PersianDateField } from "@/components/ui/persian-date-input";
 import { deleteSocialPostAction, fetchSocialLinkMetricsAction, saveSocialPostAction } from "@/lib/actions/extended-actions";
@@ -58,6 +63,9 @@ import {
   MAX_SOCIAL_POST_LINK_ENTRIES,
   normalizeSocialPostLinkEntries,
   SOCIAL_PLATFORM_OPTIONS,
+  sumSocialPostLinkEntryComments,
+  sumSocialPostLinkEntryLikes,
+  sumSocialPostLinkEntryShares,
   sumSocialPostLinkEntryViews,
 } from "@/lib/social-posts";
 import { SocialPlatformIcon, getSocialPlatformLabel } from "@/components/public/social-platform-icon";
@@ -126,6 +134,8 @@ export function SocialPostsAdmin({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [previewPost, setPreviewPost] = useState<SocialMediaPost | null>(null);
   const [planLabels, setPlanLabels] = useState<string[]>([]);
+  const [sourceProductionType, setSourceProductionType] = useState<ProductionSourceType | null>(null);
+  const [sourceProductionId, setSourceProductionId] = useState<string | null>(null);
   const [highlightFields, setHighlightFields] = useState<EditSuggestionMissingField[]>([]);
   const [isGroupDistribution, setIsGroupDistribution] = useState(false);
   const [selectedPlatforms, setSelectedPlatforms] = useState<SocialPlatform[]>(["instagram"]);
@@ -232,6 +242,8 @@ export function SocialPostsAdmin({
       setEditingId(null);
       setHighlightFields([]);
       setPlanLabels([]);
+      setSourceProductionType(null);
+      setSourceProductionId(null);
       setIsGroupDistribution(false);
       setSelectedPlatforms(["instagram"]);
       setLinkEntries([createEmptySocialPostLinkEntry("instagram")]);
@@ -258,19 +270,48 @@ export function SocialPostsAdmin({
     setEditingId(post.id);
     setHighlightFields(fields);
     setPlanLabels(normalizePlanLabels(post.planLabels, post.planLabel));
+    setSourceProductionType(post.sourceProductionType ?? null);
+    setSourceProductionId(post.sourceProductionId ?? null);
     const groupEntries = normalizeSocialPostLinkEntries(post.linkEntries);
     const groupMode = groupEntries.length > 0;
     const platforms = platformsFromPost(post);
     setSelectedPlatforms(platforms);
     setIsGroupDistribution(groupMode || platforms.length > 1);
+
+    let resolvedGroupEntries = groupEntries;
+    if (groupMode && groupEntries.length > 0) {
+      const entryLikes = sumSocialPostLinkEntryLikes(groupEntries);
+      const entryComments = sumSocialPostLinkEntryComments(groupEntries);
+      const entryShares = sumSocialPostLinkEntryShares(groupEntries);
+      const hasPerLinkEngagement = entryLikes > 0 || entryComments > 0 || entryShares > 0;
+      const hasPostEngagement =
+        (post.likes ?? 0) > 0 || (post.comments ?? 0) > 0 || (post.shares ?? 0) > 0;
+      // Legacy group posts stored engagement only at post level — seed the first link.
+      if (!hasPerLinkEngagement && hasPostEngagement) {
+        resolvedGroupEntries = groupEntries.map((entry, index) =>
+          index === 0
+            ? {
+                ...entry,
+                likes: post.likes ?? 0,
+                comments: post.comments ?? 0,
+                shares: post.shares ?? 0,
+              }
+            : entry
+        );
+      }
+    }
+
     setLinkEntries(
       groupMode
-        ? groupEntries
+        ? resolvedGroupEntries
         : [
             {
               id: crypto.randomUUID(),
               link: post.link ?? "",
               views: post.views ?? 0,
+              likes: post.likes ?? 0,
+              comments: post.comments ?? 0,
+              shares: post.shares ?? 0,
               platform: platforms[0],
             },
           ]
@@ -312,6 +353,18 @@ export function SocialPostsAdmin({
     () => sumSocialPostLinkEntryViews(linkEntries),
     [linkEntries]
   );
+  const groupLikesTotal = useMemo(
+    () => sumSocialPostLinkEntryLikes(linkEntries),
+    [linkEntries]
+  );
+  const groupCommentsTotal = useMemo(
+    () => sumSocialPostLinkEntryComments(linkEntries),
+    [linkEntries]
+  );
+  const groupSharesTotal = useMemo(
+    () => sumSocialPostLinkEntryShares(linkEntries),
+    [linkEntries]
+  );
   const filledLinkEntries = useMemo(
     () => normalizeSocialPostLinkEntries(linkEntries),
     [linkEntries]
@@ -334,7 +387,7 @@ export function SocialPostsAdmin({
 
   const updateLinkEntry = (
     id: string,
-    patch: Partial<Pick<SocialPostLinkEntry, "link" | "views" | "platform">>
+    patch: Partial<Pick<SocialPostLinkEntry, "link" | "views" | "likes" | "comments" | "shares" | "platform">>
   ) => {
     setLinkEntries((prev) =>
       prev.map((entry) => (entry.id === id ? { ...entry, ...patch } : entry))
@@ -361,7 +414,13 @@ export function SocialPostsAdmin({
 
   const ensureGroupModeWithPlatforms = (
     platforms: SocialPlatform[],
-    seed?: { link: string; views: number }
+    seed?: {
+      link: string;
+      views: number;
+      likes?: number;
+      comments?: number;
+      shares?: number;
+    }
   ) => {
     const nextPlatforms = platforms.length > 0 ? platforms : (["instagram"] as SocialPlatform[]);
     setSelectedPlatforms(nextPlatforms);
@@ -386,6 +445,9 @@ export function SocialPostsAdmin({
               ...existing[0],
               link: seed.link,
               views: seed.views || existing[0].views,
+              likes: seed.likes ?? existing[0].likes,
+              comments: seed.comments ?? existing[0].comments,
+              shares: seed.shares ?? existing[0].shares,
             });
             next.push(...existing.slice(1));
             seedApplied = true;
@@ -399,6 +461,9 @@ export function SocialPostsAdmin({
           id: crypto.randomUUID(),
           link: useSeed ? seed!.link : "",
           views: useSeed ? seed!.views : 0,
+          likes: useSeed ? seed!.likes ?? 0 : 0,
+          comments: useSeed ? seed!.comments ?? 0 : 0,
+          shares: useSeed ? seed!.shares ?? 0 : 0,
           platform,
         });
         if (useSeed) seedApplied = true;
@@ -406,7 +471,17 @@ export function SocialPostsAdmin({
 
       const untagged = prev.filter((entry) => !entry.platform);
       if (untagged.length > 0 && nextPlatforms.length === 1) {
-        return [...next, ...untagged.filter((entry) => entry.link.trim() || entry.views > 0)];
+        return [
+          ...next,
+          ...untagged.filter(
+            (entry) =>
+              entry.link.trim() ||
+              entry.views > 0 ||
+              entry.likes > 0 ||
+              entry.comments > 0 ||
+              entry.shares > 0
+          ),
+        ];
       }
       return next.length > 0 ? next : [createEmptySocialPostLinkEntry(nextPlatforms[0])];
     });
@@ -448,6 +523,9 @@ export function SocialPostsAdmin({
           ? {
               link: form.getValues("link")?.trim() ?? "",
               views: Number(form.getValues("views")) || 0,
+              likes: Number(form.getValues("likes")) || 0,
+              comments: Number(form.getValues("comments")) || 0,
+              shares: Number(form.getValues("shares")) || 0,
             }
           : undefined;
       ensureGroupModeWithPlatforms(next, seed);
@@ -461,11 +539,20 @@ export function SocialPostsAdmin({
     if (enabled) {
       const currentLink = form.getValues("link")?.trim() ?? "";
       const currentViews = Number(form.getValues("views")) || 0;
+      const currentLikes = Number(form.getValues("likes")) || 0;
+      const currentComments = Number(form.getValues("comments")) || 0;
+      const currentShares = Number(form.getValues("shares")) || 0;
       const platforms =
         selectedPlatforms.length > 0
           ? selectedPlatforms
           : ([form.getValues("platform")] as SocialPlatform[]);
-      ensureGroupModeWithPlatforms(platforms, { link: currentLink, views: currentViews });
+      ensureGroupModeWithPlatforms(platforms, {
+        link: currentLink,
+        views: currentViews,
+        likes: currentLikes,
+        comments: currentComments,
+        shares: currentShares,
+      });
       return;
     }
 
@@ -477,6 +564,9 @@ export function SocialPostsAdmin({
     const first = linkEntries[0];
     form.setValue("link", first?.link ?? "");
     form.setValue("views", first?.views ?? 0);
+    form.setValue("likes", first?.likes ?? 0);
+    form.setValue("comments", first?.comments ?? 0);
+    form.setValue("shares", first?.shares ?? 0);
     setIsGroupDistribution(false);
   };
 
@@ -560,6 +650,11 @@ export function SocialPostsAdmin({
   };
 
   const onSubmit = form.handleSubmit((data) => {
+    if (!editingId && (!sourceProductionType || !sourceProductionId)) {
+      toast.error("برای ثبت نشر باید یک تولید (یا دارایی دستورکار) انتخاب شود");
+      return;
+    }
+
     startTransition(async () => {
 
       if (selectedPlatforms.length === 0) {
@@ -581,6 +676,15 @@ export function SocialPostsAdmin({
       const resolvedViews = useGroupLinks
         ? sumSocialPostLinkEntryViews(normalizedEntries)
         : data.views;
+      const resolvedLikes = useGroupLinks
+        ? sumSocialPostLinkEntryLikes(normalizedEntries)
+        : data.likes;
+      const resolvedComments = useGroupLinks
+        ? sumSocialPostLinkEntryComments(normalizedEntries)
+        : data.comments;
+      const resolvedShares = useGroupLinks
+        ? sumSocialPostLinkEntryShares(normalizedEntries)
+        : data.shares;
       const resolvedLink = useGroupLinks
         ? normalizedEntries[0]?.link ?? ""
         : data.link ?? "";
@@ -589,6 +693,9 @@ export function SocialPostsAdmin({
         ...data,
         platform: primaryPlatform,
         views: resolvedViews,
+        likes: resolvedLikes,
+        comments: resolvedComments,
+        shares: resolvedShares,
         link: resolvedLink,
         linkEntries: normalizedEntries,
         campaignId,
@@ -596,6 +703,8 @@ export function SocialPostsAdmin({
         published: true,
         planLabels,
         planLabel: planLabels[0] ?? null,
+        sourceProductionType,
+        sourceProductionId,
       });
       if (!result.success) {
         toast.error("ذخیره نشد");
@@ -612,12 +721,17 @@ export function SocialPostsAdmin({
         ...data,
         platform: primaryPlatform,
         views: resolvedViews,
+        likes: resolvedLikes,
+        comments: resolvedComments,
+        shares: resolvedShares,
         link: resolvedLink,
         linkEntries: normalizedEntries.length > 0 ? normalizedEntries : undefined,
         campaignId,
         published: true,
         planLabels,
         planLabel: planLabels[0] ?? null,
+        sourceProductionType,
+        sourceProductionId,
       };
 
       if (editingId) {
@@ -814,7 +928,12 @@ export function SocialPostsAdmin({
                             {entry.link}
                           </a>
                           <span className="ms-2 text-muted-foreground" dir="rtl">
-                            ({formatPersianNumber(entry.views)} بازدید)
+                            (
+                            {formatPersianNumber(entry.views)} بازدید ·{" "}
+                            {formatPersianNumber(entry.likes ?? 0)} لایک ·{" "}
+                            {formatPersianNumber(entry.comments ?? 0)} کامنت ·{" "}
+                            {formatPersianNumber(entry.shares ?? 0)} اشتراک
+                            )
                           </span>
                         </div>
                       ))}
@@ -858,15 +977,42 @@ export function SocialPostsAdmin({
         }
       />
 
-      <Dialog
+      <AdminEditorDialog
         open={open}
         onOpenChange={(nextOpen) => (nextOpen ? setOpen(true) : closeEditor())}
+        title={editingId ? "ویرایش پست" : "پست جدید"}
+        description="ثبت یا ویرایش پست شبکه‌های اجتماعی"
+        size="2xl"
+        formProps={{ onSubmit }}
+        footer={
+          <AdminEditorDialogActions
+            submit
+            isPending={isPending}
+            onDelete={editingId
+              ? () => {
+                  startTransition(async () => {
+                    await deleteSocialPostAction(editingId);
+                    setRows((prev) => prev.filter((row) => row.id !== editingId));
+                    toast.success("حذف شد");
+                    setOpen(false);
+                  });
+                }
+              : undefined}
+            deleteLabel="حذف پست"
+          />
+        }
       >
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" dir="rtl">
-          <DialogHeader className="text-right">
-            <DialogTitle>{editingId ? "ویرایش پست" : "پست جدید"}</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={onSubmit} className="space-y-4 text-right">
+            <ProductionSourcePicker
+              campaignId={campaignId}
+              valueType={sourceProductionType}
+              valueId={sourceProductionId}
+              required={!editingId}
+              label="کدام تولید را نشر می‌کنید؟"
+              onChange={(item) => {
+                setSourceProductionType(item?.type ?? null);
+                setSourceProductionId(item?.id ?? null);
+              }}
+            />
             <div className="space-y-2">
               <Label>شبکه‌های اجتماعی</Label>
               <p className="text-xs text-muted-foreground">
@@ -973,93 +1119,134 @@ export function SocialPostsAdmin({
                   <Label className={cn(highlightLink && "text-destructive")}>
                     لینک شبکه‌های انتخاب‌شده ({formatPersianNumber(filledLinkEntries.length)} لینک)
                   </Label>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="secondary">
-                      جمع بازدید: {formatPersianNumber(groupViewsTotal)}
-                    </Badge>
-                    <Button type="button" variant="outline" size="sm" onClick={() => addLinkEntry()}>
-                      + افزودن لینک
-                    </Button>
-                  </div>
+                  <Button type="button" variant="outline" size="sm" onClick={() => addLinkEntry()}>
+                    + افزودن لینک
+                  </Button>
                 </div>
-                <div className="max-h-72 space-y-2 overflow-y-auto rounded-lg border p-2">
+                <div className="flex flex-wrap gap-2">
+                  <Badge variant="secondary">
+                    جمع بازدید: {formatPersianNumber(groupViewsTotal)}
+                  </Badge>
+                  <Badge variant="secondary">
+                    جمع لایک: {formatPersianNumber(groupLikesTotal)}
+                  </Badge>
+                  <Badge variant="secondary">
+                    جمع کامنت: {formatPersianNumber(groupCommentsTotal)}
+                  </Badge>
+                  <Badge variant="secondary">
+                    جمع اشتراک: {formatPersianNumber(groupSharesTotal)}
+                  </Badge>
+                </div>
+                <div className="max-h-96 space-y-2 overflow-y-auto rounded-lg border p-2">
                   {linkEntries.map((entry, index) => (
                     <div
                       key={entry.id}
-                      className="grid grid-cols-[minmax(0,1fr)_6.5rem_auto] items-end gap-2 rounded-md border bg-muted/30 p-2"
+                      className="space-y-2 rounded-md border bg-muted/30 p-2"
                     >
-                      <div className="space-y-1">
-                        <Label className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                          {entry.platform ? (
-                            <>
-                              <SocialPlatformIcon
-                                platform={entry.platform}
-                                size="sm"
-                                className="h-4 w-4 rounded"
-                              />
-                              {getSocialPlatformLabel(entry.platform)}
-                            </>
-                          ) : (
-                            <>لینک {index + 1}</>
-                          )}
-                        </Label>
-                        <Input
-                          dir="ltr"
-                          value={entry.link}
-                          placeholder="https://..."
-                          className={cn(
-                            highlightLink &&
-                              !entry.link.trim() &&
-                              "border-destructive focus-visible:ring-destructive"
-                          )}
-                          onChange={(event) =>
-                            updateLinkEntry(entry.id, { link: event.target.value })
-                          }
-                        />
+                      <div className="flex items-end gap-2">
+                        <div className="min-w-0 flex-1 space-y-1">
+                          <Label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                            {entry.platform ? (
+                              <>
+                                <SocialPlatformIcon
+                                  platform={entry.platform}
+                                  size="sm"
+                                  className="h-4 w-4 rounded"
+                                />
+                                {getSocialPlatformLabel(entry.platform)}
+                              </>
+                            ) : (
+                              <>لینک {index + 1}</>
+                            )}
+                          </Label>
+                          <Input
+                            dir="ltr"
+                            value={entry.link}
+                            placeholder="https://..."
+                            className={cn(
+                              highlightLink &&
+                                !entry.link.trim() &&
+                                "border-destructive focus-visible:ring-destructive"
+                            )}
+                            onChange={(event) =>
+                              updateLinkEntry(entry.id, { link: event.target.value })
+                            }
+                          />
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="mb-0.5 shrink-0"
+                          onClick={() => removeLinkEntry(entry.id)}
+                          title="حذف"
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
                       </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs text-muted-foreground">بازدید</Label>
-                        <Input
-                          type="number"
-                          min={0}
-                          value={entry.views}
-                          onChange={(event) =>
-                            updateLinkEntry(entry.id, {
-                              views: Math.max(0, Number(event.target.value) || 0),
-                            })
-                          }
-                        />
+                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">بازدید</Label>
+                          <Input
+                            type="number"
+                            min={0}
+                            value={entry.views}
+                            onChange={(event) =>
+                              updateLinkEntry(entry.id, {
+                                views: Math.max(0, Number(event.target.value) || 0),
+                              })
+                            }
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">لایک</Label>
+                          <Input
+                            type="number"
+                            min={0}
+                            value={entry.likes}
+                            onChange={(event) =>
+                              updateLinkEntry(entry.id, {
+                                likes: Math.max(0, Number(event.target.value) || 0),
+                              })
+                            }
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">کامنت</Label>
+                          <Input
+                            type="number"
+                            min={0}
+                            value={entry.comments}
+                            onChange={(event) =>
+                              updateLinkEntry(entry.id, {
+                                comments: Math.max(0, Number(event.target.value) || 0),
+                              })
+                            }
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">اشتراک</Label>
+                          <Input
+                            type="number"
+                            min={0}
+                            value={entry.shares}
+                            onChange={(event) =>
+                              updateLinkEntry(entry.id, {
+                                shares: Math.max(0, Number(event.target.value) || 0),
+                              })
+                            }
+                          />
+                        </div>
                       </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="mb-0.5"
-                        onClick={() => removeLinkEntry(entry.id)}
-                        title="حذف"
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
                     </div>
                   ))}
                 </div>
                 {highlightLink && (
                   <p className="text-xs text-destructive">حداقل یک لینک وارد کنید.</p>
                 )}
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label>لایک</Label>
-                    <Input type="number" {...form.register("likes")} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>کامنت</Label>
-                    <Input type="number" {...form.register("comments")} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>اشتراک</Label>
-                    <Input type="number" {...form.register("shares")} />
-                  </div>
-                </div>
+                <p className="text-xs text-muted-foreground">
+                  آمار هر شبکه را جدا وارد کنید؛ سیستم در انتها بازدید، لایک، کامنت و اشتراک را جمع می‌زند.
+                </p>
               </div>
             ) : (
               <>
@@ -1197,31 +1384,7 @@ export function SocialPostsAdmin({
                 <p className="text-xs text-amber-700 dark:text-amber-300">توضیحات خالی است؛ بهتر است تکمیل شود.</p>
               )}
             </div>
-
-
-
-            <Button type="submit" disabled={isPending} className="w-full">ذخیره</Button>
-            {editingId && (
-              <Button
-                type="button"
-                variant="destructive"
-                className="w-full"
-                disabled={isPending}
-                onClick={() => {
-                  startTransition(async () => {
-                    await deleteSocialPostAction(editingId);
-                    setRows((prev) => prev.filter((row) => row.id !== editingId));
-                    toast.success("حذف شد");
-                    setOpen(false);
-                  });
-                }}
-              >
-                حذف پست
-              </Button>
-            )}
-          </form>
-        </DialogContent>
-      </Dialog>
+      </AdminEditorDialog>
     </div>
   );
 }

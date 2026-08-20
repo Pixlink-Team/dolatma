@@ -1,15 +1,12 @@
 "use client";
 
 import { useEffect, useState, useTransition, type ReactNode } from "react";
-import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  AdminEditorDialog,
+  AdminEditorDialogActions,
+} from "@/components/admin/admin-editor-dialog";
 import {
   ContentSectionFormRenderer,
   type BillboardSectionFormValues,
@@ -48,6 +45,8 @@ import type {
   BillboardDisplayPeriod,
   ContentFormField,
 } from "@/lib/types";
+import { ProductionSourcePicker } from "@/components/admin/production-source-picker";
+import type { ProductionSourceType } from "@/lib/production-source-shared";
 
 interface ContributorProfile {
   province?: string | null;
@@ -171,6 +170,9 @@ export function BillboardCreateAssignmentDialog({
   );
   const [fieldsLoaded, setFieldsLoaded] = useState(false);
   const [values, setValues] = useState<BillboardSectionFormValues>(emptyValues);
+  const [sourceProductionType, setSourceProductionType] =
+    useState<ProductionSourceType | null>(null);
+  const [sourceProductionId, setSourceProductionId] = useState<string | null>(null);
 
   const isEditing = Boolean(editingBillboard);
 
@@ -254,6 +256,8 @@ export function BillboardCreateAssignmentDialog({
           score: editingBillboard.score,
           metadata: parseMetadataObject(editingBillboard.metadata),
         });
+        setSourceProductionType(editingBillboard.sourceProductionType ?? null);
+        setSourceProductionId(editingBillboard.sourceProductionId ?? null);
         return;
       }
 
@@ -293,6 +297,8 @@ export function BillboardCreateAssignmentDialog({
         score: null,
         metadata: {},
       });
+      setSourceProductionType(null);
+      setSourceProductionId(null);
     };
 
     void loadForm();
@@ -352,6 +358,11 @@ export function BillboardCreateAssignmentDialog({
       }
     }
 
+    if (!isEditing && (!sourceProductionType || !sourceProductionId)) {
+      toast.error("برای ثبت نشر باید یک تولید (یا دارایی دستورکار) انتخاب شود");
+      return;
+    }
+
     startTransition(async () => {
       const formData = new FormData();
       formData.append("campaignId", campaignId);
@@ -380,6 +391,12 @@ export function BillboardCreateAssignmentDialog({
       }
       if (values.planLabels[0]) formData.append("planLabel", values.planLabels[0]);
       formData.append("metadata", JSON.stringify(values.metadata ?? {}));
+      if (sourceProductionType) {
+        formData.append("sourceProductionType", sourceProductionType);
+      }
+      if (sourceProductionId) {
+        formData.append("sourceProductionId", sourceProductionId);
+      }
 
       const periods =
         values.periods.length > 0 ? values.periods : [createDisplayPeriod()];
@@ -405,27 +422,57 @@ export function BillboardCreateAssignmentDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>
-            {isEditing ? "ویرایش تبلیغات محیطی" : "ثبت تبلیغات محیطی جدید"}
-          </DialogTitle>
-          <p className="text-sm text-muted-foreground">
-            {initialValues
-              ? "داده‌های Excel پر شده‌اند؛ بقیه فیلدها (مثل موقعیت دقیق روی نقشه) را تکمیل کنید."
-              : contributorProfile?.province &&
-                  contributorProfile?.city &&
-                  !isEditing
-                ? `استان و شهر از پروفایل ${contributorProfile.name} پر شده‌اند.`
-                : "استان و شهر را انتخاب کنید تا نقشه به همان موقعیت برود."}{" "}
-            می‌توانید چند دوره نمایش اضافه کنید.
-          </p>
-        </DialogHeader>
-
+    <AdminEditorDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={isEditing ? "ویرایش تبلیغات محیطی" : "ثبت تبلیغات محیطی جدید"}
+      description={
+        initialValues
+          ? "داده‌های Excel پر شده‌اند؛ بقیه فیلدها (مثل موقعیت دقیق روی نقشه) را تکمیل کنید. می‌توانید چند دوره نمایش اضافه کنید."
+          : contributorProfile?.province &&
+              contributorProfile?.city &&
+              !isEditing
+            ? `استان و شهر از پروفایل ${contributorProfile.name} پر شده‌اند. می‌توانید چند دوره نمایش اضافه کنید.`
+            : "استان و شهر را انتخاب کنید تا نقشه به همان موقعیت برود. می‌توانید چند دوره نمایش اضافه کنید."
+      }
+      descriptionVisible
+      size="2xl"
+      footer={
+        <AdminEditorDialogActions
+          saveLabel={isEditing ? "ذخیره تغییرات" : "ثبت تبلیغات محیطی"}
+          isPending={isPending}
+          saveDisabled={!fieldsLoaded}
+          onSave={handleSubmit}
+          extra={
+            onSkip ? (
+              <Button
+                type="button"
+                variant="outline"
+                disabled={isPending}
+                onClick={onSkip}
+              >
+                {skipLabel}
+              </Button>
+            ) : null
+          }
+        />
+      }
+    >
         {bulkTypeSwitcher}
 
         <div className="space-y-4">
+          <ProductionSourcePicker
+            campaignId={campaignId}
+            valueType={sourceProductionType}
+            valueId={sourceProductionId}
+            required={!isEditing}
+            label="کدام تولید را نشر می‌کنید؟"
+            onChange={(item) => {
+              setSourceProductionType(item?.type ?? null);
+              setSourceProductionId(item?.id ?? null);
+            }}
+          />
+
           {!fieldsLoaded ? (
             <p className="text-sm text-muted-foreground">در حال بارگذاری فرم...</p>
           ) : (
@@ -458,39 +505,7 @@ export function BillboardCreateAssignmentDialog({
               عنوان پیش‌فرض یا خالی است؛ یک عنوان اختصاصی وارد کنید.
             </p>
           ) : null}
-
-          <div className="flex flex-col gap-2 sm:flex-row">
-            {onSkip ? (
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full sm:w-auto"
-                disabled={isPending}
-                onClick={onSkip}
-              >
-                {skipLabel}
-              </Button>
-            ) : null}
-            <Button
-              type="button"
-              className="w-full"
-              disabled={isPending || !fieldsLoaded}
-              onClick={handleSubmit}
-            >
-              {isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  در حال ذخیره...
-                </>
-              ) : isEditing ? (
-                "ذخیره تغییرات"
-              ) : (
-                "ثبت تبلیغات محیطی"
-              )}
-            </Button>
-          </div>
         </div>
-      </DialogContent>
-    </Dialog>
+    </AdminEditorDialog>
   );
 }

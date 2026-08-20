@@ -211,8 +211,19 @@ function SocialPostCard({ post }: { post: SocialMediaPost }) {
                           {entry.link}
                         </a>
                       </div>
-                      <span className="shrink-0 text-muted-foreground" dir="rtl">
-                        {formatPersianNumber(entry.views)}
+                      <span className="shrink-0 text-left text-muted-foreground" dir="rtl">
+                        <span className="block">
+                          {formatPersianNumber(entry.views)} بازدید
+                        </span>
+                        <span className="block">
+                          {formatPersianNumber(entry.likes ?? 0)} لایک
+                        </span>
+                        <span className="block">
+                          {formatPersianNumber(entry.comments ?? 0)} کامنت
+                        </span>
+                        <span className="block">
+                          {formatPersianNumber(entry.shares ?? 0)} اشتراک
+                        </span>
                       </span>
                     </div>
                   ))}

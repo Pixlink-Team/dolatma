@@ -390,7 +390,7 @@ export function DevicePassportView({
   });
 
   return (
-    <div className="space-y-6" dir="rtl">
+    <div className="space-y-4" dir="rtl">
       <div className="flex flex-wrap items-center gap-3">
         <Button variant="ghost" size="sm" asChild>
           <Link href={adminHref("/admin/ministries", campaignId)}>
@@ -400,10 +400,11 @@ export function DevicePassportView({
         </Button>
       </div>
 
-      <section className="rounded-xl border bg-card p-5 shadow-sm">
-        <div className="flex flex-wrap items-start justify-between gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-12 xl:auto-rows-fr">
+        {/* Identity hero */}
+        <section className="flex flex-col justify-between rounded-2xl border bg-card p-5 shadow-sm md:col-span-2 xl:col-span-8">
           <div className="flex min-w-0 items-start gap-4">
-            <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg border bg-muted">
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl border bg-muted">
               {device.logoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={device.logoUrl} alt="" className="h-full w-full object-cover" />
@@ -428,469 +429,473 @@ export function DevicePassportView({
               </div>
             </div>
           </div>
-          <div className="w-full max-w-sm space-y-3 sm:ms-auto">
-            <DevicePassportCompletionRing
-              completion={completion}
-              onMissingItemClick={
-                canEditProfile
-                  ? (key) => {
-                      if (
-                        key === "mission" ||
-                        key === "address" ||
-                        key === "phones" ||
-                        key === "location"
-                      ) {
-                        setProfileOpen(true);
-                        return;
-                      }
-                      if (key === "staff" && canManageStaff) {
-                        openStaffDialog();
-                        return;
-                      }
-                      if (key === "capacity" && canManageAdminSections) {
-                        setEditingCapacityId(null);
-                        capacityForm.reset({
-                          capacityType: "website",
-                          title: "",
-                          description: "",
-                          ownerName: "",
-                          coverageScope: "",
-                          province: "",
-                          city: "",
-                          address: "",
-                          details: resetDetailsForType("website") as Record<string, unknown>,
-                          isActive: true,
-                        });
-                        setCapacityOpen(true);
-                        return;
-                      }
-                      if (key === "primary") {
-                        window.location.assign(adminHref("/admin/users", campaignId));
-                      }
+          {canEditProfile ? (
+            <Button
+              size="sm"
+              variant="outline"
+              className="mt-4 w-full sm:w-auto"
+              onClick={() => setProfileOpen(true)}
+            >
+              <Pencil className="ml-1 h-4 w-4" />
+              ویرایش اطلاعات
+            </Button>
+          ) : (
+            <p className="mt-4 text-xs text-muted-foreground">
+              فقط مشاهده — تکمیل شناسنامه با مسئول همین دستگاه است.
+            </p>
+          )}
+        </section>
+
+        {/* Completion ring */}
+        <section className="rounded-2xl border bg-card p-5 shadow-sm md:col-span-2 xl:col-span-4">
+          <DevicePassportCompletionRing
+            completion={completion}
+            onMissingItemClick={
+              canEditProfile
+                ? (key) => {
+                    if (
+                      key === "mission" ||
+                      key === "address" ||
+                      key === "phones" ||
+                      key === "location"
+                    ) {
+                      setProfileOpen(true);
+                      return;
                     }
-                  : undefined
-              }
+                    if (key === "staff" && canManageStaff) {
+                      openStaffDialog();
+                      return;
+                    }
+                    if (key === "capacity" && canManageAdminSections) {
+                      setEditingCapacityId(null);
+                      capacityForm.reset({
+                        capacityType: "website",
+                        title: "",
+                        description: "",
+                        ownerName: "",
+                        coverageScope: "",
+                        province: "",
+                        city: "",
+                        address: "",
+                        details: resetDetailsForType("website") as Record<string, unknown>,
+                        isActive: true,
+                      });
+                      setCapacityOpen(true);
+                      return;
+                    }
+                    if (key === "primary") {
+                      window.location.assign(adminHref("/admin/users", campaignId));
+                    }
+                  }
+                : undefined
+            }
+          />
+        </section>
+
+        {/* Main info */}
+        <section className="rounded-2xl border bg-card p-5 xl:col-span-4">
+          <h2 className="mb-3 text-lg font-semibold">اطلاعات اصلی</h2>
+          <dl className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
+            <InfoItem
+              label="استان / شهر"
+              value={[device.province, device.city].filter(Boolean).join(" / ") || "—"}
             />
-            {canEditProfile ? (
-              <Button
-                size="sm"
-                variant="outline"
-                className="w-full"
-                onClick={() => setProfileOpen(true)}
-              >
-                <Pencil className="ml-1 h-4 w-4" />
-                ویرایش اطلاعات
-              </Button>
-            ) : (
-              <p className="text-center text-xs text-muted-foreground sm:text-right">
-                فقط مشاهده — تکمیل شناسنامه با مسئول همین دستگاه است.
-              </p>
-            )}
-          </div>
-        </div>
-      </section>
+            <InfoItem label="آدرس" value={device.address || "—"} />
+            <InfoItem label="تماس" value={device.phones.join("، ") || "—"} />
+            <div className="sm:col-span-2 xl:col-span-1 2xl:col-span-2">
+              <InfoItem label="حوزه مأموریت" value={device.mission || "—"} />
+            </div>
+          </dl>
+        </section>
 
-      <section className="rounded-xl border bg-card p-5">
-        <h2 className="mb-3 text-lg font-semibold">اطلاعات اصلی</h2>
-        <dl className="grid gap-3 sm:grid-cols-2">
-          <InfoItem label="استان / شهر" value={[device.province, device.city].filter(Boolean).join(" / ") || "—"} />
-          <InfoItem label="آدرس" value={device.address || "—"} />
-          <InfoItem label="تماس" value={device.phones.join("، ") || "—"} />
-          <div className="sm:col-span-2">
-            <InfoItem label="حوزه مأموریت" value={device.mission || "—"} />
+        {/* Contacts */}
+        <section className="rounded-2xl border bg-card p-5 xl:col-span-8">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <h2 className="flex items-center gap-2 text-lg font-semibold">
+              <Users className="h-5 w-5" />
+              مسئولان و راه‌های ارتباطی
+            </h2>
+            <Button size="sm" variant="outline" asChild>
+              <Link href={adminHref("/admin/users", campaignId)}>مدیریت کاربران</Link>
+            </Button>
           </div>
-        </dl>
-      </section>
-
-      <section className="rounded-xl border bg-card p-5">
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="flex items-center gap-2 text-lg font-semibold">
-            <Users className="h-5 w-5" />
-            مسئولان و راه‌های ارتباطی
-          </h2>
-          <Button size="sm" variant="outline" asChild>
-            <Link href={adminHref("/admin/users", campaignId)}>مدیریت کاربران</Link>
-          </Button>
-        </div>
-        <p className="mb-3 text-xs text-muted-foreground">
-          کاربران این دستگاه با سمت‌های سازمانی (مدیر، ناظر، معاون، روابط عمومی).
-        </p>
-        {contactUsers.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            کاربری با نقش سازمانی به این دستگاه متصل نیست.
+          <p className="mb-3 text-xs text-muted-foreground">
+            کاربران این دستگاه با سمت‌های سازمانی (مدیر، ناظر، معاون، روابط عمومی).
           </p>
-        ) : (
-          <div className="space-y-2">
-            {contactUsers.map((user) => (
-              <div
-                key={user.id}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3"
-              >
-                <div className="min-w-0 space-y-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="font-medium">{user.name}</p>
-                    <Badge variant="secondary">{getUserRoleDisplayLabel(user)}</Badge>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {[user.phone, user.email, user.province].filter(Boolean).join(" · ") || "—"}
-                  </p>
-                  {user.accountManagerName ? (
+          {contactUsers.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              کاربری با نقش سازمانی به این دستگاه متصل نیست.
+            </p>
+          ) : (
+            <div className="grid gap-2 sm:grid-cols-2">
+              {contactUsers.map((user) => (
+                <div
+                  key={user.id}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-xl border p-3"
+                >
+                  <div className="min-w-0 space-y-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="font-medium">{user.name}</p>
+                      <Badge variant="secondary">{getUserRoleDisplayLabel(user)}</Badge>
+                    </div>
                     <p className="text-xs text-muted-foreground">
-                      مسئول اکانت: {user.accountManagerName}
+                      {[user.phone, user.email, user.province].filter(Boolean).join(" · ") || "—"}
                     </p>
+                    {user.accountManagerName ? (
+                      <p className="text-xs text-muted-foreground">
+                        مسئول اکانت: {user.accountManagerName}
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* Structure */}
+        <section className="rounded-2xl border bg-card p-5 xl:col-span-5">
+          <h2 className="mb-4 text-lg font-semibold">ساختار و ارتباط</h2>
+          <div className="space-y-0 overflow-x-auto">
+            {(passport.ancestors ?? []).map((ancestor, index) => (
+              <div key={ancestor.id}>
+                <div
+                  className="rounded-lg border bg-muted/30 px-3 py-2.5 transition-colors hover:bg-muted/50"
+                  style={{ marginRight: index * 16 }}
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <Link
+                      href={adminHref(`/admin/devices/${ancestor.id}`, campaignId)}
+                      className="font-medium text-primary hover:underline"
+                    >
+                      {ancestor.shortName || ancestor.name}
+                    </Link>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="text-[10px]">
+                        {DEVICE_TYPE_LABELS[ancestor.type]}
+                      </Badge>
+                      <span className="text-[10px] text-muted-foreground">سطح {index + 1}</span>
+                    </div>
+                  </div>
+                  {ancestor.shortName && ancestor.name !== ancestor.shortName ? (
+                    <p className="mt-0.5 text-xs text-muted-foreground">{ancestor.name}</p>
                   ) : null}
+                </div>
+                <div
+                  className="flex items-center py-1"
+                  style={{ marginRight: index * 16 + 16 }}
+                  aria-hidden
+                >
+                  <div className="h-4 w-px bg-border" />
                 </div>
               </div>
             ))}
-          </div>
-        )}
-      </section>
 
-      <section className="rounded-xl border bg-card p-5">
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-lg font-semibold">کارکنان</h2>
-          {canManageStaff ? (
-            <Button size="sm" onClick={() => openStaffDialog()}>
-              <Plus className="ml-1 h-4 w-4" />
-              افزودن کارمند
-            </Button>
-          ) : null}
-        </div>
-        {staffMembers.length === 0 ? (
-          <p className="text-sm text-muted-foreground">کارمندی ثبت نشده است.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[720px] text-sm">
-              <thead>
-                <tr className="border-b text-right text-muted-foreground">
-                  <th className="pb-2 font-medium">نام و نام خانوادگی</th>
-                  <th className="pb-2 font-medium">موبایل</th>
-                  <th className="pb-2 font-medium">جنسیت</th>
-                  <th className="pb-2 font-medium">تاریخ تولد</th>
-                  <th className="pb-2 font-medium">سمت</th>
-                  <th className="pb-2 font-medium">مدرک تحصیلی</th>
-                  <th className="pb-2 font-medium">وضعیت</th>
-                  <th className="pb-2 font-medium">عملیات</th>
-                </tr>
-              </thead>
-              <tbody>
-                {staffMembers.map((item) => (
-                  <tr key={item.id} className="border-b last:border-0">
-                    <td className="py-2.5 font-medium">
-                      {item.firstName} {item.lastName}
-                    </td>
-                    <td className="py-2.5">{item.mobile}</td>
-                    <td className="py-2.5">{DEVICE_STAFF_GENDER_LABELS[item.gender]}</td>
-                    <td className="py-2.5">
-                      {item.birthDate
-                        ? new Date(`${item.birthDate}T12:00:00`).toLocaleDateString("fa-IR")
-                        : "—"}
-                    </td>
-                    <td className="py-2.5">{item.position}</td>
-                    <td className="py-2.5">{DEVICE_STAFF_EDUCATION_LABELS[item.education]}</td>
-                    <td className="py-2.5">
-                      <Badge variant={item.isActive ? "secondary" : "outline"}>
-                        {item.isActive ? "فعال" : "غیرفعال"}
-                      </Badge>
-                    </td>
-                    <td className="py-2.5">
-                      {canManageStaff ? (
-                        <div className="flex gap-1">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            disabled={isPending}
-                            onClick={() => openStaffDialog(item)}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            disabled={isPending}
-                            onClick={() => {
-                              startTransition(async () => {
-                                const result = await deleteDeviceStaffAction(item.id, device.id);
-                                if (!result.success) {
-                                  toast.error(result.error);
-                                  return;
-                                }
-                                toast.success("کارمند حذف شد");
-                                refresh();
-                              });
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </div>
-                      ) : (
-                        "—"
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
-
-      <section className="rounded-xl border bg-card p-5">
-        <h2 className="mb-4 text-lg font-semibold">ساختار و ارتباط</h2>
-        <div className="space-y-0">
-          {(passport.ancestors ?? []).map((ancestor, index) => (
-            <div key={ancestor.id}>
-              <div
-                className="rounded-lg border bg-muted/30 px-3 py-2.5 transition-colors hover:bg-muted/50"
-                style={{ marginRight: index * 20 }}
-              >
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <Link
-                    href={adminHref(`/admin/devices/${ancestor.id}`, campaignId)}
-                    className="font-medium text-primary hover:underline"
-                  >
-                    {ancestor.shortName || ancestor.name}
-                  </Link>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="text-[10px]">
-                      {DEVICE_TYPE_LABELS[ancestor.type]}
-                    </Badge>
-                    <span className="text-[10px] text-muted-foreground">سطح {index + 1}</span>
-                  </div>
+            <div
+              className="rounded-lg border-2 border-primary/40 bg-primary/5 px-3 py-2.5"
+              style={{ marginRight: (passport.ancestors?.length ?? 0) * 16 }}
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <p className="font-semibold">{device.shortName || device.name}</p>
+                  {device.shortName && device.name !== device.shortName ? (
+                    <p className="mt-0.5 text-xs text-muted-foreground">{device.name}</p>
+                  ) : null}
                 </div>
-                {ancestor.shortName && ancestor.name !== ancestor.shortName ? (
-                  <p className="mt-0.5 text-xs text-muted-foreground">{ancestor.name}</p>
-                ) : null}
-              </div>
-              <div
-                className="flex items-center py-1"
-                style={{ marginRight: index * 20 + 16 }}
-                aria-hidden
-              >
-                <div className="h-4 w-px bg-border" />
-              </div>
-            </div>
-          ))}
-
-          <div
-            className="rounded-lg border-2 border-primary/40 bg-primary/5 px-3 py-2.5"
-            style={{ marginRight: (passport.ancestors?.length ?? 0) * 20 }}
-          >
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div>
-                <p className="font-semibold">
-                  {device.shortName || device.name}
-                </p>
-                {device.shortName && device.name !== device.shortName ? (
-                  <p className="mt-0.5 text-xs text-muted-foreground">{device.name}</p>
-                ) : null}
-              </div>
-              <div className="flex items-center gap-2">
-                <Badge variant="secondary" className="text-[10px]">
-                  دستگاه فعلی
-                </Badge>
-                <Badge variant="outline" className="text-[10px]">
-                  {DEVICE_TYPE_LABELS[device.type]}
-                </Badge>
-                <span className="text-[10px] text-muted-foreground">
-                  سطح {(passport.ancestors?.length ?? 0) + 1}
-                </span>
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary" className="text-[10px]">
+                    دستگاه فعلی
+                  </Badge>
+                  <Badge variant="outline" className="text-[10px]">
+                    {DEVICE_TYPE_LABELS[device.type]}
+                  </Badge>
+                  <span className="text-[10px] text-muted-foreground">
+                    سطح {(passport.ancestors?.length ?? 0) + 1}
+                  </span>
+                </div>
               </div>
             </div>
-          </div>
 
-          {passport.children.length > 0 ? (
-            <>
-              <div
-                className="flex items-center py-1"
-                style={{ marginRight: (passport.ancestors?.length ?? 0) * 20 + 16 }}
-                aria-hidden
-              >
-                <div className="h-4 w-px bg-border" />
-              </div>
-              <div
-                className="space-y-2"
-                style={{ marginRight: (passport.ancestors?.length ?? 0) * 20 + 20 }}
-              >
-                <p className="text-xs text-muted-foreground">زیرمجموعه‌ها</p>
-                <ul className="space-y-2">
-                  {passport.children.map((child) => (
-                    <li key={child.id}>
-                      <div className="rounded-lg border px-3 py-2.5 transition-colors hover:bg-muted/40">
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <Link
-                            href={adminHref(`/admin/devices/${child.id}`, campaignId)}
-                            className="text-sm font-medium text-primary hover:underline"
-                          >
-                            {child.shortName || child.name}
-                          </Link>
-                          <Badge variant="outline" className="text-[10px]">
-                            {DEVICE_TYPE_LABELS[child.type]}
-                          </Badge>
+            {passport.children.length > 0 ? (
+              <>
+                <div
+                  className="flex items-center py-1"
+                  style={{ marginRight: (passport.ancestors?.length ?? 0) * 16 + 16 }}
+                  aria-hidden
+                >
+                  <div className="h-4 w-px bg-border" />
+                </div>
+                <div
+                  className="space-y-2"
+                  style={{ marginRight: (passport.ancestors?.length ?? 0) * 16 + 16 }}
+                >
+                  <p className="text-xs text-muted-foreground">زیرمجموعه‌ها</p>
+                  <ul className="space-y-2">
+                    {passport.children.map((child) => (
+                      <li key={child.id}>
+                        <div className="rounded-lg border px-3 py-2.5 transition-colors hover:bg-muted/40">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <Link
+                              href={adminHref(`/admin/devices/${child.id}`, campaignId)}
+                              className="text-sm font-medium text-primary hover:underline"
+                            >
+                              {child.shortName || child.name}
+                            </Link>
+                            <Badge variant="outline" className="text-[10px]">
+                              {DEVICE_TYPE_LABELS[child.type]}
+                            </Badge>
+                          </div>
+                          {child.shortName && child.name !== child.shortName ? (
+                            <p className="mt-0.5 text-xs text-muted-foreground">{child.name}</p>
+                          ) : null}
                         </div>
-                        {child.shortName && child.name !== child.shortName ? (
-                          <p className="mt-0.5 text-xs text-muted-foreground">{child.name}</p>
-                        ) : null}
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </>
-          ) : (
-            <p
-              className="mt-3 text-sm text-muted-foreground"
-              style={{ marginRight: (passport.ancestors?.length ?? 0) * 20 }}
-            >
-              زیرمجموعه‌ای ثبت نشده است.
-            </p>
-          )}
-        </div>
-      </section>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </>
+            ) : (
+              <p
+                className="mt-3 text-sm text-muted-foreground"
+                style={{ marginRight: (passport.ancestors?.length ?? 0) * 16 }}
+              >
+                زیرمجموعه‌ای ثبت نشده است.
+              </p>
+            )}
+          </div>
+        </section>
 
-      <section className="rounded-xl border-2 border-primary/20 bg-card p-5 shadow-sm">
-        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h2 className="text-lg font-semibold">دارایی‌های دیجیتال و ظرفیت‌ها</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              وب‌سایت، اپلیکیشن، شبکه‌های اجتماعی، شبکه‌های تبلیغاتی و خبری و سایر دارایی‌های رسانه‌ای را اینجا ثبت کنید.
-            </p>
+        {/* Capacities */}
+        <section className="rounded-2xl border-2 border-primary/20 bg-card p-5 shadow-sm xl:col-span-7">
+          <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-semibold">دارایی‌های دیجیتال و ظرفیت‌ها</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                وب‌سایت، اپلیکیشن، شبکه‌های اجتماعی و سایر دارایی‌های رسانه‌ای.
+              </p>
+            </div>
+            {canManageAdminSections ? (
+              <Button
+                size="sm"
+                onClick={() => {
+                  setEditingCapacityId(null);
+                  capacityForm.reset({
+                    capacityType: "website",
+                    title: "",
+                    description: "",
+                    ownerName: "",
+                    coverageScope: "",
+                    province: "",
+                    city: "",
+                    address: "",
+                    details: resetDetailsForType("website") as Record<string, unknown>,
+                    isActive: true,
+                  });
+                  setCapacityOpen(true);
+                }}
+              >
+                <Plus className="ml-1 h-4 w-4" />
+                ثبت دارایی
+              </Button>
+            ) : null}
           </div>
-          {canManageAdminSections ? (
-            <Button
-              size="sm"
-              onClick={() => {
-                setEditingCapacityId(null);
-                capacityForm.reset({
-                  capacityType: "website",
-                  title: "",
-                  description: "",
-                  ownerName: "",
-                  coverageScope: "",
-                  province: "",
-                  city: "",
-                  address: "",
-                  details: resetDetailsForType("website") as Record<string, unknown>,
-                  isActive: true,
-                });
-                setCapacityOpen(true);
-              }}
-            >
-              <Plus className="ml-1 h-4 w-4" />
-              ثبت دارایی
-            </Button>
-          ) : null}
-        </div>
-        {passport.capacities.length === 0 ? (
-          <div className="rounded-lg border border-dashed bg-muted/30 px-4 py-8 text-center">
-            <p className="text-sm font-medium">هنوز دارایی‌ای ثبت نشده است</p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              سایت، اپ، کانال‌های شبکه اجتماعی و شبکه‌های تبلیغ/خبر را به‌صورت جداگانه ثبت کنید.
-            </p>
-          </div>
-        ) : (
-          <div className="grid gap-2 sm:grid-cols-2">
-            {passport.capacities.map((item) => {
-              const details = normalizeCapacityDetails(item.capacityType, item.details);
-              const summary = formatCapacityDetailsSummary(
-                item.capacityType,
-                details,
-                {
+          {passport.capacities.length === 0 ? (
+            <div className="rounded-xl border border-dashed bg-muted/30 px-4 py-8 text-center">
+              <p className="text-sm font-medium">هنوز دارایی‌ای ثبت نشده است</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                سایت، اپ، کانال‌های شبکه اجتماعی و شبکه‌های تبلیغ/خبر را به‌صورت جداگانه ثبت کنید.
+              </p>
+            </div>
+          ) : (
+            <div className="grid gap-2 sm:grid-cols-2">
+              {passport.capacities.map((item) => {
+                const details = normalizeCapacityDetails(item.capacityType, item.details);
+                const summary = formatCapacityDetailsSummary(item.capacityType, details, {
                   province: item.province,
                   city: item.city,
                   address: item.address,
-                }
-              );
-              const externalUrl = getCapacityExternalUrl(item.capacityType, details);
-              return (
-              <div
-                key={item.id}
-                className="flex flex-wrap items-start justify-between gap-2 rounded-lg border bg-background p-3"
-              >
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="font-medium">{item.title}</p>
-                    <Badge variant="secondary" className="text-[10px]">
-                      {DEVICE_CAPACITY_TYPE_LABELS[item.capacityType]}
-                    </Badge>
-                    <Badge
-                      variant={item.isActive ? "default" : "outline"}
-                      className="text-[10px]"
-                    >
-                      {item.isActive ? "فعال" : "غیرفعال"}
-                    </Badge>
+                });
+                const externalUrl = getCapacityExternalUrl(item.capacityType, details);
+                return (
+                  <div
+                    key={item.id}
+                    className="flex flex-wrap items-start justify-between gap-2 rounded-xl border bg-background p-3"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-medium">{item.title}</p>
+                        <Badge variant="secondary" className="text-[10px]">
+                          {DEVICE_CAPACITY_TYPE_LABELS[item.capacityType]}
+                        </Badge>
+                        <Badge
+                          variant={item.isActive ? "default" : "outline"}
+                          className="text-[10px]"
+                        >
+                          {item.isActive ? "فعال" : "غیرفعال"}
+                        </Badge>
+                      </div>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {item.ownerName ? `مسئول: ${item.ownerName}` : ""}
+                        {item.ownerName && item.coverageScope ? " · " : ""}
+                        {item.coverageScope ? `پوشش: ${item.coverageScope}` : ""}
+                      </p>
+                      {summary ? (
+                        <p className="mt-1 text-xs text-foreground/80">{summary}</p>
+                      ) : null}
+                      {externalUrl ? (
+                        <a
+                          href={externalUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                          dir="ltr"
+                        >
+                          <ExternalLink className="h-3 w-3" />
+                          {externalUrl}
+                        </a>
+                      ) : null}
+                    </div>
+                    {canManageAdminSections ? (
+                      <div className="flex gap-1">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => {
+                            setEditingCapacityId(item.id);
+                            capacityForm.reset({
+                              capacityType: item.capacityType,
+                              title: item.title,
+                              description: item.description ?? "",
+                              ownerName: item.ownerName ?? "",
+                              coverageScope: item.coverageScope ?? "",
+                              province: item.province ?? "",
+                              city: item.city ?? "",
+                              address: item.address ?? "",
+                              details: details as Record<string, unknown>,
+                              isActive: item.isActive,
+                            });
+                            setCapacityOpen(true);
+                          }}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          disabled={isPending}
+                          onClick={() => {
+                            startTransition(async () => {
+                              const result = await deleteDeviceCapacityAction(item.id, device.id);
+                              if (!result.success) {
+                                toast.error(result.error);
+                                return;
+                              }
+                              toast.success("دارایی حذف شد");
+                              refresh();
+                            });
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    ) : null}
                   </div>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {item.ownerName ? `مسئول: ${item.ownerName}` : ""}
-                    {item.ownerName && item.coverageScope ? " · " : ""}
-                    {item.coverageScope ? `پوشش: ${item.coverageScope}` : ""}
-                  </p>
-                  {summary ? (
-                    <p className="mt-1 text-xs text-foreground/80">{summary}</p>
-                  ) : null}
-                  {externalUrl ? (
-                    <a
-                      href={externalUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
-                      dir="ltr"
-                    >
-                      <ExternalLink className="h-3 w-3" />
-                      {externalUrl}
-                    </a>
-                  ) : null}
-                </div>
-                {canManageAdminSections ? (
-                  <div className="flex gap-1">
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => {
-                        setEditingCapacityId(item.id);
-                        capacityForm.reset({
-                          capacityType: item.capacityType,
-                          title: item.title,
-                          description: item.description ?? "",
-                          ownerName: item.ownerName ?? "",
-                          coverageScope: item.coverageScope ?? "",
-                          province: item.province ?? "",
-                          city: item.city ?? "",
-                          address: item.address ?? "",
-                          details: details as Record<string, unknown>,
-                          isActive: item.isActive,
-                        });
-                        setCapacityOpen(true);
-                      }}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      disabled={isPending}
-                      onClick={() => {
-                        startTransition(async () => {
-                          const result = await deleteDeviceCapacityAction(item.id, device.id);
-                          if (!result.success) {
-                            toast.error(result.error);
-                            return;
-                          }
-                          toast.success("دارایی حذف شد");
-                          refresh();
-                        });
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </div>
-                ) : null}
-              </div>
-              );
-            })}
+                );
+              })}
+            </div>
+          )}
+        </section>
+
+        {/* Staff — full width */}
+        <section className="rounded-2xl border bg-card p-5 md:col-span-2 xl:col-span-12">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-lg font-semibold">کارکنان</h2>
+            {canManageStaff ? (
+              <Button size="sm" onClick={() => openStaffDialog()}>
+                <Plus className="ml-1 h-4 w-4" />
+                افزودن کارمند
+              </Button>
+            ) : null}
           </div>
-        )}
-      </section>
+          {staffMembers.length === 0 ? (
+            <p className="text-sm text-muted-foreground">کارمندی ثبت نشده است.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[720px] text-sm">
+                <thead>
+                  <tr className="border-b text-right text-muted-foreground">
+                    <th className="pb-2 font-medium">نام و نام خانوادگی</th>
+                    <th className="pb-2 font-medium">موبایل</th>
+                    <th className="pb-2 font-medium">جنسیت</th>
+                    <th className="pb-2 font-medium">تاریخ تولد</th>
+                    <th className="pb-2 font-medium">سمت</th>
+                    <th className="pb-2 font-medium">مدرک تحصیلی</th>
+                    <th className="pb-2 font-medium">وضعیت</th>
+                    <th className="pb-2 font-medium">عملیات</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {staffMembers.map((item) => (
+                    <tr key={item.id} className="border-b last:border-0">
+                      <td className="py-2.5 font-medium">
+                        {item.firstName} {item.lastName}
+                      </td>
+                      <td className="py-2.5">{item.mobile}</td>
+                      <td className="py-2.5">{DEVICE_STAFF_GENDER_LABELS[item.gender]}</td>
+                      <td className="py-2.5">
+                        {item.birthDate
+                          ? new Date(`${item.birthDate}T12:00:00`).toLocaleDateString("fa-IR")
+                          : "—"}
+                      </td>
+                      <td className="py-2.5">{item.position}</td>
+                      <td className="py-2.5">{DEVICE_STAFF_EDUCATION_LABELS[item.education]}</td>
+                      <td className="py-2.5">
+                        <Badge variant={item.isActive ? "secondary" : "outline"}>
+                          {item.isActive ? "فعال" : "غیرفعال"}
+                        </Badge>
+                      </td>
+                      <td className="py-2.5">
+                        {canManageStaff ? (
+                          <div className="flex gap-1">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              disabled={isPending}
+                              onClick={() => openStaffDialog(item)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              disabled={isPending}
+                              onClick={() => {
+                                startTransition(async () => {
+                                  const result = await deleteDeviceStaffAction(item.id, device.id);
+                                  if (!result.success) {
+                                    toast.error(result.error);
+                                    return;
+                                  }
+                                  toast.success("کارمند حذف شد");
+                                  refresh();
+                                });
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      </div>
 
       <Dialog open={profileOpen} onOpenChange={setProfileOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto" dir="rtl">

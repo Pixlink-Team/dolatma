@@ -52,6 +52,8 @@ import type { OrgRole } from "@/lib/org-roles";
 import { isOrgRole } from "@/lib/org-roles";
 import type { ParsedUserImportRow } from "@/lib/services/users-excel-parser";
 import { normalizePlanLabels } from "@/lib/content-topics";
+import { normalizeProductionSource } from "@/lib/production-source";
+import { normalizeSmsSendChannels } from "@/lib/sms-send-channels";
 import { normalizeSocialPostLinkEntries } from "@/lib/social-posts";
 import { generateId } from "@/lib/utils";
 import { hashPassword } from "@/lib/auth/password";
@@ -1121,12 +1123,15 @@ export async function pgSaveSocialPost(data: Partial<SocialMediaPost> & { id?: s
   const id = data.id ?? generateId();
   const { planLabel, planLabels } = resolvePlanFields(data);
   const linkEntries = normalizeSocialPostLinkEntries(data.linkEntries);
+  const source = normalizeProductionSource(data);
 
   // Ensure column exists on older deployments that have not run db:migrate yet.
   await sql`
     ALTER TABLE social_media_posts
     ADD COLUMN IF NOT EXISTS link_entries JSONB NOT NULL DEFAULT '[]'::jsonb
   `;
+  await sql`ALTER TABLE social_media_posts ADD COLUMN IF NOT EXISTS source_production_type TEXT`;
+  await sql`ALTER TABLE social_media_posts ADD COLUMN IF NOT EXISTS source_production_id UUID`;
 
   const countRows = await sql`
     SELECT COUNT(*)::int AS count FROM social_media_posts WHERE campaign_id = ${data.campaignId ?? ""}
@@ -1137,7 +1142,8 @@ export async function pgSaveSocialPost(data: Partial<SocialMediaPost> & { id?: s
     INSERT INTO social_media_posts (
       id, campaign_id, owner_user_id, platform, title, cover_image_url,
       views, likes, comments, shares, link, link_entries, content_type, media_url, description,
-      published_date, published, sort_order, plan_label, plan_labels, created_at, updated_at
+      published_date, published, sort_order, plan_label, plan_labels,
+      source_production_type, source_production_id, created_at, updated_at
     ) VALUES (
       ${id},
       ${data.campaignId ?? ""},
@@ -1159,6 +1165,8 @@ export async function pgSaveSocialPost(data: Partial<SocialMediaPost> & { id?: s
       ${sortOrder},
       ${planLabel},
       ${sql.json(planLabels)},
+      ${source.sourceProductionType},
+      ${source.sourceProductionId},
       ${now},
       ${now}
     )
@@ -1181,6 +1189,8 @@ export async function pgSaveSocialPost(data: Partial<SocialMediaPost> & { id?: s
       owner_user_id = COALESCE(EXCLUDED.owner_user_id, social_media_posts.owner_user_id),
       plan_label = EXCLUDED.plan_label,
       plan_labels = EXCLUDED.plan_labels,
+      source_production_type = EXCLUDED.source_production_type,
+      source_production_id = EXCLUDED.source_production_id,
       updated_at = EXCLUDED.updated_at
   `;
 
@@ -1331,6 +1341,10 @@ export async function pgSaveBroadcastReport(data: Partial<BroadcastReport> & { i
   const now = new Date().toISOString();
   const id = data.id ?? generateId();
   const { planLabel, planLabels } = resolvePlanFields(data);
+  const source = normalizeProductionSource(data);
+
+  await sql`ALTER TABLE broadcast_reports ADD COLUMN IF NOT EXISTS source_production_type TEXT`;
+  await sql`ALTER TABLE broadcast_reports ADD COLUMN IF NOT EXISTS source_production_id UUID`;
 
   const countRows = await sql`
     SELECT COUNT(*)::int AS count FROM broadcast_reports WHERE campaign_id = ${data.campaignId ?? ""}
@@ -1340,7 +1354,8 @@ export async function pgSaveBroadcastReport(data: Partial<BroadcastReport> & { i
   await sql`
     INSERT INTO broadcast_reports (
       id, campaign_id, owner_user_id, title, report_date, pdf_url, file_name,
-      summary_data, published, sort_order, plan_label, plan_labels, created_at, updated_at
+      summary_data, published, sort_order, plan_label, plan_labels,
+      source_production_type, source_production_id, created_at, updated_at
     ) VALUES (
       ${id},
       ${data.campaignId ?? ""},
@@ -1354,6 +1369,8 @@ export async function pgSaveBroadcastReport(data: Partial<BroadcastReport> & { i
       ${sortOrder},
       ${planLabel},
       ${sql.json(planLabels)},
+      ${source.sourceProductionType},
+      ${source.sourceProductionId},
       ${now},
       ${now}
     )
@@ -1368,6 +1385,8 @@ export async function pgSaveBroadcastReport(data: Partial<BroadcastReport> & { i
       owner_user_id = COALESCE(EXCLUDED.owner_user_id, broadcast_reports.owner_user_id),
       plan_label = EXCLUDED.plan_label,
       plan_labels = EXCLUDED.plan_labels,
+      source_production_type = EXCLUDED.source_production_type,
+      source_production_id = EXCLUDED.source_production_id,
       updated_at = EXCLUDED.updated_at
   `;
 
@@ -1429,6 +1448,12 @@ export async function pgSaveSmsSendReport(data: Partial<SmsSendReport> & { id?: 
   const now = new Date().toISOString();
   const id = data.id ?? generateId();
   const { planLabel, planLabels } = resolvePlanFields(data);
+  const source = normalizeProductionSource(data);
+  const channels = normalizeSmsSendChannels(data.channels);
+
+  await sql`ALTER TABLE sms_send_reports ADD COLUMN IF NOT EXISTS source_production_type TEXT`;
+  await sql`ALTER TABLE sms_send_reports ADD COLUMN IF NOT EXISTS source_production_id UUID`;
+  await sql`ALTER TABLE sms_send_reports ADD COLUMN IF NOT EXISTS channels JSONB NOT NULL DEFAULT '[]'::jsonb`;
 
   const countRows = await sql`
     SELECT COUNT(*)::int AS count FROM sms_send_reports WHERE campaign_id = ${data.campaignId ?? ""}
@@ -1437,9 +1462,10 @@ export async function pgSaveSmsSendReport(data: Partial<SmsSendReport> & { id?: 
 
   await sql`
     INSERT INTO sms_send_reports (
-      id, campaign_id, owner_user_id, title, send_date, recipient_count, message_body,
+      id, campaign_id, owner_user_id, title, send_date, recipient_count, message_body, channels,
       evidence_file_url, evidence_file_name, evidence_mime_type, evidence_file_size,
-      published, sort_order, plan_label, plan_labels, created_at, updated_at
+      published, sort_order, plan_label, plan_labels,
+      source_production_type, source_production_id, created_at, updated_at
     ) VALUES (
       ${id},
       ${data.campaignId ?? ""},
@@ -1448,6 +1474,7 @@ export async function pgSaveSmsSendReport(data: Partial<SmsSendReport> & { id?: 
       ${data.sendDate ?? now.split("T")[0]},
       ${data.recipientCount ?? 0},
       ${data.messageBody ?? ""},
+      ${sql.json(channels)},
       ${data.evidenceFileUrl ?? null},
       ${data.evidenceFileName ?? null},
       ${data.evidenceMimeType ?? null},
@@ -1456,6 +1483,8 @@ export async function pgSaveSmsSendReport(data: Partial<SmsSendReport> & { id?: 
       ${sortOrder},
       ${planLabel},
       ${sql.json(planLabels)},
+      ${source.sourceProductionType},
+      ${source.sourceProductionId},
       ${now},
       ${now}
     )
@@ -1464,6 +1493,7 @@ export async function pgSaveSmsSendReport(data: Partial<SmsSendReport> & { id?: 
       send_date = EXCLUDED.send_date,
       recipient_count = EXCLUDED.recipient_count,
       message_body = EXCLUDED.message_body,
+      channels = EXCLUDED.channels,
       evidence_file_url = EXCLUDED.evidence_file_url,
       evidence_file_name = EXCLUDED.evidence_file_name,
       evidence_mime_type = EXCLUDED.evidence_mime_type,
@@ -1473,6 +1503,8 @@ export async function pgSaveSmsSendReport(data: Partial<SmsSendReport> & { id?: 
       owner_user_id = COALESCE(EXCLUDED.owner_user_id, sms_send_reports.owner_user_id),
       plan_label = EXCLUDED.plan_label,
       plan_labels = EXCLUDED.plan_labels,
+      source_production_type = EXCLUDED.source_production_type,
+      source_production_id = EXCLUDED.source_production_id,
       updated_at = EXCLUDED.updated_at
   `;
 
@@ -1512,6 +1544,7 @@ export async function pgSaveCampaignActivity(data: Partial<CampaignActivity> & {
   const now = new Date().toISOString();
   const id = data.id ?? generateId();
   const { planLabel, planLabels } = resolvePlanFields(data);
+  const source = normalizeProductionSource(data);
 
   const countRows = await sql`
     SELECT COUNT(*)::int AS count FROM campaign_activities WHERE campaign_id = ${data.campaignId ?? ""}
@@ -1519,11 +1552,14 @@ export async function pgSaveCampaignActivity(data: Partial<CampaignActivity> & {
   const sortOrder = data.sortOrder ?? (Number(countRows[0]?.count) || 0) + 1;
 
   await sql`ALTER TABLE campaign_activities ADD COLUMN IF NOT EXISTS press_content_type TEXT`;
+  await sql`ALTER TABLE campaign_activities ADD COLUMN IF NOT EXISTS source_production_type TEXT`;
+  await sql`ALTER TABLE campaign_activities ADD COLUMN IF NOT EXISTS source_production_id UUID`;
 
   await sql`
     INSERT INTO campaign_activities (
       id, campaign_id, owner_user_id, title, activity_type, activity_date,
-      location, link, image_url, video_url, media_items, description, is_creative, press_content_type, published, sort_order, plan_label, plan_labels, created_at, updated_at
+      location, link, image_url, video_url, media_items, description, is_creative, press_content_type, published, sort_order, plan_label, plan_labels,
+      source_production_type, source_production_id, created_at, updated_at
     ) VALUES (
       ${id},
       ${data.campaignId ?? ""},
@@ -1543,6 +1579,8 @@ export async function pgSaveCampaignActivity(data: Partial<CampaignActivity> & {
       ${sortOrder},
       ${planLabel},
       ${sql.json(planLabels)},
+      ${source.sourceProductionType},
+      ${source.sourceProductionId},
       ${now},
       ${now}
     )
@@ -1563,6 +1601,8 @@ export async function pgSaveCampaignActivity(data: Partial<CampaignActivity> & {
       owner_user_id = COALESCE(EXCLUDED.owner_user_id, campaign_activities.owner_user_id),
       plan_label = EXCLUDED.plan_label,
       plan_labels = EXCLUDED.plan_labels,
+      source_production_type = EXCLUDED.source_production_type,
+      source_production_id = EXCLUDED.source_production_id,
       updated_at = EXCLUDED.updated_at
   `;
 

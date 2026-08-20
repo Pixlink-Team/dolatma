@@ -10,6 +10,10 @@ import {
   type BillboardDisplayPeriodInput,
 } from "@/lib/services/local-billboard-create";
 import type { BillboardCategory } from "@/lib/billboard-categories";
+import {
+  assertProductionSourceAllowed,
+  isProductionSourceType,
+} from "@/lib/production-source";
 
 function parseRequiredPeriods(formData: FormData): BillboardDisplayPeriodInput[] {
   const raw = formData.get("periods");
@@ -119,6 +123,11 @@ export async function POST(request: Request) {
     .getAll("planLabels")
     .map((value) => String(value).trim())
     .filter(Boolean);
+  const sourceProductionTypeRaw = String(formData.get("sourceProductionType") ?? "").trim();
+  const sourceProductionId = String(formData.get("sourceProductionId") ?? "").trim() || null;
+  const sourceProductionType = isProductionSourceType(sourceProductionTypeRaw)
+    ? sourceProductionTypeRaw
+    : null;
 
   let metadata: Record<string, unknown> = {};
   const metadataRaw = formData.get("metadata");
@@ -145,6 +154,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: tutorialDenied.error }, { status: 403 });
     }
 
+    const sourceDenied = await assertProductionSourceAllowed(session, campaignId, {
+      id: billboardId,
+      sourceProductionType,
+      sourceProductionId,
+    });
+    if (sourceDenied) {
+      return NextResponse.json({ error: sourceDenied.error }, { status: 400 });
+    }
+
     await createLocalBillboard({
       campaignId,
       billboardId,
@@ -166,6 +184,8 @@ export async function POST(request: Request) {
       metadata,
       periods,
       ownerUserId,
+      sourceProductionType,
+      sourceProductionId,
     });
 
     revalidatePath("/admin/billboards");

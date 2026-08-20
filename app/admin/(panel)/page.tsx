@@ -245,7 +245,7 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
               <div>
                 <h2 className="text-base font-semibold sm:text-lg">وضعیت بخش‌ها</h2>
                 <p className="text-xs text-muted-foreground sm:text-sm">
-                  دسته‌بندی‌شده؛ ناقص‌ها در هر گروه بالاتر دیده می‌شوند.
+                  گروه‌بندی مثل منو (تولید / نشر و انتشار)؛ ناقص‌ها در هر گروه بالاتر دیده می‌شوند.
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">

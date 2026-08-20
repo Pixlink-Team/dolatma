@@ -22,14 +22,10 @@ import {
 } from "@/components/admin/section-bulk-edit";
 import { PlanLabelSelect } from "@/components/admin/plan-label-select";
 import { ContentScoreControl } from "@/components/admin/content-score-control";
-import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  AdminEditorDialog,
+  AdminEditorDialogActions,
+} from "@/components/admin/admin-editor-dialog";
 import { DocumentUpload } from "@/components/ui/document-upload";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -430,89 +426,87 @@ export function FilesAdmin({
         remaining={filteredFiles.length - visibleCount}
       />
 
-      <Dialog open={dialogOpen} onOpenChange={(open) => (open ? setDialogOpen(true) : closeDialog())}>
-        <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editingId ? "ویرایش فایل" : "افزودن فایل"}</DialogTitle>
-            <DialogDescription className="sr-only">
-              آپلود فایل PDF، Word، Excel یا متنی برای راستا
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            <div>
-              <Label className={cn(highlightTitle && "text-destructive")}>عنوان</Label>
-              <Input
-                value={title}
-                maxLength={CONTENT_TITLE_MAX_LENGTH}
-                onChange={(event) => setTitle(event.target.value)}
-                placeholder="عنوان فایل"
-                className={cn(highlightTitle && "border-destructive focus-visible:ring-destructive")}
-              />
-              {highlightTitle && (
-                <p className="mt-1 text-xs text-destructive">
-                  عنوان پیش‌فرض یا خالی است؛ یک عنوان اختصاصی وارد کنید.
-                </p>
-              )}
-            </div>
-            <div>
-              <Label className={cn(highlightDescription && "text-amber-700 dark:text-amber-300")}>توضیحات (اختیاری)</Label>
-              <Textarea
-                value={description}
-                onChange={(event) => setDescription(event.target.value)}
-                rows={2}
-                className={cn(
-                  highlightDescription && "border-amber-500 focus-visible:ring-amber-500"
-                )}
-              />
-              {highlightDescription && (
-                <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">توضیحات خالی است؛ بهتر است تکمیل شود.</p>
-              )}
-            </div>
-            <PlanLabelSelect
-              topics={contentTopics}
-              plans={contentPlans}
-              values={planLabels}
-              onChangeMultiple={setPlanLabels}
-            />
-            <div
-              className={cn(
-                highlightFile && "rounded-lg border border-destructive bg-destructive/5 p-3"
-              )}
-            >
-              <DocumentUpload
-                label="فایل"
-                value={upload.url}
-                fileName={upload.fileName}
-                fileSize={upload.fileSize}
-                mimeType={upload.mimeType}
-                onChange={setUpload}
-                disabled={isPending}
-              />
-              {highlightFile && (
-                <p className="mt-2 text-xs text-destructive">فایل هنوز آپلود نشده است.</p>
-              )}
-            </div>
-            <Button onClick={handleSave} disabled={isPending} className="w-full">
-              {isPending ? "در حال ذخیره..." : "ذخیره فایل"}
-            </Button>
-            {editingId && (
-              <Button
-                type="button"
-                variant="destructive"
-                className="w-full"
-                disabled={isPending}
-                onClick={() => {
-                  const current = files.find((item) => item.id === editingId);
-                  if (current) handleDelete(current);
-                }}
-              >
-                حذف فایل
-              </Button>
+      <AdminEditorDialog
+        open={dialogOpen}
+        onOpenChange={(open) => (open ? setDialogOpen(true) : closeDialog())}
+        title={editingId ? "ویرایش فایل" : "افزودن فایل"}
+        description="آپلود فایل PDF، Word، Excel یا متنی برای راستا"
+        size="lg"
+        footer={
+          <AdminEditorDialogActions
+            saveLabel="ذخیره فایل"
+            isPending={isPending}
+            onSave={handleSave}
+            onDelete={
+              editingId
+                ? () => {
+                    const current = files.find((item) => item.id === editingId);
+                    if (current) handleDelete(current);
+                  }
+                : undefined
+            }
+            deleteLabel="حذف فایل"
+          />
+        }
+      >
+        <div className="space-y-2">
+          <Label className={cn(highlightTitle && "text-destructive")}>عنوان</Label>
+          <Input
+            value={title}
+            maxLength={CONTENT_TITLE_MAX_LENGTH}
+            onChange={(event) => setTitle(event.target.value)}
+            placeholder="عنوان فایل"
+            className={cn(highlightTitle && "border-destructive focus-visible:ring-destructive")}
+          />
+          {highlightTitle && (
+            <p className="text-xs text-destructive">
+              عنوان پیش‌فرض یا خالی است؛ یک عنوان اختصاصی وارد کنید.
+            </p>
+          )}
+        </div>
+        <div className="space-y-2">
+          <Label className={cn(highlightDescription && "text-amber-700 dark:text-amber-300")}>
+            توضیحات (اختیاری)
+          </Label>
+          <Textarea
+            value={description}
+            onChange={(event) => setDescription(event.target.value)}
+            rows={2}
+            className={cn(
+              highlightDescription && "border-amber-500 focus-visible:ring-amber-500"
             )}
-          </div>
-        </DialogContent>
-      </Dialog>
+          />
+          {highlightDescription && (
+            <p className="text-xs text-amber-700 dark:text-amber-300">
+              توضیحات خالی است؛ بهتر است تکمیل شود.
+            </p>
+          )}
+        </div>
+        <PlanLabelSelect
+          topics={contentTopics}
+          plans={contentPlans}
+          values={planLabels}
+          onChangeMultiple={setPlanLabels}
+        />
+        <div
+          className={cn(
+            highlightFile && "rounded-lg border border-destructive bg-destructive/5 p-3"
+          )}
+        >
+          <DocumentUpload
+            label="فایل"
+            value={upload.url}
+            fileName={upload.fileName}
+            fileSize={upload.fileSize}
+            mimeType={upload.mimeType}
+            onChange={setUpload}
+            disabled={isPending}
+          />
+          {highlightFile && (
+            <p className="mt-2 text-xs text-destructive">فایل هنوز آپلود نشده است.</p>
+          )}
+        </div>
+      </AdminEditorDialog>
     </div>
   );
 }

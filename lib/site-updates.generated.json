@@ -1,6 +1,30 @@
 {
   "entries": [
     {
+      "hash": "cc6378ef202fbc325940dbd3a0217925fde76eb7",
+      "committedAt": "2026-08-20T17:34:11+03:30",
+      "title": "حذف پنجره خطای فیلدهای خالی؛ فقط هشدار بالای صفحه نمایش داده می‌شود",
+      "subject": "Stop opening modal for missing-field validation"
+    },
+    {
+      "hash": "6bf316a64c4da503d8094d3f1ae60dc4c7eb5a01",
+      "committedAt": "2026-08-20T17:32:44+03:30",
+      "title": "انتقال بخش پروفایل من به انتهای داشبورد و منو",
+      "subject": "Move profile section to end of dashboard and sidebar"
+    },
+    {
+      "hash": "3687ffe47d0714f365b466e12648ed0ab1da7c81",
+      "committedAt": "2026-08-20T17:27:31+03:30",
+      "title": "حذف پیش‌نمایش لحظه‌ای قبل از باز شدن کارت تبلیغات محیطی",
+      "subject": "Remove billboard map preview popup flash"
+    },
+    {
+      "hash": "bceb607be855d0716c5c216598812770e2ef991c",
+      "committedAt": "2026-08-20T17:26:28+03:30",
+      "title": "یکدست‌سازی ظاهر بخش‌های محتوا و کانال‌های انتشار",
+      "subject": "Unify admin content section UI layout"
+    },
+    {
       "hash": "7d41ca20cb49563885b466c4d36ca23685acaa50",
       "committedAt": "2026-08-20T17:23:29+03:30",
       "title": "حذف کارت برگشتی امروز از گزارش عملکرد",

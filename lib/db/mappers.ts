@@ -43,6 +43,7 @@ import {
 } from "@/lib/content-topics";
 import { truncateMeetingSummary } from "@/lib/meeting-preview";
 import { mapOrgRole } from "@/lib/org-roles";
+import { parseSmsSendChannels } from "@/lib/sms-send-channels";
 import { parseSocialPostLinkEntries } from "@/lib/social-posts";
 import { normalizeAdminRole } from "@/lib/user-roles";
 
@@ -459,6 +460,7 @@ export function mapSmsSendReportFromDb(row: any): SmsSendReport {
     sendDate: toDateString(row.send_date),
     recipientCount: Number(row.recipient_count ?? 0),
     messageBody: row.message_body ?? "",
+    channels: parseSmsSendChannels(row.channels),
     evidenceFileUrl: row.evidence_file_url ?? null,
     evidenceFileName: row.evidence_file_name ?? null,
     evidenceMimeType: row.evidence_mime_type ?? null,

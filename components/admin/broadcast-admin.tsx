@@ -14,7 +14,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  AdminEditorDialog,
+  AdminEditorDialogActions,
+} from "@/components/admin/admin-editor-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   AdminBroadcastAddCard,
   AdminBroadcastCompactCard,
@@ -34,6 +43,7 @@ import { ImageZoom } from "@/components/ui/image-zoom";
 import { VideoModal } from "@/components/media/video-modal";
 import { VideoThumbnail } from "@/components/media/video-thumbnail";
 import { PersianDateField } from "@/components/ui/persian-date-input";
+import { ProductionSourcePicker } from "@/components/admin/production-source-picker";
 import { deleteBroadcastReportAction, saveBroadcastReportAction } from "@/lib/actions/extended-actions";
 import {
   resolveBroadcastFileKind,
@@ -45,6 +55,7 @@ import { useAdminEditDeepLink } from "@/lib/hooks/use-admin-edit-deep-link";
 import { useAdminViewMode } from "@/lib/hooks/use-admin-view-mode";
 import { useSectionCreateGate } from "@/lib/hooks/use-section-create-gate";
 import { todayISO } from "@/lib/jalali";
+import type { ProductionSourceType } from "@/lib/production-source-shared";
 import type { BroadcastReport, VideoVersion } from "@/lib/types";
 import { cn, formatPersianDate } from "@/lib/utils";
 
@@ -121,6 +132,8 @@ export function BroadcastAdmin({ campaignId, initialReports }: BroadcastAdminPro
   const { requestCreate, tutorialModal } = useSectionCreateGate("broadcast", campaignId);
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [sourceProductionType, setSourceProductionType] = useState<ProductionSourceType | null>(null);
+  const [sourceProductionId, setSourceProductionId] = useState<string | null>(null);
   const [rows, setRows] = useState(initialReports);
   const [previewReport, setPreviewReport] = useState<BroadcastReport | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -143,6 +156,8 @@ export function BroadcastAdmin({ campaignId, initialReports }: BroadcastAdminPro
     basePath: "/admin/broadcast",
     onOpen: (report, fields) => {
       setEditingId(report.id);
+      setSourceProductionType(report.sourceProductionType ?? null);
+      setSourceProductionId(report.sourceProductionId ?? null);
       form.reset(reportToFormValues(report));
       setHighlightFields(fields);
       setOpen(true);
@@ -173,6 +188,8 @@ export function BroadcastAdmin({ campaignId, initialReports }: BroadcastAdminPro
   const openCreate = () => {
     void requestCreate(() => {
       setEditingId(null);
+      setSourceProductionType(null);
+      setSourceProductionId(null);
       setHighlightFields([]);
       form.reset(emptyFormValues());
       setOpen(true);
@@ -181,6 +198,8 @@ export function BroadcastAdmin({ campaignId, initialReports }: BroadcastAdminPro
 
   const openEdit = (report: BroadcastReport) => {
     setEditingId(report.id);
+    setSourceProductionType(report.sourceProductionType ?? null);
+    setSourceProductionId(report.sourceProductionId ?? null);
     setHighlightFields([]);
     form.reset(reportToFormValues(report));
     setOpen(true);
@@ -209,6 +228,11 @@ export function BroadcastAdmin({ campaignId, initialReports }: BroadcastAdminPro
   };
 
   const onSubmit = form.handleSubmit((data) => {
+    if (!editingId && (!sourceProductionType || !sourceProductionId)) {
+      toast.error("برای ثبت نشر باید یک تولید (یا دارایی دستورکار) انتخاب شود");
+      return;
+    }
+
     startTransition(async () => {
       const fileKind =
         data.mediaType === "media" ? detectFormFileKind(data.pdfUrl, data.fileName) : null;
@@ -229,6 +253,8 @@ export function BroadcastAdmin({ campaignId, initialReports }: BroadcastAdminPro
         fileName: data.fileName,
         published: true,
         summaryData,
+        sourceProductionType,
+        sourceProductionId,
       };
 
       const result = await saveBroadcastReportAction(payload);
@@ -249,6 +275,8 @@ export function BroadcastAdmin({ campaignId, initialReports }: BroadcastAdminPro
         summaryData,
         published: true,
         sortOrder: 0,
+        sourceProductionType,
+        sourceProductionId,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
@@ -375,12 +403,27 @@ export function BroadcastAdmin({ campaignId, initialReports }: BroadcastAdminPro
         </div>
       )}
 
-      <Dialog open={open} onOpenChange={(nextOpen) => (nextOpen ? setOpen(true) : closeDialog())}>
-        <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editingId ? "ویرایش گزارش" : "گزارش جدید"}</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={onSubmit} className="space-y-4">
+      <AdminEditorDialog
+        open={open}
+        onOpenChange={(nextOpen) => (nextOpen ? setOpen(true) : closeDialog())}
+        title={editingId ? "ویرایش گزارش" : "گزارش جدید"}
+        description="آپلود و انتشار گزارش PDF یا مدیا برای صدا و سیما"
+        size="xl"
+        pinTop
+        formProps={{ onSubmit }}
+        footer={<AdminEditorDialogActions submit isPending={isPending} />}
+      >
+        <ProductionSourcePicker
+          campaignId={campaignId}
+          valueType={sourceProductionType}
+          valueId={sourceProductionId}
+          required={!editingId}
+          label="کدام تولید را نشر می‌کنید؟"
+          onChange={(item) => {
+            setSourceProductionType(item?.type ?? null);
+            setSourceProductionId(item?.id ?? null);
+          }}
+        />
             <div className="space-y-2">
               <Label className={cn(highlightTitle && "text-destructive")}>عنوان گزارش</Label>
               <Input
@@ -556,13 +599,7 @@ export function BroadcastAdmin({ campaignId, initialReports }: BroadcastAdminPro
               <Label>یادداشت (اختیاری)</Label>
               <Textarea {...form.register("notes")} placeholder="نکات تکمیلی برای نمایش در داشبورد" />
             </div>
-
-            <Button type="submit" disabled={isPending} className="w-full">
-              ذخیره
-            </Button>
-          </form>
-        </DialogContent>
-      </Dialog>
+      </AdminEditorDialog>
 
       {previewVersion && previewReport && previewKind === "video" && (
         <VideoModal

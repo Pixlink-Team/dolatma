@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { MediaUpload } from "@/components/ui/media-upload";
 import { PersianDateField } from "@/components/ui/persian-date-input";
 import { PlanLabelSelect } from "@/components/admin/plan-label-select";
+import { ProductionSourcePicker } from "@/components/admin/production-source-picker";
 import { SocialPlatformIcon, getSocialPlatformLabel } from "@/components/public/social-platform-icon";
 import { saveSocialPostAction } from "@/lib/actions/extended-actions";
 import type { ContentTopic } from "@/lib/content-topics";
@@ -23,6 +24,7 @@ import {
   CONTENT_TITLE_MAX_LENGTH_MESSAGE,
 } from "@/lib/content-constraints";
 import { todayISO } from "@/lib/jalali";
+import type { ProductionSourceType } from "@/lib/production-source-shared";
 import { stripFileAccessToken } from "@/lib/uploads";
 import { getStatusLabel } from "@/lib/utils";
 import type { SocialContentType, SocialPlatform, SocialPostPlatform } from "@/lib/types";
@@ -131,6 +133,8 @@ export function SocialPostFormDialog({
   bulkTypeSwitcher,
 }: SocialPostFormDialogProps) {
   const [planLabels, setPlanLabels] = useState<string[]>([]);
+  const [sourceProductionType, setSourceProductionType] = useState<ProductionSourceType | null>(null);
+  const [sourceProductionId, setSourceProductionId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const form = useForm<FormValues>({
@@ -169,9 +173,16 @@ export function SocialPostFormDialog({
       publishedDate: initialValues?.publishedDate || todayISO(),
     });
     setPlanLabels([]);
+    setSourceProductionType(null);
+    setSourceProductionId(null);
   }, [open, initialValues, initialValuesKey, form]);
 
   const onSubmit = form.handleSubmit((data) => {
+    if (!sourceProductionType || !sourceProductionId) {
+      toast.error("برای ثبت نشر باید یک تولید (یا دارایی دستورکار) انتخاب شود");
+      return;
+    }
+
     startTransition(async () => {
       const cover = stripFileAccessToken(data.coverImageUrl || "");
       const media = stripFileAccessToken(data.mediaUrl || cover);
@@ -193,6 +204,8 @@ export function SocialPostFormDialog({
         published: true,
         planLabels,
         planLabel: planLabels[0] ?? null,
+        sourceProductionType,
+        sourceProductionId,
       });
 
       if (!result.success) {
@@ -220,6 +233,17 @@ export function SocialPostFormDialog({
         {bulkTypeSwitcher}
 
         <form onSubmit={onSubmit} className="space-y-4 text-right">
+          <ProductionSourcePicker
+            campaignId={campaignId}
+            valueType={sourceProductionType}
+            valueId={sourceProductionId}
+            required
+            label="کدام تولید را نشر می‌کنید؟"
+            onChange={(item) => {
+              setSourceProductionType(item?.type ?? null);
+              setSourceProductionId(item?.id ?? null);
+            }}
+          />
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>کانال</Label>

@@ -41,6 +41,7 @@ import { normalizePlanLabels, normalizeContentTopics, ensureContentTopicInList }
 import { resolveUploadFilePath } from "@/lib/uploads";
 import { unlink } from "fs/promises";
 import { ensureSectionContentFormsSchema } from "@/lib/db/repository-section-forms";
+import { normalizeProductionSource } from "@/lib/production-source";
 import type { Ownable } from "@/lib/types";
 
 function resolvePlanFields(data: Partial<Ownable>) {
@@ -552,8 +553,11 @@ export async function pgSaveBillboard(data: Partial<Billboard> & { id?: string }
   const now = new Date().toISOString();
   const id = data.id ?? generateId();
   const { planLabel, planLabels } = resolvePlanFields(data);
+  const source = normalizeProductionSource(data);
 
   await sql`ALTER TABLE billboards ADD COLUMN IF NOT EXISTS location_type TEXT`;
+  await sql`ALTER TABLE billboards ADD COLUMN IF NOT EXISTS source_production_type TEXT`;
+  await sql`ALTER TABLE billboards ADD COLUMN IF NOT EXISTS source_production_id UUID`;
 
   const countRows = await sql`
     SELECT COUNT(*)::int AS count FROM billboards WHERE campaign_id = ${data.campaignId ?? ""}
@@ -565,7 +569,7 @@ export async function pgSaveBillboard(data: Partial<Billboard> & { id?: string }
       id, campaign_id, title, description, province, city, location, date,
       thumbnail_url, image_url, external_url, latitude, longitude, source, external_id,
       category, area_sqm, location_type, status, tags, notes, published, sort_order, owner_user_id, plan_label, plan_labels, score,
-      metadata, created_at, updated_at
+      metadata, source_production_type, source_production_id, created_at, updated_at
     ) VALUES (
       ${id},
       ${data.campaignId ?? ""},
@@ -595,6 +599,8 @@ export async function pgSaveBillboard(data: Partial<Billboard> & { id?: string }
       ${sql.json(planLabels)},
       ${data.score ?? null},
       ${sql.json(JSON.parse(JSON.stringify(data.metadata ?? {})))},
+      ${source.sourceProductionType},
+      ${source.sourceProductionId},
       ${now},
       ${now}
     )
@@ -625,6 +631,8 @@ export async function pgSaveBillboard(data: Partial<Billboard> & { id?: string }
       plan_labels = EXCLUDED.plan_labels,
       score = COALESCE(EXCLUDED.score, billboards.score),
       metadata = EXCLUDED.metadata,
+      source_production_type = EXCLUDED.source_production_type,
+      source_production_id = EXCLUDED.source_production_id,
       updated_at = EXCLUDED.updated_at
   `;
 

@@ -10,11 +10,13 @@ import {
   CONTENT_TITLE_MAX_LENGTH,
   CONTENT_TITLE_MAX_LENGTH_MESSAGE,
 } from "@/lib/content-constraints";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  AdminEditorDialog,
+  AdminEditorDialogActions,
+} from "@/components/admin/admin-editor-dialog";
 import { AdminCreatedAtText } from "@/components/admin/admin-created-at";
 import { AdminCompactAddCard } from "@/components/admin/admin-compact-add-card";
 import {
@@ -26,8 +28,11 @@ import {
 import { AdminItemActions } from "@/components/admin/admin-item-actions";
 import { AdminOwnerBadge } from "@/components/admin/admin-owner-badge";
 import { AdminViewModeToggle } from "@/components/admin/admin-view-mode-toggle";
+import { Badge } from "@/components/ui/badge";
 import { DocumentUpload } from "@/components/ui/document-upload";
 import { PersianDateField } from "@/components/ui/persian-date-input";
+import { ProductionSourcePicker } from "@/components/admin/production-source-picker";
+import { SocialPlatformIcon } from "@/components/public/social-platform-icon";
 import {
   deleteSmsSendReportAction,
   saveSmsSendReportAction,
@@ -36,7 +41,13 @@ import { useAdminEditDeepLink } from "@/lib/hooks/use-admin-edit-deep-link";
 import { useAdminViewMode } from "@/lib/hooks/use-admin-view-mode";
 import { useSectionCreateGate } from "@/lib/hooks/use-section-create-gate";
 import { todayISO } from "@/lib/jalali";
-import type { SmsSendReport } from "@/lib/types";
+import type { ProductionSourceType } from "@/lib/production-source-shared";
+import {
+  getSmsSendChannelLabel,
+  SMS_SEND_CHANNEL_OPTIONS,
+  type SmsSendChannel,
+} from "@/lib/sms-send-channels";
+import type { SmsSendReport, SocialPlatform } from "@/lib/types";
 import { cn, formatPersianDate, formatPersianNumber } from "@/lib/utils";
 
 const schema = z.object({
@@ -44,6 +55,7 @@ const schema = z.object({
   sendDate: z.string().min(1),
   recipientCount: z.coerce.number().int().min(1, "حداقل یک گیرنده لازم است"),
   messageBody: z.string().min(1, "متن پیام الزامی است"),
+  channels: z.array(z.enum(SMS_SEND_CHANNEL_OPTIONS)).min(1, "حداقل یک رسانه را انتخاب کنید"),
   evidenceFileUrl: z.string().optional(),
   evidenceFileName: z.string().optional(),
   evidenceMimeType: z.string().optional(),
@@ -63,6 +75,7 @@ function emptyFormValues(): FormValues {
     sendDate: todayISO(),
     recipientCount: 1,
     messageBody: "",
+    channels: ["sms"],
     evidenceFileUrl: "",
     evidenceFileName: "",
     evidenceMimeType: "",
@@ -76,6 +89,7 @@ function reportToFormValues(report: SmsSendReport): FormValues {
     sendDate: report.sendDate,
     recipientCount: report.recipientCount,
     messageBody: report.messageBody,
+    channels: report.channels.length > 0 ? report.channels : ["sms"],
     evidenceFileUrl: report.evidenceFileUrl ?? "",
     evidenceFileName: report.evidenceFileName ?? "",
     evidenceMimeType: report.evidenceMimeType ?? "",
@@ -89,10 +103,37 @@ function truncateMessage(text: string, max = 90): string {
   return `${trimmed.slice(0, max)}…`;
 }
 
+function isSocialMessengerChannel(channel: SmsSendChannel): channel is Extract<
+  SmsSendChannel,
+  SocialPlatform
+> {
+  return channel !== "sms";
+}
+
+function ChannelBadges({ channels }: { channels: SmsSendChannel[] }) {
+  if (channels.length === 0) return null;
+  return (
+    <div className="mt-2 flex flex-wrap gap-1">
+      {channels.map((channel) => (
+        <Badge key={channel} variant="secondary" className="gap-1 text-[10px] font-normal">
+          {isSocialMessengerChannel(channel) ? (
+            <SocialPlatformIcon platform={channel} size="sm" className="h-3.5 w-3.5 rounded-sm" />
+          ) : (
+            <MessageSquare className="h-3 w-3" />
+          )}
+          {getSmsSendChannelLabel(channel)}
+        </Badge>
+      ))}
+    </div>
+  );
+}
+
 export function SmsReportsAdmin({ campaignId, initialReports }: SmsReportsAdminProps) {
   const { requestCreate, tutorialModal } = useSectionCreateGate("smsReports", campaignId);
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [sourceProductionType, setSourceProductionType] = useState<ProductionSourceType | null>(null);
+  const [sourceProductionId, setSourceProductionId] = useState<string | null>(null);
   const [rows, setRows] = useState(initialReports);
   const [isPending, startTransition] = useTransition();
   const [contentFilter, setContentFilter] = useState<AdminContentFilterState>(DEFAULT_ADMIN_CONTENT_FILTER);
@@ -114,6 +155,8 @@ export function SmsReportsAdmin({ campaignId, initialReports }: SmsReportsAdminP
     basePath: "/admin/sms-reports",
     onOpen: (report, fields) => {
       setEditingId(report.id);
+      setSourceProductionType(report.sourceProductionType ?? null);
+      setSourceProductionId(report.sourceProductionId ?? null);
       form.reset(reportToFormValues(report));
       setHighlightFields(fields);
       setOpen(true);
@@ -121,13 +164,24 @@ export function SmsReportsAdmin({ campaignId, initialReports }: SmsReportsAdminP
   });
 
   const watchedTitle = form.watch("title");
+  const watchedChannels = form.watch("channels");
   const watchedEvidenceUrl = form.watch("evidenceFileUrl");
   const watchedEvidenceName = form.watch("evidenceFileName");
   const highlightTitle = highlightFields.includes("title") && !watchedTitle?.trim();
 
+  const toggleChannel = (channel: SmsSendChannel) => {
+    const current = form.getValues("channels") ?? [];
+    const next = current.includes(channel)
+      ? current.filter((item) => item !== channel)
+      : [...current, channel];
+    form.setValue("channels", next, { shouldDirty: true, shouldValidate: true });
+  };
+
   const openCreate = () => {
     void requestCreate(() => {
       setEditingId(null);
+      setSourceProductionType(null);
+      setSourceProductionId(null);
       setHighlightFields([]);
       form.reset(emptyFormValues());
       setOpen(true);
@@ -136,6 +190,8 @@ export function SmsReportsAdmin({ campaignId, initialReports }: SmsReportsAdminP
 
   const openEdit = (report: SmsSendReport) => {
     setEditingId(report.id);
+    setSourceProductionType(report.sourceProductionType ?? null);
+    setSourceProductionId(report.sourceProductionId ?? null);
     setHighlightFields([]);
     form.reset(reportToFormValues(report));
     setOpen(true);
@@ -168,6 +224,11 @@ export function SmsReportsAdmin({ campaignId, initialReports }: SmsReportsAdminP
   };
 
   const onSubmit = form.handleSubmit((data) => {
+    if (!editingId && (!sourceProductionType || !sourceProductionId)) {
+      toast.error("برای ثبت نشر باید یک تولید (یا دارایی دستورکار) انتخاب شود");
+      return;
+    }
+
     startTransition(async () => {
       const payload = {
         campaignId,
@@ -176,11 +237,14 @@ export function SmsReportsAdmin({ campaignId, initialReports }: SmsReportsAdminP
         sendDate: data.sendDate,
         recipientCount: data.recipientCount,
         messageBody: data.messageBody.trim(),
+        channels: data.channels,
         evidenceFileUrl: data.evidenceFileUrl?.trim() || null,
         evidenceFileName: data.evidenceFileName?.trim() || null,
         evidenceMimeType: data.evidenceMimeType?.trim() || null,
         evidenceFileSize: data.evidenceFileSize ?? 0,
         published: true,
+        sourceProductionType,
+        sourceProductionId,
       };
 
       const result = await saveSmsSendReportAction(payload);
@@ -197,12 +261,15 @@ export function SmsReportsAdmin({ campaignId, initialReports }: SmsReportsAdminP
         sendDate: payload.sendDate,
         recipientCount: payload.recipientCount,
         messageBody: payload.messageBody,
+        channels: payload.channels,
         evidenceFileUrl: payload.evidenceFileUrl,
         evidenceFileName: payload.evidenceFileName,
         evidenceMimeType: payload.evidenceMimeType,
         evidenceFileSize: payload.evidenceFileSize,
         published: true,
         sortOrder: 0,
+        sourceProductionType,
+        sourceProductionId,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
@@ -222,7 +289,7 @@ export function SmsReportsAdmin({ campaignId, initialReports }: SmsReportsAdminP
         <div>
           <h1 className="text-2xl font-bold">ارسال پیام انبوه</h1>
           <p className="text-sm text-muted-foreground">
-            ثبت گزارش ارسال پیام انبوه (پیامک، بله و سایر کانال‌ها) — عنوان، تعداد گیرندگان، متن پیام و مستند اختیاری
+            ثبت گزارش ارسال پیام انبوه (پیامک، بله، ایتا و سایر کانال‌ها) — عنوان، رسانه، تعداد گیرندگان، متن پیام و مستند اختیاری
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -268,6 +335,7 @@ export function SmsReportsAdmin({ campaignId, initialReports }: SmsReportsAdminP
                 />
               </div>
               <p className="truncate font-medium">{report.title}</p>
+              <ChannelBadges channels={report.channels} />
               <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
                 <Users className="h-3.5 w-3.5" />
                 {formatPersianNumber(report.recipientCount)} نفر
@@ -309,6 +377,7 @@ export function SmsReportsAdmin({ campaignId, initialReports }: SmsReportsAdminP
                 </div>
                 <div className="min-w-0">
                   <p className="truncate font-medium">{report.title}</p>
+                  <ChannelBadges channels={report.channels} />
                   <p className="text-xs text-muted-foreground">
                     {formatPersianNumber(report.recipientCount)} نفر · {formatPersianDate(report.sendDate)}
                     {report.evidenceFileName ? ` · ${report.evidenceFileName}` : ""}
@@ -335,71 +404,129 @@ export function SmsReportsAdmin({ campaignId, initialReports }: SmsReportsAdminP
         </div>
       )}
 
-      <Dialog open={open} onOpenChange={(nextOpen) => (nextOpen ? setOpen(true) : closeDialog())}>
-        <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editingId ? "ویرایش گزارش ارسال" : "ثبت ارسال پیام"}</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={onSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label className={cn(highlightTitle && "text-destructive")}>عنوان</Label>
-              <Input
-                {...form.register("title")}
-                maxLength={CONTENT_TITLE_MAX_LENGTH}
-                placeholder="مثلاً پیامک اطلاع‌رسانی مرحله اول"
-                className={cn(highlightTitle && "border-destructive focus-visible:ring-destructive")}
-              />
-              {form.formState.errors.title ? (
-                <p className="text-xs text-destructive">{form.formState.errors.title.message}</p>
-              ) : null}
-            </div>
+      <AdminEditorDialog
+        open={open}
+        onOpenChange={(nextOpen) => (nextOpen ? setOpen(true) : closeDialog())}
+        title={editingId ? "ویرایش گزارش ارسال" : "ثبت ارسال پیام"}
+        description="ثبت گزارش ارسال پیام انبوه با عنوان، رسانه ارسال، تعداد گیرندگان و مستند اختیاری"
+        size="xl"
+        formProps={{ onSubmit }}
+        footer={
+          <AdminEditorDialogActions submit isPending={isPending} />
+        }
+      >
+        <ProductionSourcePicker
+          campaignId={campaignId}
+          valueType={sourceProductionType}
+          valueId={sourceProductionId}
+          required={!editingId}
+          label="کدام تولید را نشر می‌کنید؟"
+          onChange={(item) => {
+            setSourceProductionType(item?.type ?? null);
+            setSourceProductionId(item?.id ?? null);
+          }}
+        />
+        <div className="space-y-2">
+          <Label className={cn(highlightTitle && "text-destructive")}>عنوان</Label>
+          <Input
+            {...form.register("title")}
+            maxLength={CONTENT_TITLE_MAX_LENGTH}
+            placeholder="مثلاً پیامک اطلاع‌رسانی مرحله اول"
+            className={cn(highlightTitle && "border-destructive focus-visible:ring-destructive")}
+          />
+          {form.formState.errors.title ? (
+            <p className="text-xs text-destructive">{form.formState.errors.title.message}</p>
+          ) : null}
+        </div>
 
-            <PersianDateField control={form.control} name="sendDate" label="تاریخ ارسال" />
+        <div className="space-y-2">
+          <Label>رسانه ارسال</Label>
+          <p className="text-xs text-muted-foreground">
+            کانال‌هایی که این پیام انبوه از طریق آن‌ها ارسال شده را انتخاب کنید.
+          </p>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {SMS_SEND_CHANNEL_OPTIONS.map((channel) => {
+              const checked = watchedChannels?.includes(channel) ?? false;
+              return (
+                <button
+                  key={channel}
+                  type="button"
+                  onClick={() => toggleChannel(channel)}
+                  className={cn(
+                    "flex items-center gap-2 rounded-lg border px-2.5 py-2 text-right text-sm transition-colors",
+                    checked
+                      ? "border-primary bg-primary/10 text-foreground"
+                      : "border-border bg-background text-muted-foreground hover:bg-muted/50"
+                  )}
+                  aria-pressed={checked}
+                >
+                  <span
+                    className={cn(
+                      "flex h-4 w-4 shrink-0 items-center justify-center rounded border text-[10px] font-bold",
+                      checked
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-muted-foreground/40"
+                    )}
+                  >
+                    {checked ? "✓" : ""}
+                  </span>
+                  {isSocialMessengerChannel(channel) ? (
+                    <SocialPlatformIcon platform={channel} size="sm" className="h-5 w-5 rounded-md" />
+                  ) : (
+                    <span className="flex h-5 w-5 items-center justify-center rounded-md bg-muted">
+                      <MessageSquare className="h-3.5 w-3.5" />
+                    </span>
+                  )}
+                  <span className="truncate">{getSmsSendChannelLabel(channel)}</span>
+                </button>
+              );
+            })}
+          </div>
+          {form.formState.errors.channels ? (
+            <p className="text-xs text-destructive">{form.formState.errors.channels.message}</p>
+          ) : null}
+        </div>
 
-            <div className="space-y-2">
-              <Label>تعداد گیرندگان</Label>
-              <Input
-                type="number"
-                min={1}
-                step={1}
-                {...form.register("recipientCount")}
-                placeholder="مثلاً ۵۰۰۰"
-              />
-              {form.formState.errors.recipientCount ? (
-                <p className="text-xs text-destructive">{form.formState.errors.recipientCount.message}</p>
-              ) : null}
-            </div>
+        <PersianDateField control={form.control} name="sendDate" label="تاریخ ارسال" />
 
-            <div className="space-y-2">
-              <Label>متن پیام ارسال‌شده</Label>
-              <Textarea
-                {...form.register("messageBody")}
-                rows={5}
-                placeholder="متن دقیق پیامکی که برای مخاطبان ارسال شده را وارد کنید"
-              />
-              {form.formState.errors.messageBody ? (
-                <p className="text-xs text-destructive">{form.formState.errors.messageBody.message}</p>
-              ) : null}
-            </div>
+        <div className="space-y-2">
+          <Label>تعداد گیرندگان</Label>
+          <Input
+            type="number"
+            min={1}
+            step={1}
+            {...form.register("recipientCount")}
+            placeholder="مثلاً ۵۰۰۰"
+          />
+          {form.formState.errors.recipientCount ? (
+            <p className="text-xs text-destructive">{form.formState.errors.recipientCount.message}</p>
+          ) : null}
+        </div>
 
-            <DocumentUpload
-              label="مستند ارسال (اختیاری)"
-              value={watchedEvidenceUrl ?? ""}
-              fileName={watchedEvidenceName}
-              onChange={(payload) => {
-                form.setValue("evidenceFileUrl", payload.url, { shouldDirty: true });
-                form.setValue("evidenceFileName", payload.fileName, { shouldDirty: true });
-                form.setValue("evidenceMimeType", payload.mimeType, { shouldDirty: true });
-                form.setValue("evidenceFileSize", payload.fileSize, { shouldDirty: true });
-              }}
-            />
+        <div className="space-y-2">
+          <Label>متن پیام ارسال‌شده</Label>
+          <Textarea
+            {...form.register("messageBody")}
+            rows={5}
+            placeholder="متن دقیق پیامی که برای مخاطبان ارسال شده را وارد کنید"
+          />
+          {form.formState.errors.messageBody ? (
+            <p className="text-xs text-destructive">{form.formState.errors.messageBody.message}</p>
+          ) : null}
+        </div>
 
-            <Button type="submit" disabled={isPending} className="w-full">
-              ذخیره
-            </Button>
-          </form>
-        </DialogContent>
-      </Dialog>
+        <DocumentUpload
+          label="مستند ارسال (اختیاری)"
+          value={watchedEvidenceUrl ?? ""}
+          fileName={watchedEvidenceName}
+          onChange={(payload) => {
+            form.setValue("evidenceFileUrl", payload.url, { shouldDirty: true });
+            form.setValue("evidenceFileName", payload.fileName, { shouldDirty: true });
+            form.setValue("evidenceMimeType", payload.mimeType, { shouldDirty: true });
+            form.setValue("evidenceFileSize", payload.fileSize, { shouldDirty: true });
+          }}
+        />
+      </AdminEditorDialog>
     </div>
   );
 }

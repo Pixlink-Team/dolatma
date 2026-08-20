@@ -54,6 +54,7 @@ import {
   type ContributorPermissionKey,
 } from "@/lib/contributor-permissions";
 import { pgGetUserPermissionsForCampaign } from "@/lib/db/repository-extended";
+import { assertProductionSourceAllowed } from "@/lib/production-source";
 import { isPostgresConfigured } from "@/lib/utils";
 import { stripFileAccessTokensDeep } from "@/lib/uploads";
 
@@ -211,6 +212,12 @@ export async function saveBillboardAction(data: Partial<Billboard> & { id?: stri
   if (tutorialDenied) return tutorialDenied;
   const scoped = await withOwnerScope(auth, data);
   const ownerId = scoped.ownerUserId ?? auth.userId;
+  const sourceDenied = await assertProductionSourceAllowed(
+    auth,
+    scoped.campaignId ?? data.campaignId ?? "",
+    { ...scoped, id: data.id }
+  );
+  if (sourceDenied) return sourceDenied;
   if (ownerId && (scoped.campaignId || data.campaignId)) {
     const { denyIfCreateQuotaExceeded } = await import(
       "@/lib/scoring/daily-cap-and-duplicates"

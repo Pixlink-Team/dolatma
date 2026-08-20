@@ -28,12 +28,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  AdminEditorDialog,
+  AdminEditorDialogActions,
+} from "@/components/admin/admin-editor-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MediaThumbnail } from "@/components/ui/media-thumbnail";
@@ -560,112 +557,106 @@ export function RawMediaAdmin({
         remaining={filteredItems.length - visibleCount}
       />
 
-      <Dialog open={dialogOpen} onOpenChange={(open) => (open ? setDialogOpen(true) : closeDialog())}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>{editingId ? "ویرایش راش تصاویر" : "آپلود راش تصاویر"}</DialogTitle>
-            <DialogDescription>
-              همه فرمت‌های تصویر و ویدیو با حجم بالا — حداکثر هر فایل{" "}
-              {formatStorageBytes(RAW_MEDIA_MAX_FILE_BYTES)}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label className={cn(highlightTitle && "text-destructive")}>عنوان</Label>
-              <Input
-                value={title}
-                maxLength={CONTENT_TITLE_MAX_LENGTH}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="نام محتوا"
-                className={cn(highlightTitle && "border-destructive focus-visible:ring-destructive")}
-              />
-              {highlightTitle && (
-                <p className="text-xs text-destructive">عنوان خالی است؛ لطفاً تکمیل کنید.</p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label className={cn(highlightDescription && "text-amber-700 dark:text-amber-300")}>توضیحات</Label>
-              <Textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                rows={2}
-                placeholder="اختیاری"
-                className={cn(
-                  highlightDescription && "border-amber-500 focus-visible:ring-amber-500"
-                )}
-              />
-              {highlightDescription && (
-                <p className="text-xs text-amber-700 dark:text-amber-300">توضیحات خالی است؛ بهتر است تکمیل شود.</p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label>نوع فایل</Label>
-              <Select
-                value={mediaKind}
-                onValueChange={(value) => {
-                  setMediaKind(value as RawMediaKind);
-                  if (!editingId) {
-                    setUpload({ url: "", fileName: "", fileSize: 0, mimeType: "" });
+      <AdminEditorDialog
+        open={dialogOpen}
+        onOpenChange={(open) => (open ? setDialogOpen(true) : closeDialog())}
+        title={editingId ? "ویرایش راش تصاویر" : "آپلود راش تصاویر"}
+        description={`همه فرمت‌های تصویر و ویدیو با حجم بالا — حداکثر هر فایل ${formatStorageBytes(RAW_MEDIA_MAX_FILE_BYTES)}`}
+        descriptionVisible
+        size="lg"
+        footer={
+          <AdminEditorDialogActions
+            isPending={isPending}
+            onSave={handleSave}
+            onDelete={
+              editingId
+                ? () => {
+                    const current = items.find((item) => item.id === editingId);
+                    if (current) handleDelete(current);
                   }
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="image">تصویر</SelectItem>
-                  <SelectItem value="video">ویدیو</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <PlanLabelSelect topics={contentTopics} plans={contentPlans} values={planLabels} onChangeMultiple={setPlanLabels} />
-            <div
-              className={cn(
-                highlightFile && "rounded-lg border border-destructive bg-destructive/5 p-3"
-              )}
-            >
-              <MediaUpload
-                label={mediaKind === "video" ? "ویدیو خام" : "تصویر خام"}
-                kind={mediaKind}
-                uploadKind={mediaKind === "video" ? "raw-video" : "raw-image"}
-                value={upload.url}
-                fileOnly
-                accept={mediaKind === "video" ? "video/*,.mkv,.avi,.wmv,.flv,.mts,.m2ts,.ts,.mpg,.mpeg,.3gp,.ogv" : "image/*,.heic,.heif,.tif,.tiff,.bmp,.avif,.raw,.cr2,.nef,.dng,.orf,.arw,.rw2"}
-                maxFileSizeBytes={RAW_MEDIA_MAX_FILE_BYTES}
-                onChange={(url) => setUpload((prev) => ({ ...prev, url }))}
-                onUploadedMeta={(meta) =>
-                  setUpload({
-                    url: meta.url,
-                    fileName: meta.fileName,
-                    fileSize: meta.fileSize,
-                    mimeType: meta.mimeType,
-                  })
-                }
-              />
-              {highlightFile && (
-                <p className="mt-2 text-xs text-destructive">فایل هنوز آپلود نشده است.</p>
-              )}
-            </div>
-            <Button className="w-full" disabled={isPending} onClick={handleSave}>
-              ذخیره
-            </Button>
-            {editingId && (
-              <Button
-                type="button"
-                variant="destructive"
-                className="w-full"
-                disabled={isPending}
-                onClick={() => {
-                  const current = items.find((item) => item.id === editingId);
-                  if (current) handleDelete(current);
-                }}
-              >
-                حذف راش
-              </Button>
+                : undefined
+            }
+            deleteLabel="حذف راش"
+          />
+        }
+      >
+        <div className="space-y-2">
+          <Label className={cn(highlightTitle && "text-destructive")}>عنوان</Label>
+          <Input
+            value={title}
+            maxLength={CONTENT_TITLE_MAX_LENGTH}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="نام محتوا"
+            className={cn(highlightTitle && "border-destructive focus-visible:ring-destructive")}
+          />
+          {highlightTitle && (
+            <p className="text-xs text-destructive">عنوان خالی است؛ لطفاً تکمیل کنید.</p>
+          )}
+        </div>
+        <div className="space-y-2">
+          <Label className={cn(highlightDescription && "text-amber-700 dark:text-amber-300")}>توضیحات</Label>
+          <Textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            rows={2}
+            placeholder="اختیاری"
+            className={cn(
+              highlightDescription && "border-amber-500 focus-visible:ring-amber-500"
             )}
-          </div>
-        </DialogContent>
-      </Dialog>
+          />
+          {highlightDescription && (
+            <p className="text-xs text-amber-700 dark:text-amber-300">توضیحات خالی است؛ بهتر است تکمیل شود.</p>
+          )}
+        </div>
+        <div className="space-y-2">
+          <Label>نوع فایل</Label>
+          <Select
+            value={mediaKind}
+            onValueChange={(value) => {
+              setMediaKind(value as RawMediaKind);
+              if (!editingId) {
+                setUpload({ url: "", fileName: "", fileSize: 0, mimeType: "" });
+              }
+            }}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="image">تصویر</SelectItem>
+              <SelectItem value="video">ویدیو</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <PlanLabelSelect topics={contentTopics} plans={contentPlans} values={planLabels} onChangeMultiple={setPlanLabels} />
+        <div
+          className={cn(
+            highlightFile && "rounded-lg border border-destructive bg-destructive/5 p-3"
+          )}
+        >
+          <MediaUpload
+            label={mediaKind === "video" ? "ویدیو خام" : "تصویر خام"}
+            kind={mediaKind}
+            uploadKind={mediaKind === "video" ? "raw-video" : "raw-image"}
+            value={upload.url}
+            fileOnly
+            accept={mediaKind === "video" ? "video/*,.mkv,.avi,.wmv,.flv,.mts,.m2ts,.ts,.mpg,.mpeg,.3gp,.ogv" : "image/*,.heic,.heif,.tif,.tiff,.bmp,.avif,.raw,.cr2,.nef,.dng,.orf,.arw,.rw2"}
+            maxFileSizeBytes={RAW_MEDIA_MAX_FILE_BYTES}
+            onChange={(url) => setUpload((prev) => ({ ...prev, url }))}
+            onUploadedMeta={(meta) =>
+              setUpload({
+                url: meta.url,
+                fileName: meta.fileName,
+                fileSize: meta.fileSize,
+                mimeType: meta.mimeType,
+              })
+            }
+          />
+          {highlightFile && (
+            <p className="mt-2 text-xs text-destructive">فایل هنوز آپلود نشده است.</p>
+          )}
+        </div>
+      </AdminEditorDialog>
     </div>
   );
 }

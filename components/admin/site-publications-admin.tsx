@@ -13,9 +13,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
+import {
+  AdminEditorDialog,
+  AdminEditorDialogActions,
+} from "@/components/admin/admin-editor-dialog";
 import {
   AdminContentFilterBar,
   collectAdminFilterUsers,
@@ -32,12 +35,14 @@ import { AdminSitePublicationCompactCard } from "@/components/admin/admin-site-p
 import { AdminViewModeToggle } from "@/components/admin/admin-view-mode-toggle";
 import { PlanLabelSelect } from "@/components/admin/plan-label-select";
 import { ContentScoreControl } from "@/components/admin/content-score-control";
+import { ProductionSourcePicker } from "@/components/admin/production-source-picker";
 import {
   BulkItemShell,
   SectionBulkEditBar,
   useSectionBulkEdit,
 } from "@/components/admin/section-bulk-edit";
 import { MediaUpload } from "@/components/ui/media-upload";
+import type { ProductionSourceType } from "@/lib/production-source-shared";
 import { PersianDateField } from "@/components/ui/persian-date-input";
 import { deleteSocialPostAction, fetchSocialLinkMetricsAction, saveSocialPostAction } from "@/lib/actions/extended-actions";
 import { RefreshCw, Trash2 } from "lucide-react";
@@ -142,6 +147,8 @@ export function SitePublicationsAdmin({
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [planLabels, setPlanLabels] = useState<string[]>([]);
+  const [sourceProductionType, setSourceProductionType] = useState<ProductionSourceType | null>(null);
+  const [sourceProductionId, setSourceProductionId] = useState<string | null>(null);
   const [isGroupDistribution, setIsGroupDistribution] = useState(false);
   const [linkEntries, setLinkEntries] = useState<SocialPostLinkEntry[]>([
     createEmptySocialPostLinkEntry(),
@@ -193,6 +200,8 @@ export function SitePublicationsAdmin({
   ) => {
     setEditingId(post.id);
     setPlanLabels(normalizePlanLabels(post.planLabels, post.planLabel));
+    setSourceProductionType(post.sourceProductionType ?? null);
+    setSourceProductionId(post.sourceProductionId ?? null);
     const groupEntries = normalizeSocialPostLinkEntries(post.linkEntries);
     const groupMode = groupEntries.length > 0;
     setIsGroupDistribution(groupMode);
@@ -201,9 +210,8 @@ export function SitePublicationsAdmin({
         ? groupEntries
         : [
             {
-              id: crypto.randomUUID(),
+              ...createEmptySocialPostLinkEntry(),
               link: post.link ?? "",
-              views: 0,
             },
           ]
     );
@@ -272,6 +280,9 @@ export function SitePublicationsAdmin({
           id: crypto.randomUUID(),
           link: currentLink,
           views: 0,
+          likes: 0,
+          comments: 0,
+          shares: 0,
         },
       ]);
       setIsGroupDistribution(true);
@@ -287,6 +298,8 @@ export function SitePublicationsAdmin({
     void requestCreate(() => {
       setEditingId(null);
       setPlanLabels([]);
+      setSourceProductionType(null);
+      setSourceProductionId(null);
       setIsGroupDistribution(false);
       setLinkEntries([createEmptySocialPostLinkEntry()]);
       setHighlightFields([]);
@@ -367,6 +380,11 @@ export function SitePublicationsAdmin({
   };
 
   const onSubmit = form.handleSubmit((data) => {
+    if (!editingId && (!sourceProductionType || !sourceProductionId)) {
+      toast.error("برای ثبت نشر باید یک تولید (یا دارایی دستورکار) انتخاب شود");
+      return;
+    }
+
     startTransition(async () => {
       const existing = editingId ? rows.find((row) => row.id === editingId) : undefined;
 
@@ -414,6 +432,8 @@ export function SitePublicationsAdmin({
         shares: 0,
         planLabels,
         planLabel: planLabels[0] ?? null,
+        sourceProductionType,
+        sourceProductionId,
       });
 
       if (!result.success) {
@@ -440,6 +460,8 @@ export function SitePublicationsAdmin({
         shares: 0,
         planLabels,
         planLabel: planLabels[0] ?? null,
+        sourceProductionType,
+        sourceProductionId,
         sortOrder: rows.length + 1,
         ownerUserId: existing?.ownerUserId,
         ownerName: existing?.ownerName,
@@ -672,12 +694,38 @@ export function SitePublicationsAdmin({
         }
       />
 
-      <Dialog open={open} onOpenChange={(nextOpen) => (nextOpen ? setOpen(true) : closeDialog())}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editingId ? "ویرایش انتشار" : copy.dialogCreateTitle}</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={onSubmit} className="space-y-4">
+      <AdminEditorDialog
+        open={open}
+        onOpenChange={(nextOpen) => (nextOpen ? setOpen(true) : closeDialog())}
+        title={editingId ? "ویرایش انتشار" : copy.dialogCreateTitle}
+        description="ثبت یا ویرایش انتشار سایت با عنوان، لینک و تصویر شاخص"
+        size="lg"
+        formProps={{ onSubmit }}
+        footer={
+          <AdminEditorDialogActions
+            submit
+            isPending={isPending}
+            onDelete={editingId
+              ? () => {
+                  const current = rows.find((row) => row.id === editingId);
+                  if (current) handleDelete(current);
+                }
+              : undefined}
+            deleteLabel="حذف انتشار"
+          />
+        }
+      >
+            <ProductionSourcePicker
+              campaignId={campaignId}
+              valueType={sourceProductionType}
+              valueId={sourceProductionId}
+              required={!editingId}
+              label="کدام تولید را نشر می‌کنید؟"
+              onChange={(item) => {
+                setSourceProductionType(item?.type ?? null);
+                setSourceProductionId(item?.id ?? null);
+              }}
+            />
             <div className="space-y-2">
               <Label className={cn(highlightTitle && "text-destructive")}>
                 عنوان (به‌صورت لینک نمایش داده می‌شود)
@@ -760,17 +808,6 @@ export function SitePublicationsAdmin({
                 {highlightLink && (
                   <p className="text-xs text-destructive">حداقل یک لینک وارد کنید.</p>
                 )}
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={isPending}
-                  onClick={handleFetchFromLink}
-                  title="خواندن عنوان، توضیح و کاور از اولین لینک"
-                  className="w-full gap-1.5"
-                >
-                  <RefreshCw className={cn("h-4 w-4", isPending && "animate-spin")} />
-                  خواندن اطلاعات از اولین لینک
-                </Button>
               </div>
             ) : (
               <div className="space-y-2">
@@ -859,26 +896,7 @@ export function SitePublicationsAdmin({
                 <p className="text-xs text-amber-700 dark:text-amber-300">توضیحات خالی است؛ بهتر است تکمیل شود.</p>
               )}
             </div>
-            <Button type="submit" disabled={isPending} className="w-full">
-              ذخیره
-            </Button>
-            {editingId && (
-              <Button
-                type="button"
-                variant="destructive"
-                className="w-full"
-                disabled={isPending}
-                onClick={() => {
-                  const current = rows.find((row) => row.id === editingId);
-                  if (current) handleDelete(current);
-                }}
-              >
-                حذف انتشار
-              </Button>
-            )}
-          </form>
-        </DialogContent>
-      </Dialog>
+      </AdminEditorDialog>
     </div>
   );
 }

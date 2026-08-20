@@ -17,12 +17,9 @@ import {
   type AdminContentFilterState,
 } from "@/components/admin/admin-content-filter-bar";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  AdminEditorDialog,
+  AdminEditorDialogActions,
+} from "@/components/admin/admin-editor-dialog";
 import {
   BulkItemShell,
   SectionBulkEditBar,
@@ -55,9 +52,6 @@ interface VideosAdminProps {
   isFullAdmin?: boolean;
   users?: AdminUser[];
 }
-
-const editorDialogClass =
-  "!flex min-h-0 max-h-[92vh] max-w-2xl flex-col gap-0 overflow-hidden rounded-xl p-0 !top-4 !translate-x-[-50%] !translate-y-0 sm:!top-6";
 
 export function VideosAdmin({
   campaignId,
@@ -359,15 +353,14 @@ export function VideosAdmin({
         remaining={filteredVideos.length - visibleCount}
       />
 
-      <Dialog open={editorOpen} onOpenChange={(open) => (open ? setEditorOpen(true) : closeEditor())}>
-        <DialogContent className={editorDialogClass}>
-          <DialogHeader className="shrink-0 border-b px-6 py-4 pr-12">
-            <DialogTitle>{activeVideo?.title ?? "ویرایش ویدیو"}</DialogTitle>
-            <DialogDescription className="sr-only">
-              ویرایش عنوان و وضعیت انتشار ویدیو
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden pb-4 pt-4">
+      <AdminEditorDialog
+        open={editorOpen}
+        onOpenChange={(open) => (open ? setEditorOpen(true) : closeEditor())}
+        title={activeVideo?.title ?? "ویرایش ویدیو"}
+        description="ویرایش عنوان و وضعیت انتشار ویدیو"
+        size="2xl"
+        pinTop
+      >
             {activeVideo ? (
               <AdminVideoEditor
                 video={activeVideo}
@@ -396,9 +389,7 @@ export function VideosAdmin({
                 در حال بارگذاری...
               </div>
             )}
-          </div>
-        </DialogContent>
-      </Dialog>
+      </AdminEditorDialog>
 
       {previewVideo && (() => {
         const previewVersions = versionsByVideoId.get(previewVideo.id) ?? [];

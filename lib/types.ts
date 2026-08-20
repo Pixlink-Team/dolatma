@@ -1308,11 +1308,14 @@ export interface SocialAnalyticsSummary {
   hasData: boolean;
 }
 
-/** One published link + views row inside a group social distribution. */
+/** One published link + engagement row inside a group social distribution. */
 export interface SocialPostLinkEntry {
   id: string;
   link: string;
   views: number;
+  likes: number;
+  comments: number;
+  shares: number;
   /** Optional per-link platform when the same content is posted to multiple networks. */
   platform?: SocialPlatform;
 }
@@ -1328,7 +1331,7 @@ export interface SocialMediaPost extends Ownable {
   comments: number;
   shares: number;
   link: string;
-  /** When set (group distribution), each entry is a separate published link; `views` is the sum. */
+  /** When set (group distribution), each entry is a separate published link; totals are the sums. */
   linkEntries?: SocialPostLinkEntry[];
   contentType: SocialContentType;
   mediaUrl?: string | null;
@@ -1406,6 +1409,8 @@ export interface SmsSendReport extends Ownable {
   sendDate: string;
   recipientCount: number;
   messageBody: string;
+  /** Messaging channels used for this bulk send (SMS, Bale, Eitaa, …). */
+  channels: import("@/lib/sms-send-channels").SmsSendChannel[];
   evidenceFileUrl?: string | null;
   evidenceFileName?: string | null;
   evidenceMimeType?: string | null;

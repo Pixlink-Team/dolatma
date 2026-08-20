@@ -315,6 +315,7 @@ CREATE TABLE IF NOT EXISTS sms_send_reports (
   send_date DATE NOT NULL DEFAULT CURRENT_DATE,
   recipient_count INT NOT NULL DEFAULT 0,
   message_body TEXT NOT NULL DEFAULT '',
+  channels JSONB NOT NULL DEFAULT '[]'::jsonb,
   evidence_file_url TEXT,
   evidence_file_name TEXT,
   evidence_mime_type TEXT,
@@ -2654,4 +2655,5 @@ ALTER TABLE billboards ADD COLUMN IF NOT EXISTS source_production_type TEXT;
 ALTER TABLE billboards ADD COLUMN IF NOT EXISTS source_production_id UUID;
 ALTER TABLE sms_send_reports ADD COLUMN IF NOT EXISTS source_production_type TEXT;
 ALTER TABLE sms_send_reports ADD COLUMN IF NOT EXISTS source_production_id UUID;
+ALTER TABLE sms_send_reports ADD COLUMN IF NOT EXISTS channels JSONB NOT NULL DEFAULT '[]'::jsonb;
 

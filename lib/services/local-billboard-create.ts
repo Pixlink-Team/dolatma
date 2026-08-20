@@ -39,6 +39,8 @@ export interface CreateLocalBillboardInput {
   metadata?: Record<string, unknown> | null;
   periods: BillboardDisplayPeriodInput[];
   ownerUserId?: string | null;
+  sourceProductionType?: import("@/lib/production-source").ProductionSourceType | null;
+  sourceProductionId?: string | null;
 }
 
 function buildMapsUrl(latitude: number, longitude: number): string {
@@ -189,6 +191,8 @@ export async function saveLocalBillboard(params: CreateLocalBillboardInput): Pro
     planLabels: params.planLabels ?? undefined,
     metadata: params.metadata ?? {},
     ownerUserId: params.ownerUserId ?? null,
+    sourceProductionType: params.sourceProductionType ?? null,
+    sourceProductionId: params.sourceProductionId ?? null,
   });
 
   if (!result.success) {

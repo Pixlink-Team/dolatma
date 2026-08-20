@@ -16,7 +16,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  AdminEditorDialog,
+  AdminEditorDialogActions,
+} from "@/components/admin/admin-editor-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -33,6 +36,7 @@ import { AdminContentPreviewDialog } from "@/components/admin/admin-content-prev
 import { AdminViewModeToggle } from "@/components/admin/admin-view-mode-toggle";
 import { PlanLabelSelect } from "@/components/admin/plan-label-select";
 import { ContentScoreControl } from "@/components/admin/content-score-control";
+import { ProductionSourcePicker } from "@/components/admin/production-source-picker";
 import {
   BulkItemShell,
   SectionBulkEditBar,
@@ -48,6 +52,7 @@ import { isDefaultActivityTitle, type EditSuggestionMissingField } from "@/lib/e
 import { useAdminEditDeepLink } from "@/lib/hooks/use-admin-edit-deep-link";
 import { useAdminViewMode } from "@/lib/hooks/use-admin-view-mode";
 import { useSectionCreateGate } from "@/lib/hooks/use-section-create-gate";
+import type { ProductionSourceType } from "@/lib/production-source-shared";
 import { useAdminInfiniteScroll } from "@/lib/hooks/use-admin-infinite-scroll";
 import { AdminInfiniteScrollSentinel } from "@/components/admin/admin-infinite-scroll-sentinel";
 import { todayISO } from "@/lib/jalali";
@@ -114,6 +119,8 @@ export function ActivitiesAdmin({
   const [isMediaDragging, setIsMediaDragging] = useState(false);
   const [isBatchUploadingMedia, setIsBatchUploadingMedia] = useState(false);
   const [planLabels, setPlanLabels] = useState<string[]>([]);
+  const [sourceProductionType, setSourceProductionType] = useState<ProductionSourceType | null>(null);
+  const [sourceProductionId, setSourceProductionId] = useState<string | null>(null);
   const [isCreative, setIsCreative] = useState(false);
   const [contentFilter, setContentFilter] = useState<AdminContentFilterState>(DEFAULT_ADMIN_CONTENT_FILTER);
   const { viewMode, setViewMode } = useAdminViewMode("activities");
@@ -160,6 +167,8 @@ export function ActivitiesAdmin({
       setEditingId(activity.id);
       setMediaItems(activity.mediaItems ?? []);
       setPlanLabels(normalizePlanLabels(activity.planLabels, activity.planLabel));
+      setSourceProductionType(activity.sourceProductionType ?? null);
+      setSourceProductionId(activity.sourceProductionId ?? null);
       setIsCreative(Boolean(activity.isCreative));
       form.reset({
         title: activity.title,
@@ -196,6 +205,8 @@ export function ActivitiesAdmin({
       setEditingId(null);
       setMediaItems([]);
       setPlanLabels([]);
+      setSourceProductionType(null);
+      setSourceProductionId(null);
       setIsCreative(false);
       setHighlightFields([]);
       form.reset({
@@ -215,6 +226,8 @@ export function ActivitiesAdmin({
     setEditingId(activity.id);
     setMediaItems(activity.mediaItems ?? []);
     setPlanLabels(normalizePlanLabels(activity.planLabels, activity.planLabel));
+    setSourceProductionType(activity.sourceProductionType ?? null);
+    setSourceProductionId(activity.sourceProductionId ?? null);
     setIsCreative(Boolean(activity.isCreative));
     form.reset({
       title: activity.title,
@@ -321,6 +334,11 @@ export function ActivitiesAdmin({
   };
 
   const onSubmit = form.handleSubmit((data) => {
+    if (!editingId && (!sourceProductionType || !sourceProductionId)) {
+      toast.error("برای ثبت نشر باید یک تولید (یا دارایی دستورکار) انتخاب شود");
+      return;
+    }
+
     const filledMedia = mediaItems.filter((item) => item.url.trim());
     startTransition(async () => {
       const result = await saveCampaignActivityAction({
@@ -338,6 +356,8 @@ export function ActivitiesAdmin({
         published: true,
         planLabels,
         planLabel: planLabels[0] ?? null,
+        sourceProductionType,
+        sourceProductionId,
       });
 
       if (!result.success) {
@@ -361,6 +381,8 @@ export function ActivitiesAdmin({
         published: true,
         planLabels,
         planLabel: planLabels[0] ?? null,
+        sourceProductionType,
+        sourceProductionId,
         sortOrder: rows.length + 1,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -558,12 +580,42 @@ export function ActivitiesAdmin({
         }
       />
 
-      <Dialog open={open} onOpenChange={(nextOpen) => (nextOpen ? setOpen(true) : closeDialog())}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editingId ? "ویرایش اقدام" : "اقدام جدید"}</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={onSubmit} className="space-y-4">
+      <AdminEditorDialog
+        open={open}
+        onOpenChange={(nextOpen) => (nextOpen ? setOpen(true) : closeDialog())}
+        title={editingId ? "ویرایش اقدام" : "اقدام جدید"}
+        description="ثبت یا ویرایش اقدام میدانی با رسانه و جزئیات"
+        size="lg"
+        formProps={{ onSubmit }}
+        footer={
+          <AdminEditorDialogActions
+            submit
+            isPending={isPending}
+            onDelete={editingId
+              ? () => {
+                  startTransition(async () => {
+                    await deleteCampaignActivityAction(editingId);
+                    setRows((prev) => prev.filter((row) => row.id !== editingId));
+                    toast.success("حذف شد");
+                    closeDialog();
+                  });
+                }
+              : undefined}
+            deleteLabel="حذف اقدام"
+          />
+        }
+      >
+            <ProductionSourcePicker
+              campaignId={campaignId}
+              valueType={sourceProductionType}
+              valueId={sourceProductionId}
+              required={!editingId}
+              label="کدام تولید را نشر می‌کنید؟"
+              onChange={(item) => {
+                setSourceProductionType(item?.type ?? null);
+                setSourceProductionId(item?.id ?? null);
+              }}
+            />
             <div className="space-y-2">
               <Label className={cn(highlightTitle && "text-destructive")}>عنوان</Label>
               <Input
@@ -771,30 +823,7 @@ export function ActivitiesAdmin({
                 <p className="text-xs text-amber-700 dark:text-amber-300">توضیحات خالی است؛ بهتر است تکمیل شود.</p>
               )}
             </div>
-            <Button type="submit" disabled={isPending} className="w-full">
-              ذخیره
-            </Button>
-            {editingId && (
-              <Button
-                type="button"
-                variant="destructive"
-                className="w-full"
-                disabled={isPending}
-                onClick={() => {
-                  startTransition(async () => {
-                    await deleteCampaignActivityAction(editingId);
-                    setRows((prev) => prev.filter((row) => row.id !== editingId));
-                    toast.success("حذف شد");
-                    closeDialog();
-                  });
-                }}
-              >
-                حذف اقدام
-              </Button>
-            )}
-          </form>
-        </DialogContent>
-      </Dialog>
+      </AdminEditorDialog>
     </div>
   );
 }

@@ -37,7 +37,7 @@ const STATUS_RANK: Record<CategoryCompletenessStatus, number> = {
   complete: 3,
 };
 
-const GROUP_ORDER: DashboardStatGroupKey[] = ["actions", "content", "reports"];
+const GROUP_ORDER: DashboardStatGroupKey[] = ["production", "publishing", "assets", "other"];
 
 function sortCards(cards: DashboardCompletenessCardData[]): DashboardCompletenessCardData[] {
   return [...cards].sort((a, b) => {
@@ -65,7 +65,7 @@ function groupCards(
   for (const key of GROUP_ORDER) buckets.set(key, []);
 
   for (const card of cards) {
-    const key = card.group ?? "reports";
+    const key = card.group ?? "other";
     const list = buckets.get(key) ?? [];
     list.push(card);
     buckets.set(key, list);

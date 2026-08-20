@@ -14,8 +14,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  AdminEditorDialog,
+  AdminEditorDialogActions,
+} from "@/components/admin/admin-editor-dialog";
 import { AdminActivityCompactCard } from "@/components/admin/admin-activity-compact-card";
 import { AdminCompactAddCard } from "@/components/admin/admin-compact-add-card";
 import {
@@ -29,6 +32,7 @@ import { AdminContentPreviewDialog } from "@/components/admin/admin-content-prev
 import { AdminItemActions } from "@/components/admin/admin-item-actions";
 import { AdminViewModeToggle } from "@/components/admin/admin-view-mode-toggle";
 import { PlanLabelSelect } from "@/components/admin/plan-label-select";
+import { ProductionSourcePicker } from "@/components/admin/production-source-picker";
 import {
   BulkItemShell,
   SectionBulkEditBar,
@@ -38,6 +42,7 @@ import { MediaUpload } from "@/components/ui/media-upload";
 import { PersianDateField } from "@/components/ui/persian-date-input";
 import { applyVideoCoverToMediaItems } from "@/lib/client/activity-media-cover";
 import { getActivityTypeLabel, pressActivityTypeOptions } from "@/lib/activity-types";
+import type { ProductionSourceType } from "@/lib/production-source-shared";
 import {
   deleteCampaignActivityAction,
   fetchSocialLinkMetricsAction,
@@ -119,6 +124,8 @@ export function PressPublicationsAdmin({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [mediaItems, setMediaItems] = useState<ActivityMediaItem[]>([]);
   const [planLabels, setPlanLabels] = useState<string[]>([]);
+  const [sourceProductionType, setSourceProductionType] = useState<ProductionSourceType | null>(null);
+  const [sourceProductionId, setSourceProductionId] = useState<string | null>(null);
   const [rows, setRows] = useState(
     initialActivities.filter((activity) => isPressPublication(activity))
   );
@@ -166,6 +173,8 @@ export function PressPublicationsAdmin({
       setEditingId(null);
       setMediaItems([]);
       setPlanLabels([]);
+      setSourceProductionType(null);
+      setSourceProductionId(null);
       resetDeepLink();
       form.reset({
         title: "",
@@ -187,6 +196,8 @@ export function PressPublicationsAdmin({
     setEditingId(activity.id);
     setMediaItems(activity.mediaItems ?? []);
     setPlanLabels(normalizePlanLabels(activity.planLabels, activity.planLabel));
+    setSourceProductionType(activity.sourceProductionType ?? null);
+    setSourceProductionId(activity.sourceProductionId ?? null);
     form.reset({
       title: activity.title,
       activityType: activity.activityType === "newspaper" ? "newspaper" : "magazine",
@@ -306,6 +317,11 @@ export function PressPublicationsAdmin({
   };
 
   const onSubmit = form.handleSubmit((data) => {
+    if (!editingId && (!sourceProductionType || !sourceProductionId)) {
+      toast.error("برای ثبت نشر باید یک تولید (یا دارایی دستورکار) انتخاب شود");
+      return;
+    }
+
     const filledMedia = mediaItems.filter((item) => item.url.trim());
     startTransition(async () => {
       const result = await saveCampaignActivityAction({
@@ -324,6 +340,8 @@ export function PressPublicationsAdmin({
         published: true,
         planLabels,
         planLabel: planLabels[0] ?? null,
+        sourceProductionType,
+        sourceProductionId,
       });
 
       if (!result.success) {
@@ -349,6 +367,8 @@ export function PressPublicationsAdmin({
         isCreative: false,
         planLabels,
         planLabel: planLabels[0] ?? null,
+        sourceProductionType,
+        sourceProductionId,
         sortOrder: rows.length + 1,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -561,12 +581,38 @@ export function PressPublicationsAdmin({
         }
       />
 
-      <Dialog open={open} onOpenChange={(nextOpen) => (nextOpen ? setOpen(true) : closeDialog())}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editingId ? "ویرایش" : "ثبت جدید"}</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={onSubmit} className="space-y-4">
+      <AdminEditorDialog
+        open={open}
+        onOpenChange={(nextOpen) => (nextOpen ? setOpen(true) : closeDialog())}
+        title={editingId ? "ویرایش" : "ثبت جدید"}
+        description="ثبت یا ویرایش انتشار مطبوعاتی"
+        size="lg"
+        formProps={{ onSubmit }}
+        footer={
+          <AdminEditorDialogActions
+            submit
+            isPending={isPending}
+            onDelete={editingId
+              ? () => {
+                  const current = rows.find((row) => row.id === editingId);
+                  if (current) handleDelete(current);
+                }
+              : undefined}
+            deleteLabel="حذف"
+          />
+        }
+      >
+            <ProductionSourcePicker
+              campaignId={campaignId}
+              valueType={sourceProductionType}
+              valueId={sourceProductionId}
+              required={!editingId}
+              label="کدام تولید را نشر می‌کنید؟"
+              onChange={(item) => {
+                setSourceProductionType(item?.type ?? null);
+                setSourceProductionId(item?.id ?? null);
+              }}
+            />
             <div className="space-y-2">
               <Label className={cn(highlightTitle && "text-destructive")}>عنوان</Label>
               <Input
@@ -747,26 +793,7 @@ export function PressPublicationsAdmin({
               values={planLabels}
               onChangeMultiple={setPlanLabels}
             />
-            <Button type="submit" disabled={isPending} className="w-full">
-              ذخیره
-            </Button>
-            {editingId && (
-              <Button
-                type="button"
-                variant="destructive"
-                className="w-full"
-                disabled={isPending}
-                onClick={() => {
-                  const current = rows.find((row) => row.id === editingId);
-                  if (current) handleDelete(current);
-                }}
-              >
-                حذف
-              </Button>
-            )}
-          </form>
-        </DialogContent>
-      </Dialog>
+      </AdminEditorDialog>
     </div>
   );
 }

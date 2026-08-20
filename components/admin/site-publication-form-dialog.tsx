@@ -14,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { MediaUpload } from "@/components/ui/media-upload";
 import { PersianDateField } from "@/components/ui/persian-date-input";
 import { PlanLabelSelect } from "@/components/admin/plan-label-select";
+import { ProductionSourcePicker } from "@/components/admin/production-source-picker";
 import { saveSocialPostAction } from "@/lib/actions/extended-actions";
 import type { ContentTopic } from "@/lib/content-topics";
 import {
@@ -21,6 +22,7 @@ import {
   CONTENT_TITLE_MAX_LENGTH_MESSAGE,
 } from "@/lib/content-constraints";
 import { todayISO } from "@/lib/jalali";
+import type { ProductionSourceType } from "@/lib/production-source-shared";
 import { stripFileAccessToken } from "@/lib/uploads";
 
 const schema = z.object({
@@ -74,6 +76,8 @@ export function SitePublicationFormDialog({
   bulkTypeSwitcher,
 }: SitePublicationFormDialogProps) {
   const [planLabels, setPlanLabels] = useState<string[]>([]);
+  const [sourceProductionType, setSourceProductionType] = useState<ProductionSourceType | null>(null);
+  const [sourceProductionId, setSourceProductionId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const form = useForm<FormValues>({
@@ -97,11 +101,17 @@ export function SitePublicationFormDialog({
       publishedDate: initialValues?.publishedDate || todayISO(),
     });
     setPlanLabels([]);
+    setSourceProductionType(null);
+    setSourceProductionId(null);
   }, [open, initialValues, initialValuesKey, form]);
 
   const onSubmit = form.handleSubmit((data) => {
     if (!data.link.trim()) {
       toast.error("لینک مطلب الزامی است");
+      return;
+    }
+    if (!sourceProductionType || !sourceProductionId) {
+      toast.error("برای ثبت نشر باید یک تولید (یا دارایی دستورکار) انتخاب شود");
       return;
     }
 
@@ -124,6 +134,8 @@ export function SitePublicationFormDialog({
         shares: 0,
         planLabels,
         planLabel: planLabels[0] ?? null,
+        sourceProductionType,
+        sourceProductionId,
       });
 
       if (!result.success) {
@@ -151,6 +163,17 @@ export function SitePublicationFormDialog({
         {bulkTypeSwitcher}
 
         <form onSubmit={onSubmit} className="space-y-4">
+          <ProductionSourcePicker
+            campaignId={campaignId}
+            valueType={sourceProductionType}
+            valueId={sourceProductionId}
+            required
+            label="کدام تولید را نشر می‌کنید؟"
+            onChange={(item) => {
+              setSourceProductionType(item?.type ?? null);
+              setSourceProductionId(item?.id ?? null);
+            }}
+          />
           <div className="space-y-2">
             <Label>عنوان</Label>
             <Input {...form.register("title")} maxLength={CONTENT_TITLE_MAX_LENGTH} />

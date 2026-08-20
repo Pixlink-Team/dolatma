@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { MediaUpload } from "@/components/ui/media-upload";
 import { PersianDateField } from "@/components/ui/persian-date-input";
 import { PlanLabelSelect } from "@/components/admin/plan-label-select";
+import { ProductionSourcePicker } from "@/components/admin/production-source-picker";
 import { saveCampaignActivityAction } from "@/lib/actions/extended-actions";
 import { getActivityTypeLabel, pressActivityTypeOptions } from "@/lib/activity-types";
 import type { ContentTopic } from "@/lib/content-topics";
@@ -23,6 +24,7 @@ import {
   CONTENT_TITLE_MAX_LENGTH_MESSAGE,
 } from "@/lib/content-constraints";
 import { todayISO } from "@/lib/jalali";
+import type { ProductionSourceType } from "@/lib/production-source-shared";
 import { stripFileAccessToken } from "@/lib/uploads";
 import type { ActivityMediaItem } from "@/lib/types";
 
@@ -81,6 +83,8 @@ export function PressFormDialog({
 }: PressFormDialogProps) {
   const [mediaItems, setMediaItems] = useState<ActivityMediaItem[]>([]);
   const [planLabels, setPlanLabels] = useState<string[]>([]);
+  const [sourceProductionType, setSourceProductionType] = useState<ProductionSourceType | null>(null);
+  const [sourceProductionId, setSourceProductionId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const form = useForm<FormValues>({
@@ -104,6 +108,8 @@ export function PressFormDialog({
       description: initialValues?.description || "",
     });
     setPlanLabels([]);
+    setSourceProductionType(null);
+    setSourceProductionId(null);
     const imageUrl = initialValues?.imageUrl?.trim();
     setMediaItems(
       imageUrl
@@ -113,6 +119,11 @@ export function PressFormDialog({
   }, [open, initialValues, initialValuesKey, form]);
 
   const onSubmit = form.handleSubmit((data) => {
+    if (!sourceProductionType || !sourceProductionId) {
+      toast.error("برای ثبت نشر باید یک تولید (یا دارایی دستورکار) انتخاب شود");
+      return;
+    }
+
     const filledMedia = mediaItems
       .filter((item) => item.url.trim())
       .map((item) => ({
@@ -135,6 +146,8 @@ export function PressFormDialog({
         published: true,
         planLabels,
         planLabel: planLabels[0] ?? null,
+        sourceProductionType,
+        sourceProductionId,
       });
 
       if (!result.success) {
@@ -162,6 +175,17 @@ export function PressFormDialog({
         {bulkTypeSwitcher}
 
         <form onSubmit={onSubmit} className="space-y-4">
+          <ProductionSourcePicker
+            campaignId={campaignId}
+            valueType={sourceProductionType}
+            valueId={sourceProductionId}
+            required
+            label="کدام تولید را نشر می‌کنید؟"
+            onChange={(item) => {
+              setSourceProductionType(item?.type ?? null);
+              setSourceProductionId(item?.id ?? null);
+            }}
+          />
           <div className="space-y-2">
             <Label>عنوان</Label>
             <Input {...form.register("title")} maxLength={CONTENT_TITLE_MAX_LENGTH} />

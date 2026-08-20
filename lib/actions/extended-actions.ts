@@ -37,6 +37,7 @@ import {
 } from "@/lib/audit/log-event";
 import { getContentTitleValidationError } from "@/lib/content-constraints";
 import type { TutorialSectionKey } from "@/lib/section-tutorials";
+import { assertProductionSourceAllowed } from "@/lib/production-source";
 
 function validateTitlePayload(data: { title?: unknown }) {
   const error = getContentTitleValidationError(data.title);
@@ -116,6 +117,13 @@ export async function saveSocialPostAction(data: Partial<SocialMediaPost> & { id
     const denied = await assertCanMutateOwnedContent(session, "social_media_posts", data.id);
     if (denied) return denied;
   }
+
+  const sourceDenied = await assertProductionSourceAllowed(
+    session,
+    payload.campaignId ?? data.campaignId ?? "",
+    { ...payload, id: data.id }
+  );
+  if (sourceDenied) return sourceDenied;
 
   const tutorialKey = isWebOutletPublication({ platform: data.platform ?? "other" })
     ? "sitePublications"
@@ -383,6 +391,13 @@ export async function saveBroadcastReportAction(data: Partial<BroadcastReport> &
     return { success: false, error: "Database required" };
   }
 
+  const sourceDenied = await assertProductionSourceAllowed(
+    session,
+    payload.campaignId ?? data.campaignId ?? "",
+    { ...payload, id: data.id }
+  );
+  if (sourceDenied) return sourceDenied;
+
   const tutorialDenied = await assertTutorialForPossibleCreate(
     "broadcast",
     "broadcast_reports",
@@ -442,6 +457,13 @@ export async function saveSmsSendReportAction(data: Partial<SmsSendReport> & { i
     return { success: false, error: "Database required" };
   }
 
+  const sourceDenied = await assertProductionSourceAllowed(
+    session,
+    payload.campaignId ?? data.campaignId ?? "",
+    { ...payload, id: data.id }
+  );
+  if (sourceDenied) return sourceDenied;
+
   const tutorialDenied = await assertTutorialForPossibleCreate(
     "smsReports",
     "sms_send_reports",
@@ -496,6 +518,13 @@ export async function saveCampaignActivityAction(data: Partial<CampaignActivity>
   if (!isPostgresConfigured()) {
     return { success: false, error: "Database required" };
   }
+
+  const sourceDenied = await assertProductionSourceAllowed(
+    session,
+    payload.campaignId ?? data.campaignId ?? "",
+    { ...payload, id: data.id }
+  );
+  if (sourceDenied) return sourceDenied;
 
   const tutorialDenied = await assertTutorialForPossibleCreate(
     activityTutorialKey(data.activityType),

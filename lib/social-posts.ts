@@ -50,11 +50,20 @@ export function isGroupSocialPost(
   return (post.linkEntries?.length ?? 0) > 0;
 }
 
+function parseNonNegativeInt(value: unknown): number {
+  const parsed =
+    typeof value === "number" ? value : typeof value === "string" ? Number(value) : 0;
+  return Number.isFinite(parsed) && parsed >= 0 ? Math.floor(parsed) : 0;
+}
+
 export function createEmptySocialPostLinkEntry(platform?: SocialPlatform): SocialPostLinkEntry {
   return {
     id: crypto.randomUUID(),
     link: "",
     views: 0,
+    likes: 0,
+    comments: 0,
+    shares: 0,
     ...(platform ? { platform } : {}),
   };
 }
@@ -78,20 +87,16 @@ export function parseSocialPostLinkEntries(value: unknown): SocialPostLinkEntry[
       const record = item as Record<string, unknown>;
       const rawLink = typeof record.link === "string" ? record.link.trim() : "";
       const link = ensureHttpUrl(rawLink) ?? rawLink;
-      const viewsRaw = record.views;
-      const views =
-        typeof viewsRaw === "number"
-          ? viewsRaw
-          : typeof viewsRaw === "string"
-            ? Number(viewsRaw)
-            : 0;
       const id = typeof record.id === "string" && record.id ? record.id : crypto.randomUUID();
       if (!link) return null;
       const platform = isSocialPlatform(record.platform) ? record.platform : undefined;
       return {
         id,
         link,
-        views: Number.isFinite(views) && views >= 0 ? Math.floor(views) : 0,
+        views: parseNonNegativeInt(record.views),
+        likes: parseNonNegativeInt(record.likes),
+        comments: parseNonNegativeInt(record.comments),
+        shares: parseNonNegativeInt(record.shares),
         ...(platform ? { platform } : {}),
       };
     })
@@ -107,6 +112,18 @@ export function normalizeSocialPostLinkEntries(
 
 export function sumSocialPostLinkEntryViews(entries: SocialPostLinkEntry[]): number {
   return entries.reduce((sum, entry) => sum + (entry.views ?? 0), 0);
+}
+
+export function sumSocialPostLinkEntryLikes(entries: SocialPostLinkEntry[]): number {
+  return entries.reduce((sum, entry) => sum + (entry.likes ?? 0), 0);
+}
+
+export function sumSocialPostLinkEntryComments(entries: SocialPostLinkEntry[]): number {
+  return entries.reduce((sum, entry) => sum + (entry.comments ?? 0), 0);
+}
+
+export function sumSocialPostLinkEntryShares(entries: SocialPostLinkEntry[]): number {
+  return entries.reduce((sum, entry) => sum + (entry.shares ?? 0), 0);
 }
 
 /** Unique platforms present on link entries, in first-seen order. */
