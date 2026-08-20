@@ -139,6 +139,30 @@ export function computeContentScore(
   return { autoScore, breakdown };
 }
 
+/** Official score from preview, rejection flag, and manual bonus. */
+export function computeOfficialScore(input: {
+  autoScore: number;
+  manualScore?: number | null;
+  everRejected?: boolean;
+  /** When false, official score is 0 (pending review). */
+  approved?: boolean;
+  /** Non-reviewable types are always "approved" for scoring. */
+  requiresApproval?: boolean;
+}): number {
+  const auto =
+    typeof input.autoScore === "number" && Number.isFinite(input.autoScore)
+      ? input.autoScore
+      : 0;
+  const manual =
+    typeof input.manualScore === "number" && Number.isFinite(input.manualScore)
+      ? input.manualScore
+      : 0;
+  const requiresApproval = input.requiresApproval !== false;
+  if (requiresApproval && !input.approved) return 0;
+  const factor = input.everRejected ? 0.5 : 1;
+  return auto * factor + manual;
+}
+
 export function sumFinalScore(
   autoScore: number | null | undefined,
   manualScore: number | null | undefined

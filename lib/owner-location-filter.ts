@@ -3,6 +3,7 @@ import { filterOwnerGroups } from "@/lib/owner-groups";
 import { normalizeStoredUserEmail } from "@/lib/auth/user-login";
 import { matchesDateFilter } from "@/lib/campaign-content-filter";
 import { matchesPlanLabelFilter } from "@/lib/content-topics";
+import type { UserCompanyType } from "@/lib/user-company-types";
 
 export const OWNER_LOCATION_ALL = "all";
 export const OWNER_USER_ALL = "all";
@@ -10,6 +11,8 @@ export const OWNER_DATE_ALL = "all";
 export const OWNER_PLAN_ALL = "all";
 export const OWNER_MINISTRY_ALL = "all";
 export const OWNER_ORGANIZATION_ALL = "all";
+export const OWNER_COMPANY_TYPE_ALL = "all";
+export type OwnerCompanyTypeFilter = typeof OWNER_COMPANY_TYPE_ALL | UserCompanyType;
 export const OWNER_TOP_SCORED = "top_scored";
 
 export type CampaignDatePreset = "all" | "today" | "this_week" | "this_month" | "custom";
@@ -32,6 +35,7 @@ export interface OwnerLocationFilter extends CampaignDateFilter {
   /** Free-text search across content title / description / location fields. */
   searchQuery: string;
   sortOrder: CampaignContentSort;
+  companyType: OwnerCompanyTypeFilter;
 }
 
 export const DEFAULT_OWNER_LOCATION_FILTER: OwnerLocationFilter = {
@@ -46,6 +50,7 @@ export const DEFAULT_OWNER_LOCATION_FILTER: OwnerLocationFilter = {
   dateFrom: "",
   dateTo: "",
   sortOrder: "newest",
+  companyType: OWNER_COMPANY_TYPE_ALL,
 };
 
 export function isOwnerLocationFilterActive(filter: OwnerLocationFilter): boolean {

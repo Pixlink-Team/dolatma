@@ -126,6 +126,18 @@ export async function saveSocialPostAction(data: Partial<SocialMediaPost> & { id
   );
   if (tutorialDenied) return tutorialDenied;
 
+  const { denyIfCreateQuotaExceeded } = await import("@/lib/scoring/daily-cap-and-duplicates");
+  const quota = await denyIfCreateQuotaExceeded({
+    campaignId: payload.campaignId ?? data.campaignId ?? "",
+    ownerUserId: payload.ownerUserId ?? session.userId,
+    contentId: data.id,
+    table: "social_media_posts",
+    contentType: isSitePublication({ platform: data.platform ?? "other" })
+      ? "site_publication"
+      : "social_post",
+  });
+  if (quota) return quota;
+
   const result = await pgExt.pgSaveSocialPost(payload);
   await auditContentChange({
     isUpdate: Boolean(data.id),
@@ -373,6 +385,15 @@ export async function saveBroadcastReportAction(data: Partial<BroadcastReport> &
   );
   if (tutorialDenied) return tutorialDenied;
 
+  const { denyIfCreateQuotaExceeded } = await import("@/lib/scoring/daily-cap-and-duplicates");
+  const quota = await denyIfCreateQuotaExceeded({
+    campaignId: payload.campaignId ?? data.campaignId ?? "",
+    ownerUserId: payload.ownerUserId ?? session.userId,
+    contentId: data.id,
+    table: "broadcast_reports",
+  });
+  if (quota) return quota;
+
   const result = await pgExt.pgSaveBroadcastReport(payload);
   await auditContentChange({
     isUpdate: Boolean(data.id),
@@ -478,6 +499,15 @@ export async function saveCampaignActivityAction(data: Partial<CampaignActivity>
   );
   if (tutorialDenied) return tutorialDenied;
 
+  const { denyIfCreateQuotaExceeded } = await import("@/lib/scoring/daily-cap-and-duplicates");
+  const quota = await denyIfCreateQuotaExceeded({
+    campaignId: payload.campaignId ?? data.campaignId ?? "",
+    ownerUserId: payload.ownerUserId ?? session.userId,
+    contentId: data.id,
+    table: "campaign_activities",
+  });
+  if (quota) return quota;
+
   const result = await pgExt.pgSaveCampaignActivity(payload);
   await auditContentChange({
     isUpdate: Boolean(data.id),
@@ -532,6 +562,15 @@ export async function saveMeetingAction(
     data.id
   );
   if (tutorialDenied) return tutorialDenied;
+
+  const { denyIfCreateQuotaExceeded } = await import("@/lib/scoring/daily-cap-and-duplicates");
+  const quota = await denyIfCreateQuotaExceeded({
+    campaignId: payload.campaignId ?? data.campaignId ?? "",
+    ownerUserId: payload.ownerUserId ?? session.userId,
+    contentId: data.id,
+    table: "campaign_meetings",
+  });
+  if (quota) return quota;
 
   const result = await pgExt.pgSaveMeetingWithTasks(payload, tasks, decisions);
   await auditContentChange({
@@ -1113,3 +1152,78 @@ export async function getSessionContextAction(campaignId?: string) {
 }
 
 export { getOwnerFilter, isFullAdmin };
+
+const SECTION_TO_DAILY_CAP_TABLE: Record<
+  string,
+  import("@/lib/scoring/daily-cap-and-duplicates").DailyCapTable | null
+> = {
+  billboards: "billboards",
+  posters: "posters",
+  videos: "videos",
+  files: "campaign_files",
+  rawMedia: "raw_media_uploads",
+  socialPosts: "social_media_posts",
+  sitePublications: "social_media_posts",
+  pressPublications: "social_media_posts",
+  activities: "campaign_activities",
+  broadcast: "broadcast_reports",
+  meetings: "campaign_meetings",
+  analytics: null,
+  socialAnalytics: null,
+  submissions: null,
+  smsReports: null,
+};
+
+const SECTION_TO_CONTENT_TYPE: Record<string, import("@/lib/types").ScoreableContentType | undefined> = {
+  billboards: "billboard",
+  posters: "poster",
+  videos: "video",
+  files: "file",
+  rawMedia: "raw_media",
+  sitePublications: "site_publication",
+  pressPublications: "social_post",
+  socialPosts: "social_post",
+  activities: "activity",
+  broadcast: "broadcast",
+  meetings: "meeting",
+};
+
+const SECTION_TO_POSTER_VIDEO: Record<string, "poster" | "video" | undefined> = {
+  posters: "poster",
+  videos: "video",
+};
+
+export async function checkDailyQuotaAction(
+  sectionKey: string,
+  campaignId: string
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const session = await getAuthSession();
+  if (!session) return { ok: false, error: "Unauthorized" };
+
+  const table = SECTION_TO_DAILY_CAP_TABLE[sectionKey];
+  if (!table) return { ok: true };
+
+  const { assertUserCategoryDailyLimit, assertDailyCapForCreate } = await import(
+    "@/lib/scoring/daily-cap-and-duplicates"
+  );
+
+  const contentType = SECTION_TO_CONTENT_TYPE[sectionKey];
+  const categoryCap = await assertUserCategoryDailyLimit({
+    campaignId,
+    ownerUserId: session.userId,
+    contentType,
+  });
+  if (!categoryCap.ok) return categoryCap;
+
+  const section = SECTION_TO_POSTER_VIDEO[sectionKey];
+  if (section) {
+    const sectionCap = await assertDailyCapForCreate({
+      campaignId,
+      ownerUserId: session.userId,
+      section,
+    });
+    if (!sectionCap.ok) return sectionCap;
+  }
+
+  return { ok: true };
+}

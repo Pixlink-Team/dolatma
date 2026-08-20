@@ -106,7 +106,7 @@ export function ActivitiesAdmin({
   isFullAdmin = false,
   users = [],
 }: ActivitiesAdminProps) {
-  const { requestCreate, tutorialModal } = useSectionCreateGate("activities");
+  const { requestCreate, tutorialModal } = useSectionCreateGate("activities", campaignId);
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [previewActivity, setPreviewActivity] = useState<CampaignActivity | null>(null);

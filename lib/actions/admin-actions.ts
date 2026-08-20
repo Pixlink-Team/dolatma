@@ -209,7 +209,21 @@ export async function saveBillboardAction(data: Partial<Billboard> & { id?: stri
     data.id
   );
   if (tutorialDenied) return tutorialDenied;
-  const result = await saveBillboard(await withOwnerScope(auth, data));
+  const scoped = await withOwnerScope(auth, data);
+  const ownerId = scoped.ownerUserId ?? auth.userId;
+  if (ownerId && (scoped.campaignId || data.campaignId)) {
+    const { denyIfCreateQuotaExceeded } = await import(
+      "@/lib/scoring/daily-cap-and-duplicates"
+    );
+    const quota = await denyIfCreateQuotaExceeded({
+      campaignId: scoped.campaignId ?? data.campaignId ?? "",
+      ownerUserId: ownerId,
+      contentId: data.id,
+      table: "billboards",
+    });
+    if (quota) return quota;
+  }
+  const result = await saveBillboard(scoped);
   await auditContentChange({
     isUpdate: Boolean(data.id),
     entityType: "billboard",
@@ -276,7 +290,19 @@ export async function savePosterAction(data: Partial<Poster> & { id?: string }) 
   }
   const tutorialDenied = await assertTutorialForPossibleCreate("posters", "posters", data.id);
   if (tutorialDenied) return tutorialDenied;
-  const result = await savePoster(await withOwnerScope(auth, data));
+  const scoped = await withOwnerScope(auth, data);
+  const { denyIfCreateQuotaExceeded } = await import(
+    "@/lib/scoring/daily-cap-and-duplicates"
+  );
+  const quota = await denyIfCreateQuotaExceeded({
+    campaignId: scoped.campaignId ?? data.campaignId ?? "",
+    ownerUserId: scoped.ownerUserId ?? auth.userId,
+    contentId: data.id,
+    table: "posters",
+    section: "poster",
+  });
+  if (quota) return quota;
+  const result = await savePoster(scoped);
   await auditContentChange({
     isUpdate: Boolean(data.id),
     entityType: "poster",
@@ -348,7 +374,19 @@ export async function saveVideoAction(data: Partial<Video> & { id?: string }) {
   }
   const tutorialDenied = await assertTutorialForPossibleCreate("videos", "videos", data.id);
   if (tutorialDenied) return tutorialDenied;
-  const result = await saveVideo(await withOwnerScope(auth, data));
+  const scoped = await withOwnerScope(auth, data);
+  const { denyIfCreateQuotaExceeded } = await import(
+    "@/lib/scoring/daily-cap-and-duplicates"
+  );
+  const quota = await denyIfCreateQuotaExceeded({
+    campaignId: scoped.campaignId ?? data.campaignId ?? "",
+    ownerUserId: scoped.ownerUserId ?? auth.userId,
+    contentId: data.id,
+    table: "videos",
+    section: "video",
+  });
+  if (quota) return quota;
+  const result = await saveVideo(scoped);
   await auditContentChange({
     isUpdate: Boolean(data.id),
     entityType: "video",
@@ -564,7 +602,16 @@ export async function saveCampaignFileAction(data: Partial<CampaignFile> & { id?
     data.id
   );
   if (tutorialDenied) return tutorialDenied;
-  const result = await saveCampaignFile(await withOwnerScope(auth, data));
+  const scoped = await withOwnerScope(auth, data);
+  const { denyIfCreateQuotaExceeded } = await import("@/lib/scoring/daily-cap-and-duplicates");
+  const quota = await denyIfCreateQuotaExceeded({
+    campaignId: scoped.campaignId ?? data.campaignId ?? "",
+    ownerUserId: scoped.ownerUserId ?? auth.userId,
+    contentId: data.id,
+    table: "campaign_files",
+  });
+  if (quota) return quota;
+  const result = await saveCampaignFile(scoped);
   await auditContentChange({
     isUpdate: Boolean(data.id),
     entityType: "file",
@@ -604,7 +651,16 @@ export async function saveRawMediaUploadAction(data: Partial<RawMediaUpload> & {
     data.id
   );
   if (tutorialDenied) return tutorialDenied;
-  const result = await saveRawMediaUpload(await withOwnerScope(auth, data));
+  const scoped = await withOwnerScope(auth, data);
+  const { denyIfCreateQuotaExceeded } = await import("@/lib/scoring/daily-cap-and-duplicates");
+  const quota = await denyIfCreateQuotaExceeded({
+    campaignId: scoped.campaignId ?? data.campaignId ?? "",
+    ownerUserId: scoped.ownerUserId ?? auth.userId,
+    contentId: data.id,
+    table: "raw_media_uploads",
+  });
+  if (quota) return quota;
+  const result = await saveRawMediaUpload(scoped);
   await auditContentChange({
     isUpdate: Boolean(data.id),
     entityType: "raw_media",

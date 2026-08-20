@@ -1518,10 +1518,12 @@ export async function pgSaveCampaignActivity(data: Partial<CampaignActivity> & {
   `;
   const sortOrder = data.sortOrder ?? (Number(countRows[0]?.count) || 0) + 1;
 
+  await sql`ALTER TABLE campaign_activities ADD COLUMN IF NOT EXISTS press_content_type TEXT`;
+
   await sql`
     INSERT INTO campaign_activities (
       id, campaign_id, owner_user_id, title, activity_type, activity_date,
-      location, link, image_url, video_url, media_items, description, is_creative, published, sort_order, plan_label, plan_labels, created_at, updated_at
+      location, link, image_url, video_url, media_items, description, is_creative, press_content_type, published, sort_order, plan_label, plan_labels, created_at, updated_at
     ) VALUES (
       ${id},
       ${data.campaignId ?? ""},
@@ -1536,6 +1538,7 @@ export async function pgSaveCampaignActivity(data: Partial<CampaignActivity> & {
       ${sql.json(JSON.parse(JSON.stringify(data.mediaItems ?? [])))},
       ${data.description ?? null},
       ${data.isCreative ?? false},
+      ${data.pressContentType?.toString().trim() || null},
       ${data.published ?? true},
       ${sortOrder},
       ${planLabel},
@@ -1554,6 +1557,7 @@ export async function pgSaveCampaignActivity(data: Partial<CampaignActivity> & {
       media_items = EXCLUDED.media_items,
       description = EXCLUDED.description,
       is_creative = EXCLUDED.is_creative,
+      press_content_type = EXCLUDED.press_content_type,
       published = EXCLUDED.published,
       sort_order = EXCLUDED.sort_order,
       owner_user_id = COALESCE(EXCLUDED.owner_user_id, campaign_activities.owner_user_id),

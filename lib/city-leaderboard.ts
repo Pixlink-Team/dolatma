@@ -6,6 +6,8 @@ import {
   isSameDay,
 } from "@/lib/safe-dates";
 import type { Billboard, Ownable, PublicCampaignData } from "@/lib/types";
+import type { UserCompanyType } from "@/lib/user-company-types";
+import type { UserRegion } from "@/lib/user-regions";
 
 /**
  * Minimal shape the leaderboard builders actually read. `PublicCampaignData`
@@ -38,6 +40,15 @@ export interface ProvinceLeaderboardMetrics {
   score: number;
   /** Sum of Ownable.score values across content items. */
   ratingScore: number;
+  pendingScore: number;
+  billboardScore: number;
+  posterScore: number;
+  videoScore: number;
+  socialScore: number;
+  pendingBillboardScore: number;
+  pendingPosterScore: number;
+  pendingVideoScore: number;
+  pendingSocialScore: number;
   /** Sum of billboard areaSqm values. */
   totalAreaSqm: number;
 }
@@ -86,7 +97,10 @@ export interface UserLeaderboardEntry extends ProvinceLeaderboardMetrics {
   userName: string;
   userKey: string;
   province: string;
+  city: string;
   ministry: string;
+  companyType: UserCompanyType | null;
+  region: UserRegion | null;
 }
 
 const SCORE_WEIGHTS = {
@@ -180,6 +194,15 @@ function emptyMetrics(): ProvinceLeaderboardMetrics {
     totalUploads: 0,
     score: 0,
     ratingScore: 0,
+    pendingScore: 0,
+    billboardScore: 0,
+    posterScore: 0,
+    videoScore: 0,
+    socialScore: 0,
+    pendingBillboardScore: 0,
+    pendingPosterScore: 0,
+    pendingVideoScore: 0,
+    pendingSocialScore: 0,
     totalAreaSqm: 0,
   };
 }
@@ -284,6 +307,15 @@ function addContributor<T extends Ownable & { createdAt?: string | null; provinc
     totalUploads: 0,
     score: 0,
     ratingScore: 0,
+    pendingScore: 0,
+    billboardScore: 0,
+    posterScore: 0,
+    videoScore: 0,
+    socialScore: 0,
+    pendingBillboardScore: 0,
+    pendingPosterScore: 0,
+    pendingVideoScore: 0,
+    pendingSocialScore: 0,
   };
 
   current.totalUploads++;
@@ -311,6 +343,15 @@ function addMinistryContributor<T extends Ownable & { createdAt?: string | null 
     totalUploads: 0,
     score: 0,
     ratingScore: 0,
+    pendingScore: 0,
+    billboardScore: 0,
+    posterScore: 0,
+    videoScore: 0,
+    socialScore: 0,
+    pendingBillboardScore: 0,
+    pendingPosterScore: 0,
+    pendingVideoScore: 0,
+    pendingSocialScore: 0,
   };
 
   current.totalUploads++;
@@ -389,6 +430,15 @@ export function buildProvinceLeaderboard(data: LeaderboardSourceData): ProvinceL
       totalUploads: metrics.totalUploads,
       score: metrics.score,
       ratingScore: metrics.ratingScore,
+      pendingScore: metrics.pendingScore ?? 0,
+      billboardScore: metrics.billboardScore ?? 0,
+      posterScore: metrics.posterScore ?? 0,
+      videoScore: metrics.videoScore ?? 0,
+      socialScore: metrics.socialScore ?? 0,
+      pendingBillboardScore: metrics.pendingBillboardScore ?? 0,
+      pendingPosterScore: metrics.pendingPosterScore ?? 0,
+      pendingVideoScore: metrics.pendingVideoScore ?? 0,
+      pendingSocialScore: metrics.pendingSocialScore ?? 0,
       totalAreaSqm: metrics.totalAreaSqm,
       rank: 0,
     }))
@@ -418,6 +468,15 @@ export function buildMinistryLeaderboard(data: LeaderboardSourceData): MinistryL
       totalUploads: metrics.totalUploads,
       score: metrics.score,
       ratingScore: metrics.ratingScore,
+      pendingScore: metrics.pendingScore ?? 0,
+      billboardScore: metrics.billboardScore ?? 0,
+      posterScore: metrics.posterScore ?? 0,
+      videoScore: metrics.videoScore ?? 0,
+      socialScore: metrics.socialScore ?? 0,
+      pendingBillboardScore: metrics.pendingBillboardScore ?? 0,
+      pendingPosterScore: metrics.pendingPosterScore ?? 0,
+      pendingVideoScore: metrics.pendingVideoScore ?? 0,
+      pendingSocialScore: metrics.pendingSocialScore ?? 0,
       totalAreaSqm: metrics.totalAreaSqm,
       rank: 0,
     }))
@@ -453,6 +512,15 @@ export function buildOrganizationLeaderboard(
       totalUploads: metrics.totalUploads,
       score: metrics.score,
       ratingScore: metrics.ratingScore,
+      pendingScore: metrics.pendingScore ?? 0,
+      billboardScore: metrics.billboardScore ?? 0,
+      posterScore: metrics.posterScore ?? 0,
+      videoScore: metrics.videoScore ?? 0,
+      socialScore: metrics.socialScore ?? 0,
+      pendingBillboardScore: metrics.pendingBillboardScore ?? 0,
+      pendingPosterScore: metrics.pendingPosterScore ?? 0,
+      pendingVideoScore: metrics.pendingVideoScore ?? 0,
+      pendingSocialScore: metrics.pendingSocialScore ?? 0,
       totalAreaSqm: metrics.totalAreaSqm,
       rank: 0,
     }))
@@ -472,7 +540,10 @@ export function buildUserLeaderboard(data: LeaderboardSourceData): UserLeaderboa
       userKey,
       userName: metrics.userName,
       province: resolvePrimaryProvince(metrics.provinceCounts),
+      city: "",
       ministry: resolvePrimaryLabel(metrics.ministryCounts, "بدون وزارتخانه"),
+      companyType: null,
+      region: null,
       billboards: metrics.billboards,
       posters: metrics.posters,
       videos: metrics.videos,
@@ -484,6 +555,15 @@ export function buildUserLeaderboard(data: LeaderboardSourceData): UserLeaderboa
       totalUploads: metrics.totalUploads,
       score: metrics.score,
       ratingScore: metrics.ratingScore,
+      pendingScore: metrics.pendingScore ?? 0,
+      billboardScore: metrics.billboardScore ?? 0,
+      posterScore: metrics.posterScore ?? 0,
+      videoScore: metrics.videoScore ?? 0,
+      socialScore: metrics.socialScore ?? 0,
+      pendingBillboardScore: metrics.pendingBillboardScore ?? 0,
+      pendingPosterScore: metrics.pendingPosterScore ?? 0,
+      pendingVideoScore: metrics.pendingVideoScore ?? 0,
+      pendingSocialScore: metrics.pendingSocialScore ?? 0,
       totalAreaSqm: metrics.totalAreaSqm,
       rank: 0,
     }))
@@ -496,6 +576,32 @@ export function buildUserRatingLeaderboard(data: LeaderboardSourceData): UserLea
     .slice()
     .sort((a, b) => b.ratingScore - a.ratingScore || b.totalUploads - a.totalUploads)
     .map((entry, index) => ({ ...entry, rank: index + 1 }));
+}
+
+
+export type UserLeaderboardSortMode = "activity" | "rating" | "count";
+
+/** Sort users by content count (totalUploads), then score. */
+export function buildUserContentCountLeaderboard(
+  data: LeaderboardSourceData
+): UserLeaderboardEntry[] {
+  return buildUserLeaderboard(data)
+    .slice()
+    .sort((a, b) => {
+      if (b.totalUploads !== a.totalUploads) return b.totalUploads - a.totalUploads;
+      if (b.score !== a.score) return b.score - a.score;
+      return a.userName.localeCompare(b.userName, "fa");
+    })
+    .map((entry, index) => ({ ...entry, rank: index + 1 }));
+}
+
+export function buildUserLeaderboardByMode(
+  data: LeaderboardSourceData,
+  mode: UserLeaderboardSortMode
+): UserLeaderboardEntry[] {
+  if (mode === "rating") return buildUserRatingLeaderboard(data);
+  if (mode === "count") return buildUserContentCountLeaderboard(data);
+  return buildUserLeaderboard(data);
 }
 
 export interface UserContentScoreItem {

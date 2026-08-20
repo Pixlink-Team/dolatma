@@ -551,6 +551,8 @@ export async function pgSaveBillboard(data: Partial<Billboard> & { id?: string }
   const id = data.id ?? generateId();
   const { planLabel, planLabels } = resolvePlanFields(data);
 
+  await sql`ALTER TABLE billboards ADD COLUMN IF NOT EXISTS location_type TEXT`;
+
   const countRows = await sql`
     SELECT COUNT(*)::int AS count FROM billboards WHERE campaign_id = ${data.campaignId ?? ""}
   `;
@@ -560,7 +562,7 @@ export async function pgSaveBillboard(data: Partial<Billboard> & { id?: string }
     INSERT INTO billboards (
       id, campaign_id, title, description, province, city, location, date,
       thumbnail_url, image_url, external_url, latitude, longitude, source, external_id,
-      category, area_sqm, status, tags, notes, published, sort_order, owner_user_id, plan_label, plan_labels, score,
+      category, area_sqm, location_type, status, tags, notes, published, sort_order, owner_user_id, plan_label, plan_labels, score,
       metadata, created_at, updated_at
     ) VALUES (
       ${id},
@@ -580,6 +582,7 @@ export async function pgSaveBillboard(data: Partial<Billboard> & { id?: string }
       ${data.externalId ?? null},
       ${data.category ?? null},
       ${data.areaSqm ?? null},
+      ${data.locationType ?? null},
       ${data.status ?? "published"},
       ${sql.array(data.tags ?? [])},
       ${data.notes ?? null},
@@ -609,6 +612,7 @@ export async function pgSaveBillboard(data: Partial<Billboard> & { id?: string }
       external_id = EXCLUDED.external_id,
       category = EXCLUDED.category,
       area_sqm = EXCLUDED.area_sqm,
+      location_type = EXCLUDED.location_type,
       status = EXCLUDED.status,
       tags = EXCLUDED.tags,
       notes = EXCLUDED.notes,

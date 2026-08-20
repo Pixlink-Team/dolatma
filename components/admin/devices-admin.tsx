@@ -122,7 +122,7 @@ export function DevicesAdmin({
   homeDeviceId = null,
 }: DevicesAdminProps) {
   const { campaignId } = useAdminCampaign();
-  const { requestCreate, tutorialModal } = useSectionCreateGate("subsidiaries");
+  const { requestCreate, tutorialModal } = useSectionCreateGate("subsidiaries", campaignId ?? undefined);
   const [open, setOpen] = useState(false);
   const [childOpen, setChildOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);

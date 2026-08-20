@@ -556,3 +556,63 @@ function bulkUpdateMock(
 
   return updated;
 }
+
+
+const TOPIC_BULK_TYPES_BY_SOURCE: Record<string, BulkEditableContentType[]> = {
+  billboard: ["billboard"],
+  poster: ["poster"],
+  video: ["video"],
+  file: ["file"],
+  raw_media: ["raw_media"],
+  social_post: ["social_post"],
+  site_publication: ["site_publication"],
+  activity: ["activity"],
+  press: ["press"],
+};
+
+/** Bulk-set plan labels across mixed content types (company supervision). */
+export async function bulkUpdatePlanLabelsAction(input: {
+  campaignId: string;
+  items: Array<{ contentType: string; contentId: string }>;
+  planLabels: string[];
+}): Promise<{ success: boolean; updated: number; error?: string }> {
+  const grouped = new Map<BulkEditableContentType, string[]>();
+  for (const item of input.items) {
+    const contentId = item.contentId?.trim();
+    if (!contentId) continue;
+    const types = TOPIC_BULK_TYPES_BY_SOURCE[item.contentType] ?? [];
+    for (const contentType of types) {
+      const ids = grouped.get(contentType) ?? [];
+      if (!ids.includes(contentId)) ids.push(contentId);
+      grouped.set(contentType, ids);
+    }
+  }
+
+  if (grouped.size === 0) {
+    return { success: false, updated: 0, error: "هیچ مورد معتبری برای برچسب‌گذاری انتخاب نشده است" };
+  }
+
+  let anySuccess = false;
+  let totalUpdated = 0;
+  let lastError: string | undefined;
+
+  for (const [contentType, ids] of grouped) {
+    const result = await bulkUpdateContentAction({
+      campaignId: input.campaignId,
+      contentType,
+      ids,
+      patch: { planLabels: input.planLabels },
+    });
+    if (result.success) {
+      anySuccess = true;
+      totalUpdated += result.updated;
+    } else if (result.error) {
+      lastError = result.error;
+    }
+  }
+
+  if (!anySuccess) {
+    return { success: false, updated: 0, error: lastError ?? "برچسب‌گذاری انجام نشد" };
+  }
+  return { success: true, updated: totalUpdated };
+}

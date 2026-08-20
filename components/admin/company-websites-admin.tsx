@@ -42,7 +42,7 @@ interface CompanyWebsitesAdminProps {
 }
 
 export function CompanyWebsitesAdmin({ campaignId, initialItems }: CompanyWebsitesAdminProps) {
-  const { requestCreate, tutorialModal } = useSectionCreateGate("analytics");
+  const { requestCreate, tutorialModal } = useSectionCreateGate("analytics", campaignId);
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();

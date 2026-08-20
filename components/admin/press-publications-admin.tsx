@@ -44,9 +44,14 @@ import { useSectionCreateGate } from "@/lib/hooks/use-section-create-gate";
 import { useAdminInfiniteScroll } from "@/lib/hooks/use-admin-infinite-scroll";
 import { AdminInfiniteScrollSentinel } from "@/components/admin/admin-infinite-scroll-sentinel";
 import { todayISO } from "@/lib/jalali";
-import { isPressPublication } from "@/lib/press-publications";
+import {
+  getPressContentTypeLabel,
+  isPressContentType,
+  isPressPublication,
+  PRESS_CONTENT_TYPES,
+} from "@/lib/press-publications";
 import { cn, formatPersianDate } from "@/lib/utils";
-import type { ActivityMediaItem, AdminUser, CampaignActivity } from "@/lib/types";
+import type { ActivityMediaItem, AdminUser, CampaignActivity, PressContentType } from "@/lib/types";
 
 const ACTIVITY_VIDEO_MAX_BYTES = 50 * 1024 * 1024;
 const MAX_MEDIA_ITEMS = 10;
@@ -57,6 +62,16 @@ const schema = z.object({
     .min(1, "عنوان الزامی است")
     .max(CONTENT_TITLE_MAX_LENGTH, CONTENT_TITLE_MAX_LENGTH_MESSAGE),
   activityType: z.enum(["magazine", "newspaper"]),
+  pressContentType: z.enum([
+    "news",
+    "news_interview",
+    "report",
+    "news_report",
+    "interview",
+    "ad",
+    "advertorial",
+    "other",
+  ]),
   activityDate: z.string(),
   location: z.string().optional(),
   link: z
@@ -67,6 +82,12 @@ const schema = z.object({
     }),
   description: z.string().optional(),
 });
+
+function resolvePressContentType(
+  value: string | null | undefined
+): PressContentType {
+  return isPressContentType(value) ? value : "news";
+}
 
 interface PressPublicationsAdminProps {
   campaignId: string;
@@ -85,7 +106,7 @@ export function PressPublicationsAdmin({
   isFullAdmin = false,
   users = [],
 }: PressPublicationsAdminProps) {
-  const { requestCreate, tutorialModal } = useSectionCreateGate("pressPublications");
+  const { requestCreate, tutorialModal } = useSectionCreateGate("pressPublications", campaignId);
   const { viewMode, setViewMode } = useAdminViewMode("press-publications");
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -109,7 +130,8 @@ export function PressPublicationsAdmin({
     resolver: zodResolver(schema),
     defaultValues: {
       title: "",
-      activityType: "magazine",
+      activityType: "magazine" as const,
+      pressContentType: "news" as const,
       activityDate: todayISO(),
       location: "",
       link: "",
@@ -135,6 +157,7 @@ export function PressPublicationsAdmin({
       form.reset({
         title: "",
         activityType: "magazine",
+        pressContentType: "news",
         activityDate: todayISO(),
         location: "",
         link: "",
@@ -154,6 +177,7 @@ export function PressPublicationsAdmin({
     form.reset({
       title: activity.title,
       activityType: activity.activityType === "newspaper" ? "newspaper" : "magazine",
+      pressContentType: resolvePressContentType(activity.pressContentType),
       activityDate: activity.activityDate,
       location: activity.location,
       link: activity.link ?? "",
@@ -276,6 +300,7 @@ export function PressPublicationsAdmin({
         id: editingId ?? undefined,
         title: data.title,
         activityType: data.activityType,
+        pressContentType: data.pressContentType,
         activityDate: data.activityDate,
         location: data.location?.trim() ?? "",
         link: data.link?.trim() || "",
@@ -299,6 +324,7 @@ export function PressPublicationsAdmin({
         campaignId,
         title: data.title,
         activityType: data.activityType,
+        pressContentType: data.pressContentType,
         activityDate: data.activityDate,
         location: data.location?.trim() ?? "",
         link: data.link?.trim() || "",
@@ -531,6 +557,24 @@ export function PressPublicationsAdmin({
                   {pressActivityTypeOptions.map((type) => (
                     <SelectItem key={type} value={type}>
                       {getActivityTypeLabel(type)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>نوع محتوا</Label>
+              <Select
+                value={form.watch("pressContentType")}
+                onValueChange={(value) =>
+                  form.setValue("pressContentType", value as PressContentType)
+                }
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {PRESS_CONTENT_TYPES.map((type) => (
+                    <SelectItem key={type} value={type}>
+                      {getPressContentTypeLabel(type)}
                     </SelectItem>
                   ))}
                 </SelectContent>

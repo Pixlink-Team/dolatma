@@ -6,6 +6,7 @@ import {
   type ContentMessageContentType,
 } from "@/lib/content-messages/types";
 import { isPostgresConfigured } from "@/lib/utils";
+import type { ContentMessageFollowUpStatus } from "@/lib/content-messages/types";
 
 const CONTENT_TYPE_SET = new Set<string>(CONTENT_MESSAGE_CONTENT_TYPES);
 
@@ -337,4 +338,27 @@ export async function pgListAllContentMessages(input?: {
       recipientEmail: record.recipient_email ? String(record.recipient_email) : null,
     };
   });
+}
+
+
+/** Best-effort follow-up status update for all messages on a content item. */
+export async function pgUpdateFollowUpStatusForContent(input: {
+  campaignId: string;
+  contentType: string;
+  contentId: string;
+  status: ContentMessageFollowUpStatus;
+}): Promise<void> {
+  await ensureContentMessagesTable();
+  const sql = getSql();
+  try {
+    await sql`
+      UPDATE content_messages
+      SET follow_up_status = ${input.status}
+      WHERE campaign_id = ${input.campaignId}
+        AND content_type = ${input.contentType}
+        AND content_id = ${input.contentId}
+    `;
+  } catch {
+    // Column may not exist yet in older DBs — ignore so review flow still works.
+  }
 }

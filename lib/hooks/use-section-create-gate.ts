@@ -7,6 +7,7 @@ import {
   completeTutorialAction,
   getTutorialStatusAction,
 } from "@/lib/actions/tutorial-actions";
+import { checkDailyQuotaAction } from "@/lib/actions/extended-actions";
 import type { TutorialSectionKey, TutorialStep } from "@/lib/section-tutorials";
 import { tutorialSectionLabels } from "@/lib/section-tutorials";
 
@@ -29,10 +30,11 @@ const initialState: TutorialGateState = {
 };
 
 /**
- * Gates the first create action for contributors behind a multi-step tutorial.
+ * Gates the first create action for org users behind a multi-step tutorial.
  * Admins bypass. Missing tutorial content keeps create blocked.
+ * When campaignId is provided, also enforces daily posting quota before create.
  */
-export function useSectionCreateGate(sectionKey: TutorialSectionKey) {
+export function useSectionCreateGate(sectionKey: TutorialSectionKey, campaignId?: string) {
   const [state, setState] = useState<TutorialGateState>({
     ...initialState,
     title: tutorialSectionLabels[sectionKey],
@@ -69,6 +71,14 @@ export function useSectionCreateGate(sectionKey: TutorialSectionKey) {
 
   const requestCreate = useCallback(
     async (onCreate: () => void) => {
+      if (campaignId) {
+        const quota = await checkDailyQuotaAction(sectionKey, campaignId);
+        if (!quota.ok) {
+          toast.error(quota.error);
+          return;
+        }
+      }
+
       let current = state;
 
       if (!current.loaded) {
@@ -96,7 +106,7 @@ export function useSectionCreateGate(sectionKey: TutorialSectionKey) {
       pendingCreateRef.current = onCreate;
       setModalOpen(true);
     },
-    [runCreate, sectionKey, state]
+    [runCreate, sectionKey, state, campaignId]
   );
 
   const handleComplete = useCallback(async () => {

@@ -72,7 +72,7 @@ function decisionSummary(decisions: MeetingDecisionInput[]) {
 }
 
 export function MeetingsAdmin({ campaignId, initialMeetings, hasMeetingsPassword }: MeetingsAdminProps) {
-  const { requestCreate, tutorialModal } = useSectionCreateGate("meetings");
+  const { requestCreate, tutorialModal } = useSectionCreateGate("meetings", campaignId);
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [rows, setRows] = useState(initialMeetings);

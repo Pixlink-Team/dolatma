@@ -61,6 +61,25 @@ export function canSendContentMessages(
   );
 }
 
+
+/** Internal profile notes on user/company supervision (admin / broad panel). */
+export function canManageUserProfileNotes(session: AuthSession): boolean {
+  return canManageAllContent(session);
+}
+
+/** Any authenticated panel user can use the live chat inbox. */
+export function canUseChat(session: AuthSession): boolean {
+  return Boolean(session);
+}
+
+/**
+ * Admin / کارفرما / رییس can start a chat with any user.
+ * org_user chats with staff only (admin + client + reis).
+ */
+export function canStartChatWithAnyone(session: AuthSession): boolean {
+  return canManageAllContent(session);
+}
+
 export function canAccessNotifications(session: AuthSession): boolean {
   return isFullAdmin(session) || isBroadPanelUser(session);
 }
@@ -174,6 +193,11 @@ export function canScoreContent(
  * Org users may score content via `canScoreContent`, but never edit the rules themselves.
  */
 export function canManageScoringRules(session: AuthSession): boolean {
+  return isFullAdmin(session) || isBroadPanelUser(session);
+}
+
+/** Admin / کارفرما / رییس can set daily upload limits per user category. */
+export function canManagePostingLimits(session: AuthSession): boolean {
   return isFullAdmin(session) || isBroadPanelUser(session);
 }
 

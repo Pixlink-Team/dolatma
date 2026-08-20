@@ -354,9 +354,18 @@ CREATE TABLE IF NOT EXISTS content_messages (
   sender_name TEXT,
   sender_role TEXT,
   body TEXT NOT NULL,
+  parent_message_id UUID REFERENCES content_messages(id) ON DELETE CASCADE,
+  follow_up_status TEXT NOT NULL DEFAULT 'open'
+    CHECK (follow_up_status IN ('open', 'awaiting_user', 'user_replied', 'resolved')),
   seen_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+ALTER TABLE content_messages
+  ADD COLUMN IF NOT EXISTS parent_message_id UUID REFERENCES content_messages(id) ON DELETE CASCADE;
+
+ALTER TABLE content_messages
+  ADD COLUMN IF NOT EXISTS follow_up_status TEXT NOT NULL DEFAULT 'open';
 
 CREATE INDEX IF NOT EXISTS idx_content_messages_recipient
   ON content_messages(recipient_user_id, created_at DESC);
@@ -374,6 +383,131 @@ CREATE INDEX IF NOT EXISTS idx_content_messages_content
 CREATE INDEX IF NOT EXISTS idx_content_messages_sender
   ON content_messages(sender_user_id, created_at DESC)
   WHERE sender_user_id IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_content_messages_parent
+  ON content_messages(parent_message_id, created_at ASC)
+  WHERE parent_message_id IS NOT NULL;
+
+CREATE TABLE IF NOT EXISTS content_reviews (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  campaign_id UUID NOT NULL REFERENCES campaign_settings(id) ON DELETE CASCADE,
+  content_type TEXT NOT NULL
+    CHECK (content_type IN (
+      'billboard',
+      'poster',
+      'video',
+      'activity',
+      'social_post',
+      'site_publication'
+    )),
+  content_id UUID NOT NULL,
+  status TEXT NOT NULL
+    CHECK (status IN ('needs_revision', 'resubmitted', 'approved'))
+    DEFAULT 'needs_revision',
+  rejection_reason TEXT,
+  rejected_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  rejected_at TIMESTAMPTZ,
+  resubmitted_at TIMESTAMPTZ,
+  resolved_at TIMESTAMPTZ,
+  ever_rejected BOOLEAN NOT NULL DEFAULT false,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (campaign_id, content_type, content_id)
+);
+
+ALTER TABLE content_reviews
+  ADD COLUMN IF NOT EXISTS ever_rejected BOOLEAN NOT NULL DEFAULT false;
+
+CREATE INDEX IF NOT EXISTS idx_content_reviews_campaign_status
+  ON content_reviews(campaign_id, status, updated_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_content_reviews_content
+  ON content_reviews(content_type, content_id, updated_at DESC);
+
+-- Internal notes on user/company profiles (admin + کارفرما / رییس; not shown to org_user)
+CREATE TABLE IF NOT EXISTS user_profile_notes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  subject_user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  author_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  author_name TEXT,
+  author_role TEXT,
+  body TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_profile_notes_subject
+  ON user_profile_notes(subject_user_id, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_user_profile_notes_author
+  ON user_profile_notes(author_user_id, created_at DESC)
+  WHERE author_user_id IS NOT NULL;
+
+-- 1:1 live chat (admin/client/reis ↔ org_user)
+CREATE TABLE IF NOT EXISTS chat_conversations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  participant_a_key TEXT NOT NULL,
+  participant_b_key TEXT NOT NULL,
+  last_message_at TIMESTAMPTZ,
+  last_message_preview TEXT,
+  last_message_sender_key TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT chat_conversations_pair_chk CHECK (participant_a_key < participant_b_key),
+  CONSTRAINT chat_conversations_pair_uniq UNIQUE (participant_a_key, participant_b_key)
+);
+
+CREATE TABLE IF NOT EXISTS chat_messages (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  conversation_id UUID NOT NULL REFERENCES chat_conversations(id) ON DELETE CASCADE,
+  sender_key TEXT NOT NULL,
+  sender_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  sender_name TEXT,
+  body TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  delivered_at TIMESTAMPTZ,
+  seen_at TIMESTAMPTZ,
+  edited_at TIMESTAMPTZ,
+  deleted_at TIMESTAMPTZ
+);
+
+ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS edited_at TIMESTAMPTZ;
+ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
+
+CREATE TABLE IF NOT EXISTS chat_presence (
+  participant_key TEXT PRIMARY KEY,
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  last_seen_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  active_conversation_id UUID REFERENCES chat_conversations(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_chat_conversations_a
+  ON chat_conversations(participant_a_key, last_message_at DESC NULLS LAST);
+
+CREATE INDEX IF NOT EXISTS idx_chat_conversations_b
+  ON chat_conversations(participant_b_key, last_message_at DESC NULLS LAST);
+
+CREATE INDEX IF NOT EXISTS idx_chat_messages_conversation
+  ON chat_messages(conversation_id, created_at ASC);
+
+CREATE INDEX IF NOT EXISTS idx_chat_messages_undelivered
+  ON chat_messages(conversation_id, created_at ASC)
+  WHERE delivered_at IS NULL;
+
+CREATE INDEX IF NOT EXISTS idx_chat_messages_unseen
+  ON chat_messages(conversation_id, created_at ASC)
+  WHERE seen_at IS NULL AND deleted_at IS NULL;
+
+CREATE INDEX IF NOT EXISTS idx_chat_messages_edited
+  ON chat_messages(conversation_id, edited_at DESC)
+  WHERE edited_at IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_chat_messages_deleted
+  ON chat_messages(conversation_id, deleted_at DESC)
+  WHERE deleted_at IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_chat_presence_seen
+  ON chat_presence(last_seen_at DESC);
 
 -- Group social distribution: multiple published links + views (summed into views)
 ALTER TABLE social_media_posts
@@ -466,6 +600,7 @@ ALTER TABLE campaign_activities ADD COLUMN IF NOT EXISTS link TEXT NOT NULL DEFA
 ALTER TABLE billboards ADD COLUMN IF NOT EXISTS province TEXT;
 ALTER TABLE billboards ADD COLUMN IF NOT EXISTS category TEXT;
 ALTER TABLE billboards ADD COLUMN IF NOT EXISTS area_sqm DOUBLE PRECISION;
+ALTER TABLE billboards ADD COLUMN IF NOT EXISTS location_type TEXT;
 
 CREATE TABLE IF NOT EXISTS billboard_display_periods (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -566,6 +701,7 @@ ALTER TABLE videos ADD COLUMN IF NOT EXISTS score DOUBLE PRECISION;
 ALTER TABLE social_media_posts ADD COLUMN IF NOT EXISTS score DOUBLE PRECISION;
 ALTER TABLE campaign_activities ADD COLUMN IF NOT EXISTS score DOUBLE PRECISION;
 ALTER TABLE campaign_activities ADD COLUMN IF NOT EXISTS is_creative BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE campaign_activities ADD COLUMN IF NOT EXISTS press_content_type TEXT;
 ALTER TABLE broadcast_reports ADD COLUMN IF NOT EXISTS score DOUBLE PRECISION;
 ALTER TABLE campaign_meetings ADD COLUMN IF NOT EXISTS score DOUBLE PRECISION;
 ALTER TABLE campaign_files ADD COLUMN IF NOT EXISTS score DOUBLE PRECISION;
@@ -593,6 +729,15 @@ ALTER TABLE raw_media_uploads ADD COLUMN IF NOT EXISTS manual_score DOUBLE PRECI
 
 -- Field-based auto scoring rules per content type (JSON keyed by ScoreableContentType).
 ALTER TABLE campaign_settings ADD COLUMN IF NOT EXISTS scoring_rules JSONB NOT NULL DEFAULT '{}'::jsonb;
+
+-- Daily upload quota per user category (region / company type / province / company)
+ALTER TABLE campaign_settings
+  ADD COLUMN IF NOT EXISTS daily_posting_limits JSONB NOT NULL DEFAULT '{}'::jsonb;
+
+ALTER TABLE users ADD COLUMN IF NOT EXISTS company_type TEXT;
+ALTER TABLE users DROP CONSTRAINT IF EXISTS users_company_type_check;
+ALTER TABLE users ADD CONSTRAINT users_company_type_check
+  CHECK (company_type IS NULL OR company_type IN ('distribution', 'regional_electricity'));
 
 ALTER TABLE social_media_posts DROP CONSTRAINT IF EXISTS social_media_posts_content_type_check;
 ALTER TABLE social_media_posts ADD CONSTRAINT social_media_posts_content_type_check

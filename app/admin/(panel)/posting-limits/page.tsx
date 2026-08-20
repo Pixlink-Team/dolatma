@@ -1,0 +1,35 @@
+import { redirect } from "next/navigation";
+import { getAdminData, getAllUsers } from "@/lib/data-access/admin";
+import { resolveAdminCampaignId } from "@/lib/admin-campaign";
+import { PostingLimitsAdmin } from "@/components/admin/posting-limits-admin";
+import { canManagePostingLimits } from "@/lib/auth/access";
+import { getAuthSession } from "@/lib/auth/get-session";
+import { isOrgUserRole } from "@/lib/user-roles";
+
+interface PageProps {
+  searchParams: Promise<{ campaign?: string }>;
+}
+
+export default async function PostingLimitsPage({ searchParams }: PageProps) {
+  const session = await getAuthSession();
+  if (!session || !canManagePostingLimits(session)) {
+    redirect("/admin");
+  }
+
+  const params = await searchParams;
+  const { campaignId } = await resolveAdminCampaignId(params.campaign);
+  if (!campaignId) redirect("/admin");
+  const data = await getAdminData(campaignId, ["settings"]);
+  if (!data.settings) redirect("/admin");
+
+  const users = (await getAllUsers())
+    .filter((user) => isOrgUserRole(user.role) && user.campaignIds.includes(campaignId))
+    .map((user) => ({
+      id: user.id,
+      name: user.name,
+      province: user.province ?? null,
+      companyType: user.companyType ?? null,
+    }));
+
+  return <PostingLimitsAdmin initialSettings={data.settings} companies={users} />;
+}

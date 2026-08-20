@@ -112,6 +112,7 @@ export async function POST(request: Request) {
   const address = String(formData.get("address") ?? "").trim() || undefined;
   const areaSqmRaw = String(formData.get("area_sqm") ?? "").trim();
   const areaSqm = areaSqmRaw ? Number(areaSqmRaw) : undefined;
+  const locationType = String(formData.get("locationType") ?? "").trim() || null;
   const notes = String(formData.get("notes") ?? "").trim() || null;
   const planLabel = String(formData.get("planLabel") ?? "").trim() || null;
   const planLabels = formData
@@ -152,6 +153,7 @@ export async function POST(request: Request) {
       latitude,
       longitude,
       areaSqm: Number.isFinite(areaSqm) ? areaSqm : null,
+      locationType,
       province,
       city,
       category: category as BillboardCategory | null,

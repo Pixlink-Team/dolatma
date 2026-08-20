@@ -46,3 +46,8 @@ export function getBillboardDisplayImage(billboard: Billboard): string {
   }
   return candidate;
 }
+
+/** Alias used by company supervision cards (same as display image in dolatma). */
+export function getBillboardCardImage(billboard: Billboard): string {
+  return getBillboardDisplayImage(billboard);
+}

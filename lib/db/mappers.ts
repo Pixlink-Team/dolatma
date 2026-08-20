@@ -1,4 +1,6 @@
 import { normalizeScoringRules } from "@/lib/scoring/normalize-scoring-rules";
+import { normalizeDailyPostingLimits } from "@/lib/posting-limits";
+import { normalizeUserCompanyType } from "@/lib/user-company-types";
 import type {
   AnalyticsMetric,
   AdminUser,
@@ -164,6 +166,11 @@ export function mapSettingsFromDb(row: any): CampaignSettings {
         : (row.billboard_config ?? {}),
     adminOwnerLabel: row.admin_owner_label ?? "توانیر",
     scoringRules: normalizeScoringRules(row.scoring_rules),
+    dailyPostingLimits: normalizeDailyPostingLimits(
+      typeof row.daily_posting_limits === "string"
+        ? JSON.parse(row.daily_posting_limits)
+        : row.daily_posting_limits
+    ),
     contentTopics: normalizeContentTopics(row.content_plans),
     contentPlans: contentPlansFromTopics(normalizeContentTopics(row.content_plans)),
     meetingsViewPasswordHash: row.meetings_view_password_hash ?? null,
@@ -231,6 +238,10 @@ export function mapBillboardFromDb(row: any): Billboard {
     externalId: row.external_id ?? null,
     category: row.category ?? null,
     areaSqm: row.area_sqm != null ? Number(row.area_sqm) : null,
+    locationType:
+      typeof row.location_type === "string" && row.location_type.trim()
+        ? row.location_type.trim()
+        : null,
     status: row.status,
     tags: row.tags ?? [],
     notes: row.notes,
@@ -480,6 +491,10 @@ export function mapCampaignActivityFromDb(row: any): CampaignActivity {
           ],
     description: row.description ?? null,
     isCreative: Boolean(row.is_creative),
+    pressContentType:
+      typeof row.press_content_type === "string" && row.press_content_type.trim()
+        ? row.press_content_type.trim()
+        : null,
     published: row.published ?? false,
     sortOrder: row.sort_order ?? 0,
     createdAt: toIsoString(row.created_at),
@@ -621,6 +636,7 @@ export function mapUserFromDb(
     region: row.region === "north" || row.region === "south" || row.region === "east" || row.region === "west"
       ? row.region
       : null,
+    companyType: normalizeUserCompanyType(row.company_type),
     phone: typeof row.phone === "string" && row.phone.trim() ? row.phone.trim() : null,
     accountManagerName: row.account_manager_name ?? null,
     alternateContactName:

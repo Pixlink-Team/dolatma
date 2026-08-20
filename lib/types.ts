@@ -26,6 +26,17 @@ export type OrgRole = import("./org-roles").OrgRole;
 export type DirectiveAuthorityLevel = import("./directive-authority").DirectiveAuthorityLevel;
 export type SocialPlatform = "instagram" | "x" | "telegram" | "linkedin" | "youtube" | "aparat" | "rubika" | "eitaa" | "soroush" | "bale" | "other";
 export type SocialPostPlatform = SocialPlatform | "site";
+/** Genre of a press (magazine/newspaper) publication. */
+export type PressContentType =
+  | "news"
+  | "news_interview"
+  | "report"
+  | "news_report"
+  | "interview"
+  | "ad"
+  | "advertorial"
+  | "other";
+
 export type ActivityType =
   | "magazine"
   | "newspaper"
@@ -514,6 +525,8 @@ export interface CampaignSettings {
   billboardConfig: BillboardConfig;
   /** Field-based auto scoring rules per content type. */
   scoringRules?: CampaignScoringRules;
+  /** Per user-category daily upload quota. Stored in daily_posting_limits JSONB. */
+  dailyPostingLimits?: import("./posting-limits").DailyPostingLimitsConfig;
   /** Campaign content plan names configured by admin (e.g. مهتاب، سامان). Legacy flat list. */
   contentPlans?: string[];
   /** Hierarchical topics with optional subtopics (موضوع / زیرموضوع). */
@@ -547,6 +560,8 @@ export interface Ownable {
   ownerMinistryName?: string | null;
   ownerOrganizationId?: string | null;
   ownerOrganizationName?: string | null;
+  ownerCompanyType?: import("@/lib/user-company-types").UserCompanyType | null;
+  ownerRegion?: import("@/lib/user-regions").UserRegion | null;
   /** Legacy single topic — prefer planLabels. */
   planLabel?: string | null;
   /** Multiple topic/subtopic tokens (e.g. "مهتاب" or "مهتاب|هفته اول"). */
@@ -626,6 +641,8 @@ export interface Billboard extends Ownable {
   externalId?: string | null;
   category?: string | null;
   areaSqm?: number | null;
+  /** Location class for scoring (highway, boulevard, metro, …). */
+  locationType?: string | null;
   status: ItemStatus;
   tags: string[];
   notes?: string | null;
@@ -815,6 +832,8 @@ export interface AdminUser {
   city?: string | null;
   /** Geographic zone set by admin/client: north/south/east/west. */
   region?: import("./user-regions").UserRegion | null;
+  /** Company category used for posting limits / filters. */
+  companyType?: import("./user-company-types").UserCompanyType | null;
   /** Mobile phone for SMS (optional until SMS provider is configured). */
   phone?: string | null;
   /** Account manager name set by the user in their profile. */
@@ -1390,7 +1409,7 @@ export interface CampaignActivity extends Ownable {
   /** Marked as a creative field action for review and filtering. */
   isCreative: boolean;
   /** Press publication genre/content type when activity is press-related. */
-  pressContentType?: string | null;
+  pressContentType?: PressContentType | string | null;
   published: boolean;
   sortOrder: number;
   createdAt: string;

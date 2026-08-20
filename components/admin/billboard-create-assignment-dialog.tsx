@@ -134,6 +134,7 @@ function emptyValues(): BillboardSectionFormValues {
     axis: "",
     areaSqm: "",
     address: "",
+    locationType: "",
     latitude: 35.6892,
     longitude: 51.389,
     mapCenter: { lat: 35.6892, lng: 51.389 },
@@ -236,6 +237,7 @@ export function BillboardCreateAssignmentDialog({
           axis: editingBillboard.title,
           areaSqm: parseAreaSqmFromBillboard(editingBillboard),
           address: parseAddressFromBillboard(editingBillboard),
+          locationType: editingBillboard.locationType ?? "",
           latitude: editingBillboard.latitude ?? center.lat,
           longitude: editingBillboard.longitude ?? center.lng,
           mapCenter: {
@@ -281,6 +283,7 @@ export function BillboardCreateAssignmentDialog({
         axis: initialValues?.axis?.trim() || "",
         areaSqm: "",
         address: initialValues?.address?.trim() || "",
+        locationType: "",
         latitude: center.lat,
         longitude: center.lng,
         mapCenter: { lat: center.lat, lng: center.lng, revision: Date.now() },
@@ -308,6 +311,11 @@ export function BillboardCreateAssignmentDialog({
   };
 
   const handleSubmit = () => {
+    if (!values.locationType.trim()) {
+      toast.error("نوع محل را انتخاب کنید");
+      return;
+    }
+
     const axisField = fieldByWidget(fields, "axis");
     if ((axisField?.required ?? true) && values.axis.trim().length < 2) {
       toast.error("محور باید حداقل ۲ کاراکتر باشد");
@@ -352,6 +360,7 @@ export function BillboardCreateAssignmentDialog({
       formData.append("axis", values.axis.trim() || "محور");
       formData.append("address", values.address.trim());
       formData.append("area_sqm", values.areaSqm.trim());
+      formData.append("locationType", values.locationType.trim());
       formData.append("latitude", String(values.latitude));
       formData.append("longitude", String(values.longitude));
 

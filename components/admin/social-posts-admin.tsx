@@ -118,7 +118,7 @@ export function SocialPostsAdmin({
   users = [],
   initialSortOrder = "newest",
 }: SocialPostsAdminProps) {
-  const { requestCreate, tutorialModal } = useSectionCreateGate("socialPosts");
+  const { requestCreate, tutorialModal } = useSectionCreateGate("socialPosts", campaignId);
   const router = useRouter();
   const searchParams = useSearchParams();
   const openedFromQueryRef = useRef<string | null>(null);

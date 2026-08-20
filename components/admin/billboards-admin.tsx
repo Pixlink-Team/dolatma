@@ -2,8 +2,10 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   AdminContentFilterBar,
   collectAdminFilterUsers,
@@ -71,7 +73,7 @@ export function BillboardsAdmin({
   users = [],
   contributorProfile = null,
 }: BillboardsAdminProps) {
-  const { requestCreate, tutorialModal } = useSectionCreateGate("billboards");
+  const { requestCreate, tutorialModal } = useSectionCreateGate("billboards", campaignId);
   const router = useRouter();
   const [billboards, setBillboards] = useState(initialBillboards);
   const [formOpen, setFormOpen] = useState(false);
@@ -80,6 +82,7 @@ export function BillboardsAdmin({
   const [contentFilter, setContentFilter] = useState<AdminContentFilterState>(DEFAULT_ADMIN_CONTENT_FILTER);
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const { viewMode, setViewMode } = useAdminViewMode("billboards");
+  const [isLocalizingImages, setIsLocalizingImages] = useState(false);
   const [, startTransition] = useTransition();
 
   const { highlightFields, setHighlightFields, resetDeepLink } = useAdminEditDeepLink({
@@ -157,6 +160,67 @@ export function BillboardsAdmin({
     });
   };
 
+  const handleRemoveExternalDeps = () => {
+    if (isLocalizingImages) return;
+    const confirmed = window.confirm(
+      "همه وابستگی‌های خارجی حذف شوند؟\n\n" +
+        "• تصاویر خارجی دانلود و محلی می‌شوند\n" +
+        "• تگ‌های map/assignment/provider پاک می‌شوند\n" +
+        "• منبع (source) همه بیلبوردها به «دستی» تغییر می‌کند\n" +
+        "• شناسه‌های خارجی حذف می‌شوند"
+    );
+    if (!confirmed) return;
+
+    setIsLocalizingImages(true);
+    startTransition(async () => {
+      try {
+        const res = await fetch("/api/billboard/remove-external-deps", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ campaignId }),
+        });
+        const result = await res.json();
+        if (!res.ok || !result.success) {
+          toast.error(result.error ?? "عملیات ناموفق بود");
+          return;
+        }
+        const {
+          imagesLocalized,
+          tagsCleanedCount,
+          sourceFixedCount,
+          externalIdClearedCount,
+          periodsFixed,
+          alreadyClean,
+        } = result;
+        const changes =
+          imagesLocalized +
+          tagsCleanedCount +
+          sourceFixedCount +
+          externalIdClearedCount +
+          periodsFixed;
+        if (changes === 0) {
+          toast.message("همه بیلبوردها قبلاً مستقل هستند — وابستگی خارجی وجود ندارد.");
+        } else {
+          const parts: string[] = [];
+          if (imagesLocalized > 0) parts.push(`${imagesLocalized} تصویر محلی شد`);
+          if (tagsCleanedCount > 0) parts.push(`${tagsCleanedCount} تگ خارجی پاک شد`);
+          if (sourceFixedCount > 0) parts.push(`${sourceFixedCount} منبع اصلاح شد`);
+          if (externalIdClearedCount > 0)
+            parts.push(`${externalIdClearedCount} شناسه خارجی حذف شد`);
+          if (periodsFixed > 0) parts.push(`${periodsFixed} دوره نمایش اصلاح شد`);
+          toast.success(
+            parts.join(" | ") + (alreadyClean > 0 ? ` — ${alreadyClean} بدون تغییر` : "")
+          );
+        }
+        router.refresh();
+      } catch {
+        toast.error("خطا در حذف وابستگی‌ها");
+      } finally {
+        setIsLocalizingImages(false);
+      }
+    });
+  };
+
   return (
     <div className="space-y-6">
       {tutorialModal}
@@ -168,6 +232,23 @@ export function BillboardsAdmin({
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {isFullAdmin && (
+            <Button
+              type="button"
+              variant="outline"
+              disabled={isLocalizingImages}
+              onClick={handleRemoveExternalDeps}
+            >
+              {isLocalizingImages ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  در حال پاکسازی...
+                </>
+              ) : (
+                "حذف وابستگی خارجی"
+              )}
+            </Button>
+          )}
           <AdminViewModeToggle value={viewMode} onChange={setViewMode} />
         </div>
       </div>

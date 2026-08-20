@@ -85,7 +85,7 @@ export function RawMediaAdmin({
   isFullAdmin = false,
   users = [],
 }: RawMediaAdminProps) {
-  const { requestCreate, tutorialModal } = useSectionCreateGate("rawMedia");
+  const { requestCreate, tutorialModal } = useSectionCreateGate("rawMedia", campaignId);
   const [items, setItems] = useState(initialItems);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);

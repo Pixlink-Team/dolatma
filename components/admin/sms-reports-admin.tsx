@@ -89,7 +89,7 @@ function truncateMessage(text: string, max = 90): string {
 }
 
 export function SmsReportsAdmin({ campaignId, initialReports }: SmsReportsAdminProps) {
-  const { requestCreate, tutorialModal } = useSectionCreateGate("smsReports");
+  const { requestCreate, tutorialModal } = useSectionCreateGate("smsReports", campaignId);
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [rows, setRows] = useState(initialReports);

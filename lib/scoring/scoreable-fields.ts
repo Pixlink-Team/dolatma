@@ -57,6 +57,17 @@ const SOCIAL_CONTENT_TYPE_OPTIONS: ScoreableFieldOption[] = [
   { value: "audio", label: "صوت" },
 ];
 
+const PRESS_CONTENT_TYPE_OPTIONS: ScoreableFieldOption[] = [
+  { value: "news", label: "خبر" },
+  { value: "news_interview", label: "مصاحبه خبری" },
+  { value: "report", label: "گزارش" },
+  { value: "news_report", label: "گزارش خبری" },
+  { value: "interview", label: "مصاحبه" },
+  { value: "ad", label: "آگهی" },
+  { value: "advertorial", label: "رپرتاژ آگهی" },
+  { value: "other", label: "سایر" },
+];
+
 const BILLBOARD_CATEGORY_OPTIONS: ScoreableFieldOption[] = BILLBOARD_CATEGORIES.map((key) => ({
   value: key,
   label: billboardCategoryLabels[key],
@@ -82,6 +93,21 @@ const SCOREABLE_FIELDS: Record<ScoreableContentType, ScoreableFieldDef[]> = {
       options: BILLBOARD_CATEGORY_OPTIONS,
     },
     { key: "areaSqm", label: "متراژ (متر مربع)", valueType: "number", kinds: ["filled", "range"] },
+    {
+      key: "locationType",
+      label: "نوع محل",
+      valueType: "select",
+      kinds: ["filled", "equals"],
+      options: [
+        { value: "highway", label: "بزرگراه" },
+        { value: "boulevard", label: "بلوار" },
+        { value: "main_street", label: "خیابان اصلی" },
+        { value: "square", label: "میدان" },
+        { value: "metro", label: "مترو" },
+        { value: "bus_station", label: "ایستگاه اتوبوس" },
+        { value: "other", label: "سایر" },
+      ],
+    },
     { key: "thumbnailUrl", label: "تصویر بندانگشتی", valueType: "media", kinds: ["filled"] },
     { key: "imageUrl", label: "تصویر اصلی", valueType: "media", kinds: ["filled"] },
     { key: "tags", label: "برچسب‌ها", valueType: "text", kinds: ["filled"] },
@@ -169,6 +195,13 @@ const SCOREABLE_FIELDS: Record<ScoreableContentType, ScoreableFieldDef[]> = {
       valueType: "select",
       kinds: ["filled", "equals"],
       options: ACTIVITY_TYPE_OPTIONS,
+    },
+    {
+      key: "pressContentType",
+      label: "نوع محتوا (مطبوعات)",
+      valueType: "select",
+      kinds: ["filled", "equals"],
+      options: PRESS_CONTENT_TYPE_OPTIONS,
     },
     { key: "activityDate", label: "تاریخ", valueType: "date", kinds: ["filled", "range"] },
     { key: "location", label: "مکان", valueType: "text", kinds: ["filled"] },

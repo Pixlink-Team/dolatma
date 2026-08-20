@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { ImageIcon, Upload } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,6 +30,10 @@ import {
   billboardCategoryLabels,
   type BillboardCategory,
 } from "@/lib/billboard-categories";
+import {
+  BILLBOARD_LOCATION_TYPES,
+  isBillboardLocationTypeKey,
+} from "@/lib/billboard-location-types";
 import { CONTENT_TITLE_MAX_LENGTH } from "@/lib/content-constraints";
 import type { ContentTopic } from "@/lib/content-topics";
 import type { ContentFormField, ContentFormSectionKey } from "@/lib/types";
@@ -52,6 +57,7 @@ export interface BillboardSectionFormValues {
   axis: string;
   areaSqm: string;
   address: string;
+  locationType: string;
   latitude: number;
   longitude: number;
   mapCenter: { lat: number; lng: number; revision?: number } | null;
@@ -154,6 +160,123 @@ export type ContentSectionFormRendererProps =
   | PosterRendererProps
   | BillboardRendererProps
   | GenericRendererProps;
+
+function BillboardMapField({
+  label,
+  required,
+  values,
+  onChange,
+  readOnly,
+}: {
+  label: string;
+  required?: boolean;
+  values: BillboardSectionFormValues;
+  onChange: (patch: Partial<BillboardSectionFormValues>) => void;
+  readOnly?: boolean;
+}) {
+  const [locationTypeFromMap, setLocationTypeFromMap] = useState(false);
+  const [detectingLocationType, setDetectingLocationType] = useState(false);
+  const locationDetectTimerRef = useRef<number | null>(null);
+  const locationDetectAbortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (locationDetectTimerRef.current) window.clearTimeout(locationDetectTimerRef.current);
+      locationDetectAbortRef.current?.abort();
+    };
+  }, []);
+
+  const detectLocationTypeFromMap = async (pick: {
+    latitude: number;
+    longitude: number;
+  }) => {
+    locationDetectAbortRef.current?.abort();
+    const controller = new AbortController();
+    locationDetectAbortRef.current = controller;
+    setDetectingLocationType(true);
+    try {
+      const response = await fetch(
+        `/api/map/location-type?lat=${encodeURIComponent(String(pick.latitude))}&lng=${encodeURIComponent(String(pick.longitude))}`,
+        { signal: controller.signal }
+      );
+      const data = (await response.json()) as { locationType?: string | null };
+      if (controller.signal.aborted) return;
+      if (typeof data.locationType === "string" && isBillboardLocationTypeKey(data.locationType)) {
+        onChange({ locationType: data.locationType });
+        setLocationTypeFromMap(true);
+      }
+    } catch {
+      // aborted or network — user can still pick manually
+    } finally {
+      if (!controller.signal.aborted) setDetectingLocationType(false);
+    }
+  };
+
+  const handleUserMapPick = (pick: { latitude: number; longitude: number }) => {
+    if (locationDetectTimerRef.current) window.clearTimeout(locationDetectTimerRef.current);
+    locationDetectTimerRef.current = window.setTimeout(() => {
+      void detectLocationTypeFromMap(pick);
+    }, 400);
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="space-y-2">
+        <Label>نوع محل *</Label>
+        <Select
+          value={values.locationType || undefined}
+          onValueChange={(value) => {
+            onChange({ locationType: value });
+            setLocationTypeFromMap(false);
+          }}
+          disabled={readOnly}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="انتخاب محل" />
+          </SelectTrigger>
+          <SelectContent>
+            {BILLBOARD_LOCATION_TYPES.map((item) => (
+              <SelectItem key={item.key} value={item.key}>
+                {item.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {detectingLocationType ? (
+          <p className="text-xs text-muted-foreground">در حال خواندن نوع محل از نقشه...</p>
+        ) : locationTypeFromMap ? (
+          <p className="text-xs text-muted-foreground">
+            از نقشه تشخیص داده شد؛ در صورت نیاز می‌توانید عوض کنید.
+          </p>
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            با کلیک روی نقشه پر می‌شود، یا خودتان انتخاب کنید.
+          </p>
+        )}
+      </div>
+
+      <div className="space-y-2">
+        <Label>
+          {label}
+          {required ? <span className="text-destructive mr-1">*</span> : null}
+        </Label>
+        <BillboardLocationMapPicker
+          latitude={values.latitude}
+          longitude={values.longitude}
+          mapCenter={values.mapCenter}
+          onChange={(coords) =>
+            onChange({
+              latitude: coords.latitude,
+              longitude: coords.longitude,
+            })
+          }
+          onUserPick={readOnly ? undefined : handleUserMapPick}
+        />
+      </div>
+    </div>
+  );
+}
+
 function CustomFieldInput({
   field,
   value,
@@ -536,23 +659,14 @@ export function ContentSectionFormRenderer(props: ContentSectionFormRendererProp
             );
           case "map":
             return (
-              <div key={field.id} className="space-y-2">
-                <Label>
-                  {field.label}
-                  {field.required ? <span className="text-destructive mr-1">*</span> : null}
-                </Label>
-                <BillboardLocationMapPicker
-                  latitude={values.latitude}
-                  longitude={values.longitude}
-                  mapCenter={values.mapCenter}
-                  onChange={(coords) =>
-                    onChange({
-                      latitude: coords.latitude,
-                      longitude: coords.longitude,
-                    })
-                  }
-                />
-              </div>
+              <BillboardMapField
+                key={field.id}
+                label={field.label}
+                required={field.required}
+                values={values}
+                onChange={onChange}
+                readOnly={readOnly}
+              />
             );
           case "notes":
             if (!showAdminNotes) return null;
@@ -844,6 +958,7 @@ export function emptyBillboardFormValues(): BillboardSectionFormValues {
     axis: "",
     areaSqm: "",
     address: "",
+    locationType: "",
     latitude: 35.6892,
     longitude: 51.389,
     mapCenter: { lat: 35.6892, lng: 51.389 },

@@ -24,6 +24,14 @@ const persianDateTimeFormatter = new Intl.DateTimeFormat("fa-IR-u-ca-persian", {
   minute: "2-digit",
 });
 
+
+const tehranHourMinuteFormatter = new Intl.DateTimeFormat("fa-IR", {
+  timeZone: "Asia/Tehran",
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false,
+});
+
 const persianDateShortFormatter = new Intl.DateTimeFormat("fa-IR-u-ca-persian", {
   month: "short",
   day: "numeric",
@@ -72,6 +80,17 @@ export function formatPersianDateTime(dateStr: string): string {
   } catch {
     return "—";
   }
+}
+
+
+/** HH:mm clock in Asia/Tehran with Persian digits. */
+export function formatTehranClock(iso: string): string {
+  if (!iso?.trim()) return "-";
+  const parsed = new Date(iso);
+  if (!isValidDate(parsed)) return "-";
+  return tehranHourMinuteFormatter
+    .format(parsed)
+    .replace(/\d/g, (digit) => "۰۱۲۳۴۵۶۷۸۹"[Number(digit)] ?? digit);
 }
 
 export function formatDuration(seconds: number): string {

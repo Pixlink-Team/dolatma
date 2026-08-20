@@ -5,6 +5,10 @@ import type {
   ProvinceLeaderboardEntry,
   UserLeaderboardEntry,
 } from "@/lib/city-leaderboard";
+import type {
+  CompanyExcelSource,
+  CompanySupervisionItem,
+} from "@/lib/company-supervision";
 
 /** Ranking dimension: device/subtree (ministry/organization) or contributor. */
 export type PerformanceExcelViewMode = "ministry" | "organization" | "user" | "rating" | "province";
@@ -142,6 +146,75 @@ export function downloadPerformanceExcel(
   const date = new Date().toISOString().slice(0, 10);
   anchor.href = url;
   anchor.download = `performance-${slug}-${date}.xlsx`;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}
+
+/** Company supervision detail export (summary + item rows). */
+export function buildCompanyPerformanceExcelBuffer(input: {
+  entry: UserLeaderboardEntry;
+  items: CompanySupervisionItem[];
+  excelSource?: CompanyExcelSource;
+  campaignTitle?: string;
+}): Uint8Array {
+  const { entry, items } = input;
+  const summary = [
+    {
+      "کاربر": entry.userName,
+      "وزارتخانه": entry.ministry,
+      "استان": entry.province,
+      "امتیاز فعالیت": entry.score,
+      "امتیاز محتوا": entry.ratingScore,
+      "کل بارگذاری": entry.totalUploads,
+      "تعداد اقلام": items.length,
+    },
+  ];
+  const detail = items.map((item, index) => ({
+    ردیف: index + 1,
+    نوع: item.typeLabel,
+    عنوان: item.title,
+    امتیاز: item.score ?? "",
+    "امتیاز خودکار": item.autoScore ?? "",
+    وضعیت: item.reviewStatus ?? "",
+    تاریخ: item.createdAt ?? "",
+  }));
+
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(summary), "خلاصه");
+  XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(detail), "اقلام");
+  if (input.campaignTitle) {
+    XLSX.utils.book_append_sheet(
+      workbook,
+      XLSX.utils.aoa_to_sheet([
+        ["کمپین", input.campaignTitle],
+        ["تاریخ گزارش", new Date().toISOString().slice(0, 10)],
+      ]),
+      "اطلاعات"
+    );
+  }
+  return XLSX.write(workbook, { type: "array", bookType: "xlsx" }) as Uint8Array;
+}
+
+export function downloadCompanyPerformanceExcel(input: {
+  entry: UserLeaderboardEntry;
+  items: CompanySupervisionItem[];
+  excelSource?: CompanyExcelSource;
+  campaignTitle?: string;
+  campaignSlug?: string;
+}) {
+  const bytes = buildCompanyPerformanceExcelBuffer(input);
+  const blob = new Blob([Uint8Array.from(bytes)], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  const slug = input.campaignSlug?.trim() || "campaign";
+  const safeName = input.entry.userName.replace(/[\\/:*?"<>|]+/g, "-").slice(0, 40) || "company";
+  const date = new Date().toISOString().slice(0, 10);
+  anchor.href = url;
+  anchor.download = `company-${safeName}-${slug}-${date}.xlsx`;
   document.body.appendChild(anchor);
   anchor.click();
   anchor.remove();

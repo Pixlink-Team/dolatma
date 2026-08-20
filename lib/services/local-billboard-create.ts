@@ -27,6 +27,7 @@ export interface CreateLocalBillboardInput {
   latitude: number;
   longitude: number;
   areaSqm?: number | null;
+  locationType?: string | null;
   province?: string | null;
   city?: string | null;
   category?: BillboardCategory | string | null;
@@ -104,6 +105,17 @@ export async function saveLocalBillboard(params: CreateLocalBillboardInput): Pro
     throw new Error("حداقل یک دوره نمایش الزامی است");
   }
 
+  const { denyIfCreateQuotaExceeded } = await import("@/lib/scoring/daily-cap-and-duplicates");
+  const quota = await denyIfCreateQuotaExceeded({
+    campaignId: params.campaignId,
+    ownerUserId: params.ownerUserId ?? null,
+    contentId: params.billboardId ?? null,
+    table: "billboards",
+  });
+  if (quota) {
+    throw new Error(quota.error);
+  }
+
   const savedPeriods: Array<{
     id?: string;
     title?: string | null;
@@ -162,6 +174,7 @@ export async function saveLocalBillboard(params: CreateLocalBillboardInput): Pro
     longitude: params.longitude,
     category: matchBillboardCategoryKey(params.category) ?? params.category ?? null,
     areaSqm: params.areaSqm ?? null,
+    locationType: params.locationType ?? null,
     source: "manual",
     status: (params.status as "draft" | "published" | "completed") ?? "draft",
     tags,

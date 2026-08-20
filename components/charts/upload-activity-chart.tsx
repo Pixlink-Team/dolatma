@@ -16,9 +16,10 @@ import { formatPersianDateShort, formatPersianNumber } from "@/lib/utils";
 
 interface UploadActivityChartProps {
   stats: UploadActivitySummary;
+  onTodayClick?: () => void;
 }
 
-export function UploadActivityChart({ stats }: UploadActivityChartProps) {
+export function UploadActivityChart({ stats, onTodayClick }: UploadActivityChartProps) {
   const chartTheme = useChartTheme();
   const chartData = stats.series.map((point) => ({
     ...point,
@@ -28,7 +29,7 @@ export function UploadActivityChart({ stats }: UploadActivityChartProps) {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-3 gap-3">
-        <Card className="py-3">
+        <Card className={`py-3${onTodayClick ? " cursor-pointer" : ""}`} onClick={onTodayClick}>
           <CardContent className="px-4 py-0">
             <p className="text-xs text-muted-foreground">امروز</p>
             <p className="text-2xl font-bold">{formatPersianNumber(stats.today)}</p>

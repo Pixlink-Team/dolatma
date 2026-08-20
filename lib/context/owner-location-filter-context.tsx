@@ -53,6 +53,7 @@ interface OwnerLocationFilterProviderProps {
   users?: OwnerFilterOption[];
   locations?: CampaignOwnerLocations;
   plans?: string[];
+  initialFilter?: Partial<OwnerLocationFilter>;
 }
 
 function userMatchesFilters(
@@ -76,8 +77,12 @@ export function OwnerLocationFilterProvider({
   users = [],
   locations = { provinces: [], citiesByProvince: {}, ministries: [], organizations: [] },
   plans = [],
+  initialFilter,
 }: OwnerLocationFilterProviderProps) {
-  const [filter, setFilter] = useState<OwnerLocationFilter>(DEFAULT_OWNER_LOCATION_FILTER);
+  const [filter, setFilter] = useState<OwnerLocationFilter>({
+    ...DEFAULT_OWNER_LOCATION_FILTER,
+    ...initialFilter,
+  });
 
   const provinces = useMemo(() => locations.provinces, [locations.provinces]);
   const ministries = useMemo(() => locations.ministries, [locations.ministries]);

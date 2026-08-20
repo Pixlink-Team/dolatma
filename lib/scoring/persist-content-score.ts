@@ -1,4 +1,5 @@
 import { getSql } from "@/lib/db/client";
+import { isReviewableContentType } from "@/lib/content-review/types";
 import {
   mapBillboardFromDb,
   mapBroadcastReportFromDb,
@@ -11,11 +12,13 @@ import {
   mapSocialPostFromDb,
   mapVideoFromDb,
 } from "@/lib/db/mappers";
+import { pgGetContentReview } from "@/lib/db/content-review-repository";
 import {
   computeContentScore,
-  sumFinalScore,
+  computeOfficialScore,
 } from "@/lib/scoring/compute-content-score";
 import { getRulesForContentType } from "@/lib/scoring/normalize-scoring-rules";
+import { SCORE_TABLE_BY_TYPE } from "@/lib/scoring/score-tables";
 import type {
   CampaignScoringRules,
   ScoreableContentType,
@@ -23,18 +26,7 @@ import type {
 } from "@/lib/types";
 import { isPostgresConfigured } from "@/lib/utils";
 
-export const SCORE_TABLE_BY_TYPE: Record<ScoreableContentType, string> = {
-  billboard: "billboards",
-  poster: "posters",
-  video: "videos",
-  file: "campaign_files",
-  raw_media: "raw_media_uploads",
-  social_post: "social_media_posts",
-  site_publication: "social_media_posts",
-  activity: "campaign_activities",
-  broadcast: "broadcast_reports",
-  meeting: "campaign_meetings",
-};
+export { SCORE_TABLE_BY_TYPE } from "@/lib/scoring/score-tables";
 
 const ALL_SCOREABLE_TYPES: ScoreableContentType[] = [
   "billboard",
@@ -207,6 +199,26 @@ function readManualScore(item: Record<string, unknown>): number {
   return 0;
 }
 
+async function resolveReviewState(
+  contentType: ScoreableContentType,
+  campaignId: string,
+  contentId: string
+): Promise<{ requiresApproval: boolean; approved: boolean; everRejected: boolean }> {
+  if (!isReviewableContentType(contentType)) {
+    return { requiresApproval: false, approved: true, everRejected: false };
+  }
+  const review = await pgGetContentReview({
+    campaignId,
+    contentType,
+    contentId,
+  });
+  return {
+    requiresApproval: true,
+    approved: review?.status === "approved",
+    everRejected: Boolean(review?.everRejected),
+  };
+}
+
 export async function applyAutoScoreToItem(input: {
   campaignId: string;
   contentType: ScoreableContentType;
@@ -214,6 +226,10 @@ export async function applyAutoScoreToItem(input: {
   /** When true, wipe manual bonus (used after rule apply). */
   resetManual?: boolean;
   scoringRules?: CampaignScoringRules;
+  /** Force official score as if approved (used right after approve). */
+  forceApproved?: boolean;
+  /** Clear official score (used on reject). */
+  clearOfficial?: boolean;
 }): Promise<{
   success: boolean;
   autoScore?: number;
@@ -235,7 +251,24 @@ export async function applyAutoScoreToItem(input: {
 
   const { autoScore } = computeContentScore(input.contentType, item, rules);
   const manualScore = input.resetManual ? 0 : readManualScore(item);
-  const finalScore = sumFinalScore(autoScore, manualScore);
+
+  let finalScore: number;
+  if (input.clearOfficial) {
+    finalScore = 0;
+  } else {
+    const reviewState = await resolveReviewState(
+      input.contentType,
+      input.campaignId,
+      input.contentId
+    );
+    finalScore = computeOfficialScore({
+      autoScore,
+      manualScore,
+      everRejected: reviewState.everRejected,
+      approved: input.forceApproved || reviewState.approved,
+      requiresApproval: reviewState.requiresApproval,
+    });
+  }
 
   await updateScoreColumns(
     input.contentType,
@@ -408,7 +441,20 @@ export async function setManualScore(input: {
   const { autoScore } = computeContentScore(input.contentType, item, rules);
   const manualScore =
     input.manualScore == null || !Number.isFinite(input.manualScore) ? 0 : input.manualScore;
-  const finalScore = sumFinalScore(autoScore, manualScore);
+
+  item.manualScore = manualScore;
+  const reviewState = await resolveReviewState(
+    input.contentType,
+    input.campaignId,
+    input.contentId
+  );
+  const finalScore = computeOfficialScore({
+    autoScore,
+    manualScore,
+    everRejected: reviewState.everRejected,
+    approved: reviewState.approved,
+    requiresApproval: reviewState.requiresApproval,
+  });
 
   await updateScoreColumns(
     input.contentType,
@@ -420,4 +466,53 @@ export async function setManualScore(input: {
   );
 
   return { success: true, autoScore, manualScore, score: finalScore };
+}
+
+
+/** On reject: wipe official score so pending review does not count; keep autoScore. */
+export async function clearOfficialScoreOnReject(input: {
+  campaignId: string;
+  contentType: ScoreableContentType | string;
+  contentId: string;
+}): Promise<{ success: boolean; error?: string }> {
+  if (!isPostgresConfigured()) return { success: true };
+  const contentType = input.contentType as ScoreableContentType;
+  if (!(contentType in SCORE_TABLE_BY_TYPE)) return { success: true };
+  try {
+    const result = await applyAutoScoreToItem({
+      campaignId: input.campaignId,
+      contentType,
+      contentId: input.contentId,
+      resetManual: false,
+      clearOfficial: true,
+    });
+    return result.success
+      ? { success: true }
+      : { success: false, error: result.error };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "clear score failed",
+    };
+  }
+}
+
+/** On approve: recompute auto score and persist as official. */
+export async function finalizeOfficialScore(input: {
+  campaignId: string;
+  contentType: ScoreableContentType | string;
+  contentId: string;
+}): Promise<{ success: boolean; error?: string }> {
+  const contentType = input.contentType as ScoreableContentType;
+  if (!(contentType in SCORE_TABLE_BY_TYPE)) return { success: true };
+  const result = await applyAutoScoreToItem({
+    campaignId: input.campaignId,
+    contentType,
+    contentId: input.contentId,
+    resetManual: false,
+    forceApproved: true,
+  });
+  return result.success
+    ? { success: true }
+    : { success: false, error: result.error };
 }
