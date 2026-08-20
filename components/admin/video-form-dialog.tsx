@@ -43,7 +43,7 @@ interface VideoFormDialogProps {
 }
 
 const editorDialogClass =
-  "!flex min-h-0 max-h-[92vh] max-w-2xl flex-col gap-0 overflow-hidden p-0 !top-4 !translate-x-[-50%] !translate-y-0 sm:!top-6";
+  "!flex min-h-0 max-h-[92vh] max-w-2xl flex-col gap-0 overflow-hidden rounded-xl p-0 !top-4 !translate-x-[-50%] !translate-y-0 sm:!top-6";
 
 export function VideoFormDialog({
   open,
@@ -119,8 +119,8 @@ export function VideoFormDialog({
             {thumbnailUrl ? " (کاور از تصویر بسته پر شده است)" : ""}.
           </DialogDescription>
         </DialogHeader>
-        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden px-6 pb-4 pt-4">
-          {bulkTypeSwitcher}
+        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden pb-4 pt-4">
+          {bulkTypeSwitcher ? <div className="px-6">{bulkTypeSwitcher}</div> : null}
           <div className="min-h-0 flex-1 overflow-hidden">
             <AdminVideoEditor
               video={video}
