@@ -107,7 +107,6 @@ const allNavItems: {
   { href: "/admin/best-practices", label: "بهترین اقدامات", icon: Award, permissionKey: "bestPractices" },
   { href: RETURNED_CONTENT_HREF, label: "محتواهای برگشتی", icon: ClipboardCheck, alwaysVisible: true },
   { href: "/admin/president", label: "صفحه رییس‌جمهور", icon: Radar, adminOrClientOnly: true },
-  { href: "/admin/profile", label: "پروفایل من", icon: UserCircle },
   { href: "/admin/my-performance", label: "گزارش عملکرد", icon: Medal, alwaysVisible: true },
   { href: "/admin/settings", label: "تنظیمات راستا", icon: Settings, permissionKey: "campaignSettings", adminOrClientOnly: true },
   { href: "/admin/capacity-map", label: "دارایی‌های دیجیتال و نقشه ظرفیت", icon: Map, adminOrClientOnly: true },
@@ -149,6 +148,8 @@ const allNavItems: {
   { href: "/admin/backups", label: "پشتیبان‌گیری", icon: Archive, adminOnly: true },
   { href: "/admin/reported-problems", label: "مشکلات ثبت‌شده", icon: TriangleAlert, adminOnly: true },
   { href: "/admin/audit", label: "رصد کاربران", icon: ScrollText, adminOnly: true },
+  // Keep last in «تنظیمات و مدیریت» so it does not sit above operational links.
+  { href: "/admin/profile", label: "پروفایل من", icon: UserCircle },
 ];
 
 const MEDIA_COMMAND_ROOT = "/admin/media-command";

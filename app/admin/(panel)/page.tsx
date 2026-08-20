@@ -35,7 +35,7 @@ import { evaluateDeviceOnboarding } from "@/lib/onboarding/progress";
 import type { OnboardingProgress } from "@/lib/onboarding/types";
 import { withFileAccessTokensDeep } from "@/lib/uploads";
 import { getUserRoleDisplayLabel, isOrgUserRole } from "@/lib/user-roles";
-import { cn, formatPersianNumber, adminHref, isPostgresConfigured } from "@/lib/utils";
+import { formatPersianNumber, adminHref, isPostgresConfigured } from "@/lib/utils";
 
 const PERMISSION_TO_CONTENT_TYPE: Partial<
   Record<ContributorPermissionKey, EditSuggestionContentType>
@@ -238,64 +238,39 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
         inboxDirectives={inboxDirectives}
       />
 
-      <div className="grid gap-4 lg:grid-cols-12 lg:items-start">
-        {session ? (
-          <div className="lg:col-span-4 xl:col-span-3 lg:sticky lg:top-4">
-            <DashboardUserCard
-              name={session.name}
-              email={session.email}
-              roleLabel={getUserRoleDisplayLabel({
-                role: session.role,
-                orgRole: session.orgRole,
-              })}
-              campaignTitle={data.settings.title}
-              campaignId={campaignId}
-              subtitle={
-                canManageAll ? undefined : "نمای شخصی محتوا و وضعیت تکمیل بخش‌ها"
-              }
-            />
-          </div>
-        ) : null}
-
-        <div
-          className={cn(
-            "min-w-0 space-y-3",
-            session ? "lg:col-span-8 xl:col-span-9" : "lg:col-span-12"
-          )}
-        >
-          {stats.length > 0 ? (
-            <>
-              <div className="flex flex-wrap items-end justify-between gap-3">
-                <div>
-                  <h2 className="text-base font-semibold sm:text-lg">وضعیت بخش‌ها</h2>
-                  <p className="text-xs text-muted-foreground sm:text-sm">
-                    دسته‌بندی‌شده؛ ناقص‌ها در هر گروه بالاتر دیده می‌شوند.
-                  </p>
-                </div>
-                <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                  <span className="rounded-full bg-emerald-500/15 px-2 py-1 text-emerald-700">
-                    کامل
-                  </span>
-                  <span className="rounded-full bg-amber-400/20 px-2 py-1 text-amber-800">
-                    ناقص جزئی
-                  </span>
-                  <span className="rounded-full bg-red-500/15 px-2 py-1 text-red-700">
-                    ناقص
-                  </span>
-                </div>
+      <div className="min-w-0 space-y-3">
+        {stats.length > 0 ? (
+          <>
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <h2 className="text-base font-semibold sm:text-lg">وضعیت بخش‌ها</h2>
+                <p className="text-xs text-muted-foreground sm:text-sm">
+                  دسته‌بندی‌شده؛ ناقص‌ها در هر گروه بالاتر دیده می‌شوند.
+                </p>
               </div>
-              <DashboardCompletenessCards cards={stats} />
-            </>
-          ) : (
-            <Card>
-              <CardContent className="p-6 text-sm text-muted-foreground">
-                {canManageAll
-                  ? "هیچ بخشی برای این راستا فعال نیست. از تنظیمات راستا بخش‌های مورد نظر را فعال کنید."
-                  : "هیچ بخشی برای شما در این راستا فعال نیست. با مدیر تماس بگیرید."}
-              </CardContent>
-            </Card>
-          )}
-        </div>
+              <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                <span className="rounded-full bg-emerald-500/15 px-2 py-1 text-emerald-700">
+                  کامل
+                </span>
+                <span className="rounded-full bg-amber-400/20 px-2 py-1 text-amber-800">
+                  ناقص جزئی
+                </span>
+                <span className="rounded-full bg-red-500/15 px-2 py-1 text-red-700">
+                  ناقص
+                </span>
+              </div>
+            </div>
+            <DashboardCompletenessCards cards={stats} />
+          </>
+        ) : (
+          <Card>
+            <CardContent className="p-6 text-sm text-muted-foreground">
+              {canManageAll
+                ? "هیچ بخشی برای این راستا فعال نیست. از تنظیمات راستا بخش‌های مورد نظر را فعال کنید."
+                : "هیچ بخشی برای شما در این راستا فعال نیست. با مدیر تماس بگیرید."}
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       <EditSuggestionsPanel
@@ -324,6 +299,24 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
           posterCategories={data.posterCategories ?? []}
           videoCategories={data.videoCategories ?? []}
         />
+      ) : null}
+
+      {session ? (
+        <div className="max-w-md">
+          <DashboardUserCard
+            name={session.name}
+            email={session.email}
+            roleLabel={getUserRoleDisplayLabel({
+              role: session.role,
+              orgRole: session.orgRole,
+            })}
+            campaignTitle={data.settings.title}
+            campaignId={campaignId}
+            subtitle={
+              canManageAll ? undefined : "نمای شخصی محتوا و وضعیت تکمیل بخش‌ها"
+            }
+          />
+        </div>
       ) : null}
     </div>
   );
