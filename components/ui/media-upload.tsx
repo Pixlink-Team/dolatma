@@ -23,7 +23,7 @@ import {
   type OptimizeImageOptions,
 } from "@/lib/client/optimize-image";
 import { forceClientReauth, redirectIfSessionExpired } from "@/lib/auth/client-reauth";
-import { Loader2, Trash2, Upload } from "lucide-react";
+import { ImageIcon, Loader2, Trash2, Upload } from "lucide-react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -313,8 +313,72 @@ export function MediaUpload({
   const isLocalUploadedImage =
     kind === "image" && Boolean(value) && isLocalUploadedFileUrl(value);
   const hideImageLinkField = isLocalUploadedImage && !showLinkEditor;
-  const showInlineInput = showLinkInput && !dropzoneContent;
-  const isCardDropzone = Boolean(dropzoneContent);
+  // Single card: preview + drag/select in one area (poster-style), unless custom dropzoneContent.
+  const useBuiltInImageCard = kind === "image" && dropzone && !dropzoneContent;
+  const showInlineInput = showLinkInput && !dropzoneContent && !useBuiltInImageCard;
+  const isCardDropzone = Boolean(dropzoneContent) || useBuiltInImageCard;
+  const showSeparateImagePreview = showPreview && kind === "image" && !isCardDropzone;
+
+  const builtInImageCard = (
+    <div className="relative min-h-40 w-full overflow-hidden rounded-[10px] bg-muted sm:min-h-48">
+      {value ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={value} alt="" className="h-full min-h-40 w-full object-contain sm:min-h-48" />
+      ) : (
+        <div className="flex min-h-40 flex-col items-center justify-center gap-2 px-3 py-8 text-center text-muted-foreground sm:min-h-48">
+          <ImageIcon className="h-10 w-10" />
+          <span className="text-sm">تصویر را بکشید و رها کنید یا انتخاب کنید</span>
+          <span className="inline-flex items-center gap-1.5 rounded-md border bg-background px-3 py-1.5 text-xs font-medium text-foreground shadow-sm">
+            <Upload className="h-3.5 w-3.5" />
+            انتخاب تصویر
+          </span>
+        </div>
+      )}
+      {value ? (
+        <div
+          className="absolute inset-x-0 bottom-0 flex flex-wrap items-center justify-center gap-1 bg-gradient-to-t from-black/70 to-transparent px-2 pb-2 pt-8"
+          onClick={(event) => event.stopPropagation()}
+          onKeyDown={(event) => event.stopPropagation()}
+        >
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            className="h-8"
+            disabled={uploading}
+            onClick={() => inputRef.current?.click()}
+          >
+            {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+            تعویض
+          </Button>
+          {showLinkInput ? (
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              className="h-8"
+              onClick={() => setShowLinkEditor((current) => !current)}
+            >
+              {showLinkEditor ? "پنهان لینک" : "لینک"}
+            </Button>
+          ) : null}
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            className="h-8 text-destructive"
+            onClick={() => {
+              onChange("");
+              setShowLinkEditor(false);
+            }}
+          >
+            <Trash2 className="h-4 w-4" />
+            حذف
+          </Button>
+        </div>
+      ) : null}
+    </div>
+  );
 
   return (
     <div className="space-y-2 text-right" dir="rtl">
@@ -357,9 +421,9 @@ export function MediaUpload({
           !dropzone && "border-transparent p-0"
         )}
       >
-        {dropzoneContent ? (
+        {isCardDropzone ? (
           <div className="relative w-full">
-            {dropzoneContent}
+            {dropzoneContent ?? builtInImageCard}
             {(uploading || generatingCover) && (
               <div className="absolute inset-0 flex items-center justify-center bg-background/60">
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -557,6 +621,16 @@ export function MediaUpload({
         )}
       </div>
 
+      {useBuiltInImageCard && showLinkInput && !fileOnly && (!value || showLinkEditor) ? (
+        <Input
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          dir="ltr"
+          placeholder="یا لینک تصویر را وارد کنید"
+          className="font-mono text-xs"
+        />
+      ) : null}
+
       <input
         ref={inputRef}
         type="file"
@@ -568,7 +642,7 @@ export function MediaUpload({
         }}
       />
 
-      {showPreview && kind === "image" && (
+      {showSeparateImagePreview && (
         <div className="relative h-24 w-full overflow-hidden rounded-lg border bg-muted">
           {value ? (
             // eslint-disable-next-line @next/next/no-img-element
