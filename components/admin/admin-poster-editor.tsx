@@ -6,6 +6,16 @@ import { Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   ContentSectionFormRenderer,
   type PosterSectionFormValues,
 } from "@/components/admin/content-section-form-renderer";
@@ -57,6 +67,7 @@ export function AdminPosterEditor({
   const router = useRouter();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const [isPending, startTransition] = useTransition();
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [fields, setFields] = useState<ContentFormField[]>(() =>
     defaultContentFormFields("posters")
   );
@@ -215,46 +226,45 @@ export function AdminPosterEditor({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div
-        ref={scrollAreaRef}
-        className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-y-contain px-6"
-      >
-        {!fieldsLoaded ? (
-          <p className="text-sm text-muted-foreground">در حال بارگذاری فرم...</p>
-        ) : (
-          <div className="min-w-0">
-            <ContentSectionFormRenderer
-              sectionKey="posters"
-              fields={fields}
-              values={values}
-              onChange={patchValues}
-              contentTopics={contentTopics}
-              contentPlans={contentPlans}
-              campaignId={poster.campaignId}
-              contentId={poster.id}
-              canScore={canScore}
-              isNew={isNew}
-              highlightTitle={highlightTitle}
-              highlightDescription={highlightDescription}
-              highlightMedia={highlightMedia}
-            />
-            {highlightMedia ? (
-              <p className="mt-2 text-xs text-destructive">
-                تصویر پوستر هنوز آپلود نشده است.
-              </p>
-            ) : null}
-            {highlightTitle ? (
-              <p className="mt-2 text-xs text-destructive">
-                عنوان پیش‌فرض است؛ یک عنوان اختصاصی وارد کنید.
-              </p>
-            ) : null}
-            {highlightDescription ? (
-              <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">
-                توضیحات خالی است؛ بهتر است تکمیل شود.
-              </p>
-            ) : null}
-          </div>
-        )}
+      <div ref={scrollAreaRef} className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain">
+        <div className="space-y-4 px-6">
+          {!fieldsLoaded ? (
+            <p className="text-sm text-muted-foreground">در حال بارگذاری فرم...</p>
+          ) : (
+            <div className="min-w-0">
+              <ContentSectionFormRenderer
+                sectionKey="posters"
+                fields={fields}
+                values={values}
+                onChange={patchValues}
+                contentTopics={contentTopics}
+                contentPlans={contentPlans}
+                campaignId={poster.campaignId}
+                contentId={poster.id}
+                canScore={canScore}
+                isNew={isNew}
+                highlightTitle={highlightTitle}
+                highlightDescription={highlightDescription}
+                highlightMedia={highlightMedia}
+              />
+              {highlightMedia ? (
+                <p className="mt-2 text-xs text-destructive">
+                  تصویر پوستر هنوز آپلود نشده است.
+                </p>
+              ) : null}
+              {highlightTitle ? (
+                <p className="mt-2 text-xs text-destructive">
+                  عنوان پیش‌فرض است؛ یک عنوان اختصاصی وارد کنید.
+                </p>
+              ) : null}
+              {highlightDescription ? (
+                <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">
+                  توضیحات خالی است؛ بهتر است تکمیل شود.
+                </p>
+              ) : null}
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="flex shrink-0 items-center gap-2 border-t bg-card px-6 pt-3">

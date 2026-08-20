@@ -13,7 +13,7 @@ import {
   mapSettingsFromDb,
   mapSocialPostFromDb,
   mapSocialPlatformStatFromDb,
-  mapSubmissionFromDb,
+  mapSubmissionFromDb,
   mapVideoFromDb,
   mapVideoVersionFromDb,
 } from "@/lib/db/mappers";
@@ -30,7 +30,7 @@ import type {
   MediaCategory,
   Poster,
   PosterVersion,
-  RawMediaUpload,
+  RawMediaUpload,
   Video,
   VideoVersion,
 } from "@/lib/types";
@@ -351,6 +351,20 @@ export async function pgGetAdminData(
       ORDER BY f.sort_order
     `
       : emptyRows,
+    want.has("textContents")
+      ? sql`
+      SELECT t.*, u.name AS owner_name, u.province AS owner_province, u.city AS owner_city, u.ministry_id AS owner_ministry_id, om.name AS owner_ministry_name, u.organization_id AS owner_organization_id, oo.name AS owner_organization_name
+      FROM text_contents t
+      LEFT JOIN users u ON u.id = t.owner_user_id
+
+      LEFT JOIN ministries om ON om.id = u.ministry_id
+
+      LEFT JOIN ministry_organizations oo ON oo.id = u.organization_id
+      WHERE t.campaign_id = ${campaignId}
+      ${ownerFilter}
+      ORDER BY t.sort_order
+    `
+      : emptyRows,
     want.has("socialPosts")
       ? sql`
       SELECT sp.*, u.name AS owner_name, u.province AS owner_province, u.city AS owner_city, u.ministry_id AS owner_ministry_id, om.name AS owner_ministry_name, u.organization_id AS owner_organization_id, oo.name AS owner_organization_name
@@ -424,7 +438,7 @@ export async function pgGetAdminData(
     videoVersions: videoVersions.map(mapVideoVersionFromDb),
     companyWebsites: companyWebsites.map(mapCompanyWebsiteFromDb),
     submissions: submissions.map(mapSubmissionFromDb),
-    files: files.map(mapCampaignFileFromDb),
+    files: files.map(mapCampaignFileFromDb),
     socialPosts: socialPosts.map(mapSocialPostFromDb),
     broadcastReports: broadcastReports.map(mapBroadcastReportFromDb),
     socialPlatformStats: socialPlatformStats.map(mapSocialPlatformStatFromDb),
@@ -1298,7 +1312,7 @@ export async function pgGetPublicCampaignData(campaignId: string) {
     videoVersions,
     companyWebsites,
     submissions,
-    files,
+    files,
     socialPosts,
     broadcastReports,
     socialPlatformStats,
