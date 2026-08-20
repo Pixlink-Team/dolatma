@@ -1,6 +1,24 @@
 {
   "entries": [
     {
+      "hash": "a60bd90dbc21b9b4c36694501edc41663fc7a5e5",
+      "committedAt": "2026-08-20T11:40:27+03:30",
+      "title": "افزودن نوار دایره‌ای پیشرفت و نمایش موارد ناقص در شناسنامه دستگاه",
+      "subject": "Polish passport completion ring and missing-field actions"
+    },
+    {
+      "hash": "f18c63e8f8eefbabae4d0a6fc4d761ac678d5a1d",
+      "committedAt": "2026-08-20T11:34:09+03:30",
+      "title": "تکمیل آپلود و پیش‌نمایش پوستر و ویدیو و بنر در اتاق عملیات دستورکار",
+      "subject": "Complete directive publishable media upload UI"
+    },
+    {
+      "hash": "2dcc55c8ae87db6f2ef10708fd6e380edaa084b8",
+      "committedAt": "2026-08-20T11:30:43+03:30",
+      "title": "افزودن آپلود پوستر و ویدیو و بنر دسته‌بندی‌شده در اتاق عملیات دستورکار",
+      "subject": "Enhance directive ops room publishable media assets"
+    },
+    {
       "hash": "a319b81224d3ab7bf0658c3da4471332553ee98d",
       "committedAt": "2026-08-20T11:26:40+03:30",
       "title": "حذف آمار دستور و سوابق کمپین از صفحه تکمیل شناسنامه",

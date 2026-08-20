@@ -9,7 +9,7 @@ import {
 } from "@/lib/owner-location-filter";
 import { getTehranOffsetDateIso } from "@/lib/safe-dates";
 
-export function isDateFilterActive(filter: OwnerLocationFilter): boolean {
+export function isDateFilterActive(filter: CampaignDateFilter): boolean {
   return filter.datePreset !== OWNER_DATE_ALL;
 }
 
@@ -83,7 +83,7 @@ export function getOwnableContentDate(item: Ownable & Record<string, unknown>): 
 
 export function matchesDateFilter(
   item: Ownable,
-  filter: OwnerLocationFilter,
+  filter: CampaignDateFilter,
   getItemDate?: (item: Ownable) => string | undefined
 ): boolean {
   const range = resolveDateFilterRange(filter);

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Building2, Settings } from "lucide-react";
+import { Settings } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { DashboardCompletenessCards } from "@/components/admin/dashboard-completeness-cards";
@@ -8,11 +8,7 @@ import { EditSuggestionsPanel } from "@/components/admin/edit-suggestions-panel"
 import { getAdminData } from "@/lib/data-access/admin";
 import { resolveAdminCampaignId } from "@/lib/admin-campaign";
 import { DASHBOARD_STAT_DEFINITIONS } from "@/lib/admin-dashboard-stats";
-import { groupDashboardStats } from "@/lib/admin-dashboard-groups";
-import { DashboardGroupCards } from "@/components/admin/dashboard-group-cards";
 import { resolveAdminBillboards } from "@/lib/billboards";
-import { buildAssetsSummary } from "@/lib/assets-report";
-import { pgListNationalCapacityMap } from "@/lib/db/repository-user-capacities";
 import type { Billboard, CampaignSettings } from "@/lib/types";
 import { BulkContentImport } from "@/components/admin/bulk-content-import";
 import { OnboardingProgressCard } from "@/components/admin/onboarding-progress-card";
@@ -153,67 +149,6 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
     };
   });
 
-  let dashboardGroups = groupDashboardStats(
-    stats.map((stat) => ({
-      label: stat.label,
-      value: stat.value,
-      href: stat.href,
-      icon: stat.icon,
-    }))
-  );
-
-  if (canManageAll && isPostgresConfigured()) {
-    try {
-      const assetItems = await pgListNationalCapacityMap();
-      const assetsSummary = buildAssetsSummary(assetItems);
-      const assetsHref = adminHref("/admin/capacity-map", campaignId);
-      const assetsGroup = {
-        key: "assets" as const,
-        label: "دارایی‌ها",
-        description: "صفحات، سایت‌ها، بیلبوردها و ظرفیت‌های دستگاه/کاربر",
-        href: assetsHref,
-        icon: Building2,
-        sectionHrefs: [
-          "/admin/capacity-map",
-          "/admin/analytics",
-          "/admin/social-analytics",
-          "/admin/billboards",
-          "/admin/ministries",
-        ],
-        total: assetsSummary.active,
-        items: [
-          {
-            label: "دارایی فعال (دستگاه + کاربر)",
-            value: assetsSummary.active,
-            href: assetsHref,
-            icon: Building2,
-          },
-          {
-            label: "منبع دستگاه",
-            value: assetsSummary.deviceSource,
-            href: assetsHref,
-            icon: Building2,
-          },
-          {
-            label: "منبع کاربر",
-            value: assetsSummary.userSource,
-            href: assetsHref,
-            icon: Building2,
-          },
-          ...dashboardGroups
-            .find((group) => group.key === "assets")
-            ?.items.filter((item) => !item.href.includes("/admin/capacity-map")) ?? [],
-        ],
-      };
-      dashboardGroups = [
-        assetsGroup,
-        ...dashboardGroups.filter((group) => group.key !== "assets"),
-      ];
-    } catch {
-      // Keep content-only groups if capacity map is unavailable.
-    }
-  }
-
   const pendingSubmissions = data.submissions.filter((s) => s.status === "pending").length;
   const showSubmissionsAlert = canManageAll
     ? features.submissions
@@ -304,16 +239,13 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
       />
 
       {stats.length > 0 ? (
-        <div className="space-y-6">
-          <DashboardGroupCards groups={dashboardGroups} />
-          <div className="space-y-3">
-            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-              <span className="rounded-full bg-emerald-500/15 px-2 py-1 text-emerald-700">کامل = سبز</span>
-              <span className="rounded-full bg-amber-400/20 px-2 py-1 text-amber-800">ناقص جزئی = زرد</span>
-              <span className="rounded-full bg-red-500/15 px-2 py-1 text-red-700">ناقص کامل = قرمز</span>
-            </div>
-            <DashboardCompletenessCards cards={stats} />
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+            <span className="rounded-full bg-emerald-500/15 px-2 py-1 text-emerald-700">کامل = سبز</span>
+            <span className="rounded-full bg-amber-400/20 px-2 py-1 text-amber-800">ناقص جزئی = زرد</span>
+            <span className="rounded-full bg-red-500/15 px-2 py-1 text-red-700">ناقص کامل = قرمز</span>
           </div>
+          <DashboardCompletenessCards cards={stats} />
         </div>
       ) : (
         <Card>

@@ -1389,6 +1389,8 @@ export interface CampaignActivity extends Ownable {
   description?: string | null;
   /** Marked as a creative field action for review and filtering. */
   isCreative: boolean;
+  /** Press publication genre/content type when activity is press-related. */
+  pressContentType?: string | null;
   published: boolean;
   sortOrder: number;
   createdAt: string;
