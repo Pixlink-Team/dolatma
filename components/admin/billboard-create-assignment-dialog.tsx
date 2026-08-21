@@ -101,16 +101,21 @@ interface BillboardCreateAssignmentDialogProps {
 function periodsToDrafts(periods: BillboardDisplayPeriod[]): DisplayPeriodDraft[] {
   if (periods.length === 0) return [createDisplayPeriod()];
 
-  return periods.map((period) => ({
-    id: period.id,
-    title: period.title ?? "",
-    startDate: period.startDate,
-    endDate: period.endDate,
-    imageFile: null,
-    billboardImageFile: null,
-    existingBillboardImageUrl: period.billboardImageUrl,
-    existingConfirmationImageUrl: period.confirmationImageUrl ?? null,
-  }));
+  // Form uses a single date + image; keep the first period only.
+  const period = periods[0];
+  const date = period.startDate || period.endDate;
+  return [
+    {
+      id: period.id,
+      title: period.title ?? "",
+      startDate: date,
+      endDate: date,
+      imageFile: null,
+      billboardImageFile: null,
+      existingBillboardImageUrl: period.billboardImageUrl,
+      existingConfirmationImageUrl: period.confirmationImageUrl ?? null,
+    },
+  ];
 }
 
 function fallbackDraftFromBillboard(billboard: Billboard): DisplayPeriodDraft[] {
@@ -274,16 +279,22 @@ export function BillboardCreateAssignmentDialog({
 
       const nextPeriods =
         initialValues?.periods && initialValues.periods.length > 0
-          ? initialValues.periods.map((period) => ({
-              id: crypto.randomUUID(),
-              title: period.title ?? "",
-              startDate: period.startDate,
-              endDate: period.endDate,
-              imageFile: null,
-              billboardImageFile: null,
-              existingBillboardImageUrl: period.existingBillboardImageUrl ?? null,
-              existingConfirmationImageUrl: null,
-            }))
+          ? (() => {
+              const period = initialValues.periods[0];
+              const date = period.startDate || period.endDate;
+              return [
+                {
+                  id: crypto.randomUUID(),
+                  title: period.title ?? "",
+                  startDate: date,
+                  endDate: date,
+                  imageFile: null,
+                  billboardImageFile: null,
+                  existingBillboardImageUrl: period.existingBillboardImageUrl ?? null,
+                  existingConfirmationImageUrl: null,
+                },
+              ];
+            })()
           : [createDisplayPeriod()];
 
       setValues({
@@ -346,23 +357,18 @@ export function BillboardCreateAssignmentDialog({
     }
 
     if (hasSystemWidget(fields, "periods")) {
-      for (const [index, period] of values.periods.entries()) {
-        if (!period.title.trim()) {
-          toast.error(`عنوان دوره ${index + 1} الزامی است`);
-          return;
-        }
-        if (!period.startDate || !period.endDate) {
-          toast.error(`تاریخ دوره ${index + 1} الزامی است`);
-          return;
-        }
-        const hasBillboardImage =
-          Boolean(period.billboardImageFile) ||
-          Boolean(period.existingBillboardImageUrl?.trim());
-        const periodsField = fieldByWidget(fields, "periods");
-        if ((periodsField?.required ?? true) && !hasBillboardImage) {
-          toast.error(`عکس بیلبورد در دوره ${index + 1} الزامی است`);
-          return;
-        }
+      const period = values.periods[0] ?? createDisplayPeriod();
+      if (!period.startDate) {
+        toast.error("تاریخ الزامی است");
+        return;
+      }
+      const hasBillboardImage =
+        Boolean(period.billboardImageFile) ||
+        Boolean(period.existingBillboardImageUrl?.trim());
+      const periodsField = fieldByWidget(fields, "periods");
+      if ((periodsField?.required ?? true) && !hasBillboardImage) {
+        toast.error("عکس بیلبورد الزامی است");
+        return;
       }
     }
 
@@ -449,14 +455,14 @@ export function BillboardCreateAssignmentDialog({
       title={isEditing ? "ویرایش تبلیغات محیطی" : "ثبت تبلیغات محیطی جدید"}
       description={
         initialSourceProduction
-          ? "تولید انتخاب‌شده از قبل پر شده؛ موقعیت و دوره‌های نمایش را تکمیل کنید."
+          ? "تولید انتخاب‌شده از قبل پر شده؛ موقعیت، تاریخ و عکس بیلبورد را تکمیل کنید."
           : initialValues
-            ? "داده‌های Excel پر شده‌اند؛ بقیه فیلدها (مثل موقعیت دقیق روی نقشه) را تکمیل کنید. می‌توانید چند دوره نمایش اضافه کنید."
+            ? "داده‌های Excel پر شده‌اند؛ بقیه فیلدها (مثل موقعیت دقیق روی نقشه) را تکمیل کنید."
             : contributorProfile?.province &&
                 contributorProfile?.city &&
                 !isEditing
-              ? `استان و شهر از پروفایل ${contributorProfile.name} پر شده‌اند. می‌توانید چند دوره نمایش اضافه کنید.`
-              : "استان و شهر را انتخاب کنید تا نقشه به همان موقعیت برود. می‌توانید چند دوره نمایش اضافه کنید."
+              ? `استان و شهر از پروفایل ${contributorProfile.name} پر شده‌اند.`
+              : "استان و شهر را انتخاب کنید تا نقشه به همان موقعیت برود."
       }
       descriptionVisible
       size="2xl"

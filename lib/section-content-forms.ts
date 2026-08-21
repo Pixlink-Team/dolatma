@@ -92,7 +92,7 @@ export const contentSystemWidgetLabels: Record<ContentSystemWidget, string> = {
   address: "آدرس",
   locationType: "محل",
   map: "نقشه",
-  periods: "دوره‌های نمایش",
+  periods: "تاریخ و عکس",
   video: "ویدیو",
   videoType: "نوع ویدیو",
   cover: "کاور",
@@ -133,9 +133,8 @@ const BILLBOARD_SYSTEM_WIDGETS: ContentSystemWidget[] = [
   "planLabels",
   "provinceCity",
   "map",
-  "axis",
-  "address",
   "locationType",
+  "axis",
   "areaSqm",
   "score",
   "periods",
@@ -288,7 +287,7 @@ function systemField(
 const DEFAULT_FIELDS: Record<ContentFormSectionKey, () => ContentFormField[]> = {
   posters: () => [
     systemField("image", "تصویر پوستر", true),
-    systemField("title", "عنوان", false),
+    systemField("title", "عنوان", true),
     systemField("planLabels", "موضوع", true),
     systemField("description", "توضیحات", false),
     systemField("score", "امتیاز", false),
@@ -298,12 +297,11 @@ const DEFAULT_FIELDS: Record<ContentFormSectionKey, () => ContentFormField[]> = 
     systemField("planLabels", "موضوع", true),
     systemField("provinceCity", "استان و شهر", false),
     systemField("map", "موقعیت روی نقشه", true),
-    systemField("axis", "محور / خیابان / بزرگراه", true),
-    systemField("address", "آدرس توصیفی", false),
     systemField("locationType", "محل", true),
+    systemField("axis", "محور / خیابان / بزرگراه", true),
     systemField("areaSqm", "متراژ (متر مربع)", false),
     systemField("score", "امتیاز", false),
-    systemField("periods", "دوره‌های نمایش", true),
+    systemField("periods", "تاریخ و عکس", true),
   ],
   videos: () => [
     systemField("video", "ویدیو", true),
@@ -339,7 +337,7 @@ const DEFAULT_FIELDS: Record<ContentFormSectionKey, () => ContentFormField[]> = 
   socialPosts: () => [
     systemField("platform", "کانال", true),
     systemField("contentType", "نوع محتوا", true),
-    systemField("title", "عنوان / نام کاور", false),
+    systemField("title", "عنوان / نام کاور", true),
     systemField("planLabels", "موضوع", true),
     systemField("score", "امتیاز", false),
     systemField("engagement", "آمار تعامل", false),
@@ -468,8 +466,8 @@ export function normalizeContentFormFields(
         widget,
         type: "text",
         label: label || contentSystemWidgetLabels[widget],
-        // Topic is always required across content forms.
-        required: widget === "planLabels" ? true : required,
+        // Title and topic are always required across content forms.
+        required: widget === "planLabels" || widget === "title" ? true : required,
       });
       continue;
     }

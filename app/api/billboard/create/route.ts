@@ -40,10 +40,15 @@ function parseRequiredPeriods(formData: FormData): BillboardDisplayPeriodInput[]
   }
 
   return parsed.map((period, index) => {
-    const title = typeof period.title === "string" ? period.title.trim() : "";
-    if (!title) {
-      throw new Error(`عنوان دوره ${index + 1} الزامی است`);
+    const startDate = typeof period.startDate === "string" ? period.startDate.trim() : "";
+    const endDate = typeof period.endDate === "string" ? period.endDate.trim() : startDate;
+    const date = startDate || endDate;
+    if (!date) {
+      throw new Error("تاریخ الزامی است");
     }
+
+    const title =
+      (typeof period.title === "string" ? period.title.trim() : "") || date;
 
     const billboardImage = period.billboardImageKey
       ? formData.get(period.billboardImageKey)
@@ -53,7 +58,7 @@ function parseRequiredPeriods(formData: FormData): BillboardDisplayPeriodInput[]
     const hasExistingBillboardImage = Boolean(period.billboardImageUrl?.trim());
 
     if (!hasNewBillboardImage && !hasExistingBillboardImage) {
-      throw new Error("عکس بیلبورد در دوره نمایش الزامی است");
+      throw new Error("عکس بیلبورد الزامی است");
     }
 
     const image = period.imageKey ? formData.get(period.imageKey) : null;
@@ -61,8 +66,8 @@ function parseRequiredPeriods(formData: FormData): BillboardDisplayPeriodInput[]
     return {
       id: period.id,
       title,
-      startDate: period.startDate,
-      endDate: period.endDate,
+      startDate: date,
+      endDate: endDate || date,
       sortOrder: period.sortOrder ?? index,
       image: image instanceof File && image.size > 0 ? image : null,
       billboardImage: hasNewBillboardImage ? billboardImage : null,
