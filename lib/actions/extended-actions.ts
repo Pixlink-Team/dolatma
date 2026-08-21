@@ -1216,7 +1216,7 @@ export async function getSessionContextAction(campaignId?: string) {
   }
 }
 
-export { getOwnerFilter, isFullAdmin };
+export { getOwnerFilter, getSubordinatesOwnerFilter, isFullAdmin };
 
 const SECTION_TO_DAILY_CAP_TABLE: Record<
   string,

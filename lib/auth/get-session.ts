@@ -68,21 +68,30 @@ export function isFullAdmin(session: AuthSession): boolean {
 }
 
 /**
- * Owner scope for admin panel data.
- * - Admin / client: no filter (see all)
- * - org_user: self + parent_user_id descendants only (never peers on the same device/level)
+ * Owner scope for admin panel content lists.
+ * - Admin / client / reis: no filter (see all)
+ * - org_user: own content only (subordinates are loaded via getSubordinatesOwnerFilter on a separate page)
  */
 export async function getOwnerFilter(session: AuthSession): Promise<OwnerScope> {
   if (isFullAdmin(session)) return undefined;
   if (session.role === "client" || session.role === "reis") return undefined;
   if (!session.userId) return null;
+  return session.userId;
+}
 
-  if (isOrgUserRole(session.role) && isPostgresConfigured()) {
-    const descendantIds = await pgListDescendantUserIds(session.userId);
-    if (descendantIds.length > 0) {
-      return [session.userId, ...descendantIds];
-    }
+/**
+ * Owner scope for viewing subordinates' content (exclude self).
+ * Returns null when the session cannot load a subtree.
+ */
+export async function getSubordinatesOwnerFilter(session: AuthSession): Promise<OwnerScope> {
+  if (isFullAdmin(session) || session.role === "client" || session.role === "reis") {
+    return undefined;
+  }
+  if (!session.userId || !isOrgUserRole(session.role) || !isPostgresConfigured()) {
+    return null;
   }
 
-  return session.userId;
+  const descendantIds = await pgListDescendantUserIds(session.userId);
+  if (descendantIds.length === 0) return null;
+  return descendantIds;
 }

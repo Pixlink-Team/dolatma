@@ -90,7 +90,7 @@ export function getUserRoleDisplayLabel(user: {
   return getRoleLabel(user.role);
 }
 
-/** Roles that only see their own (or subtree) content — not the full campaign feed. */
+/** Roles that only see their own content on list pages — not the full campaign feed. */
 export function isContentScopedRole(role: SessionRole | AdminRole): boolean {
   return isOrgUserRole(role);
 }
