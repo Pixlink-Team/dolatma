@@ -36,7 +36,17 @@ import {
   type CampaignDatePreset,
 } from "@/lib/owner-location-filter";
 
-export function OwnerLocationFilterBar() {
+interface OwnerLocationFilterBarProps {
+  /**
+   * Ministry/organization filters are for admin/supervision views that span many owners.
+   * Campaign users only see their own scope, so these stay hidden by default.
+   */
+  showMinistryFilters?: boolean;
+}
+
+export function OwnerLocationFilterBar({
+  showMinistryFilters = false,
+}: OwnerLocationFilterBarProps) {
   const {
     filter,
     setMinistryId,
@@ -65,6 +75,7 @@ export function OwnerLocationFilterBar() {
   const organizationLocked = userLocked && filter.organizationId !== OWNER_ORGANIZATION_ALL;
   const provinceLocked = userLocked && filter.province !== OWNER_LOCATION_ALL;
   const cityLocked = userLocked && filter.city !== OWNER_LOCATION_ALL;
+  const canShowMinistryFilters = showMinistryFilters && ministries.length > 0;
 
   const filterActive =
     isCampaignContentFilterActive(filter) ||
@@ -151,7 +162,7 @@ export function OwnerLocationFilterBar() {
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        {ministries.length > 0 && (
+        {canShowMinistryFilters && (
           <SearchableSelect
             value={filter.ministryId}
             onValueChange={setMinistryId}
@@ -163,7 +174,7 @@ export function OwnerLocationFilterBar() {
           />
         )}
 
-        {ministries.length > 0 && (
+        {canShowMinistryFilters && (
           <SearchableSelect
             value={filter.organizationId}
             onValueChange={setOrganizationId}

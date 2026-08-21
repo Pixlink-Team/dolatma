@@ -1585,7 +1585,7 @@ function CompanySupervisionAdminInner({
         </TabsContent>
 
         <TabsContent value="content" className="space-y-4">
-          <OwnerLocationFilterBar />
+          <OwnerLocationFilterBar showMinistryFilters />
 
           <div className="flex flex-wrap items-center gap-3">
             <Select
