@@ -59,7 +59,10 @@ const schema = z.object({
   sendDate: z.string().min(1),
   recipientCount: z.coerce.number().int().min(1, "حداقل یک گیرنده لازم است"),
   messageBody: z.string().min(1, "متن پیام الزامی است"),
-  channels: z.array(z.enum(SMS_SEND_CHANNEL_OPTIONS)).min(1, "حداقل یک رسانه را انتخاب کنید"),
+  channels: z
+    .array(z.enum(SMS_SEND_CHANNEL_OPTIONS))
+    .min(1, "یک رسانه ارسال را انتخاب کنید")
+    .max(1, "فقط یک رسانه ارسال قابل انتخاب است"),
   evidenceFileUrl: z.string().optional(),
   evidenceFileName: z.string().optional(),
   evidenceMimeType: z.string().optional(),
@@ -93,7 +96,7 @@ function reportToFormValues(report: SmsSendReport): FormValues {
     sendDate: report.sendDate,
     recipientCount: report.recipientCount,
     messageBody: report.messageBody,
-    channels: report.channels.length > 0 ? report.channels : ["sms"],
+    channels: report.channels.length > 0 ? [report.channels[0]] : ["sms"],
     evidenceFileUrl: report.evidenceFileUrl ?? "",
     evidenceFileName: report.evidenceFileName ?? "",
     evidenceMimeType: report.evidenceMimeType ?? "",
@@ -115,19 +118,18 @@ function isSocialMessengerChannel(channel: SmsSendChannel): channel is Extract<
 }
 
 function ChannelBadges({ channels }: { channels: SmsSendChannel[] }) {
-  if (channels.length === 0) return null;
+  const channel = channels[0];
+  if (!channel) return null;
   return (
     <div className="mt-2 flex flex-wrap gap-1">
-      {channels.map((channel) => (
-        <Badge key={channel} variant="secondary" className="gap-1 text-[10px] font-normal">
-          {isSocialMessengerChannel(channel) ? (
-            <SocialPlatformIcon platform={channel} size="sm" className="h-3.5 w-3.5 rounded-sm" />
-          ) : (
-            <MessageSquare className="h-3 w-3" />
-          )}
-          {getSmsSendChannelLabel(channel)}
-        </Badge>
-      ))}
+      <Badge variant="secondary" className="gap-1 text-[10px] font-normal">
+        {isSocialMessengerChannel(channel) ? (
+          <SocialPlatformIcon platform={channel} size="sm" className="h-3.5 w-3.5 rounded-sm" />
+        ) : (
+          <MessageSquare className="h-3 w-3" />
+        )}
+        {getSmsSendChannelLabel(channel)}
+      </Badge>
     </div>
   );
 }
@@ -173,12 +175,8 @@ export function SmsReportsAdmin({ campaignId, initialReports }: SmsReportsAdminP
   const watchedEvidenceName = form.watch("evidenceFileName");
   const highlightTitle = highlightFields.includes("title") && !watchedTitle?.trim();
 
-  const toggleChannel = (channel: SmsSendChannel) => {
-    const current = form.getValues("channels") ?? [];
-    const next = current.includes(channel)
-      ? current.filter((item) => item !== channel)
-      : [...current, channel];
-    form.setValue("channels", next, { shouldDirty: true, shouldValidate: true });
+  const selectChannel = (channel: SmsSendChannel) => {
+    form.setValue("channels", [channel], { shouldDirty: true, shouldValidate: true });
   };
 
   const openCreate = () => {
@@ -440,33 +438,34 @@ export function SmsReportsAdmin({ campaignId, initialReports }: SmsReportsAdminP
         <div className="space-y-2">
           <Label>رسانه ارسال</Label>
           <p className="text-xs text-muted-foreground">
-            کانال‌هایی که این پیام انبوه از طریق آن‌ها ارسال شده را انتخاب کنید.
+            فقط یک رسانه ارسال را انتخاب کنید.
           </p>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3" role="radiogroup" aria-label="رسانه ارسال">
             {SMS_SEND_CHANNEL_OPTIONS.map((channel) => {
-              const checked = watchedChannels?.includes(channel) ?? false;
+              const checked = watchedChannels?.[0] === channel;
               return (
                 <button
                   key={channel}
                   type="button"
-                  onClick={() => toggleChannel(channel)}
+                  role="radio"
+                  aria-checked={checked}
+                  onClick={() => selectChannel(channel)}
                   className={cn(
                     "flex items-center gap-2 rounded-lg border px-2.5 py-2 text-right text-sm transition-colors",
                     checked
                       ? "border-primary bg-primary/10 text-foreground"
                       : "border-border bg-background text-muted-foreground hover:bg-muted/50"
                   )}
-                  aria-pressed={checked}
                 >
                   <span
                     className={cn(
-                      "flex h-4 w-4 shrink-0 items-center justify-center rounded border text-[10px] font-bold",
-                      checked
-                        ? "border-primary bg-primary text-primary-foreground"
-                        : "border-muted-foreground/40"
+                      "flex h-4 w-4 shrink-0 items-center justify-center rounded-full border",
+                      checked ? "border-primary" : "border-muted-foreground/40"
                     )}
                   >
-                    {checked ? "✓" : ""}
+                    {checked ? (
+                      <span className="h-2 w-2 rounded-full bg-primary" />
+                    ) : null}
                   </span>
                   {isSocialMessengerChannel(channel) ? (
                     <SocialPlatformIcon platform={channel} size="sm" className="h-5 w-5 rounded-md" />

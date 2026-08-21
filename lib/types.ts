@@ -1281,6 +1281,8 @@ export interface AuthSession {
   manageSubtreeDirectives?: boolean;
   scoreSubtreeContent?: boolean;
   manageSubtreeDevices?: boolean;
+  viewSubtreeLiveReport?: boolean;
+  viewSubtreePerformance?: boolean;
   email?: string;
   name?: string;
   /** Bumped on logout so previous cookies become invalid. */
@@ -1409,7 +1411,7 @@ export interface SmsSendReport extends Ownable {
   sendDate: string;
   recipientCount: number;
   messageBody: string;
-  /** Messaging channels used for this bulk send (SMS, Bale, Eitaa, …). */
+  /** Single messaging channel for this bulk send (SMS, Bale, Eitaa, …). Stored as a one-item array. */
   channels: import("@/lib/sms-send-channels").SmsSendChannel[];
   evidenceFileUrl?: string | null;
   evidenceFileName?: string | null;

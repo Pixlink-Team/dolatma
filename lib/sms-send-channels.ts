@@ -54,6 +54,8 @@ export function parseSmsSendChannels(value: unknown): SmsSendChannel[] {
   return channels;
 }
 
+/** Persist at most one channel — bulk send reports are single-media. */
 export function normalizeSmsSendChannels(value: unknown): SmsSendChannel[] {
-  return parseSmsSendChannels(value);
+  const channels = parseSmsSendChannels(value);
+  return channels.length > 0 ? [channels[0]] : [];
 }
