@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { ArrowLeft, Check, Target } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +11,8 @@ interface OnboardingProgressCardProps {
   /** Override default end-user copy (e.g. admin audit view). */
   title?: string;
   description?: string;
+  /** Optional content rendered under the mission checklist (e.g. edit suggestions). */
+  children?: ReactNode;
 }
 
 function CircularProgress({
@@ -87,6 +90,7 @@ export function OnboardingProgressCard({
   progress,
   title = "راه‌اندازی سامانه",
   description = "مأموریت‌های زیر را انجام دهید تا آماده‌سازی کامل شود.",
+  children,
 }: OnboardingProgressCardProps) {
   const { steps, completedCount, totalCount, percent } = progress;
   const currentIndex = steps.findIndex((step) => !step.done);
@@ -114,7 +118,7 @@ export function OnboardingProgressCard({
           </Badge>
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-4">
         <div className="grid gap-5 md:grid-cols-[minmax(0,180px)_1fr] md:items-start lg:grid-cols-[200px_1fr]">
           <div className="flex flex-col items-center gap-2 rounded-xl bg-background/70 p-3 ring-1 ring-emerald-100 sm:p-4">
             <CircularProgress
@@ -198,6 +202,8 @@ export function OnboardingProgressCard({
             })}
           </ol>
         </div>
+
+        {children ? <div className="border-t border-emerald-100/80 pt-4">{children}</div> : null}
       </CardContent>
     </Card>
   );

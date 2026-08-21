@@ -18,9 +18,15 @@ import { formatPersianNumber } from "@/lib/utils";
 interface EditSuggestionsPanelProps {
   suggestions: EditSuggestionItem[];
   storageKey: string;
+  /** When true, render as a compact block without the outer card (e.g. under missions). */
+  embedded?: boolean;
 }
 
-export function EditSuggestionsPanel({ suggestions, storageKey }: EditSuggestionsPanelProps) {
+export function EditSuggestionsPanel({
+  suggestions,
+  storageKey,
+  embedded = false,
+}: EditSuggestionsPanelProps) {
   const [open, setOpen] = useState(false);
   const hasSuggestions = suggestions.length > 0;
 
@@ -41,27 +47,33 @@ export function EditSuggestionsPanel({ suggestions, storageKey }: EditSuggestion
 
   if (!hasSuggestions) return null;
 
+  const body = (
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex min-w-0 items-start gap-3">
+        <Lightbulb className="mt-0.5 h-5 w-5 shrink-0 text-warning" />
+        <div className="min-w-0">
+          <p className="font-medium">پیشنهاد ویرایش</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {formatPersianNumber(suggestions.length)} کارت در بخش‌های مختلف هنوز کامل نشده است.
+            فیلدهای جاافتاده را تکمیل کنید.
+          </p>
+        </div>
+      </div>
+      <Button type="button" variant="outline" size="sm" onClick={() => setOpen(true)}>
+        مشاهده همه پیشنهادها
+      </Button>
+    </div>
+  );
+
   return (
     <>
-      <Card className="border-warning/30 bg-warning/10">
-        <CardContent className="p-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex min-w-0 items-start gap-3">
-              <Lightbulb className="mt-0.5 h-5 w-5 shrink-0 text-warning" />
-              <div className="min-w-0">
-                <p className="font-medium">پیشنهاد ویرایش</p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {formatPersianNumber(suggestions.length)} کارت در بخش‌های مختلف هنوز کامل نشده
-                  است. فیلدهای جاافتاده را تکمیل کنید.
-                </p>
-              </div>
-            </div>
-            <Button type="button" variant="outline" size="sm" onClick={() => setOpen(true)}>
-              مشاهده همه پیشنهادها
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      {embedded ? (
+        <div className="rounded-xl border border-warning/30 bg-warning/10 p-4">{body}</div>
+      ) : (
+        <Card className="border-warning/30 bg-warning/10">
+          <CardContent className="p-4">{body}</CardContent>
+        </Card>
+      )}
 
       <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent className="max-h-[88vh] max-w-2xl overflow-hidden p-0">

@@ -324,8 +324,21 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
         )}
       </div>
 
-      {onboardingProgress && onboardingProgress.totalCount > 0 ? (
-        <OnboardingProgressCard progress={onboardingProgress} />
+      {onboardingProgress &&
+      onboardingProgress.totalCount > 0 &&
+      onboardingProgress.percent < 100 ? (
+        <OnboardingProgressCard progress={onboardingProgress}>
+          <EditSuggestionsPanel
+            suggestions={editSuggestions}
+            storageKey={editSuggestionsStorageKey}
+            embedded
+          />
+        </OnboardingProgressCard>
+      ) : onboardingProgress == null || onboardingProgress.totalCount === 0 ? (
+        <EditSuggestionsPanel
+          suggestions={editSuggestions}
+          storageKey={editSuggestionsStorageKey}
+        />
       ) : null}
 
       <DashboardBentoGrid
@@ -423,11 +436,6 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
           </Card>
         )}
       </div>
-
-      <EditSuggestionsPanel
-        suggestions={editSuggestions}
-        storageKey={editSuggestionsStorageKey}
-      />
 
       {showSubmissionsAlert && pendingSubmissions > 0 ? (
         <Card className="border-warning/30 bg-warning/10">
