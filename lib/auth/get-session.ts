@@ -31,8 +31,15 @@ export const getAuthSession = cache(async (): Promise<AuthSession | null> => {
       const user = await pgGetUserById(session.userId);
       if (user) {
         const permissionSets = Object.values(user.campaignPermissions ?? {});
-        const anyFlag = (key: "manageSubtreeUsers" | "manageSubtreeDirectives" | "scoreSubtreeContent" | "manageSubtreeDevices") =>
-          permissionSets.some((perms) => Boolean(perms?.[key]));
+        const anyFlag = (
+          key:
+            | "manageSubtreeUsers"
+            | "manageSubtreeDirectives"
+            | "scoreSubtreeContent"
+            | "manageSubtreeDevices"
+            | "viewSubtreeLiveReport"
+            | "viewSubtreePerformance"
+        ) => permissionSets.some((perms) => Boolean(perms?.[key]));
 
         return {
           ...session,
@@ -42,6 +49,8 @@ export const getAuthSession = cache(async (): Promise<AuthSession | null> => {
           manageSubtreeDirectives: anyFlag("manageSubtreeDirectives"),
           scoreSubtreeContent: anyFlag("scoreSubtreeContent"),
           manageSubtreeDevices: anyFlag("manageSubtreeDevices"),
+          viewSubtreeLiveReport: anyFlag("viewSubtreeLiveReport"),
+          viewSubtreePerformance: anyFlag("viewSubtreePerformance"),
           email: user.email,
           name: user.name,
         };

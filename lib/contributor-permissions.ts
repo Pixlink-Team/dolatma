@@ -38,6 +38,10 @@ export interface ContributorPermissions {
   scoreSubtreeContent: boolean;
   /** Scoped management: mutate devices inside subtree. */
   manageSubtreeDevices: boolean;
+  /** View live campaign report scoped to subordinates only. */
+  viewSubtreeLiveReport: boolean;
+  /** View performance leaderboard scoped to subordinates only. */
+  viewSubtreePerformance: boolean;
 }
 
 export type ContributorPermissionKey = keyof ContributorPermissions;
@@ -73,6 +77,8 @@ export const defaultContributorPermissions = (): ContributorPermissions => ({
   manageSubtreeDirectives: false,
   scoreSubtreeContent: false,
   manageSubtreeDevices: false,
+  viewSubtreeLiveReport: false,
+  viewSubtreePerformance: false,
 });
 
 /** Content section permissions shown when editing users. */
@@ -125,6 +131,8 @@ export const subtreeManagementKeys = [
   "manageSubtreeDirectives",
   "scoreSubtreeContent",
   "manageSubtreeDevices",
+  "viewSubtreeLiveReport",
+  "viewSubtreePerformance",
 ] as const satisfies readonly ContributorPermissionKey[];
 
 export function normalizeContributorPermissions(
@@ -164,6 +172,10 @@ export function normalizeContributorPermissions(
       record.manageSubtreeDirectives ?? defaults.manageSubtreeDirectives,
     scoreSubtreeContent: record.scoreSubtreeContent ?? defaults.scoreSubtreeContent,
     manageSubtreeDevices: record.manageSubtreeDevices ?? defaults.manageSubtreeDevices,
+    viewSubtreeLiveReport:
+      record.viewSubtreeLiveReport ?? defaults.viewSubtreeLiveReport,
+    viewSubtreePerformance:
+      record.viewSubtreePerformance ?? defaults.viewSubtreePerformance,
   };
 }
 
@@ -206,6 +218,8 @@ export const deniedContributorPermissions = (): ContributorPermissions => ({
   manageSubtreeDirectives: false,
   scoreSubtreeContent: false,
   manageSubtreeDevices: false,
+  viewSubtreeLiveReport: false,
+  viewSubtreePerformance: false,
 });
 
 export const allContributorPermissionKeys = Object.keys(

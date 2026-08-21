@@ -635,7 +635,7 @@ function filterOwnableItems<T extends Ownable>(items: T[], scope: OwnerScope): T
   return items.filter((item) => ownerMatchesScope(item.ownerUserId, scope));
 }
 
-async function getPublicCampaignDataForOwners(
+export async function getPublicCampaignDataForOwners(
   campaignSlug: string,
   ownerScope: OwnerScope
 ): Promise<PublicCampaignData | null> {

@@ -1,7 +1,7 @@
 import { cache } from "react";
 import { getMockStore, getMockStoreForCampaign, updateMockStore } from "@/lib/mock-data";
 import { getAuthSession, getOwnerFilter } from "@/lib/auth/get-session";
-import { ownerMatchesScope } from "@/lib/auth/owner-scope";
+import { ownerMatchesScope, type OwnerScope } from "@/lib/auth/owner-scope";
 import * as pg from "@/lib/db/repository";
 import type { AdminDataSection } from "@/lib/db/repository";
 import type { ParsedSubmissionRow } from "@/lib/services/submissions-excel-parser";
@@ -49,9 +49,18 @@ export const getAllCampaigns = cache(async (): Promise<CampaignSettings[]> => {
   }
 });
 
-export async function getAdminData(campaignId: string, sections?: AdminDataSection[]) {
+export async function getAdminData(
+  campaignId: string,
+  sections?: AdminDataSection[],
+  ownerFilterOverride?: OwnerScope
+) {
   const session = await getAuthSession();
-  const ownerFilter = session ? await getOwnerFilter(session) : undefined;
+  const ownerFilter =
+    ownerFilterOverride !== undefined
+      ? ownerFilterOverride
+      : session
+        ? await getOwnerFilter(session)
+        : undefined;
 
   const filterByOwner = <T extends { ownerUserId?: string | null }>(items: T[]) =>
     items.filter((item) => ownerMatchesScope(item.ownerUserId, ownerFilter));

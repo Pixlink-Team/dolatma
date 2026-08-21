@@ -35,6 +35,8 @@ export function getOrgRolePermissionPreset(orgRole: OrgRole): ContributorPermiss
         manageSubtreeDirectives: true,
         scoreSubtreeContent: true,
         manageSubtreeDevices: true,
+        viewSubtreeLiveReport: true,
+        viewSubtreePerformance: true,
       };
     case "deputy":
       return {
@@ -66,6 +68,8 @@ export function getOrgRolePermissionPreset(orgRole: OrgRole): ContributorPermiss
         manageSubtreeDirectives: true,
         scoreSubtreeContent: false,
         manageSubtreeDevices: true,
+        viewSubtreeLiveReport: true,
+        viewSubtreePerformance: true,
       };
     case "supervisor":
       return {
@@ -98,6 +102,8 @@ export function getOrgRolePermissionPreset(orgRole: OrgRole): ContributorPermiss
         manageSubtreeDirectives: false,
         scoreSubtreeContent: false,
         manageSubtreeDevices: false,
+        viewSubtreeLiveReport: false,
+        viewSubtreePerformance: false,
       };
     case "pr":
       return {
@@ -129,6 +135,8 @@ export function getOrgRolePermissionPreset(orgRole: OrgRole): ContributorPermiss
         manageSubtreeDirectives: false,
         scoreSubtreeContent: false,
         manageSubtreeDevices: false,
+        viewSubtreeLiveReport: false,
+        viewSubtreePerformance: false,
       };
     default:
       return {
@@ -160,6 +168,8 @@ export function getOrgRolePermissionPreset(orgRole: OrgRole): ContributorPermiss
         manageSubtreeDirectives: false,
         scoreSubtreeContent: false,
         manageSubtreeDevices: false,
+        viewSubtreeLiveReport: false,
+        viewSubtreePerformance: false,
       };
   }
 }
@@ -185,4 +195,6 @@ export const subtreeManagementPermissionLabels = {
   manageSubtreeDirectives: "صدور دستورکار برای زیرشاخه",
   scoreSubtreeContent: "امتیازدهی محتوای زیرشاخه",
   manageSubtreeDevices: "مدیریت دستگاه‌های زیرشاخه",
+  viewSubtreeLiveReport: "گزارش زنده زیردستان",
+  viewSubtreePerformance: "مشاهده عملکرد زیردستان",
 } as const;

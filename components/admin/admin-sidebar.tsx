@@ -99,6 +99,8 @@ const allNavItems: {
   usersNav?: boolean;
   /** Visible to admin and device-scoped org users with manageSubtreeDevices. */
   devicesNav?: boolean;
+  /** Org-user subtree view pages (hidden from admin/client/reis). */
+  orgSubtreeOnly?: boolean;
   /** Always visible for every panel user (not gated by section permissions). */
   alwaysVisible?: boolean;
   permissionKey?: ContributorPermissionKey;
@@ -113,6 +115,20 @@ const allNavItems: {
   { href: "/admin/calendar", label: "تقویم ملی", icon: CalendarDays, permissionKey: "nationalCalendar", adminOrClientOnly: true },
   { href: "/admin/taghvim", label: "تقویم دفاع و سازندگی", icon: Shield, permissionKey: "defenseCalendar", adminOrClientOnly: true },
   { href: "/admin/performance", label: "مشاهده عملکرد", icon: Medal, adminOrClientOnly: true },
+  {
+    href: "/admin/subordinates-performance",
+    label: "مشاهده عملکرد زیردستان",
+    icon: Medal,
+    orgSubtreeOnly: true,
+    permissionKey: "viewSubtreePerformance",
+  },
+  {
+    href: "/admin/subordinates-live-report",
+    label: "گزارش زنده زیردستان",
+    icon: Radio,
+    orgSubtreeOnly: true,
+    permissionKey: "viewSubtreeLiveReport",
+  },
   { href: "/admin/scoring", label: "قوانین امتیازدهی", icon: Award, adminOrClientOnly: true },
   { href: "/admin/posting-limits", label: "محدودیت روزانه", icon: Gauge, adminOrClientOnly: true },
   { href: "/admin/tutorials", label: "آموزش بخش‌ها", icon: GraduationCap, permissionKey: "sectionTutorials", adminOnly: true },
@@ -168,6 +184,8 @@ const managementNavHrefs = new Set([
   "/admin/calendar",
   "/admin/taghvim",
   "/admin/performance",
+  "/admin/subordinates-performance",
+  "/admin/subordinates-live-report",
   "/admin/scoring",
   "/admin/posting-limits",
   "/admin/tutorials",
@@ -377,6 +395,12 @@ export function AdminSidebar({ showReisReturn = false }: AdminSidebarProps) {
     }
     if (item.devicesNav) {
       return isFullAdminUser || canViewDevicesNav;
+    }
+    // Subordinates-only views: never for admin/client/reis; need explicit grant.
+    if (item.orgSubtreeOnly) {
+      if (seesAllCampaignSections) return false;
+      if (!item.permissionKey) return false;
+      return hasContributorPermission(permissions, item.permissionKey);
     }
     // Panel management items: admin/client/reis always, or org_user with explicit grant.
     if (item.adminOrClientOnly) {

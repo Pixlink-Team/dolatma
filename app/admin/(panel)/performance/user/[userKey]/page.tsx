@@ -4,9 +4,19 @@ import { CompanySupervisionAdmin } from "@/components/admin/company-supervision-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { resolveAdminCampaignId } from "@/lib/admin-campaign";
-import { canScoreContent } from "@/lib/auth/access";
-import { getAuthSession } from "@/lib/auth/get-session";
+import {
+  canScoreContent,
+  canViewSubtreePerformance,
+  isBroadPanelUser,
+} from "@/lib/auth/access";
+import {
+  getAuthSession,
+  getSubordinatesOwnerFilter,
+  isFullAdmin,
+} from "@/lib/auth/get-session";
+import { ownerMatchesScope } from "@/lib/auth/owner-scope";
 import { loadCompanySupervisionPage } from "@/lib/company-supervision-page";
+import { isOrgUserRole } from "@/lib/user-roles";
 
 export const dynamic = "force-dynamic";
 
@@ -39,7 +49,20 @@ export default async function CompanySupervisionPage({
   if (!userKey) notFound();
 
   const isSelf = Boolean(session.userId && session.userId === userKey);
-  if (!canScoreContent(session) && !isSelf) {
+  const canScore = canScoreContent(session);
+  let canViewAsSubtreeManager = false;
+
+  if (
+    !canScore &&
+    !isSelf &&
+    isOrgUserRole(session.role) &&
+    canViewSubtreePerformance(session)
+  ) {
+    const subordinateScope = await getSubordinatesOwnerFilter(session);
+    canViewAsSubtreeManager = ownerMatchesScope(userKey, subordinateScope);
+  }
+
+  if (!canScore && !isSelf && !canViewAsSubtreeManager) {
     redirect("/admin");
   }
 
@@ -57,7 +80,10 @@ export default async function CompanySupervisionPage({
 
   if (!result.ok) {
     if (result.reason === "no_campaign") redirect("/admin");
-    const backHref = `/admin/performance?campaign=${encodeURIComponent(campaignId)}`;
+    const backHref =
+      canViewAsSubtreeManager && !isFullAdmin(session) && !isBroadPanelUser(session)
+        ? `/admin/subordinates-performance?campaign=${encodeURIComponent(campaignId)}`
+        : `/admin/performance?campaign=${encodeURIComponent(campaignId)}`;
     return (
       <Card dir="rtl">
         <CardContent className="flex flex-col items-center gap-4 p-10 text-center text-right">

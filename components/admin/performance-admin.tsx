@@ -139,6 +139,10 @@ interface PerformanceAdminProps {
   campaignTitle: string;
   campaignSlug: string;
   contentPlans?: string[];
+  /** Override page heading (default: مشاهده عملکرد). */
+  pageTitle?: string;
+  /** Override intro under the heading. */
+  pageDescription?: string;
 }
 
 const METRIC_COLUMNS: {
@@ -213,6 +217,8 @@ export function PerformanceAdmin({
   campaignTitle,
   campaignSlug,
   contentPlans = [],
+  pageTitle = "مشاهده عملکرد",
+  pageDescription,
 }: PerformanceAdminProps) {
   const [view, setView] = useState<PerformanceView>("ministry");
   const [sortMode, setSortMode] = useState<PerformanceSortMode>("activity");
@@ -340,10 +346,10 @@ export function PerformanceAdmin({
     <div className="space-y-6 text-right" dir="rtl">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-1">
-          <h1 className="text-2xl font-bold">مشاهده عملکرد</h1>
+          <h1 className="text-2xl font-bold">{pageTitle}</h1>
           <p className="text-sm text-muted-foreground">
-            نمای مدیریتی از آمار عددی همه کاربران کمپین «{campaignTitle}» — رتبه با فیلترهای
-            انتخاب‌شده دوباره محاسبه می‌شود
+            {pageDescription ??
+              `نمای مدیریتی از آمار عددی همه کاربران کمپین «${campaignTitle}» — رتبه با فیلترهای انتخاب‌شده دوباره محاسبه می‌شود`}
           </p>
         </div>
         <Button type="button" onClick={handleExport} className="shrink-0 gap-2">

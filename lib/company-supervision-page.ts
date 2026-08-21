@@ -128,18 +128,25 @@ export async function loadCompanySupervisionPage(input: {
 }) {
   const { campaignId, userKey, session, query, viewMode } = input;
 
+  // Scope admin data to the supervised user so org managers can load subordinates.
+  const ownerFilterOverride = viewMode === "admin" ? userKey : undefined;
+
   const [data, reviewsResult] = await Promise.all([
-    getAdminData(campaignId, [
-      "settings",
-      "billboards",
-      "posters",
-      "posterVersions",
-      "videos",
-      "videoVersions",
-      "files",
-      "socialPosts",
-      "activities",
-    ]),
+    getAdminData(
+      campaignId,
+      [
+        "settings",
+        "billboards",
+        "posters",
+        "posterVersions",
+        "videos",
+        "videoVersions",
+        "files",
+        "socialPosts",
+        "activities",
+      ],
+      ownerFilterOverride
+    ),
     listContentReviewsAction({ campaignId }),
   ]);
 

@@ -103,7 +103,13 @@ export function canManageDirectivesGlobally(session: AuthSession): boolean {
  */
 function resolveOrgManagementFlag(
   permissions: ContributorPermissions | null | undefined,
-  key: "manageSubtreeUsers" | "manageSubtreeDirectives" | "scoreSubtreeContent" | "manageSubtreeDevices",
+  key:
+    | "manageSubtreeUsers"
+    | "manageSubtreeDirectives"
+    | "scoreSubtreeContent"
+    | "manageSubtreeDevices"
+    | "viewSubtreeLiveReport"
+    | "viewSubtreePerformance",
   sessionFlag: boolean | undefined
 ): boolean {
   if (permissions) {
@@ -230,6 +236,40 @@ export function canManageSubtreeDevices(
     permissions,
     "manageSubtreeDevices",
     session.manageSubtreeDevices
+  );
+}
+
+/**
+ * Live campaign report scoped to subordinates (org users only via permission).
+ * Admin / client / reis already have the public campaign report.
+ */
+export function canViewSubtreeLiveReport(
+  session: AuthSession,
+  permissions?: ContributorPermissions | null
+): boolean {
+  if (isFullAdmin(session) || isBroadPanelUser(session)) return true;
+  if (!isOrgUserRole(session.role)) return false;
+  return resolveOrgManagementFlag(
+    permissions,
+    "viewSubtreeLiveReport",
+    session.viewSubtreeLiveReport
+  );
+}
+
+/**
+ * Performance leaderboard scoped to subordinates.
+ * Admin / client / reis use `/admin/performance` instead.
+ */
+export function canViewSubtreePerformance(
+  session: AuthSession,
+  permissions?: ContributorPermissions | null
+): boolean {
+  if (isFullAdmin(session) || isBroadPanelUser(session)) return true;
+  if (!isOrgUserRole(session.role)) return false;
+  return resolveOrgManagementFlag(
+    permissions,
+    "viewSubtreePerformance",
+    session.viewSubtreePerformance
   );
 }
 
