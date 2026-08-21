@@ -1183,6 +1183,8 @@ export async function getSessionContextAction(campaignId?: string) {
     const session = await getAuthSession();
     if (!session) return null;
 
+    const homeDeviceId = await getSessionHomeDeviceId(session);
+
     if (session.type === "db_user" && session.userId) {
       const user = await pgExt.pgGetUserById(session.userId);
       // Missing campaign membership must deny sections — do not fall back to all-true defaults.
@@ -1199,6 +1201,7 @@ export async function getSessionContextAction(campaignId?: string) {
         campaignIds: user?.campaignIds ?? [],
         campaignPermissions: user?.campaignPermissions ?? {},
         permissions,
+        homeDeviceId,
       };
     }
 
@@ -1209,6 +1212,7 @@ export async function getSessionContextAction(campaignId?: string) {
       campaignIds: [] as string[],
       campaignPermissions: {} as Record<string, ContributorPermissions>,
       permissions: null,
+      homeDeviceId,
     };
   } catch (error) {
     console.error("[getSessionContextAction] failed", error);

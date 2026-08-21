@@ -18,6 +18,7 @@ import {
   Gauge,
   GraduationCap,
   HardDrive,
+  IdCard,
   ImageIcon,
   Images,
   Globe,
@@ -88,6 +89,7 @@ import { REIS_HOME_PATH } from "@/lib/reis/sections";
 const PROBLEM_REPORTS_HREF = "/admin/problem-reports";
 const MESSAGES_HREF = "/admin/messages";
 const RETURNED_CONTENT_HREF = "/admin/returned-content";
+const HOME_PASSPORT_HREF = "/admin/devices/home";
 
 const allNavItems: {
   href: string;
@@ -99,6 +101,8 @@ const allNavItems: {
   usersNav?: boolean;
   /** Visible to admin and device-scoped org users with manageSubtreeDevices. */
   devicesNav?: boolean;
+  /** Own-device passport — shown when the session has a home device. */
+  homePassportNav?: boolean;
   /** Org-user subtree view pages (hidden from admin/client/reis). */
   orgSubtreeOnly?: boolean;
   /** Always visible for every panel user (not gated by section permissions). */
@@ -158,6 +162,12 @@ const allNavItems: {
   { href: "/admin/submissions", label: "مشارکت‌ها", icon: FileText, permissionKey: "submissions" },
   { href: "/admin/forms", label: "فرم‌ها", icon: FormInput, permissionKey: "forms", adminOrClientOnly: true },
   { href: "/admin/ministries", label: "دستگاه‌ها", icon: Building2, devicesNav: true },
+  {
+    href: HOME_PASSPORT_HREF,
+    label: "شناسنامه دستگاه",
+    icon: IdCard,
+    homePassportNav: true,
+  },
   { href: "/admin/users", label: "کاربران", icon: Users, usersNav: true },
   { href: "/admin/pre-registrations", label: "پیش‌ثبت‌نام‌ها", icon: UserPlus, adminOnly: true },
   { href: "/admin/updates", label: "آپدیت‌های سایت", icon: Rocket, permissionKey: "siteUpdates", adminOrClientOnly: true },
@@ -176,6 +186,7 @@ const managementNavHrefs = new Set([
   "/admin/profile",
   "/admin/my-performance",
   "/admin/ministries",
+  HOME_PASSPORT_HREF,
   "/admin/users",
   "/admin/pre-registrations",
   "/admin/group-edit",
@@ -247,6 +258,7 @@ export function AdminSidebar({ showReisReturn = false }: AdminSidebarProps) {
   const [isReisPanelUser, setIsReisPanelUser] = useState(false);
   const [canViewUsersNav, setCanViewUsersNav] = useState(false);
   const [canViewDevicesNav, setCanViewDevicesNav] = useState(false);
+  const [homeDeviceId, setHomeDeviceId] = useState<string | null>(null);
   const [permissions, setPermissions] = useState<ContributorPermissions | null>(null);
   const [mediaCommandOpen, setMediaCommandOpen] = useState(false);
   const [monitoringOpen, setMonitoringOpen] = useState(false);
@@ -344,6 +356,11 @@ export function AdminSidebar({ showReisReturn = false }: AdminSidebarProps) {
                 ? hasContributorPermission(perms, "manageSubtreeDevices")
                 : session.manageSubtreeDevices === true)
           );
+          setHomeDeviceId(
+            typeof session.homeDeviceId === "string" && session.homeDeviceId.trim()
+              ? session.homeDeviceId.trim()
+              : null
+          );
           setPermissions(perms);
         })
         .catch((error) => {
@@ -389,6 +406,7 @@ export function AdminSidebar({ showReisReturn = false }: AdminSidebarProps) {
   const navItems = allNavItems.filter((item) => {
     // Hide returned-content until there is at least one item in the user's scope.
     if (item.href === RETURNED_CONTENT_HREF && returnedContentCount <= 0) return false;
+    if (item.homePassportNav) return Boolean(homeDeviceId);
     if (item.alwaysVisible) return true;
     if (item.usersNav) {
       return seesAllCampaignSections || canViewUsersNav;
@@ -817,7 +835,11 @@ export function AdminSidebar({ showReisReturn = false }: AdminSidebarProps) {
                 const Icon = item.icon;
                 const href = adminHref(item.href, campaignId);
                 const isActive =
-                  pathname === item.href || (item.href === "/admin/elanha" && pathname === "/admin/notifications");
+                  pathname === item.href ||
+                  (item.href === HOME_PASSPORT_HREF &&
+                    Boolean(homeDeviceId) &&
+                    pathname === `/admin/devices/${homeDeviceId}`) ||
+                  (item.href === "/admin/elanha" && pathname === "/admin/notifications");
                 return (
                   <Link
                     key={item.href}
