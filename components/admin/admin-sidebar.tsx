@@ -394,7 +394,7 @@ export function AdminSidebar({ showReisReturn = false }: AdminSidebarProps) {
       return seesAllCampaignSections || canViewUsersNav;
     }
     if (item.devicesNav) {
-      return isFullAdminUser || canViewDevicesNav;
+      return isFullAdminUser || isClientRole || canViewDevicesNav;
     }
     // Subordinates-only views: never for admin/client/reis; need explicit grant.
     if (item.orgSubtreeOnly) {

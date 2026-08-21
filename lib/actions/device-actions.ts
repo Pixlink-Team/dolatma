@@ -5,6 +5,7 @@ import {
   canAccessDevicesPage,
   canCreateDeviceUnder,
   canEditDevicePassport,
+  canManageDeviceStatus,
   canMutateDevice,
   canViewDevice,
   filterUsersVisibleToSession,
@@ -12,7 +13,7 @@ import {
   isDeviceTreeScopedRole,
   listAccessibleDevices,
 } from "@/lib/auth/device-access";
-import { canManageSubtreeDevices } from "@/lib/auth/access";
+import { canManageSubtreeDevices, isClientUser } from "@/lib/auth/access";
 import { assertContributorTutorialCompleted } from "@/lib/auth/require-tutorial-completion";
 import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
 import {
@@ -149,7 +150,7 @@ export async function saveDeviceAction(data: {
         : null;
   const payload = { ...data, logoUrl };
 
-  if (isFullAdmin(session)) {
+  if (isFullAdmin(session) || isClientUser(session)) {
     const result = await pgSaveDevice(payload);
     if (result.success) await revalidateDevicePages(result.id);
     return result;
@@ -221,12 +222,17 @@ export async function saveDeviceAction(data: {
         ? "organization"
         : data.type
       : existing.type;
+    // Status is reserved for admin / کارفرما — org users keep the existing value.
+    const nextStatus = canManageDeviceStatus(session)
+      ? (data.status ?? existing.status)
+      : existing.status;
     const result = await pgSaveDevice(
       canEditPassport
         ? {
             ...payload,
             parentId: nextParentId,
             type: nextType,
+            status: nextStatus,
           }
         : {
             id: data.id,
@@ -234,7 +240,7 @@ export async function saveDeviceAction(data: {
             shortName: data.shortName,
             type: nextType,
             parentId: nextParentId,
-            status: data.status ?? existing.status,
+            status: nextStatus,
             logoUrl: existing.logoUrl,
             province: existing.province,
             city: existing.city,
@@ -265,6 +271,8 @@ export async function saveDeviceAction(data: {
     ...payload,
     parentId,
     type: data.type === "ministry" ? "organization" : data.type,
+    // Org creators cannot set status; new devices start active.
+    status: canManageDeviceStatus(session) ? (data.status ?? "active") : "active",
   });
   if (result.success) await revalidateDevicePages(result.id);
   return result;

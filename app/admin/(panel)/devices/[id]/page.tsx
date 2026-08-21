@@ -3,6 +3,7 @@ import { DevicePassportView } from "@/components/admin/device-passport";
 import {
   canAccessDevicesPage,
   canEditDevicePassport,
+  canManageDeviceStatus,
   canViewDevice,
   filterUsersVisibleToSession,
 } from "@/lib/auth/device-access";
@@ -50,6 +51,7 @@ export default async function DevicePassportPage({ params }: PageProps) {
 
   const fullAdmin = isFullAdmin(session);
   const canEdit = fullAdmin ? true : await canEditDevicePassport(session, id);
+  const canManageStatus = canManageDeviceStatus(session);
 
   return (
     <DevicePassportView
@@ -57,6 +59,7 @@ export default async function DevicePassportPage({ params }: PageProps) {
       canManageStaff={canEdit}
       canManageAdminSections={canEdit}
       canChangeMinistry={fullAdmin}
+      canManageStatus={canManageStatus}
     />
   );
 }

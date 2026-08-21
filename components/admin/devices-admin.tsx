@@ -107,6 +107,8 @@ interface DevicesAdminProps {
   showPassport?: boolean;
   /** Scoped user's home node — cannot be deleted. */
   homeDeviceId?: string | null;
+  /** Admin / کارفرما may view and change device status. */
+  canManageStatus?: boolean;
 }
 
 const CHILD_TYPES = (Object.keys(DEVICE_TYPE_LABELS) as DeviceType[]).filter(
@@ -120,6 +122,7 @@ export function DevicesAdmin({
   canManageAccess = false,
   showPassport = true,
   homeDeviceId = null,
+  canManageStatus = false,
 }: DevicesAdminProps) {
   const { campaignId } = useAdminCampaign();
   const { requestCreate, tutorialModal } = useSectionCreateGate("subsidiaries", campaignId ?? undefined);
@@ -611,6 +614,7 @@ export function DevicesAdmin({
 
   const onSaveDevice = form.handleSubmit((data) => {
     startTransition(async () => {
+      const existing = editingId ? rows.find((row) => row.id === editingId) : null;
       const result = await saveDeviceAction({
         id: editingId ?? undefined,
         name: data.name,
@@ -618,7 +622,9 @@ export function DevicesAdmin({
         type: data.type,
         parentId: editingId ? editingParentId : null,
         mission: data.mission || null,
-        status: data.status,
+        status: canManageStatus
+          ? data.status
+          : (existing?.status ?? "active"),
         activityScope: "national",
       });
       if (!result.success) {
@@ -642,7 +648,7 @@ export function DevicesAdmin({
         type: data.type,
         parentId: parentIdForChild,
         mission: data.mission || null,
-        status: data.status,
+        status: canManageStatus ? data.status : "active",
         activityScope: "national",
       });
       if (!result.success) {
@@ -730,7 +736,7 @@ export function DevicesAdmin({
               <Badge variant={depth === 0 ? "secondary" : "outline"}>
                 {DEVICE_TYPE_LABELS[device.type]}
               </Badge>
-              {depth === 0 ? (
+              {depth === 0 && canManageStatus ? (
                 <Badge variant={device.status === "active" ? "default" : "outline"}>
                   {DEVICE_STATUS_LABELS[device.status]}
                 </Badge>
@@ -893,24 +899,26 @@ export function DevicesAdmin({
                 </p>
               ) : null}
             </div>
-            <div className="space-y-2">
-              <Label>وضعیت</Label>
-              <Select
-                value={form.watch("status")}
-                onValueChange={(value) => form.setValue("status", value as DeviceStatus)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {(Object.keys(DEVICE_STATUS_LABELS) as DeviceStatus[]).map((key) => (
-                    <SelectItem key={key} value={key}>
-                      {DEVICE_STATUS_LABELS[key]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {canManageStatus ? (
+              <div className="space-y-2">
+                <Label>وضعیت</Label>
+                <Select
+                  value={form.watch("status")}
+                  onValueChange={(value) => form.setValue("status", value as DeviceStatus)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(Object.keys(DEVICE_STATUS_LABELS) as DeviceStatus[]).map((key) => (
+                      <SelectItem key={key} value={key}>
+                        {DEVICE_STATUS_LABELS[key]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : null}
             <div className="space-y-2">
               <Label>حوزه مأموریت</Label>
               <Textarea rows={3} {...form.register("mission")} />

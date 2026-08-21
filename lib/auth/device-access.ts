@@ -21,12 +21,17 @@ export function isDeviceTreeScopedRole(session: AuthSession): boolean {
   return isDeviceScopedPanelRole(session.role);
 }
 
+/** Device active/inactive/suspended status — admin and کارفرما only. */
+export function canManageDeviceStatus(session: AuthSession): boolean {
+  return isFullAdmin(session) || isClientUser(session);
+}
+
 /**
  * View passport / home device (profile link). Org users can open their subtree
  * devices even without manageSubtreeDevices.
  */
 export function canAccessDevicesPage(session: AuthSession): boolean {
-  return isFullAdmin(session) || isDeviceTreeScopedRole(session);
+  return isFullAdmin(session) || isClientUser(session) || isDeviceTreeScopedRole(session);
 }
 
 /**
@@ -34,7 +39,7 @@ export function canAccessDevicesPage(session: AuthSession): boolean {
  * Requires manageSubtreeDevices for org users (matches sidebar).
  */
 export function canAccessDevicesTree(session: AuthSession): boolean {
-  if (isFullAdmin(session)) return true;
+  if (isFullAdmin(session) || isClientUser(session)) return true;
   if (!isDeviceTreeScopedRole(session)) return false;
   return canManageSubtreeDevices(session);
 }
@@ -87,7 +92,7 @@ export async function listAccessibleDevices(
   session: AuthSession
 ): Promise<Device[]> {
   if (!isPostgresConfigured()) return [];
-  if (isFullAdmin(session)) return pgListDevices();
+  if (isFullAdmin(session) || isClientUser(session)) return pgListDevices();
   if (!isDeviceTreeScopedRole(session)) return [];
   const homeId = await getSessionHomeDeviceId(session);
   if (!homeId) return [];
@@ -117,7 +122,7 @@ export async function canViewDevice(
   session: AuthSession,
   deviceId: string
 ): Promise<boolean> {
-  if (isFullAdmin(session)) return true;
+  if (isFullAdmin(session) || isClientUser(session)) return true;
   if (!isDeviceTreeScopedRole(session)) return false;
   const homeId = await getSessionHomeDeviceId(session);
   if (!homeId) return false;
@@ -132,7 +137,7 @@ export async function canEditDevicePassport(
   session: AuthSession,
   deviceId: string
 ): Promise<boolean> {
-  if (isFullAdmin(session)) return true;
+  if (isFullAdmin(session) || isClientUser(session)) return true;
   if (!isDeviceTreeScopedRole(session)) return false;
   const homeId = await getSessionHomeDeviceId(session);
   if (!homeId) return false;
@@ -145,7 +150,7 @@ export async function canMutateDevice(
   deviceId: string,
   permissions?: ContributorPermissions | null
 ): Promise<boolean> {
-  if (isFullAdmin(session)) return true;
+  if (isFullAdmin(session) || isClientUser(session)) return true;
   if (!isDeviceTreeScopedRole(session)) return false;
   if (!canMutateDevicesFromPermissions(session, permissions)) return false;
   const homeId = await getSessionHomeDeviceId(session);
@@ -163,6 +168,8 @@ export async function canCreateDeviceUnder(
   permissions?: ContributorPermissions | null
 ): Promise<boolean> {
   if (isFullAdmin(session)) return true;
+  // کارفرما may create under existing parents, not new root ministries.
+  if (isClientUser(session)) return Boolean(parentId);
   if (!isDeviceTreeScopedRole(session)) return false;
   if (!parentId) return false;
   return canMutateDevice(session, parentId, permissions);

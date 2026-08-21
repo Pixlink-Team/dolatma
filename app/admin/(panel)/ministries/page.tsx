@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { DevicesAdmin } from "@/components/admin/devices-admin";
 import {
   canAccessDevicesTree,
+  canManageDeviceStatus,
   getSessionHomeDeviceId,
   isDeviceTreeScopedRole,
   listAccessibleDevices,
@@ -17,12 +18,13 @@ export default async function MinistriesPage() {
   if (!session) redirect("/admin/login");
 
   const fullAdmin = isFullAdmin(session);
+  const clientUser = isClientUser(session);
   // Tree management page matches sidebar: needs manageSubtreeDevices for org users.
   if (!canAccessDevicesTree(session)) redirect("/admin");
-  const canManageDevices = canManageSubtreeDevices(session);
+  const canManageDevices = fullAdmin || clientUser || canManageSubtreeDevices(session);
   const canManageAccess =
     fullAdmin ||
-    isClientUser(session) ||
+    clientUser ||
     (isOrgUserRole(session.role) && canManageSubtreeUsers(session));
   let devices: Awaited<ReturnType<typeof listAccessibleDevices>> = [];
   let homeDeviceId: string | null = null;
@@ -43,6 +45,7 @@ export default async function MinistriesPage() {
       canCreateRoot={fullAdmin}
       canManageDevices={canManageDevices}
       canManageAccess={canManageAccess}
+      canManageStatus={canManageDeviceStatus(session)}
       showPassport
       homeDeviceId={homeDeviceId}
     />

@@ -172,6 +172,8 @@ interface DevicePassportViewProps {
   canManageAdminSections?: boolean;
   /** Only full admin may change ministry placement / root ministry type. */
   canChangeMinistry?: boolean;
+  /** Admin / کارفرما may view and change device status. */
+  canManageStatus?: boolean;
 }
 
 export function DevicePassportView({
@@ -179,6 +181,7 @@ export function DevicePassportView({
   canManageStaff = true,
   canManageAdminSections = true,
   canChangeMinistry = false,
+  canManageStatus = false,
 }: DevicePassportViewProps) {
   const { campaignId } = useAdminCampaign();
   const passport = initialPassport;
@@ -321,7 +324,7 @@ export function DevicePassportView({
         })(),
         website: device.website ?? null,
         socialLinks: device.socialLinks,
-        status: data.status as DeviceStatus,
+        status: canManageStatus ? (data.status as DeviceStatus) : device.status,
       });
       if (!result.success) {
         toast.error(result.error);
@@ -419,7 +422,9 @@ export function DevicePassportView({
               <p className="text-sm text-muted-foreground">{device.name}</p>
               <div className="flex flex-wrap gap-2">
                 <Badge variant="secondary">{DEVICE_TYPE_LABELS[device.type]}</Badge>
-                <Badge variant="outline">{DEVICE_STATUS_LABELS[device.status]}</Badge>
+                {canManageStatus ? (
+                  <Badge variant="outline">{DEVICE_STATUS_LABELS[device.status]}</Badge>
+                ) : null}
                 <Badge variant="outline">{DEVICE_SCOPE_LABELS[device.activityScope]}</Badge>
                 {passport.parent && (
                   <Badge variant="outline">
@@ -968,19 +973,21 @@ export function DevicePassportView({
                 </SelectContent>
               </Select>
             </Field>
-            <Field label="وضعیت">
-              <Select
-                value={profileForm.watch("status")}
-                onValueChange={(value) => profileForm.setValue("status", value as DeviceStatus)}
-              >
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {(Object.keys(DEVICE_STATUS_LABELS) as DeviceStatus[]).map((key) => (
-                    <SelectItem key={key} value={key}>{DEVICE_STATUS_LABELS[key]}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
+            {canManageStatus ? (
+              <Field label="وضعیت">
+                <Select
+                  value={profileForm.watch("status")}
+                  onValueChange={(value) => profileForm.setValue("status", value as DeviceStatus)}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {(Object.keys(DEVICE_STATUS_LABELS) as DeviceStatus[]).map((key) => (
+                      <SelectItem key={key} value={key}>{DEVICE_STATUS_LABELS[key]}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
+            ) : null}
             <ProvinceCityFields
               province={watchedProvince ?? ""}
               city={watchedCity ?? ""}
