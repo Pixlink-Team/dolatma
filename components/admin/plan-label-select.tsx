@@ -10,6 +10,7 @@ import {
   formatPlanLabelDisplay,
   type ContentTopic,
 } from "@/lib/content-topics";
+import { cn } from "@/lib/utils";
 
 interface PlanLabelSelectProps {
   topics?: ContentTopic[];
@@ -22,6 +23,9 @@ interface PlanLabelSelectProps {
   label?: string;
   optional?: boolean;
   multiple?: boolean;
+  /** Save-time / deep-link empty highlight. */
+  invalid?: boolean;
+  className?: string;
 }
 
 function buildOptions(topics: ContentTopic[], plans: string[]): string[] {
@@ -48,12 +52,14 @@ export function PlanLabelSelect({
   label = "موضوع",
   optional = false,
   multiple = true,
+  invalid = false,
+  className,
 }: PlanLabelSelectProps) {
   const options = buildOptions(topics, plans);
   if (options.length === 0) {
     return (
-      <div className="space-y-2">
-        <Label>
+      <div data-field="planLabels" className={cn("space-y-2", className)}>
+        <Label className={cn(invalid && "text-destructive")}>
           {label}
           {!optional ? <span className="mr-1 text-destructive">*</span> : null}
         </Label>
@@ -104,8 +110,8 @@ export function PlanLabelSelect({
   });
 
   return (
-    <div className="space-y-2">
-      <Label>
+    <div data-field="planLabels" className={cn("space-y-2", className)}>
+      <Label className={cn(invalid && "text-destructive")}>
         {label}
         {!optional ? <span className="mr-1 text-destructive">*</span> : null}
       </Label>
@@ -137,7 +143,13 @@ export function PlanLabelSelect({
           placeholder={multiple ? "افزودن موضوع / زیرموضوع" : "انتخاب موضوع"}
           searchPlaceholder="جستجوی موضوع..."
           clearAfterSelect
+          triggerClassName={cn(
+            invalid && "border-destructive focus-visible:ring-destructive"
+          )}
         />
+      ) : null}
+      {invalid && selected.length === 0 ? (
+        <p className="text-xs text-destructive">موضوع را انتخاب کنید.</p>
       ) : null}
       {optional && multiple && selected.length > 0 && (
         <Button

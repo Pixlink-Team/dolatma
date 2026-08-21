@@ -26,6 +26,7 @@ import {
   saveMeetingsViewPasswordAction,
 } from "@/lib/actions/extended-actions";
 import { useAdminEditDeepLink } from "@/lib/hooks/use-admin-edit-deep-link";
+import { useInvalidFormFields } from "@/lib/hooks/use-invalid-form-fields";
 import { useSectionCreateGate } from "@/lib/hooks/use-section-create-gate";
 import { isDefaultMeetingTitle, type EditSuggestionMissingField } from "@/lib/edit-suggestions";
 import {
@@ -75,6 +76,7 @@ export function MeetingsAdmin({ campaignId, initialMeetings, hasMeetingsPassword
   const { requestCreate, tutorialModal } = useSectionCreateGate("meetings", campaignId);
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const { reportInvalid, clearInvalid, isFieldInvalid } = useInvalidFormFields();
   const [rows, setRows] = useState(initialMeetings);
   const [meetingsPassword, setMeetingsPassword] = useState("");
   const [passwordConfigured, setPasswordConfigured] = useState(hasMeetingsPassword);
@@ -153,8 +155,10 @@ export function MeetingsAdmin({ campaignId, initialMeetings, hasMeetingsPassword
   const watchedImageUrl = form.watch("imageUrl");
   const watchedDiscussion = form.watch("discussionSummary");
   const highlightTitle =
-    highlightFields.includes("title") &&
-    (!watchedTitle?.trim() || isDefaultMeetingTitle(watchedTitle));
+    Boolean(form.formState.errors.title) ||
+    isFieldInvalid("title", !watchedTitle?.trim()) ||
+    (highlightFields.includes("title") &&
+      (!watchedTitle?.trim() || isDefaultMeetingTitle(watchedTitle)));
   const highlightDate = highlightFields.includes("date") && !watchedMeetingDate?.trim();
   const highlightLocation = highlightFields.includes("location") && !watchedLocation?.trim();
   const highlightMedia = highlightFields.includes("media") && !watchedImageUrl?.trim();
@@ -232,6 +236,7 @@ export function MeetingsAdmin({ campaignId, initialMeetings, hasMeetingsPassword
     setEditingId(null);
     resetDialog();
     resetDeepLink();
+    clearInvalid();
   };
 
   const addBulkTasks = () => {
@@ -301,7 +306,9 @@ export function MeetingsAdmin({ campaignId, initialMeetings, hasMeetingsPassword
     setEditingDecisionIndex(decisions.length);
   };
 
-  const onSubmit = form.handleSubmit((data) => {
+  const onSubmit = form.handleSubmit(
+    (data) => {
+    clearInvalid();
     const normalizedTasks = reindexMeetingTasks(
       tasks
         .map((task) => ({ ...task, title: task.title.trim() }))
@@ -382,7 +389,11 @@ export function MeetingsAdmin({ campaignId, initialMeetings, hasMeetingsPassword
       toast.success("ذخیره شد");
       closeDialog();
     });
-  });
+  },
+  (errors) => {
+    reportInvalid(Object.keys(errors));
+  }
+  );
 
   return (
     <div className="space-y-4">
@@ -476,7 +487,7 @@ export function MeetingsAdmin({ campaignId, initialMeetings, hasMeetingsPassword
             <DialogTitle>{editingId ? "ویرایش جلسه" : "جلسه جدید"}</DialogTitle>
           </DialogHeader>
           <form onSubmit={onSubmit} className="space-y-4">
-            <div className="space-y-2">
+            <div data-field="title" className="space-y-2">
               <Label className={cn(highlightTitle && "text-destructive")}>عنوان جلسه</Label>
               <Input
                 {...form.register("title")}

@@ -55,6 +55,7 @@ import {
   type BroadcastMediaType,
 } from "@/lib/broadcast-media";
 import { useAdminEditDeepLink } from "@/lib/hooks/use-admin-edit-deep-link";
+import { useInvalidFormFields } from "@/lib/hooks/use-invalid-form-fields";
 import { useAdminViewMode } from "@/lib/hooks/use-admin-view-mode";
 import { useSectionCreateGate } from "@/lib/hooks/use-section-create-gate";
 import { todayISO } from "@/lib/jalali";
@@ -66,7 +67,10 @@ const MEDIA_ACCEPT =
   "image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.gif,video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov,audio/mpeg,audio/mp3,audio/wav,audio/mp4,audio/aac,audio/ogg,.mp3,.wav,.m4a,.aac,.ogg";
 
 const schema = z.object({
-  title: z.string().min(1).max(CONTENT_TITLE_MAX_LENGTH, CONTENT_TITLE_MAX_LENGTH_MESSAGE),
+  title: z
+    .string()
+    .min(1, "عنوان الزامی است")
+    .max(CONTENT_TITLE_MAX_LENGTH, CONTENT_TITLE_MAX_LENGTH_MESSAGE),
   reportDate: z.string(),
   mediaType: z.enum(["pdf", "media"]),
   pdfUrl: z.string().min(1),
@@ -132,6 +136,7 @@ export function BroadcastAdmin({ campaignId, initialReports }: BroadcastAdminPro
   const { requestCreate, tutorialModal } = useSectionCreateGate("broadcast", campaignId);
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const { reportInvalid, clearInvalid, isFieldInvalid } = useInvalidFormFields();
   const [sourceProductionType, setSourceProductionType] = useState<ProductionSourceType | null>(null);
   const [sourceProductionId, setSourceProductionId] = useState<string | null>(null);
   const [rows, setRows] = useState(initialReports);
@@ -170,7 +175,10 @@ export function BroadcastAdmin({ campaignId, initialReports }: BroadcastAdminPro
   const watchedMediaType = form.watch("mediaType");
   const watchedFileName = form.watch("fileName");
   const watchedCoverImageUrl = form.watch("coverImageUrl");
-  const highlightTitle = highlightFields.includes("title") && !watchedTitle?.trim();
+  const highlightTitle =
+    Boolean(form.formState.errors.title) ||
+    isFieldInvalid("title", !watchedTitle?.trim()) ||
+    (highlightFields.includes("title") && !watchedTitle?.trim());
   const highlightDate = highlightFields.includes("date") && !watchedReportDate?.trim();
   const highlightFile = highlightFields.includes("file") && !watchedPdfUrl?.trim();
   const formFileKind =
@@ -209,6 +217,7 @@ export function BroadcastAdmin({ campaignId, initialReports }: BroadcastAdminPro
     setOpen(false);
     setEditingId(null);
     resetDeepLink();
+    clearInvalid();
   };
 
   const handleView = (report: BroadcastReport) => {
@@ -227,11 +236,13 @@ export function BroadcastAdmin({ campaignId, initialReports }: BroadcastAdminPro
     });
   };
 
-  const onSubmit = form.handleSubmit((data) => {
+  const onSubmit = form.handleSubmit(
+    (data) => {
     if (!editingId && (!sourceProductionType || !sourceProductionId)) {
       toast.error("برای ثبت نشر باید یک تولید (یا دارایی دستورکار) انتخاب شود");
       return;
     }
+    clearInvalid();
 
     startTransition(async () => {
       const fileKind =
@@ -290,7 +301,11 @@ export function BroadcastAdmin({ campaignId, initialReports }: BroadcastAdminPro
       toast.success("ذخیره شد");
       closeDialog();
     });
-  });
+  },
+  (errors) => {
+    reportInvalid(Object.keys(errors));
+  }
+  );
 
   const previewKind = previewReport ? resolveBroadcastFileKind(previewReport) : null;
   const previewVersion =
@@ -423,7 +438,7 @@ export function BroadcastAdmin({ campaignId, initialReports }: BroadcastAdminPro
             setSourceProductionId(item?.id ?? null);
           }}
         />
-            <div className="space-y-2">
+            <div data-field="title" className="space-y-2">
               <Label className={cn(highlightTitle && "text-destructive")}>عنوان گزارش</Label>
               <Input
                 {...form.register("title")}

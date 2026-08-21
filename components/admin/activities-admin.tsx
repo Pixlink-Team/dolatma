@@ -53,6 +53,7 @@ import { deleteCampaignActivityAction, saveCampaignActivityAction } from "@/lib/
 import { normalizePlanLabels, type ContentTopic } from "@/lib/content-topics";
 import { isDefaultActivityTitle, type EditSuggestionMissingField } from "@/lib/edit-suggestions";
 import { useAdminEditDeepLink } from "@/lib/hooks/use-admin-edit-deep-link";
+import { useInvalidFormFields } from "@/lib/hooks/use-invalid-form-fields";
 import { useAdminViewMode } from "@/lib/hooks/use-admin-view-mode";
 import { useSectionCreateGate } from "@/lib/hooks/use-section-create-gate";
 import type { ProductionSourceType } from "@/lib/production-source-shared";
@@ -122,6 +123,7 @@ export function ActivitiesAdmin({
   const [isMediaDragging, setIsMediaDragging] = useState(false);
   const [isBatchUploadingMedia, setIsBatchUploadingMedia] = useState(false);
   const [planLabels, setPlanLabels] = useState<string[]>([]);
+  const { reportInvalid, clearInvalid, isFieldInvalid } = useInvalidFormFields();
   const [sourceProductionType, setSourceProductionType] = useState<ProductionSourceType | null>(null);
   const [sourceProductionId, setSourceProductionId] = useState<string | null>(null);
   const [isCreative, setIsCreative] = useState(false);
@@ -195,8 +197,11 @@ export function ActivitiesAdmin({
     Boolean(form.watch("imageUrl")?.trim() || form.watch("videoUrl")?.trim()) ||
     mediaItems.some((item) => item.url.trim());
   const highlightTitle =
-    highlightFields.includes("title") &&
-    (!watchedTitle?.trim() || isDefaultActivityTitle(watchedTitle));
+    Boolean(form.formState.errors.title) ||
+    isFieldInvalid("title", !watchedTitle?.trim()) ||
+    (highlightFields.includes("title") &&
+      (!watchedTitle?.trim() || isDefaultActivityTitle(watchedTitle)));
+  const highlightPlanLabels = isFieldInvalid("planLabels", planLabels.length === 0);
   const highlightDate = highlightFields.includes("date") && !watchedActivityDate?.trim();
   const highlightLocation = highlightFields.includes("location") && !watchedLocation?.trim();
   const highlightMedia = highlightFields.includes("media") && !hasActivityMedia;
@@ -252,6 +257,7 @@ export function ActivitiesAdmin({
     setPlanLabels([]);
     setIsCreative(false);
     resetDeepLink();
+    clearInvalid();
   };
 
   const handleDelete = (activity: CampaignActivity) => {
@@ -336,15 +342,17 @@ export function ActivitiesAdmin({
     }
   };
 
-  const onSubmit = form.handleSubmit((data) => {
+  const onSubmit = form.handleSubmit(
+    (data) => {
     if (!editingId && (!sourceProductionType || !sourceProductionId)) {
       toast.error("برای ثبت نشر باید یک تولید (یا دارایی دستورکار) انتخاب شود");
       return;
     }
     if (planLabels.length === 0) {
-      toast.error("موضوع الزامی است");
+      reportInvalid(["planLabels"]);
       return;
     }
+    clearInvalid();
 
     const filledMedia = mediaItems.filter((item) => item.url.trim());
     startTransition(async () => {
@@ -403,7 +411,11 @@ export function ActivitiesAdmin({
       toast.success("ذخیره شد");
       closeDialog();
     });
-  });
+  },
+  (errors) => {
+    reportInvalid(Object.keys(errors));
+  }
+  );
 
   return (
     <div className="space-y-6">
@@ -623,7 +635,7 @@ export function ActivitiesAdmin({
                 setSourceProductionId(item?.id ?? null);
               }}
             />
-            <div className="space-y-2">
+            <div data-field="title" className="space-y-2">
               <Label className={cn(highlightTitle && "text-destructive")}>عنوان</Label>
               <Input
                 {...form.register("title")}
@@ -640,6 +652,7 @@ export function ActivitiesAdmin({
               plans={contentPlans}
               values={planLabels}
               onChangeMultiple={setPlanLabels}
+              invalid={highlightPlanLabels}
             />
             <div className="space-y-2">
               <Label>نوع اقدام</Label>

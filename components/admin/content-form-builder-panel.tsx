@@ -335,11 +335,18 @@ export function ContentFormBuilderPanel({
               <Label htmlFor={`required-${field.id}`}>اجباری</Label>
               <Switch
                 id={`required-${field.id}`}
-                checked={field.widget === "planLabels" ? true : field.required}
-                disabled={field.widget === "planLabels"}
+                checked={
+                  field.widget === "planLabels" || field.widget === "title"
+                    ? true
+                    : field.required
+                }
+                disabled={field.widget === "planLabels" || field.widget === "title"}
                 onCheckedChange={(checked) =>
                   updateField(index, {
-                    required: field.widget === "planLabels" ? true : checked,
+                    required:
+                      field.widget === "planLabels" || field.widget === "title"
+                        ? true
+                        : checked,
                   })
                 }
               />

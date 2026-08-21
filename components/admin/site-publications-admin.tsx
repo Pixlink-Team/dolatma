@@ -53,6 +53,7 @@ import { RefreshCw, Trash2 } from "lucide-react";
 import { normalizePlanLabels, type ContentTopic } from "@/lib/content-topics";
 import { type EditSuggestionMissingField } from "@/lib/edit-suggestions";
 import { useAdminEditDeepLink } from "@/lib/hooks/use-admin-edit-deep-link";
+import { useInvalidFormFields } from "@/lib/hooks/use-invalid-form-fields";
 import { useAdminViewMode } from "@/lib/hooks/use-admin-view-mode";
 import { useSectionCreateGate } from "@/lib/hooks/use-section-create-gate";
 import { useAdminInfiniteScroll } from "@/lib/hooks/use-admin-infinite-scroll";
@@ -151,6 +152,7 @@ export function SitePublicationsAdmin({
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [planLabels, setPlanLabels] = useState<string[]>([]);
+  const { reportInvalid, clearInvalid, isFieldInvalid } = useInvalidFormFields();
   const [sourceProductionType, setSourceProductionType] = useState<ProductionSourceType | null>(null);
   const [sourceProductionId, setSourceProductionId] = useState<string | null>(null);
   const [isGroupDistribution, setIsGroupDistribution] = useState(false);
@@ -247,7 +249,11 @@ export function SitePublicationsAdmin({
     () => normalizeSocialPostLinkEntries(linkEntries),
     [linkEntries]
   );
-  const highlightTitle = highlightFields.includes("title") && !watchedTitle?.trim();
+  const highlightTitle =
+    Boolean(form.formState.errors.title) ||
+    isFieldInvalid("title", !watchedTitle?.trim()) ||
+    (highlightFields.includes("title") && !watchedTitle?.trim());
+  const highlightPlanLabels = isFieldInvalid("planLabels", planLabels.length === 0);
   const highlightLink =
     highlightFields.includes("link") &&
     (isGroupDistribution ? filledLinkEntries.length === 0 : !watchedLink?.trim());
@@ -329,6 +335,7 @@ export function SitePublicationsAdmin({
     setIsGroupDistribution(false);
     setLinkEntries([createEmptySocialPostLinkEntry()]);
     resetDeepLink();
+    clearInvalid();
   };
 
   const handleDelete = (post: SocialMediaPost) => {
@@ -383,15 +390,17 @@ export function SitePublicationsAdmin({
     });
   };
 
-  const onSubmit = form.handleSubmit((data) => {
+  const onSubmit = form.handleSubmit(
+    (data) => {
     if (!editingId && (!sourceProductionType || !sourceProductionId)) {
       toast.error("برای ثبت نشر باید یک تولید (یا دارایی دستورکار) انتخاب شود");
       return;
     }
     if (planLabels.length === 0) {
-      toast.error("موضوع الزامی است");
+      reportInvalid(["planLabels"]);
       return;
     }
+    clearInvalid();
 
     startTransition(async () => {
       const existing = editingId ? rows.find((row) => row.id === editingId) : undefined;
@@ -493,7 +502,11 @@ export function SitePublicationsAdmin({
       toast.success("ذخیره شد");
       closeDialog();
     });
-  });
+  },
+  (errors) => {
+    reportInvalid(Object.keys(errors));
+  }
+  );
 
   return (
     <div className="space-y-6">
@@ -729,7 +742,7 @@ export function SitePublicationsAdmin({
                 setSourceProductionId(item?.id ?? null);
               }}
             />
-            <div className="space-y-2">
+            <div data-field="title" className="space-y-2">
               <Label className={cn(highlightTitle && "text-destructive")}>
                 عنوان (به‌صورت لینک نمایش داده می‌شود)
               </Label>
@@ -749,6 +762,7 @@ export function SitePublicationsAdmin({
               plans={contentPlans}
               values={planLabels}
               onChangeMultiple={setPlanLabels}
+              invalid={highlightPlanLabels}
             />
 
             <div className="flex items-center justify-between gap-3 rounded-lg border p-3">

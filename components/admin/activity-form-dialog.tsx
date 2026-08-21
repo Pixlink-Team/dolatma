@@ -26,6 +26,7 @@ import {
   CONTENT_TITLE_MAX_LENGTH,
   CONTENT_TITLE_MAX_LENGTH_MESSAGE,
 } from "@/lib/content-constraints";
+import { useInvalidFormFields } from "@/lib/hooks/use-invalid-form-fields";
 import { todayISO } from "@/lib/jalali";
 import type { ProductionSourceType } from "@/lib/production-source-shared";
 import { stripFileAccessToken } from "@/lib/uploads";
@@ -35,7 +36,10 @@ import { cn } from "@/lib/utils";
 const MAX_MEDIA_ITEMS = 10;
 
 const schema = z.object({
-  title: z.string().min(1).max(CONTENT_TITLE_MAX_LENGTH, CONTENT_TITLE_MAX_LENGTH_MESSAGE),
+  title: z
+    .string()
+    .min(1, "عنوان الزامی است")
+    .max(CONTENT_TITLE_MAX_LENGTH, CONTENT_TITLE_MAX_LENGTH_MESSAGE),
   activityType: z.enum([
     "magazine",
     "newspaper",
@@ -102,6 +106,7 @@ export function ActivityFormDialog({
 }: ActivityFormDialogProps) {
   const [mediaItems, setMediaItems] = useState<ActivityMediaItem[]>([]);
   const [planLabels, setPlanLabels] = useState<string[]>([]);
+  const { reportInvalid, clearInvalid, isFieldInvalid } = useInvalidFormFields();
   const [sourceProductionType, setSourceProductionType] = useState<ProductionSourceType | null>(null);
   const [sourceProductionId, setSourceProductionId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -118,7 +123,10 @@ export function ActivityFormDialog({
   });
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      clearInvalid();
+      return;
+    }
     form.reset({
       title: initialValues?.title?.trim() || "",
       activityType: (initialValues?.activityType as FormValues["activityType"]) || "field",
@@ -139,15 +147,23 @@ export function ActivityFormDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, initialValuesKey]);
 
-  const onSubmit = form.handleSubmit((data) => {
+  const watchedTitle = form.watch("title");
+  const showTitleError =
+    Boolean(form.formState.errors.title) ||
+    isFieldInvalid("title", !watchedTitle?.trim());
+  const highlightPlanLabels = isFieldInvalid("planLabels", planLabels.length === 0);
+
+  const onSubmit = form.handleSubmit(
+    (data) => {
     if (!sourceProductionType || !sourceProductionId) {
       toast.error("برای ثبت نشر باید یک تولید (یا دارایی دستورکار) انتخاب شود");
       return;
     }
     if (planLabels.length === 0) {
-      toast.error("موضوع الزامی است");
+      reportInvalid(["planLabels"]);
       return;
     }
+    clearInvalid();
 
     const filledMedia = mediaItems
       .filter((item) => item.url.trim())
@@ -185,7 +201,11 @@ export function ActivityFormDialog({
       onSaved?.();
       onOpenChange(false);
     });
-  });
+  },
+  (errors) => {
+    reportInvalid(Object.keys(errors));
+  }
+  );
 
   return (
     <AdminEditorDialog
@@ -231,9 +251,16 @@ export function ActivityFormDialog({
           setSourceProductionId(item?.id ?? null);
         }}
       />
-      <div className="space-y-2">
-        <Label>عنوان</Label>
-        <Input {...form.register("title")} maxLength={CONTENT_TITLE_MAX_LENGTH} />
+      <div data-field="title" className="space-y-2">
+        <Label className={cn(showTitleError && "text-destructive")}>عنوان</Label>
+        <Input
+          {...form.register("title")}
+          maxLength={CONTENT_TITLE_MAX_LENGTH}
+          className={cn(showTitleError && "border-destructive focus-visible:ring-destructive")}
+        />
+        {showTitleError && (
+          <p className="text-xs text-destructive">عنوان خالی است؛ لطفاً تکمیل کنید.</p>
+        )}
       </div>
 
       <PlanLabelSelect
@@ -241,6 +268,7 @@ export function ActivityFormDialog({
         plans={contentPlans}
         values={planLabels}
         onChangeMultiple={setPlanLabels}
+        invalid={highlightPlanLabels}
       />
 
       <div className="space-y-2">

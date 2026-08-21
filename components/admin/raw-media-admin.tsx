@@ -54,6 +54,7 @@ import {
 import { useAdminViewMode } from "@/lib/hooks/use-admin-view-mode";
 import { useSectionCreateGate } from "@/lib/hooks/use-section-create-gate";
 import { useAdminEditDeepLink } from "@/lib/hooks/use-admin-edit-deep-link";
+import { useInvalidFormFields } from "@/lib/hooks/use-invalid-form-fields";
 import { useAdminInfiniteScroll } from "@/lib/hooks/use-admin-infinite-scroll";
 import { CONTENT_TITLE_MAX_LENGTH } from "@/lib/content-constraints";
 import type { ContentTopic } from "@/lib/content-topics";
@@ -91,6 +92,7 @@ export function RawMediaAdmin({
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [title, setTitle] = useState("");
+  const { reportInvalid, clearInvalid, isFieldInvalid } = useInvalidFormFields();
   const [description, setDescription] = useState("");
   const [mediaKind, setMediaKind] = useState<RawMediaKind>("image");
   const [planLabels, setPlanLabels] = useState<string[]>([]);
@@ -218,25 +220,28 @@ export function RawMediaAdmin({
     setDialogOpen(false);
     resetForm();
     resetDeepLink();
+    clearInvalid();
   };
 
-  const highlightTitle = highlightFields.includes("title") && !title.trim();
-  const highlightFile = highlightFields.includes("file") && !upload.url;
+  const highlightTitle =
+    isFieldInvalid("title", !title.trim()) ||
+    (highlightFields.includes("title") && !title.trim());
+  const highlightPlanLabels = isFieldInvalid("planLabels", planLabels.length === 0);
+  const highlightFile =
+    isFieldInvalid("file", !upload.url) ||
+    (highlightFields.includes("file") && !upload.url);
   const highlightDescription = highlightFields.includes("description") && !description.trim();
 
   const handleSave = () => {
-    if (!title.trim()) {
-      toast.error("عنوان الزامی است");
+    const invalid: string[] = [];
+    if (!title.trim()) invalid.push("title");
+    if (planLabels.length === 0) invalid.push("planLabels");
+    if (!upload.url) invalid.push("file");
+    if (invalid.length > 0) {
+      reportInvalid(invalid);
       return;
     }
-    if (planLabels.length === 0) {
-      toast.error("موضوع الزامی است");
-      return;
-    }
-    if (!upload.url) {
-      toast.error("ابتدا فایل را آپلود کنید");
-      return;
-    }
+    clearInvalid();
 
     const quota = canAcceptRawMediaUpload(storageForQuota, upload.fileSize);
     if (!quota.ok) {
@@ -582,7 +587,7 @@ export function RawMediaAdmin({
           />
         }
       >
-        <div className="space-y-2">
+        <div data-field="title" className="space-y-2">
           <Label className={cn(highlightTitle && "text-destructive")}>عنوان</Label>
           <Input
             value={title}
@@ -592,10 +597,16 @@ export function RawMediaAdmin({
             className={cn(highlightTitle && "border-destructive focus-visible:ring-destructive")}
           />
           {highlightTitle && (
-            <p className="text-xs text-destructive">عنوان خالی است؛ لطفاً تکمیل کنید.</p>
+            <p className="text-xs text-destructive">عنوان را وارد کنید.</p>
           )}
         </div>
-        <PlanLabelSelect topics={contentTopics} plans={contentPlans} values={planLabels} onChangeMultiple={setPlanLabels} />
+        <PlanLabelSelect
+          topics={contentTopics}
+          plans={contentPlans}
+          values={planLabels}
+          onChangeMultiple={setPlanLabels}
+          invalid={highlightPlanLabels}
+        />
         <div className="space-y-2">
           <Label className={cn(highlightDescription && "text-amber-700 dark:text-amber-300")}>توضیحات</Label>
           <Textarea
@@ -635,6 +646,7 @@ export function RawMediaAdmin({
           className={cn(
             highlightFile && "rounded-lg border border-destructive bg-destructive/5 p-3"
           )}
+          data-field="file"
         >
           <MediaUpload
             label={mediaKind === "video" ? "ویدیو خام" : "تصویر خام"}

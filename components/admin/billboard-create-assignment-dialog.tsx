@@ -47,6 +47,7 @@ import type {
 } from "@/lib/types";
 import { ProductionSourcePicker } from "@/components/admin/production-source-picker";
 import type { ProductionSourceType } from "@/lib/production-source-shared";
+import { useInvalidFormFields } from "@/lib/hooks/use-invalid-form-fields";
 
 interface ContributorProfile {
   province?: string | null;
@@ -176,6 +177,7 @@ export function BillboardCreateAssignmentDialog({
   bulkTypeSwitcher,
 }: BillboardCreateAssignmentDialogProps) {
   const [isPending, startTransition] = useTransition();
+  const { reportInvalid, clearInvalid, isFieldInvalid } = useInvalidFormFields();
   const [fields, setFields] = useState<ContentFormField[]>(() =>
     defaultContentFormFields("billboards")
   );
@@ -195,15 +197,20 @@ export function BillboardCreateAssignmentDialog({
           !isPlaceholderBillboardImage(period.existingBillboardImageUrl)
       )
   );
+  const axisEmptyOrDefault =
+    !values.axis.trim() || isDefaultBillboardTitle(values.axis);
   const highlightTitle =
-    highlightFields.includes("title") &&
-    (!values.axis.trim() || isDefaultBillboardTitle(values.axis));
+    isFieldInvalid("axis", axisEmptyOrDefault) ||
+    (highlightFields.includes("title") && axisEmptyOrDefault);
+  const highlightPlanLabels = isFieldInvalid("planLabels", values.planLabels.length === 0);
   const highlightCity = highlightFields.includes("city") && !values.city.trim();
   const highlightLocation =
     highlightFields.includes("location") && !values.address.trim();
   const highlightDescription =
     highlightFields.includes("description") && !values.address.trim();
-  const highlightMedia = highlightFields.includes("media") && !hasPeriodMedia;
+  const highlightMedia =
+    isFieldInvalid("billboardImage", !hasPeriodMedia) ||
+    (highlightFields.includes("media") && !hasPeriodMedia);
 
   useEffect(() => {
     if (!open) return;
@@ -222,7 +229,10 @@ export function BillboardCreateAssignmentDialog({
   }, [open]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      clearInvalid();
+      return;
+    }
 
     const loadForm = async () => {
       if (editingBillboard) {
@@ -336,9 +346,10 @@ export function BillboardCreateAssignmentDialog({
   };
 
   const handleSubmit = () => {
+    const invalid: string[] = [];
+
     if (!values.locationType.trim()) {
-      toast.error("نوع محل را انتخاب کنید");
-      return;
+      invalid.push("locationType");
     }
 
     const planLabelsField = fieldByWidget(fields, "planLabels");
@@ -346,29 +357,25 @@ export function BillboardCreateAssignmentDialog({
       (planLabelsField?.required ?? true) &&
       values.planLabels.length === 0
     ) {
-      toast.error("موضوع الزامی است");
-      return;
+      invalid.push("planLabels");
     }
 
     const axisField = fieldByWidget(fields, "axis");
     if ((axisField?.required ?? true) && values.axis.trim().length < 2) {
-      toast.error("محور باید حداقل ۲ کاراکتر باشد");
-      return;
+      invalid.push("axis");
     }
 
     if (hasSystemWidget(fields, "periods")) {
       const period = values.periods[0] ?? createDisplayPeriod();
       if (!period.startDate) {
-        toast.error("تاریخ الزامی است");
-        return;
+        invalid.push("startDate");
       }
       const hasBillboardImage =
         Boolean(period.billboardImageFile) ||
         Boolean(period.existingBillboardImageUrl?.trim());
       const periodsField = fieldByWidget(fields, "periods");
       if ((periodsField?.required ?? true) && !hasBillboardImage) {
-        toast.error("عکس بیلبورد الزامی است");
-        return;
+        invalid.push("billboardImage");
       }
     }
 
@@ -380,15 +387,20 @@ export function BillboardCreateAssignmentDialog({
         (typeof raw === "string" && !raw.trim()) ||
         (typeof raw === "number" && Number.isNaN(raw));
       if (empty && field.type !== "checkbox") {
-        toast.error(`فیلد «${field.label}» الزامی است`);
-        return;
+        invalid.push(field.key);
       }
+    }
+
+    if (invalid.length > 0) {
+      reportInvalid(invalid);
+      return;
     }
 
     if (!isEditing && (!sourceProductionType || !sourceProductionId)) {
       toast.error("برای ثبت نشر باید یک تولید (یا دارایی دستورکار) انتخاب شود");
       return;
     }
+    clearInvalid();
 
     startTransition(async () => {
       const formData = new FormData();
@@ -517,6 +529,7 @@ export function BillboardCreateAssignmentDialog({
               canScore={canScore}
               isNew={!isEditing}
               highlightTitle={highlightTitle}
+              highlightPlanLabels={highlightPlanLabels}
               highlightCity={highlightCity}
               highlightLocation={highlightLocation}
               highlightDescription={highlightDescription}

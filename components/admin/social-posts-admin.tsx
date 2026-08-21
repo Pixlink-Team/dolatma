@@ -53,6 +53,7 @@ import {
   type EditSuggestionMissingField,
 } from "@/lib/edit-suggestions";
 import { useAdminViewMode } from "@/lib/hooks/use-admin-view-mode";
+import { useInvalidFormFields } from "@/lib/hooks/use-invalid-form-fields";
 import { useSectionCreateGate } from "@/lib/hooks/use-section-create-gate";
 import { useAdminInfiniteScroll } from "@/lib/hooks/use-admin-infinite-scroll";
 import { AdminInfiniteScrollSentinel } from "@/components/admin/admin-infinite-scroll-sentinel";
@@ -84,7 +85,10 @@ import { Badge } from "@/components/ui/badge";
 
 const schema = z.object({
   platform: z.enum(["instagram", "x", "telegram", "linkedin", "youtube", "aparat", "rubika", "eitaa", "soroush", "bale", "other"]),
-  title: z.string().min(1).max(CONTENT_TITLE_MAX_LENGTH, CONTENT_TITLE_MAX_LENGTH_MESSAGE),
+  title: z
+    .string()
+    .min(1, "عنوان الزامی است")
+    .max(CONTENT_TITLE_MAX_LENGTH, CONTENT_TITLE_MAX_LENGTH_MESSAGE),
   coverImageUrl: z.string().optional(),
   views: z.coerce.number().min(0),
   likes: z.coerce.number().min(0),
@@ -137,6 +141,7 @@ export function SocialPostsAdmin({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [previewPost, setPreviewPost] = useState<SocialMediaPost | null>(null);
   const [planLabels, setPlanLabels] = useState<string[]>([]);
+  const { reportInvalid, clearInvalid, isFieldInvalid } = useInvalidFormFields();
   const [sourceProductionType, setSourceProductionType] = useState<ProductionSourceType | null>(null);
   const [sourceProductionId, setSourceProductionId] = useState<string | null>(null);
   const [highlightFields, setHighlightFields] = useState<EditSuggestionMissingField[]>([]);
@@ -194,6 +199,7 @@ export function SocialPostsAdmin({
     setHighlightFields([]);
     openedFromQueryRef.current = null;
     clearEditQuery();
+    clearInvalid();
   };
 
   const missingCoverTargets = useMemo(() => {
@@ -372,7 +378,11 @@ export function SocialPostsAdmin({
     () => normalizeSocialPostLinkEntries(linkEntries),
     [linkEntries]
   );
-  const highlightTitle = highlightFields.includes("title") && !watchedTitle?.trim();
+  const highlightTitle =
+    Boolean(form.formState.errors.title) ||
+    isFieldInvalid("title", !watchedTitle?.trim()) ||
+    (highlightFields.includes("title") && !watchedTitle?.trim());
+  const highlightPlanLabels = isFieldInvalid("planLabels", planLabels.length === 0);
   const highlightLink =
     highlightFields.includes("link") &&
     (isGroupDistribution || selectedPlatforms.length > 1
@@ -652,15 +662,17 @@ export function SocialPostsAdmin({
     });
   };
 
-  const onSubmit = form.handleSubmit((data) => {
+  const onSubmit = form.handleSubmit(
+    (data) => {
     if (!editingId && (!sourceProductionType || !sourceProductionId)) {
       toast.error("برای ثبت نشر باید یک تولید (یا دارایی دستورکار) انتخاب شود");
       return;
     }
     if (planLabels.length === 0) {
-      toast.error("موضوع الزامی است");
+      reportInvalid(["planLabels"]);
       return;
     }
+    clearInvalid();
 
     startTransition(async () => {
 
@@ -765,7 +777,11 @@ export function SocialPostsAdmin({
       toast.success("ذخیره شد");
       closeEditor();
     });
-  });
+  },
+  (errors) => {
+    reportInvalid(Object.keys(errors));
+  }
+  );
 
   return (
     <div className="space-y-6" dir="rtl">
@@ -1071,7 +1087,7 @@ export function SocialPostsAdmin({
               </Select>
             </div>
 
-            <div className="space-y-2">
+            <div data-field="title" className="space-y-2">
               <Label className={cn(highlightTitle && "text-destructive")}>عنوان / نام کاور</Label>
               <Input
                 {...form.register("title")}
@@ -1088,6 +1104,7 @@ export function SocialPostsAdmin({
               plans={contentPlans}
               values={planLabels}
               onChangeMultiple={setPlanLabels}
+              invalid={highlightPlanLabels}
             />
             {editingId && (
               <ContentScoreControl

@@ -39,6 +39,7 @@ import { CONTENT_TITLE_MAX_LENGTH } from "@/lib/content-constraints";
 import type { ContentTopic } from "@/lib/content-topics";
 import { isDefaultFileTitle, type EditSuggestionMissingField } from "@/lib/edit-suggestions";
 import { useAdminEditDeepLink } from "@/lib/hooks/use-admin-edit-deep-link";
+import { useInvalidFormFields } from "@/lib/hooks/use-invalid-form-fields";
 import { useSectionCreateGate } from "@/lib/hooks/use-section-create-gate";
 import { useAdminViewMode } from "@/lib/hooks/use-admin-view-mode";
 import { useAdminInfiniteScroll } from "@/lib/hooks/use-admin-infinite-scroll";
@@ -83,6 +84,7 @@ export function FilesAdmin({
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [title, setTitle] = useState("");
+  const { reportInvalid, clearInvalid, isFieldInvalid } = useInvalidFormFields();
   const [description, setDescription] = useState("");
   const [planLabels, setPlanLabels] = useState<string[]>([]);
   const [contentFilter, setContentFilter] = useState<AdminContentFilterState>(DEFAULT_ADMIN_CONTENT_FILTER);
@@ -169,26 +171,28 @@ export function FilesAdmin({
     setDialogOpen(false);
     resetForm();
     resetDeepLink();
+    clearInvalid();
   };
 
   const highlightTitle =
-    highlightFields.includes("title") && (isDefaultFileTitle(title) || !title.trim());
-  const highlightFile = highlightFields.includes("file") && !upload.url;
+    isFieldInvalid("title", !title.trim()) ||
+    (highlightFields.includes("title") && (isDefaultFileTitle(title) || !title.trim()));
+  const highlightPlanLabels = isFieldInvalid("planLabels", planLabels.length === 0);
+  const highlightFile =
+    isFieldInvalid("file", !upload.url) ||
+    (highlightFields.includes("file") && !upload.url);
   const highlightDescription = highlightFields.includes("description") && !description.trim();
 
   const handleSave = () => {
-    if (!title.trim()) {
-      toast.error("عنوان فایل الزامی است");
+    const invalid: string[] = [];
+    if (!title.trim()) invalid.push("title");
+    if (planLabels.length === 0) invalid.push("planLabels");
+    if (!upload.url) invalid.push("file");
+    if (invalid.length > 0) {
+      reportInvalid(invalid);
       return;
     }
-    if (planLabels.length === 0) {
-      toast.error("موضوع الزامی است");
-      return;
-    }
-    if (!upload.url) {
-      toast.error("ابتدا فایل را آپلود کنید");
-      return;
-    }
+    clearInvalid();
 
     startTransition(async () => {
       const result = await saveCampaignFileAction({
@@ -457,7 +461,7 @@ export function FilesAdmin({
           />
         }
       >
-        <div className="space-y-2">
+        <div data-field="title" className="space-y-2">
           <Label className={cn(highlightTitle && "text-destructive")}>عنوان</Label>
           <Input
             value={title}
@@ -466,17 +470,21 @@ export function FilesAdmin({
             placeholder="عنوان فایل"
             className={cn(highlightTitle && "border-destructive focus-visible:ring-destructive")}
           />
-          {highlightTitle && (
+          {highlightTitle && !title.trim() ? (
+            <p className="text-xs text-destructive">عنوان را وارد کنید.</p>
+          ) : null}
+          {highlightTitle && title.trim() ? (
             <p className="text-xs text-destructive">
               عنوان پیش‌فرض یا خالی است؛ یک عنوان اختصاصی وارد کنید.
             </p>
-          )}
+          ) : null}
         </div>
         <PlanLabelSelect
           topics={contentTopics}
           plans={contentPlans}
           values={planLabels}
           onChangeMultiple={setPlanLabels}
+          invalid={highlightPlanLabels}
         />
         <div className="space-y-2">
           <Label className={cn(highlightDescription && "text-amber-700 dark:text-amber-300")}>
@@ -497,6 +505,7 @@ export function FilesAdmin({
           )}
         </div>
         <div
+          data-field="file"
           className={cn(
             highlightFile && "rounded-lg border border-destructive bg-destructive/5 p-3"
           )}

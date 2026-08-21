@@ -128,6 +128,7 @@ interface PosterRendererProps extends SharedRendererProps {
   onChange: (patch: Partial<PosterSectionFormValues>) => void;
   contentId?: string;
   highlightTitle?: boolean;
+  highlightPlanLabels?: boolean;
   highlightDescription?: boolean;
   highlightMedia?: boolean;
 }
@@ -138,6 +139,7 @@ interface BillboardRendererProps extends SharedRendererProps {
   onChange: (patch: Partial<BillboardSectionFormValues>) => void;
   contentId?: string;
   highlightTitle?: boolean;
+  highlightPlanLabels?: boolean;
   highlightCity?: boolean;
   highlightLocation?: boolean;
   highlightDescription?: boolean;
@@ -151,6 +153,7 @@ interface GenericRendererProps extends SharedRendererProps {
   onChange: (patch: Partial<GenericSectionFormValues>) => void;
   contentId?: string;
   highlightTitle?: boolean;
+  highlightPlanLabels?: boolean;
   highlightDescription?: boolean;
   highlightMedia?: boolean;
 }
@@ -217,7 +220,7 @@ function BillboardLocationTypeField({
   onManualChange: () => void;
 }) {
   return (
-    <div className="space-y-2">
+    <div data-field="locationType" className="space-y-2">
       <Label>
         {label}
         {required ? <span className="text-destructive mr-1">*</span> : null}
@@ -268,7 +271,7 @@ function CustomFieldInput({
   readOnly?: boolean;
 }) {
   return (
-    <div className="space-y-2">
+    <div data-field={field.key} className="space-y-2">
       <Label>
         {field.label.trim() || "بدون عنوان"}
         {field.required ? <span className="text-destructive mr-1">*</span> : null}
@@ -455,8 +458,8 @@ export function ContentSectionFormRenderer(props: ContentSectionFormRendererProp
           switch (widget) {
             case "image":
               return (
+                <div key={field.id} data-field="image">
                 <MediaUpload
-                  key={field.id}
                   label={field.label}
                   value={values.imageUrl}
                   onChange={(url) => onChange({ imageUrl: url })}
@@ -490,10 +493,11 @@ export function ContentSectionFormRenderer(props: ContentSectionFormRendererProp
                     </div>
                   }
                 />
+                </div>
               );
             case "title":
               return (
-                <div key={field.id} className="space-y-2">
+                <div key={field.id} data-field="title" className="space-y-2">
                   <Label className={cn(props.highlightTitle && "text-destructive")}>
                     {field.label}
                     {field.required ? <span className="text-destructive mr-1">*</span> : null}
@@ -508,6 +512,9 @@ export function ContentSectionFormRenderer(props: ContentSectionFormRendererProp
                     )}
                     readOnly={readOnly}
                   />
+                  {props.highlightTitle ? (
+                    <p className="text-xs text-destructive">عنوان را وارد کنید.</p>
+                  ) : null}
                 </div>
               );
             case "description":
@@ -543,6 +550,7 @@ export function ContentSectionFormRenderer(props: ContentSectionFormRendererProp
                   onChangeMultiple={(planLabels) => onChange({ planLabels })}
                   optional={!field.required}
                   label={field.label}
+                  invalid={props.highlightPlanLabels}
                 />
               );
             case "notes":
@@ -617,7 +625,7 @@ export function ContentSectionFormRenderer(props: ContentSectionFormRendererProp
             );
           case "axis":
             return (
-              <div key={field.id} className="space-y-2">
+              <div key={field.id} data-field="axis" className="space-y-2">
                 <Label className={cn(props.highlightTitle && "text-destructive")}>
                   {field.label}
                   {field.required ? <span className="text-destructive mr-1">*</span> : null}
@@ -630,6 +638,9 @@ export function ContentSectionFormRenderer(props: ContentSectionFormRendererProp
                   )}
                   readOnly={readOnly}
                 />
+                {props.highlightTitle ? (
+                  <p className="text-xs text-destructive">محور را وارد کنید.</p>
+                ) : null}
               </div>
             );
           case "areaSqm":
@@ -711,6 +722,7 @@ export function ContentSectionFormRenderer(props: ContentSectionFormRendererProp
                 onChangeMultiple={(planLabels) => onChange({ planLabels })}
                 optional={!field.required}
                 label={field.label}
+                invalid={props.highlightPlanLabels}
               />
             );
           case "score":
@@ -751,7 +763,11 @@ export function ContentSectionFormRenderer(props: ContentSectionFormRendererProp
           key: keyof GenericSectionFormValues,
           multiline = false
         ) => (
-          <div key={field.id} className="space-y-2">
+          <div
+            key={field.id}
+            data-field={key === "title" ? "title" : undefined}
+            className="space-y-2"
+          >
             <Label className={cn(key === "title" && props.highlightTitle && "text-destructive")}>
               {field.label}
               {requiredMark}
@@ -763,6 +779,11 @@ export function ContentSectionFormRenderer(props: ContentSectionFormRendererProp
                 rows={3}
                 placeholder={field.placeholder}
                 readOnly={readOnly}
+                className={cn(
+                  key === "title" &&
+                    props.highlightTitle &&
+                    "border-destructive focus-visible:ring-destructive"
+                )}
               />
             ) : (
               <Input
@@ -771,8 +792,16 @@ export function ContentSectionFormRenderer(props: ContentSectionFormRendererProp
                 maxLength={key === "title" ? CONTENT_TITLE_MAX_LENGTH : undefined}
                 placeholder={field.placeholder}
                 readOnly={readOnly}
+                className={cn(
+                  key === "title" &&
+                    props.highlightTitle &&
+                    "border-destructive focus-visible:ring-destructive"
+                )}
               />
             )}
+            {key === "title" && props.highlightTitle ? (
+              <p className="text-xs text-destructive">عنوان را وارد کنید.</p>
+            ) : null}
           </div>
         );
 
@@ -889,6 +918,7 @@ export function ContentSectionFormRenderer(props: ContentSectionFormRendererProp
                 onChangeMultiple={(planLabels) => onChange({ planLabels })}
                 optional={!field.required}
                 label={field.label}
+                invalid={props.highlightPlanLabels}
               />
             );
           case "isCreative":

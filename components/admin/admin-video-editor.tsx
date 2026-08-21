@@ -40,6 +40,7 @@ import {
   isDefaultVideoTitle,
   type EditSuggestionMissingField,
 } from "@/lib/edit-suggestions";
+import { useInvalidFormFields } from "@/lib/hooks/use-invalid-form-fields";
 import { todayISO } from "@/lib/jalali";
 import {
   buildVideoVersionMedia,
@@ -123,6 +124,7 @@ export function AdminVideoEditor({
 }: AdminVideoEditorProps) {
   const router = useRouter();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const { reportInvalid, clearInvalid, isFieldInvalid } = useInvalidFormFields();
   const [isPending, startTransition] = useTransition();
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
@@ -172,18 +174,17 @@ export function AdminVideoEditor({
   const refresh = () => router.refresh();
 
   const handleSaveAll = () => {
-    if (!editCategoryId) {
-      toast.error("نوع ویدیو را انتخاب کنید");
+    const invalid: string[] = [];
+    if (!editCategoryId) invalid.push("category");
+    if (!videoUrl.trim()) invalid.push("video");
+    if (!editTitle.trim()) invalid.push("title");
+    if (editPlanLabels.length === 0) invalid.push("planLabels");
+
+    if (invalid.length > 0) {
+      reportInvalid(invalid, scrollAreaRef.current);
       return;
     }
-    if (!videoUrl.trim()) {
-      toast.error("ویدیو لازم است");
-      return;
-    }
-    if (editPlanLabels.length === 0) {
-      toast.error("موضوع الزامی است");
-      return;
-    }
+    clearInvalid();
 
     startTransition(async () => {
       const savedVideo = {
@@ -262,16 +263,25 @@ export function AdminVideoEditor({
   };
 
   const highlightTitle =
-    highlightFields.includes("title") &&
-    (isDefaultVideoTitle(editTitle) || !editTitle.trim());
+    isFieldInvalid("title", !editTitle.trim()) ||
+    (highlightFields.includes("title") &&
+      (isDefaultVideoTitle(editTitle) || !editTitle.trim()));
+  const highlightPlanLabels = isFieldInvalid(
+    "planLabels",
+    editPlanLabels.length === 0
+  );
   const highlightDescription =
     highlightFields.includes("description") && !editDescription.trim();
-  const highlightMedia = highlightFields.includes("media") && !videoUrl.trim();
+  const highlightMedia =
+    isFieldInvalid("video", !videoUrl.trim()) ||
+    (highlightFields.includes("media") && !videoUrl.trim());
+  const highlightCategory = isFieldInvalid("category", !editCategoryId);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div ref={scrollAreaRef} className={ADMIN_EDITOR_SCROLL_CLASS}>
         <div className={ADMIN_EDITOR_SCROLL_INNER_CLASS}>
+          <div data-field="video">
           <MediaUpload
             label="ویدیو"
             kind="video"
@@ -327,9 +337,10 @@ export function AdminVideoEditor({
               </div>
             }
           />
+          </div>
 
           <div className="space-y-3">
-            <div>
+            <div data-field="title" className="space-y-1">
               <Label className={cn(highlightTitle && "text-destructive")}>عنوان</Label>
               <Input
                 value={editTitle}
@@ -338,15 +349,19 @@ export function AdminVideoEditor({
                 placeholder="عنوان ویدیو"
                 className={cn(highlightTitle && "border-destructive focus-visible:ring-destructive")}
               />
-              {highlightTitle && (
-                <p className="mt-1 text-xs text-destructive">عنوان پیش‌فرض است؛ یک عنوان اختصاصی وارد کنید.</p>
-              )}
+              {highlightTitle && !editTitle.trim() ? (
+                <p className="text-xs text-destructive">عنوان را وارد کنید.</p>
+              ) : null}
+              {highlightTitle && editTitle.trim() ? (
+                <p className="text-xs text-destructive">عنوان پیش‌فرض است؛ یک عنوان اختصاصی وارد کنید.</p>
+              ) : null}
             </div>
             <PlanLabelSelect
               topics={contentTopics}
               plans={contentPlans}
               values={editPlanLabels}
               onChangeMultiple={setEditPlanLabels}
+              invalid={highlightPlanLabels}
             />
             <div>
               <Label className={cn(highlightDescription && "text-amber-700 dark:text-amber-300")}>توضیحات</Label>
@@ -363,14 +378,18 @@ export function AdminVideoEditor({
                 <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">توضیحات خالی است؛ بهتر است تکمیل شود.</p>
               )}
             </div>
-            <div>
-              <Label>نوع ویدیو</Label>
+            <div data-field="category" className="space-y-1">
+              <Label className={cn(highlightCategory && "text-destructive")}>نوع ویدیو</Label>
               <Select
                 value={editCategoryId || undefined}
                 onValueChange={setEditCategoryId}
                 disabled={selectOptions.length === 0}
               >
-                <SelectTrigger>
+                <SelectTrigger
+                  className={cn(
+                    highlightCategory && "border-destructive focus-visible:ring-destructive"
+                  )}
+                >
                   <SelectValue placeholder="تیزر، انیمیشن یا موشن‌گرافیک" />
                 </SelectTrigger>
                 <SelectContent>

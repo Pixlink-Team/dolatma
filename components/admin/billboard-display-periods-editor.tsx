@@ -61,12 +61,12 @@ export function BillboardDisplayPeriodsEditor({
         highlightMedia && "rounded-lg border border-destructive bg-destructive/5 p-3"
       )}
     >
-      <div className="space-y-2">
+      <div data-field="startDate" className="space-y-2">
         <Label className={cn(highlightMedia && "text-destructive")}>تاریخ *</Label>
         <PersianDateInput value={period.startDate} onChange={setDate} />
       </div>
 
-      <div className="space-y-2">
+      <div data-field="billboardImage" className="space-y-2">
         <ImageFileDropzone
           label="عکس بیلبورد"
           required={requireBillboardImage && !period.existingBillboardImageUrl}

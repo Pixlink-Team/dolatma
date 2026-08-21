@@ -50,6 +50,7 @@ import { CONTENT_TITLE_MAX_LENGTH } from "@/lib/content-constraints";
 import type { ContentTopic } from "@/lib/content-topics";
 import { type EditSuggestionMissingField } from "@/lib/edit-suggestions";
 import { useAdminEditDeepLink } from "@/lib/hooks/use-admin-edit-deep-link";
+import { useInvalidFormFields } from "@/lib/hooks/use-invalid-form-fields";
 import { useSectionCreateGate } from "@/lib/hooks/use-section-create-gate";
 import { useAdminViewMode } from "@/lib/hooks/use-admin-view-mode";
 import { useAdminInfiniteScroll } from "@/lib/hooks/use-admin-infinite-scroll";
@@ -91,6 +92,7 @@ export function TextContentsAdmin({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [contentKind, setContentKind] = useState<TextContentKind>("news");
   const [title, setTitle] = useState("");
+  const { reportInvalid, clearInvalid, isFieldInvalid } = useInvalidFormFields();
   const [body, setBody] = useState("");
   const [description, setDescription] = useState("");
   const [coverImageUrl, setCoverImageUrl] = useState("");
@@ -192,24 +194,26 @@ export function TextContentsAdmin({
     setDialogOpen(false);
     resetForm();
     resetDeepLink();
+    clearInvalid();
   };
 
-  const highlightTitle = highlightFields.includes("title") && !title.trim();
+  const highlightTitle =
+    isFieldInvalid("title", !title.trim()) ||
+    (highlightFields.includes("title") && !title.trim());
+  const highlightPlanLabels = isFieldInvalid("planLabels", planLabels.length === 0);
+  const highlightBody = isFieldInvalid("body", !body.trim());
   const highlightDescription = highlightFields.includes("description") && !description.trim();
 
   const handleSave = () => {
-    if (!title.trim()) {
-      toast.error("عنوان الزامی است");
+    const invalid: string[] = [];
+    if (!title.trim()) invalid.push("title");
+    if (planLabels.length === 0) invalid.push("planLabels");
+    if (!body.trim()) invalid.push("body");
+    if (invalid.length > 0) {
+      reportInvalid(invalid);
       return;
     }
-    if (planLabels.length === 0) {
-      toast.error("موضوع الزامی است");
-      return;
-    }
-    if (!body.trim()) {
-      toast.error("متن محتوا الزامی است");
-      return;
-    }
+    clearInvalid();
 
     startTransition(async () => {
       const existing = editingId ? items.find((item) => item.id === editingId) : undefined;
@@ -520,7 +524,7 @@ export function TextContentsAdmin({
             </SelectContent>
           </Select>
         </div>
-        <div className="space-y-2">
+        <div data-field="title" className="space-y-2">
           <Label className={cn(highlightTitle && "text-destructive")}>عنوان</Label>
           <Input
             value={title}
@@ -530,7 +534,7 @@ export function TextContentsAdmin({
             className={cn(highlightTitle && "border-destructive focus-visible:ring-destructive")}
           />
           {highlightTitle && (
-            <p className="text-xs text-destructive">عنوان خالی است؛ یک عنوان وارد کنید.</p>
+            <p className="text-xs text-destructive">عنوان را وارد کنید.</p>
           )}
         </div>
         <PlanLabelSelect
@@ -538,15 +542,20 @@ export function TextContentsAdmin({
           plans={contentPlans}
           values={planLabels}
           onChangeMultiple={setPlanLabels}
+          invalid={highlightPlanLabels}
         />
-        <div className="space-y-2">
-          <Label>متن</Label>
+        <div data-field="body" className="space-y-2">
+          <Label className={cn(highlightBody && "text-destructive")}>متن</Label>
           <Textarea
             value={body}
             onChange={(event) => setBody(event.target.value)}
             rows={8}
             placeholder="متن کامل خبر یا محتوا"
+            className={cn(highlightBody && "border-destructive focus-visible:ring-destructive")}
           />
+          {highlightBody ? (
+            <p className="text-xs text-destructive">متن محتوا را وارد کنید.</p>
+          ) : null}
         </div>
         <div className="space-y-2">
           <Label className={cn(highlightDescription && "text-amber-700 dark:text-amber-300")}>

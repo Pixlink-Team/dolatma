@@ -40,6 +40,7 @@ import {
   isDefaultPosterTitle,
   type EditSuggestionMissingField,
 } from "@/lib/edit-suggestions";
+import { useInvalidFormFields } from "@/lib/hooks/use-invalid-form-fields";
 import { todayISO } from "@/lib/jalali";
 import { resolveDisplayVersion } from "@/lib/media-utils";
 import type { ContentFormField, MediaCategory, Poster, PosterVersion } from "@/lib/types";
@@ -78,6 +79,7 @@ export function AdminPosterEditor({
 }: AdminPosterEditorProps) {
   const router = useRouter();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const { reportInvalid, clearInvalid, isFieldInvalid } = useInvalidFormFields();
   const [isPending, startTransition] = useTransition();
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [fields, setFields] = useState<ContentFormField[]>(() =>
@@ -136,22 +138,21 @@ export function AdminPosterEditor({
   };
 
   const handleSaveAll = () => {
+    const invalid: string[] = [];
+
     const imageField = fieldByWidget(fields, "image");
     if (imageField?.required !== false && !values.imageUrl.trim()) {
-      toast.error("تصویر پوستر لازم است");
-      return;
+      invalid.push("image");
     }
 
     const titleField = fieldByWidget(fields, "title");
-    if (titleField?.required && !values.title.trim()) {
-      toast.error(`فیلد «${titleField.label}» الزامی است`);
-      return;
+    if ((titleField?.required ?? true) && !values.title.trim()) {
+      invalid.push("title");
     }
 
     const planLabelsField = fieldByWidget(fields, "planLabels");
     if ((planLabelsField?.required ?? true) && values.planLabels.length === 0) {
-      toast.error("موضوع الزامی است");
-      return;
+      invalid.push("planLabels");
     }
 
     for (const field of fields) {
@@ -162,10 +163,15 @@ export function AdminPosterEditor({
         (typeof raw === "string" && !raw.trim()) ||
         (typeof raw === "number" && Number.isNaN(raw));
       if (empty && field.type !== "checkbox") {
-        toast.error(`فیلد «${field.label}» الزامی است`);
-        return;
+        invalid.push(field.key);
       }
     }
+
+    if (invalid.length > 0) {
+      reportInvalid(invalid, scrollAreaRef.current);
+      return;
+    }
+    clearInvalid();
 
     startTransition(async () => {
       const savedPoster: Poster = {
@@ -243,12 +249,18 @@ export function AdminPosterEditor({
   };
 
   const highlightTitle =
-    highlightFields.includes("title") &&
-    (isDefaultPosterTitle(values.title) || !values.title.trim());
+    isFieldInvalid("title", !values.title.trim()) ||
+    (highlightFields.includes("title") &&
+      (isDefaultPosterTitle(values.title) || !values.title.trim()));
+  const highlightPlanLabels = isFieldInvalid(
+    "planLabels",
+    values.planLabels.length === 0
+  );
   const highlightDescription =
     highlightFields.includes("description") && !values.description.trim();
   const highlightMedia =
-    highlightFields.includes("media") && !values.imageUrl.trim();
+    isFieldInvalid("image", !values.imageUrl.trim()) ||
+    (highlightFields.includes("media") && !values.imageUrl.trim());
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -270,6 +282,7 @@ export function AdminPosterEditor({
                 canScore={canScore}
                 isNew={isNew}
                 highlightTitle={highlightTitle}
+                highlightPlanLabels={highlightPlanLabels}
                 highlightDescription={highlightDescription}
                 highlightMedia={highlightMedia}
               />
@@ -278,7 +291,7 @@ export function AdminPosterEditor({
                   تصویر پوستر هنوز آپلود نشده است.
                 </p>
               ) : null}
-              {highlightTitle ? (
+              {highlightTitle && values.title.trim() ? (
                 <p className="mt-2 text-xs text-destructive">
                   عنوان پیش‌فرض است؛ یک عنوان اختصاصی وارد کنید.
                 </p>
