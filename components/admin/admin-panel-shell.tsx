@@ -66,7 +66,7 @@ function NavigationPendingOverlay({ offsetForSidebar }: { offsetForSidebar: bool
     <div
       className={
         offsetForSidebar
-          ? "pointer-events-none fixed inset-0 z-[90] flex items-start justify-center pt-6 lg:pr-64"
+          ? "pointer-events-none fixed inset-0 z-[90] flex items-start justify-center pt-6 md:pr-56 lg:pr-64"
           : "pointer-events-none fixed inset-0 z-[90] flex items-start justify-center pt-6"
       }
     >
@@ -109,8 +109,10 @@ function PanelChrome({
         <Suspense fallback={null}>
           <NavigationPendingOverlay offsetForSidebar />
         </Suspense>
-        <main className="min-h-screen lg:mr-64">
-          <div className="container mx-auto px-4 py-8 pt-16 lg:pt-8">{children}</div>
+        <main className="min-h-screen overflow-x-clip md:mr-56 lg:mr-64">
+          <div className="container mx-auto max-w-[1600px] px-3 py-6 pt-16 sm:px-4 md:px-5 md:py-8 md:pt-8 lg:px-6">
+            {children}
+          </div>
         </main>
         <ScrollToTopButton clearProblemReport />
       </div>

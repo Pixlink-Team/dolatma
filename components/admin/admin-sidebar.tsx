@@ -887,16 +887,16 @@ export function AdminSidebar({ showReisReturn = false }: AdminSidebarProps) {
       <Button
         variant="outline"
         size="icon"
-        className="fixed right-4 top-4 z-[80] lg:hidden"
+        className="fixed right-4 top-4 z-[80] md:hidden"
         onClick={() => setMobileOpen(true)}
       >
         <Menu className="h-4 w-4" />
       </Button>
 
       {mobileOpen && (
-        <div className="fixed inset-0 z-[80] lg:hidden">
+        <div className="fixed inset-0 z-[80] md:hidden">
           <div className="absolute inset-0 bg-black/50" onClick={() => setMobileOpen(false)} />
-          <aside className="absolute right-0 top-0 flex h-full w-64 flex-col border-l bg-card">
+          <aside className="absolute right-0 top-0 flex h-full w-[min(18rem,88vw)] flex-col border-l bg-card">
             <Button
               variant="ghost"
               size="icon"
@@ -910,7 +910,8 @@ export function AdminSidebar({ showReisReturn = false }: AdminSidebarProps) {
         </div>
       )}
 
-      <aside className="hidden lg:fixed lg:inset-y-0 lg:right-0 lg:z-[80] lg:flex lg:w-64 lg:flex-col border-l bg-card">
+      {/* md+: persistent sidebar for tablet / iPad / laptop; slightly narrower until lg */}
+      <aside className="hidden md:fixed md:inset-y-0 md:right-0 md:z-[80] md:flex md:w-56 md:flex-col border-l bg-card lg:w-64">
         {renderNavContent(desktopNavRef)}
       </aside>
     </>

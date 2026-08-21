@@ -117,13 +117,13 @@ export function OwnerLocationFilterBar() {
       className="flex flex-col gap-4 rounded-xl border bg-card/60 p-4"
       data-export-hide
     >
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2 text-sm font-medium">
-          <MapPin className="h-4 w-4 text-primary shrink-0" />
+          <MapPin className="h-4 w-4 shrink-0 text-primary" />
           <span>فیلتر و مرتب‌سازی محتوای راستا</span>
         </div>
         {filterActive && (
-          <Button type="button" variant="outline" size="sm" onClick={resetFilters} className="gap-2">
+          <Button type="button" variant="outline" size="sm" onClick={resetFilters} className="w-full gap-2 sm:w-auto">
             <RotateCcw className="h-4 w-4" />
             بازگشت به پیش‌فرض
           </Button>
@@ -150,7 +150,7 @@ export function OwnerLocationFilterBar() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {ministries.length > 0 && (
           <SearchableSelect
             value={filter.ministryId}

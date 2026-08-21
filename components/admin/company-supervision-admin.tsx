@@ -1357,8 +1357,8 @@ function CompanySupervisionAdminInner({
 
   return (
     <div className="space-y-6 text-right" dir="rtl">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div className="space-y-3">
+      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div className="min-w-0 space-y-3">
           {isSelfView ? (
             <Button type="button" variant="ghost" size="sm" className="gap-1.5 px-0" asChild>
               <Link href={dashboardHref}>
@@ -1375,7 +1375,7 @@ function CompanySupervisionAdminInner({
             </Button>
           )}
           <div className="space-y-1">
-            <h1 className="text-2xl font-bold">
+            <h1 className="text-xl font-bold sm:text-2xl">
               {isSelfView ? "گزارش عملکرد" : `نظارت شرکت — ${entry.userName}`}
             </h1>
             <p className="text-sm text-muted-foreground">
@@ -1419,7 +1419,7 @@ function CompanySupervisionAdminInner({
             )}
           </div>
         </div>
-        <Button type="button" onClick={handleExport} className="shrink-0 gap-2">
+        <Button type="button" onClick={handleExport} className="w-full shrink-0 gap-2 sm:w-auto">
           <Download className="h-4 w-4" />
           {isSelfView ? "خروجی اکسل" : "خروجی اکسل شرکت"}
         </Button>
@@ -1434,7 +1434,7 @@ function CompanySupervisionAdminInner({
         className="space-y-4"
         dir="rtl"
       >
-        <TabsList className="h-auto w-full justify-start">
+        <TabsList className="h-auto w-full flex-wrap justify-start gap-1">
           <TabsTrigger value="summary">خلاصه</TabsTrigger>
           <TabsTrigger value="content">
             محتوا ({formatPersianNumber(filteredContent.length)})
@@ -1452,7 +1452,7 @@ function CompanySupervisionAdminInner({
 
         <TabsContent value="summary" className="space-y-6">
           {(kpiItems.length > 0 || extraKpiItems.length > 0) && (
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6">
               {kpiItems.map((kpi) => (
                 <KPICard
                   key={kpi.title}

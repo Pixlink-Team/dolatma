@@ -344,21 +344,21 @@ export function PerformanceAdmin({
 
   return (
     <div className="space-y-6 text-right" dir="rtl">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-bold">{pageTitle}</h1>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0 space-y-1">
+          <h1 className="text-xl font-bold sm:text-2xl">{pageTitle}</h1>
           <p className="text-sm text-muted-foreground">
             {pageDescription ??
               `نمای مدیریتی از آمار عددی همه کاربران کمپین «${campaignTitle}» — رتبه با فیلترهای انتخاب‌شده دوباره محاسبه می‌شود`}
           </p>
         </div>
-        <Button type="button" onClick={handleExport} className="shrink-0 gap-2">
+        <Button type="button" onClick={handleExport} className="w-full shrink-0 gap-2 sm:w-auto">
           <Download className="h-4 w-4" />
           خروجی اکسل
         </Button>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <SummaryStat label={`تعداد ${getEntityColumnLabel(view)}`} value={totals.rows} />
         <SummaryStat
           label={periodLabel ? `جمع محتوا (${periodLabel})` : "جمع محتوا"}
@@ -407,7 +407,7 @@ export function PerformanceAdmin({
             ) : null}
           </div>
 
-          <div className="relative w-full max-w-md">
+          <div className="relative w-full max-w-xl">
             <Search className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               value={search}
@@ -417,7 +417,7 @@ export function PerformanceAdmin({
             />
           </div>
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             <SearchableSelect
               value={filter.province}
               onValueChange={(province) => updateFilter({ province })}
@@ -743,8 +743,8 @@ export function PerformanceAdmin({
           <CardHeader className="pb-3">
             <CardTitle className="text-base">جدول عملکرد {getEntityColumnLabel(view)}</CardTitle>
           </CardHeader>
-          <CardContent className="overflow-x-auto p-0">
-            <table className="w-full min-w-[1180px] border-collapse text-sm">
+          <CardContent className="overflow-x-auto overscroll-x-contain p-0 [-webkit-overflow-scrolling:touch]">
+            <table className="w-full min-w-[720px] border-collapse text-sm md:min-w-[960px] xl:min-w-[1100px]">
               <thead>
                 <tr className="border-b bg-muted/40 text-muted-foreground">
                   <th className="px-3 py-3 text-right font-medium">رتبه</th>

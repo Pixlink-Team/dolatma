@@ -79,7 +79,7 @@ export default async function SubordinatesLiveReportPage({ searchParams }: PageP
   );
 
   return (
-    <div className="-mx-4 -mt-2 sm:-mx-6">
+    <div className="min-w-0">
       <CampaignDashboard
         initialData={data}
         slug={slug}
@@ -89,6 +89,7 @@ export default async function SubordinatesLiveReportPage({ searchParams }: PageP
         returnPath="/admin/subordinates-live-report"
         hideCitiesLink
         banner={banner}
+        embedded
       />
     </div>
   );

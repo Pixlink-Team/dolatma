@@ -52,6 +52,8 @@ interface CampaignDashboardProps {
   hideCitiesLink?: boolean;
   /** Optional banner above the campaign title (e.g. device name + child links) */
   banner?: ReactNode;
+  /** When true, layout fits inside the admin panel (tablet / sidebar chrome). */
+  embedded?: boolean;
 }
 
 function collectAllOwnerGroups(data: PublicCampaignData): DataOwnerGroup<Ownable>[] {
@@ -82,6 +84,7 @@ function CampaignDashboardBody({
   returnPath,
   hideCitiesLink,
   banner,
+  embedded,
 }: {
   data: PublicCampaignData;
   slug: string;
@@ -93,6 +96,7 @@ function CampaignDashboardBody({
   returnPath: string;
   hideCitiesLink: boolean;
   banner?: ReactNode;
+  embedded: boolean;
 }) {
   const { settings, sections } = data;
   const { filter } = useOwnerLocationFilter();
@@ -101,41 +105,52 @@ function CampaignDashboardBody({
   const forceRender = exportMode || forceSectionsMounted;
 
   return (
-    <div className="min-h-screen" data-campaign-export-root>
+    <div className={embedded ? "min-h-0" : "min-h-screen"} data-campaign-export-root>
       {exportMode && <CampaignScreenshotExporter slug={slug} title={settings.title} />}
-      <header className="border-b bg-card/80 backdrop-blur-sm sticky top-0 z-40">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between gap-4">
-          <div>
-            <Link
-              href="/"
-              className="group text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 mb-1 transition-colors duration-[var(--duration-apple-fast)] ease-[var(--ease-apple-soft)]"
-              data-export-hide
-            >
-              <ArrowRight className="h-3 w-3 transition-transform duration-[var(--duration-apple)] ease-[var(--ease-apple)] group-hover:translate-x-0.5" />
-              همه راستاها
-            </Link>
-            <h1 className="text-lg font-bold">{settings.title}</h1>
+      <header
+        className={
+          embedded
+            ? "sticky top-0 z-30 rounded-xl border bg-card/95 backdrop-blur-sm"
+            : "sticky top-0 z-40 border-b bg-card/80 backdrop-blur-sm"
+        }
+      >
+        <div className="container mx-auto flex flex-col gap-3 px-3 py-3 sm:px-4 sm:py-4 md:flex-row md:items-start md:justify-between md:gap-4">
+          <div className="min-w-0 flex-1">
+            {!embedded ? (
+              <Link
+                href="/"
+                className="group mb-1 flex items-center gap-1 text-xs text-muted-foreground transition-colors duration-[var(--duration-apple-fast)] ease-[var(--ease-apple-soft)] hover:text-foreground"
+                data-export-hide
+              >
+                <ArrowRight className="h-3 w-3 transition-transform duration-[var(--duration-apple)] ease-[var(--ease-apple)] group-hover:translate-x-0.5" />
+                همه راستاها
+              </Link>
+            ) : null}
+            <h1 className="truncate text-base font-bold sm:text-lg">{settings.title}</h1>
             {settings.tagline?.trim() ? (
-              <p className="text-xs text-muted-foreground mt-0.5">{settings.tagline}</p>
+              <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{settings.tagline}</p>
             ) : null}
           </div>
-          <div className="flex items-center gap-3">
-            <p className="text-xs text-muted-foreground hidden sm:block">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3" data-export-hide>
+            <p className="hidden text-xs text-muted-foreground xl:block">
               آخرین بروزرسانی: {formatPersianDateTime(lastRefresh.toISOString())}
             </p>
-            <span data-export-hide>
-              <ThemeToggle />
-            </span>
+            {!embedded ? (
+              <span>
+                <ThemeToggle />
+              </span>
+            ) : null}
             <CampaignAuthChip viewer={authViewer} returnPath={returnPath} />
             {!hideCitiesLink ? (
-              <Button variant="outline" size="sm" asChild data-export-hide>
+              <Button variant="outline" size="sm" asChild>
                 <Link href={`/campaign/${slug}/cities`}>
                   <Trophy className="h-4 w-4" />
-                  رتبه‌بندی وزارتخانه‌ها
+                  <span className="hidden sm:inline">رتبه‌بندی وزارتخانه‌ها</span>
+                  <span className="sm:hidden">رتبه‌بندی</span>
                 </Link>
               </Button>
             ) : null}
-            <Button variant="outline" size="sm" onClick={onRefresh} disabled={isRefreshing} data-export-hide>
+            <Button variant="outline" size="sm" onClick={onRefresh} disabled={isRefreshing}>
               <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
               بروزرسانی
             </Button>
@@ -143,12 +158,18 @@ function CampaignDashboardBody({
         </div>
         {banner ? (
           <div className="border-t bg-muted/30" data-export-hide>
-            <div className="container mx-auto px-4 py-3">{banner}</div>
+            <div className="container mx-auto px-3 py-2.5 sm:px-4 sm:py-3">{banner}</div>
           </div>
         ) : null}
       </header>
 
-      <main className="container mx-auto max-w-[1280px] space-y-8 overflow-x-hidden px-4 py-8">
+      <main
+        className={
+          embedded
+            ? "mx-auto max-w-[1280px] space-y-6 overflow-x-hidden px-0 py-5 sm:space-y-8 sm:py-6"
+            : "container mx-auto max-w-[1280px] space-y-8 overflow-x-hidden px-4 py-8"
+        }
+      >
         <CampaignOverviewSection data={data} />
 
         {sections.analytics && (
@@ -327,7 +348,7 @@ function CampaignDashboardBody({
         <p>گزارش زنده راستا — {settings.title}</p>
       </footer>
 
-      {!exportMode && <ScrollToTopButton />}
+      {!exportMode && !embedded && <ScrollToTopButton />}
     </div>
   );
 }
@@ -342,6 +363,7 @@ export function CampaignDashboard({
   returnPath,
   hideCitiesLink = false,
   banner,
+  embedded = false,
 }: CampaignDashboardProps) {
   const [data, setData] = useState(initialData);
   const [lastRefresh, setLastRefresh] = useState(() => new Date(initialData.lastUpdated));
@@ -402,6 +424,7 @@ export function CampaignDashboard({
               returnPath={resolvedReturnPath}
               hideCitiesLink={hideCitiesLink}
               banner={banner}
+              embedded={embedded}
             />
           </OwnerLocationFilterProvider>
         </ContentScoreProvider>
