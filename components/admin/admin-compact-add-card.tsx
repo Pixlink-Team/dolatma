@@ -11,7 +11,7 @@ interface AdminCompactAddCardProps {
 }
 
 export const ADMIN_CONTENT_GRID_CLASS =
-  "grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6";
+  "grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5";
 
 export function AdminEmptyCreateState({
   message,
@@ -25,7 +25,11 @@ export function AdminEmptyCreateState({
       <div className="rounded-xl border px-4 py-6 text-center text-sm text-muted-foreground">
         {message}
       </div>
-      {children ? <div className={ADMIN_CONTENT_GRID_CLASS}>{children}</div> : null}
+      {children ? (
+        <div className="flex justify-center">
+          <div className="w-full max-w-[12rem]">{children}</div>
+        </div>
+      ) : null}
     </div>
   );
 }
