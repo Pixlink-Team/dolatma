@@ -101,7 +101,7 @@ interface DevicesAdminProps {
   canCreateRoot?: boolean;
   /** Create / edit / delete devices in the tree (manageSubtreeDevices). */
   canManageDevices?: boolean;
-  /** Set campaign access ceiling on devices (cascades to subtree users). */
+  /** Set campaign access ceiling on devices — admin / کارفرما only. */
   canManageAccess?: boolean;
   /** Passport (360°) is admin-only for now. */
   showPassport?: boolean;

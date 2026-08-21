@@ -26,6 +26,11 @@ export function canManageDeviceStatus(session: AuthSession): boolean {
   return isFullAdmin(session) || isClientUser(session);
 }
 
+/** Device access ceilings (دسترسی‌ها) — admin and کارفرما only. */
+export function canManageDeviceAccess(session: AuthSession): boolean {
+  return isFullAdmin(session) || isClientUser(session);
+}
+
 /**
  * View passport / home device (profile link). Org users can open their subtree
  * devices even without manageSubtreeDevices.

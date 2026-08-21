@@ -3,11 +3,12 @@
 import { revalidatePath } from "next/cache";
 import {
   canAccessDevicesPage,
+  canManageDeviceAccess,
   canViewDevice,
   getSessionHomeDeviceId,
   isDeviceTreeScopedRole,
 } from "@/lib/auth/device-access";
-import { canManageSubtreeUsers, isClientUser } from "@/lib/auth/access";
+import { isClientUser } from "@/lib/auth/access";
 import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
 import {
   defaultContributorPermissions,
@@ -27,14 +28,7 @@ import {
   type DeviceSubtreeAccessNode,
 } from "@/lib/db/repository-device-access";
 import { pgGetUserById } from "@/lib/db/repository-extended";
-import { isOrgUserRole } from "@/lib/user-roles";
 import { isPostgresConfigured } from "@/lib/utils";
-
-function canManageDeviceAccess(session: NonNullable<Awaited<ReturnType<typeof getAuthSession>>>) {
-  if (isFullAdmin(session) || isClientUser(session)) return true;
-  if (isOrgUserRole(session.role) && canManageSubtreeUsers(session)) return true;
-  return false;
-}
 
 async function assertDeviceInScope(
   session: NonNullable<Awaited<ReturnType<typeof getAuthSession>>>,
