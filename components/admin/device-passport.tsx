@@ -404,8 +404,8 @@ export function DevicePassportView({
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-12 xl:auto-rows-fr">
-        {/* Identity hero */}
-        <section className="flex flex-col justify-between rounded-2xl border bg-card p-5 shadow-sm md:col-span-2 xl:col-span-8">
+        {/* Identity hero — shows profile fields the device user fills in */}
+        <section className="flex flex-col rounded-2xl border bg-card p-5 shadow-sm md:col-span-2 xl:col-span-8">
           <div className="flex min-w-0 items-start gap-4">
             <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl border bg-muted">
               {device.logoUrl ? (
@@ -415,11 +415,28 @@ export function DevicePassportView({
                 <Building2 className="h-7 w-7 text-muted-foreground" />
               )}
             </div>
-            <div className="min-w-0 space-y-2">
-              <h1 className="text-2xl font-bold leading-tight">
-                {device.shortName || device.name}
-              </h1>
-              <p className="text-sm text-muted-foreground">{device.name}</p>
+            <div className="min-w-0 flex-1 space-y-2">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0 space-y-1">
+                  <h1 className="text-2xl font-bold leading-tight">
+                    {device.shortName || device.name}
+                  </h1>
+                  {device.shortName && device.name !== device.shortName ? (
+                    <p className="text-sm text-muted-foreground">{device.name}</p>
+                  ) : null}
+                </div>
+                {canEditProfile ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="shrink-0"
+                    onClick={() => setProfileOpen(true)}
+                  >
+                    <Pencil className="ml-1 h-4 w-4" />
+                    ویرایش اطلاعات
+                  </Button>
+                ) : null}
+              </div>
               <div className="flex flex-wrap gap-2">
                 <Badge variant="secondary">{DEVICE_TYPE_LABELS[device.type]}</Badge>
                 {canManageStatus ? (
@@ -434,21 +451,26 @@ export function DevicePassportView({
               </div>
             </div>
           </div>
-          {canEditProfile ? (
-            <Button
-              size="sm"
-              variant="outline"
-              className="mt-4 w-full sm:w-auto"
-              onClick={() => setProfileOpen(true)}
-            >
-              <Pencil className="ml-1 h-4 w-4" />
-              ویرایش اطلاعات
-            </Button>
-          ) : (
+
+          <dl className="mt-4 grid gap-3 border-t pt-4 sm:grid-cols-2">
+            <InfoItem
+              label="استان / شهر"
+              value={[device.province, device.city].filter(Boolean).join(" / ") || "—"}
+            />
+            <InfoItem label="تماس" value={device.phones.join("، ") || "—"} />
+            <div className="sm:col-span-2">
+              <InfoItem label="آدرس" value={device.address || "—"} />
+            </div>
+            <div className="sm:col-span-2">
+              <InfoItem label="حوزه مأموریت" value={device.mission || "—"} />
+            </div>
+          </dl>
+
+          {!canEditProfile ? (
             <p className="mt-4 text-xs text-muted-foreground">
               فقط مشاهده — تکمیل شناسنامه با مسئول همین دستگاه است.
             </p>
-          )}
+          ) : null}
         </section>
 
         {/* Completion ring */}
@@ -497,24 +519,8 @@ export function DevicePassportView({
           />
         </section>
 
-        {/* Main info */}
-        <section className="rounded-2xl border bg-card p-5 xl:col-span-4">
-          <h2 className="mb-3 text-lg font-semibold">اطلاعات اصلی</h2>
-          <dl className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
-            <InfoItem
-              label="استان / شهر"
-              value={[device.province, device.city].filter(Boolean).join(" / ") || "—"}
-            />
-            <InfoItem label="آدرس" value={device.address || "—"} />
-            <InfoItem label="تماس" value={device.phones.join("، ") || "—"} />
-            <div className="sm:col-span-2 xl:col-span-1 2xl:col-span-2">
-              <InfoItem label="حوزه مأموریت" value={device.mission || "—"} />
-            </div>
-          </dl>
-        </section>
-
         {/* Contacts */}
-        <section className="rounded-2xl border bg-card p-5 xl:col-span-8">
+        <section className="rounded-2xl border bg-card p-5 xl:col-span-6">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <h2 className="flex items-center gap-2 text-lg font-semibold">
               <Users className="h-5 w-5" />
@@ -532,7 +538,7 @@ export function DevicePassportView({
               کاربری با نقش سازمانی به این دستگاه متصل نیست.
             </p>
           ) : (
-            <div className="grid gap-2 sm:grid-cols-2">
+            <div className="grid gap-2">
               {contactUsers.map((user) => (
                 <div
                   key={user.id}
@@ -554,6 +560,86 @@ export function DevicePassportView({
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+        </section>
+
+        {/* Staff — beside contacts */}
+        <section className="rounded-2xl border bg-card p-5 xl:col-span-6">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-lg font-semibold">کارکنان</h2>
+            {canManageStaff ? (
+              <Button size="sm" onClick={() => openStaffDialog()}>
+                <Plus className="ml-1 h-4 w-4" />
+                افزودن کارمند
+              </Button>
+            ) : null}
+          </div>
+          {staffMembers.length === 0 ? (
+            <p className="text-sm text-muted-foreground">کارمندی ثبت نشده است.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[560px] text-sm">
+                <thead>
+                  <tr className="border-b text-right text-muted-foreground">
+                    <th className="pb-2 font-medium">نام و نام خانوادگی</th>
+                    <th className="pb-2 font-medium">موبایل</th>
+                    <th className="pb-2 font-medium">سمت</th>
+                    <th className="pb-2 font-medium">مدرک</th>
+                    <th className="pb-2 font-medium">وضعیت</th>
+                    {canManageStaff ? <th className="pb-2 font-medium">عملیات</th> : null}
+                  </tr>
+                </thead>
+                <tbody>
+                  {staffMembers.map((item) => (
+                    <tr key={item.id} className="border-b last:border-0">
+                      <td className="py-2.5 font-medium">
+                        {item.firstName} {item.lastName}
+                      </td>
+                      <td className="py-2.5">{item.mobile}</td>
+                      <td className="py-2.5">{item.position}</td>
+                      <td className="py-2.5">{DEVICE_STAFF_EDUCATION_LABELS[item.education]}</td>
+                      <td className="py-2.5">
+                        <Badge variant={item.isActive ? "secondary" : "outline"}>
+                          {item.isActive ? "فعال" : "غیرفعال"}
+                        </Badge>
+                      </td>
+                      {canManageStaff ? (
+                        <td className="py-2.5">
+                          <div className="flex gap-1">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              disabled={isPending}
+                              onClick={() => openStaffDialog(item)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              disabled={isPending}
+                              onClick={() => {
+                                startTransition(async () => {
+                                  const result = await deleteDeviceStaffAction(item.id, device.id);
+                                  if (!result.success) {
+                                    toast.error(result.error);
+                                    return;
+                                  }
+                                  toast.success("کارمند حذف شد");
+                                  refresh();
+                                });
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        </td>
+                      ) : null}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </section>
@@ -811,95 +897,6 @@ export function DevicePassportView({
           )}
         </section>
 
-        {/* Staff — full width */}
-        <section className="rounded-2xl border bg-card p-5 md:col-span-2 xl:col-span-12">
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-lg font-semibold">کارکنان</h2>
-            {canManageStaff ? (
-              <Button size="sm" onClick={() => openStaffDialog()}>
-                <Plus className="ml-1 h-4 w-4" />
-                افزودن کارمند
-              </Button>
-            ) : null}
-          </div>
-          {staffMembers.length === 0 ? (
-            <p className="text-sm text-muted-foreground">کارمندی ثبت نشده است.</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[720px] text-sm">
-                <thead>
-                  <tr className="border-b text-right text-muted-foreground">
-                    <th className="pb-2 font-medium">نام و نام خانوادگی</th>
-                    <th className="pb-2 font-medium">موبایل</th>
-                    <th className="pb-2 font-medium">جنسیت</th>
-                    <th className="pb-2 font-medium">تاریخ تولد</th>
-                    <th className="pb-2 font-medium">سمت</th>
-                    <th className="pb-2 font-medium">مدرک تحصیلی</th>
-                    <th className="pb-2 font-medium">وضعیت</th>
-                    <th className="pb-2 font-medium">عملیات</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {staffMembers.map((item) => (
-                    <tr key={item.id} className="border-b last:border-0">
-                      <td className="py-2.5 font-medium">
-                        {item.firstName} {item.lastName}
-                      </td>
-                      <td className="py-2.5">{item.mobile}</td>
-                      <td className="py-2.5">{DEVICE_STAFF_GENDER_LABELS[item.gender]}</td>
-                      <td className="py-2.5">
-                        {item.birthDate
-                          ? new Date(`${item.birthDate}T12:00:00`).toLocaleDateString("fa-IR")
-                          : "—"}
-                      </td>
-                      <td className="py-2.5">{item.position}</td>
-                      <td className="py-2.5">{DEVICE_STAFF_EDUCATION_LABELS[item.education]}</td>
-                      <td className="py-2.5">
-                        <Badge variant={item.isActive ? "secondary" : "outline"}>
-                          {item.isActive ? "فعال" : "غیرفعال"}
-                        </Badge>
-                      </td>
-                      <td className="py-2.5">
-                        {canManageStaff ? (
-                          <div className="flex gap-1">
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              disabled={isPending}
-                              onClick={() => openStaffDialog(item)}
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              disabled={isPending}
-                              onClick={() => {
-                                startTransition(async () => {
-                                  const result = await deleteDeviceStaffAction(item.id, device.id);
-                                  if (!result.success) {
-                                    toast.error(result.error);
-                                    return;
-                                  }
-                                  toast.success("کارمند حذف شد");
-                                  refresh();
-                                });
-                              }}
-                            >
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                          </div>
-                        ) : (
-                          "—"
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
       </div>
 
       <Dialog open={profileOpen} onOpenChange={setProfileOpen}>
