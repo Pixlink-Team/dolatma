@@ -1,6 +1,10 @@
 import { normalizePlanLabels } from "@/lib/content-topics";
 import { getSql } from "@/lib/db/client";
-import type { PublishableProductionItem, ProductionSourceType } from "@/lib/production-source";
+import {
+  READY_DIRECTIVE_ASSET_CATEGORIES,
+  type PublishableProductionItem,
+  type ProductionSourceType,
+} from "@/lib/production-source";
 import { isPostgresConfigured } from "@/lib/utils";
 
 function parsePlanLabelsColumn(value: unknown): string[] {
@@ -55,17 +59,67 @@ function mapRow(row: Record<string, unknown>): PublishableProductionItem {
   };
 }
 
+const READY_ASSET_CATEGORY_LIST = [...READY_DIRECTIVE_ASSET_CATEGORIES];
+
+async function pgListDirectiveReadyAssets(
+  campaignId: string
+): Promise<PublishableProductionItem[]> {
+  const sql = getSql();
+  const rows = await sql`
+    SELECT
+      a.id,
+      'directive_asset'::text AS type,
+      a.title,
+      COALESCE(NULLIF(TRIM(a.description), ''), a.category) AS subtitle,
+      av.file_url AS media_url,
+      NULL::text AS cover_image_url,
+      av.content_text AS body,
+      CASE
+        WHEN NULLIF(TRIM(d.topic), '') IS NOT NULL
+        THEN jsonb_build_array(TRIM(d.topic))
+        ELSE '[]'::jsonb
+      END AS plan_labels,
+      NULL::text AS plan_label,
+      NULL::text AS content_kind,
+      NULL::uuid AS owner_user_id,
+      a.created_at,
+      a.directive_id AS directive_id,
+      d.title AS directive_title,
+      a.category AS asset_category
+    FROM directive_workspace_assets a
+    INNER JOIN campaign_directives d ON d.id = a.directive_id
+    LEFT JOIN LATERAL (
+      SELECT file_url, content_text
+      FROM directive_workspace_asset_versions
+      WHERE asset_id = a.id
+      ORDER BY version_number DESC
+      LIMIT 1
+    ) av ON true
+    WHERE d.campaign_id = ${campaignId}
+      AND a.category = ANY(${READY_ASSET_CATEGORY_LIST})
+    ORDER BY a.created_at DESC
+    LIMIT 500
+  `;
+
+  return (rows as Record<string, unknown>[]).map(mapRow);
+}
+
 /**
  * List campaign productions (and directive assets) that can be linked as a publish source.
  * When `includeAllOwners` is false and `ownerUserId` is set, non-directive rows are scoped to that owner;
  * directive assets for the campaign are always included.
+ * When `onlyDirectiveAssets` is true, only ready assets attached to work orders (دستورکار) are returned.
  */
 export async function pgListPublishableProductions(
   campaignId: string,
   ownerUserId?: string | null,
-  options?: { includeAllOwners?: boolean }
+  options?: { includeAllOwners?: boolean; onlyDirectiveAssets?: boolean }
 ): Promise<PublishableProductionItem[]> {
   if (!isPostgresConfigured()) return [];
+
+  if (options?.onlyDirectiveAssets) {
+    return pgListDirectiveReadyAssets(campaignId);
+  }
 
   const includeAllOwners = Boolean(options?.includeAllOwners) || !ownerUserId;
   const sql = getSql();
@@ -246,7 +300,7 @@ export async function pgListPublishableProductions(
         LIMIT 1
       ) av ON true
       WHERE d.campaign_id = ${campaignId}
-        AND a.category IN ('poster', 'video', 'banner', 'ready_text', 'social', 'print')
+        AND a.category = ANY(${READY_ASSET_CATEGORY_LIST})
     )
     ORDER BY created_at DESC
     LIMIT 500

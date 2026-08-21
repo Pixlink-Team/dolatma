@@ -42,7 +42,8 @@ export async function assertProductionSourceAllowedForSession(
 }
 
 export async function listPublishableProductionsAction(
-  campaignId: string
+  campaignId: string,
+  options?: { onlyDirectiveAssets?: boolean }
 ): Promise<{ success: boolean; items: PublishableProductionItem[]; error?: string }> {
   const access = await assertCampaignAccess(campaignId);
   if (access.error || !access.session) {
@@ -54,13 +55,17 @@ export async function listPublishableProductionsAction(
   }
 
   const session = access.session;
+  const onlyDirectiveAssets = Boolean(options?.onlyDirectiveAssets);
   const includeAllOwners =
-    isFullAdmin(session) || session.role === "client" || session.role === "reis";
+    onlyDirectiveAssets ||
+    isFullAdmin(session) ||
+    session.role === "client" ||
+    session.role === "reis";
 
   const items = await pgListPublishableProductions(
     campaignId,
     includeAllOwners ? null : session.userId,
-    { includeAllOwners }
+    { includeAllOwners, onlyDirectiveAssets }
   );
 
   return { success: true, items };

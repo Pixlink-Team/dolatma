@@ -37,12 +37,9 @@ import {
   decodePlanLabel,
   formatPlanLabelDisplay,
 } from "@/lib/content-topics";
-import { buildContentMessageAdminPath } from "@/lib/content-messages/types";
 import { getWorkspaceAssetCategoryMeta } from "@/lib/directive-workspace";
 import {
-  PRODUCTION_SOURCE_TYPE_LABELS,
-  PRODUCTION_SOURCE_TYPES,
-  type ProductionSourceType,
+  READY_DIRECTIVE_ASSET_CATEGORIES,
   type PublishableProductionItem,
 } from "@/lib/production-source-shared";
 import type { DirectiveWorkspaceAssetCategory } from "@/lib/types";
@@ -89,13 +86,13 @@ const PUBLISH_DESTINATION_OPTIONS: {
   },
 ];
 
-const TYPE_ICONS: Record<ProductionSourceType, typeof ImageIcon> = {
+const CATEGORY_ICONS: Record<string, typeof ImageIcon> = {
   poster: ImageIcon,
   video: Video,
-  file: FileStack,
-  raw_media: HardDrive,
-  text_content: Newspaper,
-  directive_asset: ClipboardCheck,
+  banner: ImageIcon,
+  ready_text: Newspaper,
+  social: FileStack,
+  print: HardDrive,
 };
 
 function topicKeyForItem(item: PublishableProductionItem): string {
@@ -110,13 +107,10 @@ function topicLabelForKey(key: string): string {
 }
 
 function itemAdminPath(campaignId: string, item: PublishableProductionItem): string {
-  if (item.type === "directive_asset" && item.directiveId) {
+  if (item.directiveId) {
     return adminHref(`/admin/directives/${item.directiveId}`, campaignId);
   }
-  if (item.type === "directive_asset") {
-    return adminHref("/admin/directives", campaignId);
-  }
-  return buildContentMessageAdminPath(item.type, campaignId, item.id);
+  return adminHref("/admin/directives", campaignId);
 }
 
 function previewUrl(item: PublishableProductionItem): string | null {
@@ -132,6 +126,21 @@ function productionMediaUrl(item: PublishableProductionItem): string {
   return (item.coverImageUrl || item.mediaUrl || "").trim();
 }
 
+function categoryLabelForItem(item: PublishableProductionItem): string | null {
+  if (!item.assetCategory) return null;
+  return getWorkspaceAssetCategoryMeta(
+    item.assetCategory as DirectiveWorkspaceAssetCategory
+  ).label;
+}
+
+function socialContentTypeForItem(
+  item: PublishableProductionItem
+): "video" | "text" | "image" {
+  if (item.assetCategory === "video" || item.type === "video") return "video";
+  if (item.assetCategory === "ready_text" || item.type === "text_content") return "text";
+  return "image";
+}
+
 export function ReadyProductionsAdmin({
   campaignId,
   items,
@@ -145,7 +154,7 @@ export function ReadyProductionsAdmin({
   const contentTopics = currentCampaign?.contentTopics ?? [];
 
   const [search, setSearch] = useState("");
-  const [typeFilter, setTypeFilter] = useState<ProductionSourceType | "all">("all");
+  const [categoryFilter, setCategoryFilter] = useState<string | "all">("all");
   const [collapsedTopics, setCollapsedTopics] = useState<Set<string>>(new Set());
 
   const [destinationItem, setDestinationItem] =
@@ -157,7 +166,7 @@ export function ReadyProductionsAdmin({
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return items.filter((item) => {
-      if (typeFilter !== "all" && item.type !== typeFilter) return false;
+      if (categoryFilter !== "all" && item.assetCategory !== categoryFilter) return false;
       if (!q) return true;
       const haystack = [
         item.title,
@@ -169,7 +178,7 @@ export function ReadyProductionsAdmin({
         .toLowerCase();
       return haystack.includes(q);
     });
-  }, [items, search, typeFilter]);
+  }, [items, search, categoryFilter]);
 
   const topicGroups = useMemo(() => {
     const map = new Map<string, PublishableProductionItem[]>();
@@ -196,11 +205,15 @@ export function ReadyProductionsAdmin({
     return entries;
   }, [filtered]);
 
-  const typeCounts = useMemo(() => {
+  const categoryCounts = useMemo(() => {
     const counts = Object.fromEntries(
-      PRODUCTION_SOURCE_TYPES.map((type) => [type, 0])
-    ) as Record<ProductionSourceType, number>;
-    for (const item of items) counts[item.type] += 1;
+      READY_DIRECTIVE_ASSET_CATEGORIES.map((category) => [category, 0])
+    ) as Record<string, number>;
+    for (const item of items) {
+      if (item.assetCategory && item.assetCategory in counts) {
+        counts[item.assetCategory] += 1;
+      }
+    }
     return counts;
   }, [items]);
 
@@ -282,12 +295,7 @@ export function ReadyProductionsAdmin({
             coverImageUrl: mediaPrefill || undefined,
             mediaUrl: mediaPrefill || undefined,
             description: bodyPrefill || undefined,
-            contentType:
-              publishItem.type === "video"
-                ? ("video" as const)
-                : publishItem.type === "text_content"
-                  ? ("text" as const)
-                  : ("image" as const),
+            contentType: socialContentTypeForItem(publishItem),
           }
         : null,
     [publishItem, titlePrefill, bodyPrefill, mediaPrefill]
@@ -337,7 +345,7 @@ export function ReadyProductionsAdmin({
           <h1 className="text-2xl font-bold">تولیدات آماده</h1>
         </div>
         <p className="text-sm text-muted-foreground">
-          تولیدات بخش تولید و دارایی‌های آمادهٔ دستورکارها، دسته‌بندی‌شده بر اساس موضوع محتوا
+          فقط دارایی‌های آمادهٔ دستورکارها، دسته‌بندی‌شده بر اساس موضوع محتوا
         </p>
         <p className="text-xs text-muted-foreground">
           {formatPersianNumber(filtered.length)} مورد
@@ -363,32 +371,33 @@ export function ReadyProductionsAdmin({
       <div className="flex flex-wrap gap-1.5">
         <button
           type="button"
-          onClick={() => setTypeFilter("all")}
+          onClick={() => setCategoryFilter("all")}
           className={cn(
             "rounded-md border px-2.5 py-1 text-xs transition-colors",
-            typeFilter === "all"
+            categoryFilter === "all"
               ? "border-primary bg-primary text-primary-foreground"
               : "border-border bg-card hover:bg-accent"
           )}
         >
           همه ({formatPersianNumber(items.length)})
         </button>
-        {PRODUCTION_SOURCE_TYPES.map((type) => {
-          const count = typeCounts[type];
+        {READY_DIRECTIVE_ASSET_CATEGORIES.map((category) => {
+          const count = categoryCounts[category] ?? 0;
           if (count === 0) return null;
           return (
             <button
-              key={type}
+              key={category}
               type="button"
-              onClick={() => setTypeFilter(type)}
+              onClick={() => setCategoryFilter(category)}
               className={cn(
                 "rounded-md border px-2.5 py-1 text-xs transition-colors",
-                typeFilter === type
+                categoryFilter === category
                   ? "border-primary bg-primary text-primary-foreground"
                   : "border-border bg-card hover:bg-accent"
               )}
             >
-              {PRODUCTION_SOURCE_TYPE_LABELS[type]} ({formatPersianNumber(count)})
+              {getWorkspaceAssetCategoryMeta(category).label} (
+              {formatPersianNumber(count)})
             </button>
           );
         })}
@@ -396,7 +405,7 @@ export function ReadyProductionsAdmin({
 
       {topicGroups.length === 0 ? (
         <div className="rounded-lg border border-dashed px-4 py-12 text-center text-sm text-muted-foreground">
-          هنوز تولید آماده‌ای با این فیلترها ثبت نشده است.
+          هنوز دارایی آماده‌ای از دستورکارها با این فیلترها ثبت نشده است.
         </div>
       ) : (
         <div className="space-y-4">
@@ -426,16 +435,13 @@ export function ReadyProductionsAdmin({
                 {!collapsed && (
                   <div className="grid gap-3 p-3 sm:grid-cols-2 xl:grid-cols-3">
                     {group.items.map((item) => {
-                      const Icon = TYPE_ICONS[item.type];
+                      const Icon =
+                        (item.assetCategory && CATEGORY_ICONS[item.assetCategory]) ||
+                        ClipboardCheck;
                       const href = itemAdminPath(campaignId, item);
                       const thumb = previewUrl(item);
                       const showImage = isImagePreview(thumb);
-                      const categoryLabel =
-                        item.type === "directive_asset" && item.assetCategory
-                          ? getWorkspaceAssetCategoryMeta(
-                              item.assetCategory as DirectiveWorkspaceAssetCategory
-                            ).label
-                          : null;
+                      const categoryLabel = categoryLabelForItem(item);
 
                       return (
                         <article
@@ -467,24 +473,16 @@ export function ReadyProductionsAdmin({
                               <h3 className="line-clamp-2 text-sm font-medium leading-snug">
                                 {item.title || "بدون عنوان"}
                               </h3>
-                              <Badge variant="outline" className="shrink-0 text-[10px]">
-                                {PRODUCTION_SOURCE_TYPE_LABELS[item.type]}
-                              </Badge>
+                              {categoryLabel ? (
+                                <Badge variant="outline" className="shrink-0 text-[10px]">
+                                  {categoryLabel}
+                                </Badge>
+                              ) : null}
                             </div>
-
-                            {categoryLabel ? (
-                              <p className="text-[11px] text-muted-foreground">{categoryLabel}</p>
-                            ) : null}
 
                             {item.directiveTitle ? (
                               <p className="line-clamp-1 text-[11px] text-muted-foreground">
                                 دستورکار: {item.directiveTitle}
-                              </p>
-                            ) : null}
-
-                            {item.subtitle && item.type !== "directive_asset" ? (
-                              <p className="line-clamp-2 text-xs text-muted-foreground">
-                                {item.subtitle}
                               </p>
                             ) : null}
 

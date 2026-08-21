@@ -16,7 +16,9 @@ export default async function ReadyProductionsPage({ searchParams }: PageProps) 
   const { campaignId } = await resolveAdminCampaignId(params.campaign);
   if (!campaignId) redirect("/admin");
 
-  const result = await listPublishableProductionsAction(campaignId);
+  const result = await listPublishableProductionsAction(campaignId, {
+    onlyDirectiveAssets: true,
+  });
   if (!result.success) redirect("/admin");
 
   return <ReadyProductionsAdmin campaignId={campaignId} items={result.items} />;
