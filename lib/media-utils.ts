@@ -80,7 +80,7 @@ export function buildVideoVersionMedia(videoUrl: string, thumbnailUrl?: string) 
 }
 
 export function isDirectVideoUrl(url: string): boolean {
-  const trimmed = url.trim();
+  const trimmed = (url ?? "").trim();
   if (!trimmed) return false;
   if (/^\/api\/files\/.+\.(mp4|webm|ogg|mov)(\?.*)?$/i.test(trimmed)) return true;
   try {
@@ -112,7 +112,7 @@ export function isDirectAudioUrl(url: string): boolean {
 }
 
 export function isDirectImageUrl(url: string): boolean {
-  const trimmed = url.trim();
+  const trimmed = (url ?? "").trim();
   if (!trimmed) return false;
   if (/^\/api\/files\/.+\.(jpe?g|png|webp|gif|avif)(\?.*)?$/i.test(trimmed)) return true;
   try {
