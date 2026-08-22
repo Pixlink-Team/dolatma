@@ -8,6 +8,7 @@ import {
   DEFAULT_SITE_DESCRIPTION,
   DEFAULT_SITE_TITLE,
 } from "@/lib/campaign-branding";
+import { isLocalUploadedFileUrl } from "@/lib/media-utils";
 import type { CampaignSettings } from "@/lib/types";
 import { withFileAccessToken } from "@/lib/uploads";
 
@@ -63,6 +64,26 @@ function publicMediaUrl(
   return absolutizeMediaUrl(withFileAccessToken(trimmed), baseUrl);
 }
 
+export function buildPublicCampaignCoverPath(slug: string): string {
+  return `/api/public/campaign/${encodeURIComponent(slug.trim())}/cover`;
+}
+
+/** Prefer stable public cover URLs for uploaded files so social crawlers can fetch them. */
+function resolveOgImageUrl(
+  settings: CampaignMetadataSource | null | undefined,
+  baseUrl: string
+): string | undefined {
+  const cover = settings?.coverImageUrl?.trim();
+  if (!cover) return undefined;
+
+  const slug = settings?.slug?.trim();
+  if (slug && isLocalUploadedFileUrl(cover)) {
+    return `${baseUrl}${buildPublicCampaignCoverPath(slug)}`;
+  }
+
+  return publicMediaUrl(cover, baseUrl);
+}
+
 /**
  * Same-origin icon path (signed when needed). Prefer path-only URLs so
  * metadataBase (from the request Host / NEXT_PUBLIC_APP_URL) can absolutize
@@ -112,7 +133,7 @@ export async function buildCampaignMetadata(
       : []),
     { url: faviconUrl, ...(faviconType ? { type: faviconType } : {}) },
   ];
-  const ogImage = publicMediaUrl(settings?.coverImageUrl, baseUrl);
+  const ogImage = resolveOgImageUrl(settings, baseUrl);
   const pagePath = options?.path ?? (settings?.slug ? `/campaign/${settings.slug}` : "/");
   const pageUrl = `${baseUrl}${pagePath.startsWith("/") ? pagePath : `/${pagePath}`}`;
 

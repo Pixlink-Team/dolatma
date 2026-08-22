@@ -7,6 +7,8 @@ import { pgGetAllCampaigns } from "@/lib/db/repository";
 import { isPostgresConfigured } from "@/lib/utils";
 import "./globals.css";
 
+export const dynamic = "force-dynamic";
+
 /** Vazirmatn FD: Latin digit codepoints render as Persian glyphs site-wide. */
 const vazirmatn = localFont({
   src: [
