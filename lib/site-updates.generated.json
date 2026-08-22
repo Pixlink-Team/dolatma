@@ -1,6 +1,48 @@
 {
   "entries": [
     {
+      "hash": "8924ab171c06b233c7bef5a3ce1eedfe0f02e18a",
+      "committedAt": "2026-08-22T18:00:18+03:30",
+      "title": "رفع خطای نمایش فایل‌های دستورکار و کرش صفحه",
+      "subject": "Fix directive file viewing and client crashes"
+    },
+    {
+      "hash": "57b19c9f1136c3d1ed3d3fedc2b71124c19a66fe",
+      "committedAt": "2026-08-22T17:49:55+03:30",
+      "title": "نمایش پیش‌نمایش PDF در کاورها و کارت‌های محتوا",
+      "subject": "Add inline PDF preview in covers and cards"
+    },
+    {
+      "hash": "d9fa76186128d3f5d7d75a017cadcf76497f2604",
+      "committedAt": "2026-08-22T17:46:21+03:30",
+      "title": "رفع خطای نمایش فایل‌های دستورکار برای کاربران غیرادمین",
+      "subject": "Sign directive file URLs in server actions"
+    },
+    {
+      "hash": "2251d65dd93001900047e6dd0b1e8d97e14e68fd",
+      "committedAt": "2026-08-22T15:27:06+03:30",
+      "title": "رفع خطای باز شدن شناسنامه دستگاه",
+      "subject": "Fix device passport client crash on missing phone data"
+    },
+    {
+      "hash": "6fa1b7c738d6829a8c0b58c09d99483ead36eb1f",
+      "committedAt": "2026-08-22T15:23:22+03:30",
+      "title": "بازگرداندن بخش‌های گزارش عملکرد شخصی همراه با خط زمانی فعالیت و آپلود",
+      "subject": "Restore full self performance report with timelines"
+    },
+    {
+      "hash": "ee74d70ff3a4c8b5048784ef86c5d32b2191e91e",
+      "committedAt": "2026-08-22T14:50:20+03:30",
+      "title": "فعال‌سازی سئو سایت برای ایندکس شدن در گوگل",
+      "subject": "Add Google Search Console SEO for public login and campaigns"
+    },
+    {
+      "hash": "401fa79f2065aa5d380b554f5c9f7cf1accbdbae",
+      "committedAt": "2026-08-22T14:30:49+03:30",
+      "title": "پاکسازی فایل‌های اضافی و بهینه‌سازی سرعت سایت برای لانچ",
+      "subject": "Clean repo junk and optimize production build"
+    },
+    {
       "hash": "75bbfc0576c9239e7f6121c7bc896e89f61ff6f4",
       "committedAt": "2026-08-22T14:26:26+03:30",
       "title": "نمایش تصویر کاور هنگام اشتراک لینک راستا در تلگرام و واتساپ",
