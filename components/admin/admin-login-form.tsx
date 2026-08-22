@@ -132,16 +132,23 @@ export function AdminLoginForm({ settings = DEFAULT_LOGIN_PAGE_SETTINGS }: Admin
     return () => window.clearInterval(timerId);
   }, []);
 
-  const handlePagePointerMove = (event: PointerEvent<HTMLElement>) => {
+  const handleCardPointerMove = (event: PointerEvent<HTMLElement>) => {
     if (!motionEnabled || event.pointerType !== "mouse") return;
 
-    const relativeX = event.clientX / window.innerWidth;
-    const relativeY = event.clientY / window.innerHeight;
+    const rect = event.currentTarget.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return;
+
+    const relativeX = (event.clientX - rect.left) / rect.width;
+    const relativeY = (event.clientY - rect.top) / rect.height;
 
     setTilt({
       rotateY: getBoundedMotion((relativeX - 0.5) * MAX_CARD_ROTATION * 2, MAX_CARD_ROTATION),
       rotateX: getBoundedMotion(-(relativeY - 0.5) * MAX_CARD_ROTATION * 2, MAX_CARD_ROTATION),
     });
+  };
+
+  const handleCardPointerLeave = () => {
+    setTilt(INITIAL_TILT);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -194,7 +201,6 @@ export function AdminLoginForm({ settings = DEFAULT_LOGIN_PAGE_SETTINGS }: Admin
         formLayout.main
       )}
       dir="rtl"
-      onPointerMove={handlePagePointerMove}
     >
       {backgroundLayers.map((src) => {
         const isActive = useTimeOfDayBackground
@@ -243,6 +249,8 @@ export function AdminLoginForm({ settings = DEFAULT_LOGIN_PAGE_SETTINGS }: Admin
       >
         <section
           className="relative overflow-hidden rounded-[32px] border border-white/35 bg-white/[0.08] p-6 shadow-[0_24px_70px_rgba(0,0,0,0.28)] backdrop-blur-[10px] backdrop-saturate-150 transition-transform duration-150 ease-out will-change-transform md:p-7"
+          onPointerMove={handleCardPointerMove}
+          onPointerLeave={handleCardPointerLeave}
           style={{
             transform: motionEnabled
               ? `rotateX(${tilt.rotateX}deg) rotateY(${tilt.rotateY}deg)`
