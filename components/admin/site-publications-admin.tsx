@@ -392,10 +392,6 @@ export function SitePublicationsAdmin({
 
   const onSubmit = form.handleSubmit(
     (data) => {
-    if (!editingId && (!sourceProductionType || !sourceProductionId)) {
-      toast.error("برای ثبت نشر باید یک تولید (یا دارایی دستورکار) انتخاب شود");
-      return;
-    }
     if (planLabels.length === 0) {
       reportInvalid(["planLabels"]);
       return;
@@ -735,7 +731,6 @@ export function SitePublicationsAdmin({
               campaignId={campaignId}
               valueType={sourceProductionType}
               valueId={sourceProductionId}
-              required={!editingId}
               label="کدام تولید را نشر می‌کنید؟"
               onChange={(item) => {
                 setSourceProductionType(item?.type ?? null);

@@ -32,18 +32,10 @@ export function normalizeProductionSource(
   return { sourceProductionType: type, sourceProductionId: id };
 }
 
-/** Require source on create; allow legacy rows (updates without source) to keep null. */
+/** Production source is optional for now; legacy rows without source stay null on update. */
 export function requireProductionSourceOnCreate(
-  data: ProductionSourceFields & { id?: string }
+  _data: ProductionSourceFields & { id?: string }
 ): { success: false; error: string } | null {
-  if (data.id) return null;
-  const { sourceProductionType, sourceProductionId } = normalizeProductionSource(data);
-  if (!sourceProductionType || !sourceProductionId) {
-    return {
-      success: false,
-      error: "برای ثبت نشر باید یک تولید (یا دارایی دستورکار) انتخاب شود",
-    };
-  }
   return null;
 }
 

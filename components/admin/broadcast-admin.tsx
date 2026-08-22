@@ -238,10 +238,6 @@ export function BroadcastAdmin({ campaignId, initialReports }: BroadcastAdminPro
 
   const onSubmit = form.handleSubmit(
     (data) => {
-    if (!editingId && (!sourceProductionType || !sourceProductionId)) {
-      toast.error("برای ثبت نشر باید یک تولید (یا دارایی دستورکار) انتخاب شود");
-      return;
-    }
     clearInvalid();
 
     startTransition(async () => {
@@ -431,7 +427,6 @@ export function BroadcastAdmin({ campaignId, initialReports }: BroadcastAdminPro
           campaignId={campaignId}
           valueType={sourceProductionType}
           valueId={sourceProductionId}
-          required={!editingId}
           label="کدام تولید را نشر می‌کنید؟"
           onChange={(item) => {
             setSourceProductionType(item?.type ?? null);

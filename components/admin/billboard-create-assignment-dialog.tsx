@@ -396,10 +396,6 @@ export function BillboardCreateAssignmentDialog({
       return;
     }
 
-    if (!isEditing && (!sourceProductionType || !sourceProductionId)) {
-      toast.error("برای ثبت نشر باید یک تولید (یا دارایی دستورکار) انتخاب شود");
-      return;
-    }
     clearInvalid();
 
     startTransition(async () => {
@@ -506,7 +502,6 @@ export function BillboardCreateAssignmentDialog({
             campaignId={campaignId}
             valueType={sourceProductionType}
             valueId={sourceProductionId}
-            required={!isEditing}
             label="کدام تولید را نشر می‌کنید؟"
             onChange={(item) => {
               setSourceProductionType(item?.type ?? null);
