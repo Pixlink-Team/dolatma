@@ -512,7 +512,6 @@ export function mapCampaignActivityFromDb(row: any): CampaignActivity {
   };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function parseAttendees(value: unknown): string[] {
   if (Array.isArray(value)) {
     return value.map((item) => String(item).trim()).filter(Boolean);

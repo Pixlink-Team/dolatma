@@ -21,6 +21,9 @@
 # misc
 .DS_Store
 *.pem
+.tmp-*
+_diag_*
+.tmp-restore/
 
 # debug
 npm-debug.log*

@@ -25,7 +25,7 @@ import { useFilteredOwnerGroups } from "@/lib/hooks/use-filtered-owner-groups";
 import { useCampaignSectionVisibility } from "@/lib/hooks/use-campaign-section-visibility";
 import { useOwnerLocationFilter } from "@/lib/context/owner-location-filter-context";
 import { flattenOwnerGroupsInSortOrder, shouldRenderChronologically } from "@/lib/owner-groups";
-import type { DataOwnerGroup, MediaCategory, VideoWithVersions } from "@/lib/types";
+import type { DataOwnerGroup, VideoWithVersions } from "@/lib/types";
 import { formatPersianNumber } from "@/lib/utils";
 
 function getVideoLatestDate(video: VideoWithVersions): string | undefined {
@@ -40,7 +40,6 @@ function getVideoSortDate(video: VideoWithVersions, sort: PublicMediaSort): stri
 }
 
 interface VideosSectionProps {
-  categories: MediaCategory[];
   videos: VideoWithVersions[];
   groups: DataOwnerGroup<VideoWithVersions>[];
 }
@@ -71,7 +70,7 @@ function filterVideoGroups(
     .filter((group) => group.items.length > 0);
 }
 
-export function VideosSection({ categories: _categories, videos, groups }: VideosSectionProps) {
+export function VideosSection({ videos, groups }: VideosSectionProps) {
   // Category filter UI removed; always show all items.
   const categoryFilter = "all";
   const [sort, setSort] = useState<PublicMediaSort>("newest");

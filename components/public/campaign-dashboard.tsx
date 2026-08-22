@@ -198,7 +198,6 @@ function CampaignDashboardBody({
           <DeferredSection minHeight={400} forceRender={forceRender}>
             <section data-export-section data-export-label="پوستر و عکس">
               <PostersSection
-                categories={data.posterCategories}
                 posters={data.posters}
                 groups={data.posterGroups}
               />
@@ -210,7 +209,6 @@ function CampaignDashboardBody({
           <DeferredSection minHeight={400} forceRender={forceRender}>
             <section data-export-section data-export-label="ویدیوها">
               <VideosSection
-                categories={data.videoCategories}
                 videos={data.videos}
                 groups={data.videoGroups}
               />

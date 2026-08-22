@@ -60,7 +60,6 @@ export function DirectiveAutopsyPanel({ directiveId }: DirectiveAutopsyPanelProp
         .filter(Boolean);
       setFileUrlsText(urls.join("\n"));
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [directiveId]);
 
   const parseSurvey = (): Record<string, unknown> | null => {

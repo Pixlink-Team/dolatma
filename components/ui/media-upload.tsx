@@ -24,7 +24,7 @@ import {
 } from "@/lib/client/optimize-image";
 import { forceClientReauth, redirectIfSessionExpired } from "@/lib/auth/client-reauth";
 import { ImageIcon, Loader2, Trash2, Upload } from "lucide-react";
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 type UploadKind = "image" | "video" | "audio" | "activity-video" | "raw-image" | "raw-video";
@@ -114,13 +114,16 @@ export function MediaUpload({
   const [showLinkEditor, setShowLinkEditor] = useState(false);
   const shouldAutoVideoCover = autoVideoCover ?? kind === "video";
 
-  const applyGeneratedCover = (coverUrl: string) => {
-    if (!coverImageUrl?.trim()) {
-      onCoverImageUrlChange?.(coverUrl);
-    }
-    onAutoCoverGenerated?.(coverUrl);
-    toast.success("کاور از ثانیه ۳ ویدیو ساخته شد");
-  };
+  const applyGeneratedCover = useCallback(
+    (coverUrl: string) => {
+      if (!coverImageUrl?.trim()) {
+        onCoverImageUrlChange?.(coverUrl);
+      }
+      onAutoCoverGenerated?.(coverUrl);
+      toast.success("کاور از ثانیه ۳ ویدیو ساخته شد");
+    },
+    [coverImageUrl, onAutoCoverGenerated, onCoverImageUrlChange]
+  );
 
   const tryGenerateCoverFromFile = async (file: File, videoUrl: string) => {
     if (!shouldAutoVideoCover || kind !== "video") return;
@@ -178,6 +181,7 @@ export function MediaUpload({
     coverImageUrl,
     onAutoCoverGenerated,
     onCoverImageUrlChange,
+    applyGeneratedCover,
   ]);
 
   const resolveUploadKind = (file: File): UploadKind => {

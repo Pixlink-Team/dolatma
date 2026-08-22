@@ -33,9 +33,7 @@ export function normalizeProductionSource(
 }
 
 /** Production source is optional for now; legacy rows without source stay null on update. */
-export function requireProductionSourceOnCreate(
-  _data: ProductionSourceFields & { id?: string }
-): { success: false; error: string } | null {
+export function requireProductionSourceOnCreate(): { success: false; error: string } | null {
   return null;
 }
 
@@ -122,7 +120,7 @@ export async function assertProductionSourceAllowed(
   campaignId: string,
   data: ProductionSourceFields & { id?: string }
 ): Promise<{ success: false; error: string } | null> {
-  const required = requireProductionSourceOnCreate(data);
+  const required = requireProductionSourceOnCreate();
   if (required) return required;
 
   const { sourceProductionType, sourceProductionId } = normalizeProductionSource(data);

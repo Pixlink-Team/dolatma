@@ -104,12 +104,14 @@ export function BillboardLocationMapPicker({
       mapRef.current = null;
       markerRef.current = null;
     };
+    // Map initializes once; coordinate props sync via separate effects below.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     if (!mapCenter) return;
     applyMapCenter(mapCenter);
-  }, [mapCenter?.lat, mapCenter?.lng, mapCenter?.revision]);
+  }, [mapCenter]);
 
   useEffect(() => {
     if (skipCoordsSyncRef.current || !markerRef.current) return;

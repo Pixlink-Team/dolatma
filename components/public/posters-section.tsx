@@ -25,7 +25,7 @@ import { useFilteredOwnerGroups } from "@/lib/hooks/use-filtered-owner-groups";
 import { useCampaignSectionVisibility } from "@/lib/hooks/use-campaign-section-visibility";
 import { useOwnerLocationFilter } from "@/lib/context/owner-location-filter-context";
 import { flattenOwnerGroupsInSortOrder, shouldRenderChronologically } from "@/lib/owner-groups";
-import type { DataOwnerGroup, MediaCategory, PosterWithVersions } from "@/lib/types";
+import type { DataOwnerGroup, PosterWithVersions } from "@/lib/types";
 import { formatPersianNumber } from "@/lib/utils";
 
 function getPosterLatestDate(poster: PosterWithVersions): string | undefined {
@@ -40,7 +40,6 @@ function getPosterSortDate(poster: PosterWithVersions, sort: PublicMediaSort): s
 }
 
 interface PostersSectionProps {
-  categories: MediaCategory[];
   posters: PosterWithVersions[];
   groups: DataOwnerGroup<PosterWithVersions>[];
 }
@@ -71,7 +70,7 @@ function filterPosterGroups(
     .filter((group) => group.items.length > 0);
 }
 
-export function PostersSection({ categories: _categories, posters, groups }: PostersSectionProps) {
+export function PostersSection({ posters, groups }: PostersSectionProps) {
   const categoryFilter = "all";
   const [sort, setSort] = useState<PublicMediaSort>("newest");
   const { filter } = useOwnerLocationFilter();
