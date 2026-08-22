@@ -20,6 +20,7 @@ import { CampaignTools } from "@/components/admin/campaign-tools";
 import { SmsSettingsCard } from "@/components/admin/sms-settings-card";
 import { AiSettingsCard } from "@/components/admin/ai-settings-card";
 import { LoginPageSettingsCard } from "@/components/admin/login-page-settings-card";
+import { CampaignFaviconCard } from "@/components/admin/campaign-favicon-card";
 import {
   contentPlansFromTopics,
   normalizeContentTopics,
@@ -74,7 +75,6 @@ const schema = z.object({
   startDate: z.string(),
   endDate: z.string(),
   coverImageUrl: z.string().optional(),
-  faviconUrl: z.string().optional(),
   published: z.boolean(),
   features: featuresSchema,
   adminOwnerLabel: z.string().optional(),
@@ -257,7 +257,8 @@ function SiteIconCard() {
       </CardHeader>
       <CardContent className="space-y-3">
         <p className="text-sm text-muted-foreground">
-          آیکون تب مرورگر و آیکون اپلیکیشن (favicon / apple-icon) که در همه صفحات بدون فاویکون اختصاصی نمایش داده می‌شود.
+          آیکون پیش‌فرض سراسری سایت (app/icon و dolat-icon.png) برای صفحاتی که فاویکون اختصاصی
+          ندارند.
         </p>
         <div className="flex items-center gap-4">
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -280,7 +281,9 @@ function SiteIconCard() {
               onChange={handleUpload}
               disabled={uploading}
             />
-            <p className="text-xs text-muted-foreground">PNG، WebP یا ICO — حداکثر ۲ مگابایت</p>
+            <p className="text-xs text-muted-foreground">
+              PNG، WebP یا ICO — مربع ۱۸۰×۱۸۰ تا ۵۱۲×۵۱۲ — حداکثر ۲ مگابایت
+            </p>
           </div>
         </div>
       </CardContent>
@@ -317,7 +320,6 @@ export function SettingsAdmin({
       startDate: initialSettings.startDate,
       endDate: initialSettings.endDate,
       coverImageUrl: initialSettings.coverImageUrl ?? "",
-      faviconUrl: initialSettings.faviconUrl ?? "",
       published: initialSettings.published,
       features: {
         ...initialSettings.features,
@@ -363,7 +365,6 @@ export function SettingsAdmin({
         startDate: data.startDate,
         endDate: data.endDate,
         coverImageUrl: data.coverImageUrl,
-        faviconUrl: data.faviconUrl?.trim() || null,
         published: data.published,
         features: data.features,
         analyticsConfig: buildAnalyticsConfig(data, initialSettings.analyticsConfig),
@@ -406,6 +407,14 @@ export function SettingsAdmin({
       <CampaignTools isFullAdmin={canEditFullSettings} />
 
       {canEditFullSettings && <SiteIconCard />}
+
+      {canEditFullSettings && (
+        <CampaignFaviconCard
+          campaignId={initialSettings.id}
+          campaignTitle={initialSettings.title}
+          initialFaviconUrl={initialSettings.faviconUrl}
+        />
+      )}
 
       <Card>
         <CardHeader>
@@ -625,18 +634,6 @@ export function SettingsAdmin({
               />
               <p className="text-xs text-muted-foreground">
                 تصویر پیش‌نمایش هنگام اشتراک لینک راستا در تلگرام، واتساپ و شبکه‌های اجتماعی.
-              </p>
-            </div>
-            <div className="space-y-2">
-              <MediaUpload
-                label="فاویکون"
-                value={form.watch("faviconUrl") ?? ""}
-                onChange={(url) => form.setValue("faviconUrl", url)}
-                accept="image/png,image/webp,image/x-icon,image/svg+xml,.ico"
-              />
-              <p className="text-xs text-muted-foreground">
-                آیکون تب مرورگر. اگر خالی باشد از لوگوی پیش‌فرض سایت استفاده می‌شود.
-                برای نمایش مطمئن‌تر در همه مرورگرها ترجیحاً PNG یا ICO آپلود کنید (WebP در بعضی مرورگرها فاویکون نمی‌شود).
               </p>
             </div>
             <div className="flex items-center gap-2">
