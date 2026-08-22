@@ -12,7 +12,6 @@ import { getSafeRedirectPath } from "@/lib/auth/safe-redirect";
 import {
   formatPersianClock,
   formatPersianLoginDate,
-  formatPersonalizedGreeting,
   getTimeOfDayConfig,
   type TimeOfDayConfig,
 } from "@/lib/login-time-of-day";
@@ -45,7 +44,6 @@ const ALL_PERIOD_BACKGROUNDS = [
   "/images/login/night.webp",
 ] as const;
 
-const LAST_LOGIN_USER_KEY = "dolatma:last-login-user";
 const REMEMBER_ME_KEY = "dolatma:remember-me";
 
 function getBoundedMotion(value: number, max: number) {
@@ -62,14 +60,6 @@ function isNextRedirectError(error: unknown): boolean {
   );
 }
 
-function readStoredLoginUser(): string {
-  try {
-    return window.localStorage.getItem(LAST_LOGIN_USER_KEY)?.trim() ?? "";
-  } catch {
-    return "";
-  }
-}
-
 function readStoredRememberMe(): boolean {
   try {
     return window.localStorage.getItem(REMEMBER_ME_KEY) === "1";
@@ -78,12 +68,8 @@ function readStoredRememberMe(): boolean {
   }
 }
 
-function persistLoginPreferences(username: string, rememberMe: boolean) {
+function persistRememberMePreference(rememberMe: boolean) {
   try {
-    const trimmed = username.trim();
-    if (trimmed) {
-      window.localStorage.setItem(LAST_LOGIN_USER_KEY, trimmed);
-    }
     window.localStorage.setItem(REMEMBER_ME_KEY, rememberMe ? "1" : "0");
   } catch {
     // Ignore storage failures (private mode, quota, etc.).
@@ -102,7 +88,6 @@ export function AdminLoginForm({ settings = DEFAULT_LOGIN_PAGE_SETTINGS }: Admin
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
-  const [rememberedUser, setRememberedUser] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -132,13 +117,7 @@ export function AdminLoginForm({ settings = DEFAULT_LOGIN_PAGE_SETTINGS }: Admin
   }, [preRegistrationEnabled, mode]);
 
   useEffect(() => {
-    const storedUser = readStoredLoginUser();
-    const storedRememberMe = readStoredRememberMe();
-    if (storedUser) {
-      setEmail(storedUser);
-      setRememberedUser(storedUser);
-    }
-    setRememberMe(storedRememberMe);
+    setRememberMe(readStoredRememberMe());
   }, []);
 
   useEffect(() => {
@@ -178,12 +157,12 @@ export function AdminLoginForm({ settings = DEFAULT_LOGIN_PAGE_SETTINGS }: Admin
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
 
-        persistLoginPreferences(email, rememberMe);
+        persistRememberMePreference(rememberMe);
         window.location.assign(redirectTo);
         return;
       }
 
-      persistLoginPreferences(email, rememberMe);
+      persistRememberMePreference(rememberMe);
       const result = await loginAdminAction(email, password, redirectTo, rememberMe);
       if (result && result.success === false) {
         setErrorMessage(result.error);
@@ -198,10 +177,6 @@ export function AdminLoginForm({ settings = DEFAULT_LOGIN_PAGE_SETTINGS }: Admin
       setLoading(false);
     }
   };
-
-  const greetingText = timeOfDay
-    ? formatPersonalizedGreeting(timeOfDay.greeting, rememberedUser)
-    : null;
 
   const backgroundMode = settings.backgroundMode ?? "custom";
   const customBackgroundUrl =
@@ -240,18 +215,13 @@ export function AdminLoginForm({ settings = DEFAULT_LOGIN_PAGE_SETTINGS }: Admin
         );
       })}
 
-      {now && timeOfDay && greetingText ? (
+      {now && timeOfDay ? (
         <div
           className="pointer-events-none absolute bottom-4 right-4 z-10 max-w-[14rem] text-right sm:bottom-6 sm:right-6 sm:max-w-none"
           aria-live="polite"
         >
-          <p
-            className={[
-              "text-[11px] font-medium text-white/65 [text-shadow:0_1px_10px_rgba(0,0,0,0.7)]",
-              rememberedUser ? "animate-in fade-in slide-in-from-bottom-1 duration-700" : "",
-            ].join(" ")}
-          >
-            {greetingText}
+          <p className="text-[11px] font-medium text-white/65 [text-shadow:0_1px_10px_rgba(0,0,0,0.7)]">
+            {timeOfDay.greeting}
           </p>
           <p
             className="mt-0.5 font-sans text-[1.65rem] font-semibold leading-none text-white tabular-nums sm:text-[1.85rem]"
@@ -339,12 +309,6 @@ export function AdminLoginForm({ settings = DEFAULT_LOGIN_PAGE_SETTINGS }: Admin
 
             {mode === "login" || !preRegistrationEnabled ? (
               <>
-                {rememberedUser ? (
-                  <p className="mb-5 animate-in fade-in slide-in-from-top-1 duration-500 rounded-2xl border border-white/20 bg-white/10 px-4 py-3 text-sm font-semibold text-white [text-shadow:0_2px_12px_rgba(0,0,0,0.55)]">
-                    {rememberedUser}
-                  </p>
-                ) : null}
-
                 <form onSubmit={handleSubmit} className="space-y-5">
                   <div className="space-y-2">
                     <Label
