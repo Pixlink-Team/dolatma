@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { forceClientReauth, redirectIfSessionExpired } from "@/lib/auth/client-reauth";
-import { isDirectImageUrl } from "@/lib/media-utils";
+import { isDirectImageUrl, isDirectVideoUrl } from "@/lib/media-utils";
 import { cn, formatPersianNumber } from "@/lib/utils";
 import { ExternalLink, FileText, Loader2, Trash2, Upload } from "lucide-react";
 import { useRef, useState } from "react";
@@ -20,8 +20,9 @@ interface DocumentUploadProps {
   /**
    * letter = PDF or image (official directive letter).
    * document = PDF/Office/text only (default).
+   * action = document, image, or video (directive action attachments).
    */
-  variant?: "document" | "letter";
+  variant?: "document" | "letter" | "action";
 }
 
 function formatFileSize(bytes: number): string {
@@ -42,13 +43,56 @@ function isUploadedPdf(url: string, mimeType?: string, name?: string): boolean {
   return Boolean(name && /\.pdf$/i.test(name));
 }
 
+function isUploadedVideo(url: string, mimeType?: string, name?: string): boolean {
+  if (mimeType?.startsWith("video/")) return true;
+  if (isDirectVideoUrl(url)) return true;
+  return Boolean(name && /\.(mp4|webm|mov|m4v|mkv|avi)(\?.*)?$/i.test(name));
+}
+
+const VIDEO_TYPES = new Set(["video/mp4", "video/webm", "video/quicktime"]);
+
+const DOCUMENT_EXTENSIONS = /\.(pdf|docx?|xlsx?|txt|rar)$/i;
+
+function resolveUploadKind(
+  file: File,
+  variant: DocumentUploadProps["variant"]
+): "image" | "video" | "document" | null {
+  if (variant === "letter") {
+    const isPdfFile = file.type === "application/pdf" || /\.pdf$/i.test(file.name);
+    const isImageFile = file.type.startsWith("image/");
+    if (!isPdfFile && !isImageFile) return null;
+    return isImageFile ? "image" : "document";
+  }
+
+  if (variant === "action") {
+    if (file.type.startsWith("image/")) return "image";
+    if (VIDEO_TYPES.has(file.type) || /\.(mp4|webm|mov|m4v)$/i.test(file.name)) return "video";
+    if (
+      file.type === "application/pdf" ||
+      file.type.startsWith("application/vnd.") ||
+      file.type === "application/msword" ||
+      file.type === "text/plain" ||
+      file.type.includes("rar") ||
+      DOCUMENT_EXTENSIONS.test(file.name)
+    ) {
+      return "document";
+    }
+    return null;
+  }
+
+  return "document";
+}
+
 const LETTER_ACCEPT =
   ".pdf,image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.gif,application/pdf";
 
 const DOCUMENT_ACCEPT =
   ".pdf,.doc,.docx,.xls,.xlsx,.txt,.rar,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/plain,application/vnd.rar,application/x-rar-compressed,application/x-rar";
 
+const ACTION_ACCEPT = `${DOCUMENT_ACCEPT},image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.gif,video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov,.m4v`;
+
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+const MAX_VIDEO_BYTES = 100 * 1024 * 1024;
 const MAX_DOCUMENT_BYTES = 25 * 1024 * 1024;
 
 const EMPTY_FILE = { url: "", fileName: "", fileSize: 0, mimeType: "" };
@@ -67,29 +111,37 @@ export function DocumentUpload({
   const [uploading, setUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const isLetter = variant === "letter";
+  const isAction = variant === "action";
   const hasFile = Boolean(value.trim());
   const displayName = fileName?.trim() || "فایل آپلود شده";
   const isImage = hasFile && isUploadedImage(value, mimeType, fileName);
   const isPdf = hasFile && isUploadedPdf(value, mimeType, fileName);
+  const isVideo = hasFile && isUploadedVideo(value, mimeType, fileName);
 
   const handleUpload = async (file: File) => {
-    if (isLetter) {
-      const isPdfFile = file.type === "application/pdf" || /\.pdf$/i.test(file.name);
-      const isImageFile = file.type.startsWith("image/");
-      if (!isPdfFile && !isImageFile) {
-        toast.error("فقط PDF یا تصویر مجاز است");
-        return;
-      }
+    const kind = resolveUploadKind(file, variant);
+    if (!kind) {
+      toast.error(
+        isAction
+          ? "فقط سند، تصویر یا ویدیو مجاز است"
+          : "فقط PDF یا تصویر مجاز است"
+      );
+      return;
     }
 
-    const kind: "image" | "document" =
-      isLetter && file.type.startsWith("image/") ? "image" : "document";
-    const maxBytes = kind === "image" ? MAX_IMAGE_BYTES : MAX_DOCUMENT_BYTES;
+    const maxBytes =
+      kind === "image"
+        ? MAX_IMAGE_BYTES
+        : kind === "video"
+          ? MAX_VIDEO_BYTES
+          : MAX_DOCUMENT_BYTES;
     if (file.size > maxBytes) {
       toast.error(
         kind === "image"
           ? `حجم تصویر بیشتر از ${formatPersianNumber(10)} مگابایت است`
-          : `حجم فایل بیشتر از ${formatPersianNumber(25)} مگابایت است`
+          : kind === "video"
+            ? `حجم ویدیو بیشتر از ${formatPersianNumber(100)} مگابایت است`
+            : `حجم فایل بیشتر از ${formatPersianNumber(25)} مگابایت است`
       );
       if (inputRef.current) inputRef.current.value = "";
       return;
@@ -143,7 +195,9 @@ export function DocumentUpload({
 
   const dropzoneHint = isLetter
     ? "PDF یا تصویر نامه رسمی — تصویر تا ۱۰، PDF تا ۲۵ مگابایت"
-    : "PDF، Word، Excel، RAR یا فایل متنی — حداکثر ۲۵ مگابایت";
+    : isAction
+      ? "سند، تصویر یا ویدیو — تصویر تا ۱۰، ویدیو تا ۱۰۰، سند تا ۲۵ مگابایت"
+      : "PDF، Word، Excel، RAR یا فایل متنی — حداکثر ۲۵ مگابایت";
 
   const emptyDropzone = (
     <div className="flex flex-col items-center gap-3 px-2 py-6 text-center">
@@ -162,6 +216,14 @@ export function DocumentUpload({
       {isImage ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={value} alt={displayName} className="h-full min-h-40 w-full object-contain sm:min-h-48" />
+      ) : isVideo ? (
+        <video
+          src={value}
+          controls
+          playsInline
+          preload="metadata"
+          className="h-full min-h-40 w-full bg-black object-contain sm:min-h-48"
+        />
       ) : isPdf ? (
         <iframe
           src={value}
@@ -197,7 +259,7 @@ export function DocumentUpload({
             {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
             تعویض
           </Button>
-          {!isImage && !isPdf ? (
+          {!isImage && !isPdf && !isVideo ? (
             <Button type="button" variant="secondary" size="sm" className="h-8" onClick={openFile}>
               <ExternalLink className="h-4 w-4" />
               باز کردن
@@ -216,7 +278,7 @@ export function DocumentUpload({
         </div>
       ) : null}
 
-      {hasFile && !isImage && !isPdf ? (
+      {hasFile && !isImage && !isPdf && !isVideo ? (
         <div className="border-t bg-background/90 px-3 py-2 text-center text-xs text-muted-foreground">
           {displayName}
           {fileSize ? ` — ${formatFileSize(fileSize)}` : ""}
@@ -284,7 +346,7 @@ export function DocumentUpload({
       <input
         ref={inputRef}
         type="file"
-        accept={isLetter ? LETTER_ACCEPT : DOCUMENT_ACCEPT}
+        accept={isLetter ? LETTER_ACCEPT : isAction ? ACTION_ACCEPT : DOCUMENT_ACCEPT}
         className="hidden"
         onChange={(event) => {
           const file = event.target.files?.[0];

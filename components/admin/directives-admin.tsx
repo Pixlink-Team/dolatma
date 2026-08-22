@@ -296,6 +296,10 @@ function ActionFilesPreview({ item }: { item: CampaignDirective }) {
     <div className="space-y-2">
       {files.map((file) => {
         const isImage = Boolean(file.mimeType?.startsWith("image/"));
+        const isVideo = Boolean(
+          file.mimeType?.startsWith("video/") ||
+            /\.(mp4|webm|mov|m4v)(\?.*)?$/i.test(file.url)
+        );
         return (
           <div key={file.key} className="space-y-2 rounded-lg border px-3 py-3">
             <p className="text-sm font-medium">{file.title || file.fileName}</p>
@@ -305,6 +309,15 @@ function ActionFilesPreview({ item }: { item: CampaignDirective }) {
                 src={file.url}
                 alt={file.title || file.fileName}
                 className="max-h-48 w-full rounded-md object-contain bg-muted/30"
+              />
+            )}
+            {isVideo && file.url && (
+              <video
+                src={file.url}
+                controls
+                playsInline
+                preload="metadata"
+                className="max-h-48 w-full rounded-md bg-black object-contain"
               />
             )}
             <a
@@ -1464,7 +1477,7 @@ export function DirectivesAdmin({
                 <div>
                   <Label>فایل‌های اقدام</Label>
                   <p className="text-xs text-muted-foreground">
-                    برای هر فایل یک عنوان و فایل جداگانه اضافه کنید
+                    برای هر فایل یک عنوان و سند، تصویر یا ویدیو جداگانه اضافه کنید
                   </p>
                 </div>
                 <Button
@@ -1520,6 +1533,7 @@ export function DirectivesAdmin({
                         />
                       </div>
                       <DocumentUpload
+                        variant="action"
                         label="فایل"
                         value={draft.url}
                         fileName={draft.fileName}
