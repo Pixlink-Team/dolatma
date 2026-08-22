@@ -40,6 +40,7 @@ import {
 import { getWorkspaceAssetCategoryMeta } from "@/lib/directive-workspace";
 import {
   READY_DIRECTIVE_ASSET_CATEGORIES,
+  READY_DIRECTIVE_ASSET_CATEGORY_LABELS,
   type PublishableProductionItem,
 } from "@/lib/production-source-shared";
 import type { DirectiveWorkspaceAssetCategory } from "@/lib/types";
@@ -93,6 +94,7 @@ const CATEGORY_ICONS: Record<string, typeof ImageIcon> = {
   ready_text: Newspaper,
   social: FileStack,
   print: HardDrive,
+  action_file: FileStack,
 };
 
 function topicKeyForItem(item: PublishableProductionItem): string {
@@ -126,11 +128,18 @@ function productionMediaUrl(item: PublishableProductionItem): string {
   return (item.coverImageUrl || item.mediaUrl || "").trim();
 }
 
+function readyCategoryLabel(category: string): string {
+  if (category in READY_DIRECTIVE_ASSET_CATEGORY_LABELS) {
+    return READY_DIRECTIVE_ASSET_CATEGORY_LABELS[
+      category as keyof typeof READY_DIRECTIVE_ASSET_CATEGORY_LABELS
+    ];
+  }
+  return getWorkspaceAssetCategoryMeta(category as DirectiveWorkspaceAssetCategory).label;
+}
+
 function categoryLabelForItem(item: PublishableProductionItem): string | null {
   if (!item.assetCategory) return null;
-  return getWorkspaceAssetCategoryMeta(
-    item.assetCategory as DirectiveWorkspaceAssetCategory
-  ).label;
+  return readyCategoryLabel(item.assetCategory);
 }
 
 function socialContentTypeForItem(
@@ -396,8 +405,7 @@ export function ReadyProductionsAdmin({
                   : "border-border bg-card hover:bg-accent"
               )}
             >
-              {getWorkspaceAssetCategoryMeta(category).label} (
-              {formatPersianNumber(count)})
+              {readyCategoryLabel(category)} ({formatPersianNumber(count)})
             </button>
           );
         })}

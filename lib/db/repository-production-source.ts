@@ -59,7 +59,63 @@ function mapRow(row: Record<string, unknown>): PublishableProductionItem {
   };
 }
 
-const READY_ASSET_CATEGORY_LIST = [...READY_DIRECTIVE_ASSET_CATEGORIES];
+const READY_WORKSPACE_ASSET_CATEGORY_LIST = READY_DIRECTIVE_ASSET_CATEGORIES.filter(
+  (category) => category !== "action_file"
+);
+
+function excludeLegacyDirectiveAttachment(sql: ReturnType<typeof getSql>) {
+  return sql`
+    AND NOT (
+      (
+        NULLIF(TRIM(d.letter_file_url), '') IS NOT NULL
+        AND att.file_url = TRIM(d.letter_file_url)
+      )
+      OR (
+        NULLIF(TRIM(d.letter_file_url), '') IS NULL
+        AND TRIM(att.title) = 'نامه رسمی'
+      )
+    )
+  `;
+}
+
+async function pgListDirectiveActionAttachments(
+  campaignId: string
+): Promise<PublishableProductionItem[]> {
+  const sql = getSql();
+  const rows = await sql`
+    SELECT
+      att.id,
+      'directive_attachment'::text AS type,
+      att.title,
+      att.file_name AS subtitle,
+      att.file_url AS media_url,
+      CASE
+        WHEN att.mime_type LIKE 'image/%' THEN att.file_url
+        ELSE NULL::text
+      END AS cover_image_url,
+      NULL::text AS body,
+      CASE
+        WHEN NULLIF(TRIM(d.topic), '') IS NOT NULL
+        THEN jsonb_build_array(TRIM(d.topic))
+        ELSE '[]'::jsonb
+      END AS plan_labels,
+      NULL::text AS plan_label,
+      NULL::text AS content_kind,
+      NULL::uuid AS owner_user_id,
+      att.created_at,
+      att.directive_id AS directive_id,
+      d.title AS directive_title,
+      'action_file'::text AS asset_category
+    FROM directive_attachments att
+    INNER JOIN campaign_directives d ON d.id = att.directive_id
+    WHERE d.campaign_id = ${campaignId}
+      ${excludeLegacyDirectiveAttachment(sql)}
+    ORDER BY att.created_at DESC
+    LIMIT 500
+  `;
+
+  return (rows as Record<string, unknown>[]).map(mapRow);
+}
 
 async function pgListDirectiveReadyAssets(
   campaignId: string
@@ -96,12 +152,16 @@ async function pgListDirectiveReadyAssets(
       LIMIT 1
     ) av ON true
     WHERE d.campaign_id = ${campaignId}
-      AND a.category = ANY(${READY_ASSET_CATEGORY_LIST})
+      AND a.category = ANY(${READY_WORKSPACE_ASSET_CATEGORY_LIST})
     ORDER BY a.created_at DESC
     LIMIT 500
   `;
 
-  return (rows as Record<string, unknown>[]).map(mapRow);
+  const assets = (rows as Record<string, unknown>[]).map(mapRow);
+  const attachments = await pgListDirectiveActionAttachments(campaignId);
+  return [...assets, ...attachments]
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .slice(0, 500);
 }
 
 /**
@@ -300,7 +360,37 @@ export async function pgListPublishableProductions(
         LIMIT 1
       ) av ON true
       WHERE d.campaign_id = ${campaignId}
-        AND a.category = ANY(${READY_ASSET_CATEGORY_LIST})
+        AND a.category = ANY(${READY_WORKSPACE_ASSET_CATEGORY_LIST})
+    )
+    UNION ALL
+    (
+      SELECT
+        att.id,
+        'directive_attachment'::text AS type,
+        att.title,
+        att.file_name AS subtitle,
+        att.file_url AS media_url,
+        CASE
+          WHEN att.mime_type LIKE 'image/%' THEN att.file_url
+          ELSE NULL::text
+        END AS cover_image_url,
+        NULL::text AS body,
+        CASE
+          WHEN NULLIF(TRIM(d.topic), '') IS NOT NULL
+          THEN jsonb_build_array(TRIM(d.topic))
+          ELSE '[]'::jsonb
+        END AS plan_labels,
+        NULL::text AS plan_label,
+        NULL::text AS content_kind,
+        NULL::uuid AS owner_user_id,
+        att.created_at,
+        att.directive_id AS directive_id,
+        d.title AS directive_title,
+        'action_file'::text AS asset_category
+      FROM directive_attachments att
+      INNER JOIN campaign_directives d ON d.id = att.directive_id
+      WHERE d.campaign_id = ${campaignId}
+        ${excludeLegacyDirectiveAttachment(sql)}
     )
     ORDER BY created_at DESC
     LIMIT 500

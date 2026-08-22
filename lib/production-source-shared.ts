@@ -6,7 +6,8 @@ export type ProductionSourceType =
   | "file"
   | "raw_media"
   | "text_content"
-  | "directive_asset";
+  | "directive_asset"
+  | "directive_attachment";
 
 export const PRODUCTION_SOURCE_TYPES: ProductionSourceType[] = [
   "poster",
@@ -15,6 +16,7 @@ export const PRODUCTION_SOURCE_TYPES: ProductionSourceType[] = [
   "raw_media",
   "text_content",
   "directive_asset",
+  "directive_attachment",
 ];
 
 export const PRODUCTION_SOURCE_TYPE_LABELS: Record<ProductionSourceType, string> = {
@@ -24,6 +26,7 @@ export const PRODUCTION_SOURCE_TYPE_LABELS: Record<ProductionSourceType, string>
   raw_media: "راش تصاویر",
   text_content: "خبر / متن",
   directive_asset: "دارایی دستورکار",
+  directive_attachment: "فایل اقدام",
 };
 
 export interface ProductionSourceFields {
@@ -55,7 +58,21 @@ export const READY_DIRECTIVE_ASSET_CATEGORIES = [
   "ready_text",
   "social",
   "print",
+  "action_file",
 ] as const;
+
+export const READY_DIRECTIVE_ASSET_CATEGORY_LABELS: Record<
+  (typeof READY_DIRECTIVE_ASSET_CATEGORIES)[number],
+  string
+> = {
+  poster: "پوستر و عکس",
+  video: "ویدیو",
+  banner: "بنر",
+  ready_text: "متن آماده",
+  social: "شبکه اجتماعی",
+  print: "چاپ",
+  action_file: "فایل اقدام",
+};
 
 export function isProductionSourceType(value: unknown): value is ProductionSourceType {
   return (

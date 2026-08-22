@@ -92,6 +92,16 @@ async function loadProductionOwner(
       ownerUserId: rows[0]?.owner_user_id ? String(rows[0].owner_user_id) : null,
     };
   }
+  if (type === "directive_attachment") {
+    const rows = await sql`
+      SELECT att.id, d.campaign_id
+      FROM directive_attachments att
+      INNER JOIN campaign_directives d ON d.id = att.directive_id
+      WHERE att.id = ${id} AND d.campaign_id = ${campaignId}
+      LIMIT 1
+    `;
+    return { found: Boolean(rows[0]), ownerUserId: null };
+  }
   // directive_asset
   const rows = await sql`
     SELECT a.id, d.campaign_id
@@ -129,7 +139,9 @@ export async function assertProductionSourceAllowed(
   if (isFullAdmin(session)) return null;
   if (session.role === "client" || session.role === "reis") return null;
 
-  if (sourceProductionType === "directive_asset") return null;
+  if (sourceProductionType === "directive_asset" || sourceProductionType === "directive_attachment") {
+    return null;
+  }
 
   if (!session.userId || row.ownerUserId !== session.userId) {
     return { success: false, error: "فقط می‌توانید تولیدات خودتان را نشر دهید" };
