@@ -244,6 +244,13 @@ const PUBLISHING_GROUP_HREFS = new Set<string>(PUBLISHING_GROUP_ORDER);
 /** Survives remounts so the right-side menu keeps its scroll after navigation. */
 let savedSidebarScrollTop = 0;
 
+type SidebarSection =
+  | "production"
+  | "publishing"
+  | "assets"
+  | "monitoring"
+  | "mediaCommand";
+
 type AdminSidebarProps = {
   /** When reis is in full-panel mode via «تنظیمات», show a link back to the hub. */
   showReisReturn?: boolean;
@@ -260,12 +267,12 @@ export function AdminSidebar({ showReisReturn = false }: AdminSidebarProps) {
   const [canViewDevicesNav, setCanViewDevicesNav] = useState(false);
   const [homeDeviceId, setHomeDeviceId] = useState<string | null>(null);
   const [permissions, setPermissions] = useState<ContributorPermissions | null>(null);
-  const [mediaCommandOpen, setMediaCommandOpen] = useState(false);
-  const [monitoringOpen, setMonitoringOpen] = useState(false);
-  // Collapsed by default; pathname effect opens the active group.
-  const [assetsOpen, setAssetsOpen] = useState(false);
-  const [productionOpen, setProductionOpen] = useState(false);
-  const [publishingOpen, setPublishingOpen] = useState(false);
+  // Collapsed by default; pathname effect opens the active group (accordion: one at a time).
+  const [openSection, setOpenSection] = useState<SidebarSection | null>(null);
+
+  const toggleSection = (section: SidebarSection) => {
+    setOpenSection((current) => (current === section ? null : section));
+  };
   const [problemReportsUnread, setProblemReportsUnread] = useState(0);
   const [contentMessagesUnread, setContentMessagesUnread] = useState(0);
   const [returnedContentCount, setReturnedContentCount] = useState(0);
@@ -378,14 +385,16 @@ export function AdminSidebar({ showReisReturn = false }: AdminSidebarProps) {
 
   useEffect(() => {
     if (pathname.startsWith(MEDIA_COMMAND_ROOT)) {
-      setMediaCommandOpen(true);
+      setOpenSection("mediaCommand");
+    } else if (pathname.startsWith(MONITORING_ROOT) || pathname.startsWith(RAPID_RESPONSE_ROOT)) {
+      setOpenSection("monitoring");
+    } else if (ASSETS_GROUP_HREFS.has(pathname)) {
+      setOpenSection("assets");
+    } else if (PRODUCTION_GROUP_HREFS.has(pathname)) {
+      setOpenSection("production");
+    } else if (PUBLISHING_GROUP_HREFS.has(pathname)) {
+      setOpenSection("publishing");
     }
-    if (pathname.startsWith(MONITORING_ROOT) || pathname.startsWith(RAPID_RESPONSE_ROOT)) {
-      setMonitoringOpen(true);
-    }
-    if (ASSETS_GROUP_HREFS.has(pathname)) setAssetsOpen(true);
-    if (PRODUCTION_GROUP_HREFS.has(pathname)) setProductionOpen(true);
-    if (PUBLISHING_GROUP_HREFS.has(pathname)) setPublishingOpen(true);
   }, [pathname]);
 
   useEffect(() => {
@@ -401,7 +410,7 @@ export function AdminSidebar({ showReisReturn = false }: AdminSidebarProps) {
   useLayoutEffect(() => {
     const el = desktopNavRef.current;
     if (el) el.scrollTop = savedSidebarScrollTop;
-  }, [pathname, mediaCommandOpen, monitoringOpen, assetsOpen, productionOpen, publishingOpen]);
+  }, [pathname, openSection]);
 
   const navItems = allNavItems.filter((item) => {
     // Hide returned-content until there is at least one item in the user's scope.
@@ -579,7 +588,7 @@ export function AdminSidebar({ showReisReturn = false }: AdminSidebarProps) {
           <div className="mt-3 space-y-1 border-t pt-3">
             <button
               type="button"
-              onClick={() => setProductionOpen((open) => !open)}
+              onClick={() => toggleSection("production")}
               className={cn(
                 "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium",
                 productionNavItems.some((item) => pathname === item.href)
@@ -592,11 +601,11 @@ export function AdminSidebar({ showReisReturn = false }: AdminSidebarProps) {
               <ChevronDown
                 className={cn(
                   "h-4 w-4 shrink-0 transition-transform",
-                  productionOpen && "rotate-180"
+                  openSection === "production" && "rotate-180"
                 )}
               />
             </button>
-            {productionOpen && (
+            {openSection === "production" && (
               <div className="space-y-0.5 pr-2">
                 {productionNavItems.map((item) => {
                   const href = adminHref(item.href, campaignId);
@@ -629,7 +638,7 @@ export function AdminSidebar({ showReisReturn = false }: AdminSidebarProps) {
           <div className="mt-3 space-y-1 border-t pt-3">
             <button
               type="button"
-              onClick={() => setPublishingOpen((open) => !open)}
+              onClick={() => toggleSection("publishing")}
               className={cn(
                 "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium",
                 publishingNavItems.some((item) => pathname === item.href)
@@ -642,11 +651,11 @@ export function AdminSidebar({ showReisReturn = false }: AdminSidebarProps) {
               <ChevronDown
                 className={cn(
                   "h-4 w-4 shrink-0 transition-transform",
-                  publishingOpen && "rotate-180"
+                  openSection === "publishing" && "rotate-180"
                 )}
               />
             </button>
-            {publishingOpen && (
+            {openSection === "publishing" && (
               <div className="space-y-0.5 pr-2">
                 {publishingNavItems.map((item) => {
                   const href = adminHref(item.href, campaignId);
@@ -679,7 +688,7 @@ export function AdminSidebar({ showReisReturn = false }: AdminSidebarProps) {
           <div className="mt-3 space-y-1 border-t pt-3">
             <button
               type="button"
-              onClick={() => setAssetsOpen((open) => !open)}
+              onClick={() => toggleSection("assets")}
               className={cn(
                 "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium",
                 assetsNavItems.some((item) => pathname === item.href)
@@ -692,11 +701,11 @@ export function AdminSidebar({ showReisReturn = false }: AdminSidebarProps) {
               <ChevronDown
                 className={cn(
                   "h-4 w-4 shrink-0 transition-transform",
-                  assetsOpen && "rotate-180"
+                  openSection === "assets" && "rotate-180"
                 )}
               />
             </button>
-            {assetsOpen && (
+            {openSection === "assets" && (
               <div className="space-y-0.5 pr-2">
                 {assetsNavItems.map((item) => {
                   const href = adminHref(item.href, campaignId);
@@ -729,7 +738,7 @@ export function AdminSidebar({ showReisReturn = false }: AdminSidebarProps) {
           <div className="mt-3 space-y-1 border-t pt-3">
             <button
               type="button"
-              onClick={() => setMonitoringOpen((open) => !open)}
+              onClick={() => toggleSection("monitoring")}
               className={cn(
                 "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium",
                 pathname.startsWith(MONITORING_ROOT) || pathname.startsWith(RAPID_RESPONSE_ROOT)
@@ -742,11 +751,11 @@ export function AdminSidebar({ showReisReturn = false }: AdminSidebarProps) {
               <ChevronDown
                 className={cn(
                   "h-4 w-4 shrink-0 transition-transform",
-                  monitoringOpen && "rotate-180"
+                  openSection === "monitoring" && "rotate-180"
                 )}
               />
             </button>
-            {monitoringOpen && (
+            {openSection === "monitoring" && (
               <div className="space-y-0.5 pr-2">
                 {MONITORING_NAV.map((item) => {
                   const href = adminHref(item.href, campaignId);
@@ -780,7 +789,7 @@ export function AdminSidebar({ showReisReturn = false }: AdminSidebarProps) {
           <div className="mt-3 space-y-1 border-t pt-3">
             <button
               type="button"
-              onClick={() => setMediaCommandOpen((open) => !open)}
+              onClick={() => toggleSection("mediaCommand")}
               className={cn(
                 "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium",
                 pathname.startsWith(MEDIA_COMMAND_ROOT)
@@ -793,11 +802,11 @@ export function AdminSidebar({ showReisReturn = false }: AdminSidebarProps) {
               <ChevronDown
                 className={cn(
                   "h-4 w-4 shrink-0 transition-transform",
-                  mediaCommandOpen && "rotate-180"
+                  openSection === "mediaCommand" && "rotate-180"
                 )}
               />
             </button>
-            {mediaCommandOpen && (
+            {openSection === "mediaCommand" && (
               <div className="space-y-0.5 pr-2">
                 {MEDIA_COMMAND_NAV.map((item) => {
                   const href = adminHref(item.href, campaignId);
