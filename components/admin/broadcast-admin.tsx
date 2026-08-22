@@ -334,7 +334,7 @@ export function BroadcastAdmin({ campaignId, initialReports }: BroadcastAdminPro
       />
 
       {sortedRows.length === 0 ? (
-        <AdminEmptyCreateState message="هنوز گزارشی ثبت نشده است.">
+        <AdminEmptyCreateState>
           <AdminBroadcastAddCard onClick={openCreate} />
         </AdminEmptyCreateState>
       ) : viewMode === "grid" ? (

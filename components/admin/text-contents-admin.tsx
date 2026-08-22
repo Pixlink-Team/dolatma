@@ -335,7 +335,7 @@ export function TextContentsAdmin({
 
       {filteredItems.length === 0 ? (
         items.length === 0 ? (
-          <AdminEmptyCreateState message="هنوز خبر یا متنی ثبت نشده است.">
+          <AdminEmptyCreateState>
             {!bulk.bulkMode ? (
               <AdminCompactAddCard onClick={openCreate} label="محتوای جدید" />
             ) : null}

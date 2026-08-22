@@ -311,7 +311,7 @@ export function FilesAdmin({
 
       {filteredFiles.length === 0 ? (
         files.length === 0 ? (
-          <AdminEmptyCreateState message="هنوز فایلی آپلود نشده است.">
+          <AdminEmptyCreateState>
             {!bulk.bulkMode ? (
               <AdminCompactAddCard onClick={openCreate} label="فایل جدید" />
             ) : null}

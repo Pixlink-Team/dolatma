@@ -409,7 +409,7 @@ export function RawMediaAdmin({
       />
 
       {filteredItems.length === 0 ? (
-        <AdminEmptyCreateState message="هنوز موردی برای راش تصاویر آپلود نشده است.">
+        <AdminEmptyCreateState>
           {!bulk.bulkMode ? (
             <AdminCompactAddCard
               onClick={openCreate}

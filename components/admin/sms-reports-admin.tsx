@@ -308,7 +308,7 @@ export function SmsReportsAdmin({ campaignId, initialReports }: SmsReportsAdminP
       />
 
       {sortedRows.length === 0 ? (
-        <AdminEmptyCreateState message="هنوز گزارشی از ارسال پیام ثبت نشده است.">
+        <AdminEmptyCreateState>
           <AdminCompactAddCard onClick={openCreate} label="ثبت ارسال جدید" />
         </AdminEmptyCreateState>
       ) : viewMode === "grid" ? (

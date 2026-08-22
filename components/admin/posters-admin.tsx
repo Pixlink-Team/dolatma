@@ -192,7 +192,6 @@ export function PostersAdmin({
   };
 
   const handleDelete = (poster: Poster) => {
-    if (!window.confirm(`حذف «${poster.title}»؟`)) return;
     startTransition(async () => {
       await deletePosterAction(poster.id);
       setPosters((prev) => prev.filter((item) => item.id !== poster.id));
@@ -242,7 +241,7 @@ export function PostersAdmin({
       />
 
       {filteredPosters.length === 0 && posters.length === 0 ? (
-        <AdminEmptyCreateState message="هنوز پوستری ثبت نشده است.">
+        <AdminEmptyCreateState>
           <AdminPosterAddCard onClick={handleCreatePoster} />
         </AdminEmptyCreateState>
       ) : viewMode === "grid" ? (

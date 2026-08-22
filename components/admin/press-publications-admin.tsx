@@ -442,7 +442,7 @@ export function PressPublicationsAdmin({
       />
 
       {filteredRows.length === 0 && rows.length === 0 ? (
-        <AdminEmptyCreateState message="هنوز موردی ثبت نشده است.">
+        <AdminEmptyCreateState>
           {!bulk.bulkMode ? (
             <AdminCompactAddCard onClick={openCreate} label="ثبت جدید" />
           ) : null}

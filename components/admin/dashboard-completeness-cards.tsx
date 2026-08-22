@@ -138,9 +138,7 @@ function CompletenessCard({ card }: { card: DashboardCompletenessCardData }) {
                 ) : null}
               </div>
 
-              {status === "empty" ? (
-                <p className="text-xs text-muted-foreground">هنوز موردی ثبت نشده است.</p>
-              ) : hasMessages ? (
+              {hasMessages ? (
                 <div className="space-y-1">
                   {errorMessages.length > 0 ? (
                     <ul className="space-y-1 text-xs text-destructive">
@@ -157,11 +155,11 @@ function CompletenessCard({ card }: { card: DashboardCompletenessCardData }) {
                     </ul>
                   ) : null}
                 </div>
-              ) : (
+              ) : status === "complete" ? (
                 <p className="text-xs text-emerald-700 dark:text-emerald-300">
                   همه فیلدهای این بخش کامل است.
                 </p>
-              )}
+              ) : null}
             </div>
           ) : (
             <p className="mt-auto text-xs text-muted-foreground">مشاهده و مدیریت این بخش</p>

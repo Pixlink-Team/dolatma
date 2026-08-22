@@ -216,7 +216,6 @@ export function VideosAdmin({
   };
 
   const handleDelete = (video: Video) => {
-    if (!window.confirm(`حذف «${video.title}»؟`)) return;
     startTransition(async () => {
       await deleteVideoAction(video.id);
       setVideos((prev) => prev.filter((item) => item.id !== video.id));
@@ -270,7 +269,7 @@ export function VideosAdmin({
       />
 
       {filteredVideos.length === 0 && videos.length === 0 ? (
-        <AdminEmptyCreateState message="هنوز ویدیویی ثبت نشده است.">
+        <AdminEmptyCreateState>
           <AdminVideoAddCard onClick={handleCreateVideo} />
         </AdminEmptyCreateState>
       ) : viewMode === "grid" ? (

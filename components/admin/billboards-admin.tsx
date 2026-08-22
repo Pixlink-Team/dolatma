@@ -308,7 +308,7 @@ export function BillboardsAdmin({
       />
 
       {filteredBillboards.length === 0 ? (
-        <AdminEmptyCreateState message="هنوز تبلیغات محیطی ثبت نشده است.">
+        <AdminEmptyCreateState>
           {!bulk.bulkMode ? <AdminBillboardAddCard onClick={openCreate} /> : null}
         </AdminEmptyCreateState>
       ) : viewMode === "grid" ? (
