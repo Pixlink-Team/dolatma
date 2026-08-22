@@ -5,7 +5,6 @@ import { Badge } from "@/components/ui/badge";
 import { DashboardBentoGrid } from "@/components/admin/dashboard-bento-grid";
 import { DashboardCompletenessCards } from "@/components/admin/dashboard-completeness-cards";
 import { DashboardDirectivesPanel } from "@/components/admin/dashboard-directives-panel";
-import { DashboardUserCard } from "@/components/admin/dashboard-user-card";
 import { EditSuggestionsPanel } from "@/components/admin/edit-suggestions-panel";
 import { getAdminData } from "@/lib/data-access/admin";
 import { resolveAdminCampaignId } from "@/lib/admin-campaign";
@@ -47,7 +46,7 @@ import { evaluateDeviceOnboarding } from "@/lib/onboarding/progress";
 import type { OnboardingProgress } from "@/lib/onboarding/types";
 import { buildLeaderboardSourceFromAdmin } from "@/lib/performance-overview";
 import { withFileAccessTokensDeep } from "@/lib/uploads";
-import { getUserRoleDisplayLabel, isOrgUserRole } from "@/lib/user-roles";
+import { isOrgUserRole } from "@/lib/user-roles";
 import { formatPersianNumber, adminHref, isPostgresConfigured } from "@/lib/utils";
 
 const REVIEW_TYPE_LABELS: Record<ReviewableContentType, string> = {
@@ -458,24 +457,6 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
           posterCategories={data.posterCategories ?? []}
           videoCategories={data.videoCategories ?? []}
         />
-      ) : null}
-
-      {session ? (
-        <div className="max-w-md">
-          <DashboardUserCard
-            name={session.name}
-            email={session.email}
-            roleLabel={getUserRoleDisplayLabel({
-              role: session.role,
-              orgRole: session.orgRole,
-            })}
-            campaignTitle={data.settings.title}
-            campaignId={campaignId}
-            subtitle={
-              canManageAll ? undefined : "نمای شخصی محتوا و وضعیت تکمیل بخش‌ها"
-            }
-          />
-        </div>
       ) : null}
     </div>
   );
