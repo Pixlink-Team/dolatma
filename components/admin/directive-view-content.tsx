@@ -298,8 +298,16 @@ export function DirectiveUserView({
     <div className={cn("space-y-5", className)}>
       <DirectiveViewBody item={item} />
       {showMeta ? <DirectiveViewMeta item={item} /> : null}
-      <DirectiveOfficialLetterSection item={item} />
-      <DirectiveActionFilesSection item={item} />
+      {!item.archivedAt ? (
+        <>
+          <DirectiveOfficialLetterSection item={item} />
+          <DirectiveActionFilesSection item={item} />
+        </>
+      ) : (
+        <p className="rounded-xl border border-dashed px-4 py-6 text-center text-sm text-muted-foreground">
+          فایل‌های اقدام و نامه رسمی این دستورکار پس از آرشیو از دسترس خارج شده‌اند.
+        </p>
+      )}
     </div>
   );
 }

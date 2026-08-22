@@ -171,6 +171,17 @@ export async function pgUpsertActionPlan(input: {
   if (!recipient[0]) {
     return { success: false, error: "این دستورکار برای شما ثبت نشده است" };
   }
+
+  const directiveRows = await sql`
+    SELECT archived_at
+    FROM campaign_directives
+    WHERE id = ${input.directiveId}
+    LIMIT 1
+  `;
+  if (directiveRows[0]?.archived_at) {
+    return { success: false, error: "دستورکار آرشیو شده و قابل پیگیری نیست" };
+  }
+
   if (!recipient[0].confirmed) {
     return { success: false, error: "ابتدا تأیید مشاهده دستور را ثبت کنید" };
   }

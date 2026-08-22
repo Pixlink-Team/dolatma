@@ -95,7 +95,9 @@ async function loadProductionOwner(
       SELECT att.id, d.campaign_id
       FROM directive_attachments att
       INNER JOIN campaign_directives d ON d.id = att.directive_id
-      WHERE att.id = ${id} AND d.campaign_id = ${campaignId}
+      WHERE att.id = ${id}
+        AND d.campaign_id = ${campaignId}
+        AND d.archived_at IS NULL
       LIMIT 1
     `;
     return { found: Boolean(rows[0]), ownerUserId: null };
@@ -105,7 +107,9 @@ async function loadProductionOwner(
     SELECT a.id, d.campaign_id
     FROM directive_workspace_assets a
     INNER JOIN campaign_directives d ON d.id = a.directive_id
-    WHERE a.id = ${id} AND d.campaign_id = ${campaignId}
+    WHERE a.id = ${id}
+      AND d.campaign_id = ${campaignId}
+      AND d.archived_at IS NULL
     LIMIT 1
   `;
   return { found: Boolean(rows[0]), ownerUserId: null };

@@ -109,6 +109,7 @@ async function pgListDirectiveActionAttachments(
     FROM directive_attachments att
     INNER JOIN campaign_directives d ON d.id = att.directive_id
     WHERE d.campaign_id = ${campaignId}
+      AND d.archived_at IS NULL
       ${excludeLegacyDirectiveAttachment(sql)}
     ORDER BY att.created_at DESC
     LIMIT 500
@@ -152,6 +153,7 @@ async function pgListDirectiveReadyAssets(
       LIMIT 1
     ) av ON true
     WHERE d.campaign_id = ${campaignId}
+      AND d.archived_at IS NULL
       AND a.category = ANY(${READY_WORKSPACE_ASSET_CATEGORY_LIST})
     ORDER BY a.created_at DESC
     LIMIT 500
@@ -360,6 +362,7 @@ export async function pgListPublishableProductions(
         LIMIT 1
       ) av ON true
       WHERE d.campaign_id = ${campaignId}
+        AND d.archived_at IS NULL
         AND a.category = ANY(${READY_WORKSPACE_ASSET_CATEGORY_LIST})
     )
     UNION ALL
@@ -390,6 +393,7 @@ export async function pgListPublishableProductions(
       FROM directive_attachments att
       INNER JOIN campaign_directives d ON d.id = att.directive_id
       WHERE d.campaign_id = ${campaignId}
+        AND d.archived_at IS NULL
         ${excludeLegacyDirectiveAttachment(sql)}
     )
     ORDER BY created_at DESC

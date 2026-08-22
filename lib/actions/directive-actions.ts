@@ -73,10 +73,16 @@ function revalidateDirectives(campaignId?: string) {
   revalidatePath("/admin");
   revalidatePath("/admin/directives");
   revalidatePath("/admin/reis/strategic");
+  revalidatePath("/admin/posters");
+  revalidatePath("/admin/videos");
+  revalidatePath("/admin/social");
   if (campaignId) {
     revalidatePath(`/admin?campaign=${campaignId}`);
     revalidatePath(`/admin/directives?campaign=${campaignId}`);
     revalidatePath(`/admin/reis/strategic?campaign=${campaignId}`);
+    revalidatePath(`/admin/posters?campaign=${campaignId}`);
+    revalidatePath(`/admin/videos?campaign=${campaignId}`);
+    revalidatePath(`/admin/social?campaign=${campaignId}`);
   }
 }
 
@@ -156,6 +162,10 @@ export async function getDirectiveForViewAction(
   const canManageRecord =
     canManage && canManageDirectiveRecord(access.session, directive, access.permissions);
 
+  if (directive.archivedAt && !canManageRecord) {
+    return { success: false, directive: null, error: "دستورکار آرشیو شده است" };
+  }
+
   let inboxRow: CampaignDirective | undefined;
   if (!canManageRecord && access.session.userId) {
     const inbox = await pgDirectives.pgListDirectivesForUserInbox(
@@ -178,7 +188,18 @@ export async function getDirectiveForViewAction(
       }
     : directive;
 
-  return { success: true, directive: withFileAccessTokensDeep(merged) };
+  const viewable = merged.archivedAt
+    ? {
+        ...merged,
+        letterFileUrl: null,
+        letterFileName: null,
+        letterMimeType: null,
+        letterFileSize: 0,
+        attachments: [],
+      }
+    : merged;
+
+  return { success: true, directive: withFileAccessTokensDeep(viewable) };
 }
 
 export async function listCampaignDirectiveUsersAction(campaignId: string) {
@@ -639,38 +660,6 @@ export async function archiveDirectiveAction(id: string, campaignId: string) {
 
   revalidateDirectives(campaignId);
   return { success: true as const, archivedAt: archived.archivedAt };
-}
-
-export async function restoreDirectiveAction(id: string, campaignId: string) {
-  const access = await assertDirectivesAccess(campaignId);
-  if (access.error || !access.session) {
-    return { success: false as const, error: access.error ?? "Unauthorized" };
-  }
-  if (!canManageDirectives(access.session, access.permissions)) {
-    return { success: false as const, error: "دسترسی ندارید" };
-  }
-  if (!isPostgresConfigured()) {
-    return { success: false as const, error: "Database required" };
-  }
-
-  const existing = await pgDirectives.pgGetDirectiveById(id);
-  if (!existing || existing.campaignId !== campaignId) {
-    return { success: false as const, error: "دستورکار یافت نشد" };
-  }
-  if (!existing.archivedAt) {
-    return { success: false as const, error: "این دستورکار در آرشیو نیست" };
-  }
-  if (!canManageDirectiveRecord(access.session, existing, access.permissions)) {
-    return { success: false as const, error: "فقط دستورکارهای خودتان را می‌توانید بازیابی کنید" };
-  }
-
-  const ok = await pgDirectives.pgRestoreDirective(id);
-  if (!ok) {
-    return { success: false as const, error: "بازیابی انجام نشد" };
-  }
-
-  revalidateDirectives(campaignId);
-  return { success: true as const };
 }
 
 export async function confirmDirectiveSeenAction(directiveId: string, campaignId: string) {

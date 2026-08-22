@@ -73,6 +73,16 @@ export async function getMyDirectiveActionPlanAction(
     return { success: false, plan: null, capacities: [], error: "Database required" };
   }
 
+  const directive = await pgDirectives.pgGetDirectiveById(directiveId);
+  if (!directive || directive.campaignId !== campaignId || directive.archivedAt) {
+    return {
+      success: false,
+      plan: null,
+      capacities: [],
+      error: "دستورکار آرشیو شده و قابل پیگیری نیست",
+    };
+  }
+
   const [plan, capacities] = await Promise.all([
     pgActionPlans.pgGetActionPlanForUser(directiveId, access.session.userId),
     pgActionPlans.pgGetDeviceCapacitiesForUser(access.session.userId),

@@ -1103,21 +1103,6 @@ export async function pgArchiveDirective(
   return { ok: true, archivedAt };
 }
 
-export async function pgRestoreDirective(id: string): Promise<boolean> {
-  await ensureDirectiveCommandSchema();
-  const sql = getSql();
-  const now = new Date().toISOString();
-  const rows = await sql`
-    UPDATE campaign_directives
-    SET archived_at = NULL,
-        updated_at = ${now}
-    WHERE id = ${id}
-      AND archived_at IS NOT NULL
-    RETURNING id
-  `;
-  return rows.length > 0;
-}
-
 export async function pgConfirmDirectiveSeen(
   directiveId: string,
   userId: string

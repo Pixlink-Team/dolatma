@@ -1581,6 +1581,7 @@ async function loadDirectiveStats(deviceId: string): Promise<DeviceDirectiveStat
         ) AS action_plans
       FROM directive_recipients dr
       JOIN device_users du ON du.id = dr.user_id
+      JOIN campaign_directives d ON d.id = dr.directive_id AND d.archived_at IS NULL
     `;
     const row = rows[0] as Record<string, unknown> | undefined;
     return {
@@ -1678,10 +1679,12 @@ async function loadCampaignHistory(deviceId: string): Promise<DeviceCampaignHist
             JOIN device_users du2 ON du2.id = ap.user_id
             JOIN campaign_directives d2 ON d2.id = ap.directive_id
             WHERE d2.campaign_id = d.campaign_id
-          ) AS action_plans
+              AND d2.archived_at IS NULL
+        ) AS action_plans
         FROM campaign_directives d
         JOIN directive_recipients dr ON dr.directive_id = d.id
         JOIN device_users du ON du.id = dr.user_id
+        WHERE d.archived_at IS NULL
         GROUP BY d.campaign_id
       ),
       content_stats AS (

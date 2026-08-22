@@ -529,6 +529,7 @@ export async function pgGetDeviceOnboardingFacts(input: {
       FROM campaign_directives
       WHERE campaign_id = ${campaignId}::uuid
         AND created_by_user_id IN ${sql(userIds)}
+        AND archived_at IS NULL
     `;
     directivesIssued = Number(directiveRows[0]?.c ?? 0);
   }

@@ -55,6 +55,9 @@ export default async function DirectiveWorkspacePage({ params, searchParams }: P
   if (!directive || directive.campaignId !== campaignId) {
     redirect(`/admin/directives?campaign=${campaignId}`);
   }
+  if (directive.archivedAt) {
+    redirect(`/admin/directives?campaign=${campaignId}`);
+  }
 
   const canManage = canManageDirectiveRecord(session, directive);
 

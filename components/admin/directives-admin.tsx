@@ -46,7 +46,6 @@ import {
   archiveDirectiveAction,
   confirmDirectiveSeenAction,
   getDirectiveRecipientsAction,
-  restoreDirectiveAction,
   saveDirectiveAction,
 } from "@/lib/actions/directive-actions";
 import { convertDirectiveToSmartAction } from "@/lib/actions/directive-smart-actions";
@@ -1043,12 +1042,14 @@ export function DirectivesAdmin({
                 </div>
 
                 <div className="flex w-full flex-wrap gap-2 lg:w-auto lg:max-w-[22rem] lg:justify-end">
-                  <Button size="sm" className="flex-1 sm:flex-none" asChild>
-                    <Link href={adminHref(`/admin/directives/${item.id}`, campaignId)}>
-                      <LayoutDashboard className="h-4 w-4" />
-                      اتاق عملیات
-                    </Link>
-                  </Button>
+                  {!showingArchive ? (
+                    <Button size="sm" className="flex-1 sm:flex-none" asChild>
+                      <Link href={adminHref(`/admin/directives/${item.id}`, campaignId)}>
+                        <LayoutDashboard className="h-4 w-4" />
+                        اتاق عملیات
+                      </Link>
+                    </Button>
+                  ) : null}
                   <Button
                     variant="outline"
                     size="sm"
@@ -1127,7 +1128,7 @@ export function DirectivesAdmin({
                             onClick={() => {
                               if (
                                 !window.confirm(
-                                  "این دستورکار به آرشیو منتقل شود؟ از کارتابل کاربران نیز حذف می‌شود."
+                                  "این دستورکار به آرشیو منتقل شود؟ از کارتابل، اتاق عملیات، فایل‌های اقدام و انتخاب تولید نیز حذف می‌شود."
                                 )
                               ) {
                                 return;
@@ -1147,9 +1148,7 @@ export function DirectivesAdmin({
                                   { ...item, archivedAt },
                                   ...prev.filter((row) => row.id !== item.id),
                                 ]);
-                                setIssuerFilter("all");
-                                setManageListTab("archive");
-                                toast.success("به تب آرشیو منتقل شد");
+                                toast.success("دستورکار و فایل‌های اقدام از همه بخش‌ها حذف شد");
                               });
                             }}
                           >
@@ -1158,38 +1157,6 @@ export function DirectivesAdmin({
                           </Button>
                         </>
                       )}
-                      {showingArchive ? (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="flex-1 sm:flex-none"
-                          disabled={isPending}
-                          onClick={() => {
-                            if (
-                              !window.confirm(
-                                "این دستورکار از آرشیو خارج شود و دوباره در لیست فعال نمایش داده شود؟"
-                              )
-                            ) {
-                              return;
-                            }
-                            startTransition(async () => {
-                              const result = await restoreDirectiveAction(item.id, campaignId);
-                              if (!result.success) {
-                                toast.error(result.error ?? "بازیابی نشد");
-                                return;
-                              }
-                              const restored = { ...item, archivedAt: null };
-                              setArchivedRows((prev) => prev.filter((row) => row.id !== item.id));
-                              setRows((prev) => [restored, ...prev.filter((row) => row.id !== item.id)]);
-                              setManageListTab("active");
-                              toast.success("از آرشیو بازیابی شد");
-                            });
-                          }}
-                        >
-                          <Archive className="h-4 w-4" />
-                          بازیابی
-                        </Button>
-                      ) : null}
                     </>
                   )}
                 </div>
