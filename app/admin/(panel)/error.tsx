@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { resolveAppError } from "@/lib/app-errors/catalog";
+import { isStalePageError, refreshSite, resolveAppError } from "@/lib/app-errors/catalog";
 import { showAppError } from "@/components/admin/app-error-provider";
 
 export default function AdminPanelError({
@@ -28,6 +28,7 @@ export default function AdminPanelError({
   }, [error]);
 
   const guide = resolveAppError(error.message || "خطای غیرمنتظره در صفحه");
+  const canRefreshSite = isStalePageError(guide);
 
   return (
     <div
@@ -52,12 +53,20 @@ export default function AdminPanelError({
         </div>
       </div>
       <div className="flex flex-wrap gap-2">
-        <Button type="button" onClick={reset}>
-          تلاش دوباره
-        </Button>
-        <Button type="button" variant="outline" onClick={() => window.location.reload()}>
-          تازه کردن صفحه
-        </Button>
+        {canRefreshSite ? (
+          <Button type="button" onClick={refreshSite}>
+            تازه‌سازی سایت
+          </Button>
+        ) : (
+          <Button type="button" onClick={reset}>
+            تلاش دوباره
+          </Button>
+        )}
+        {!canRefreshSite ? (
+          <Button type="button" variant="outline" onClick={refreshSite}>
+            تازه‌سازی سایت
+          </Button>
+        ) : null}
       </div>
     </div>
   );

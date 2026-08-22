@@ -7,6 +7,19 @@ type CatalogEntry = AppErrorGuide & {
   match?: RegExp[];
 };
 
+const STALE_PAGE_MESSAGE_PATTERNS: RegExp[] = [
+  /unexpected response was received from the server/i,
+  /Server Action/i,
+  /failed-to-find-server-action/i,
+  /was not found on the server/i,
+  /Failed to find Server Action/i,
+  /Minified React error #418/i,
+  /Hydration failed/i,
+  /ChunkLoadError/i,
+  /Loading chunk .+ failed/i,
+  /Failed to fetch dynamically imported module/i,
+];
+
 const GENERIC: AppErrorGuide = {
   code: "generic",
   title: "مشکلی پیش آمد",
@@ -370,24 +383,12 @@ const CATALOG: CatalogEntry[] = [
   },
   {
     code: "stale_page",
-    match: [
-      /unexpected response was received from the server/i,
-      /Server Action/i,
-      /failed-to-find-server-action/i,
-      /was not found on the server/i,
-      /Failed to find Server Action/i,
-      /Minified React error #418/i,
-      /Hydration failed/i,
-      /ChunkLoadError/i,
-      /Loading chunk .+ failed/i,
-      /Failed to fetch dynamically imported module/i,
-    ],
+    match: STALE_PAGE_MESSAGE_PATTERNS,
     title: "نسخهٔ صفحه قدیمی است",
     why: "صفحهٔ بازشده در مرورگر با نسخهٔ فعلی سرور هم‌خوان نیست (معمولاً بعد از به‌روزرسانی یا قطع کوتاه ارتباط).",
-    whatToDo: "صفحه را با Ctrl+Shift+R تازه کنید یا دوباره همان کار را انجام دهید.",
+    whatToDo: "روی «تازه‌سازی سایت» بزنید تا نسخهٔ جدید بارگذاری شود، سپس دوباره همان کار را انجام دهید.",
     severity: "warning",
-    // Recoverable deploy/cache mismatch — toast is enough; avoid scary crash modal.
-    showModal: false,
+    showModal: true,
   },
   {
     code: "client_crash",
@@ -502,6 +503,21 @@ export function resolveAppError(
 
 export function getAppErrorGuide(code: AppErrorCode): AppErrorGuide {
   return BY_CODE.get(code) ?? GENERIC;
+}
+
+/** Deploy/cache mismatch or broken Server Action bundle — user should reload. */
+export function isStalePageError(
+  error: Pick<ResolvedAppError, "code" | "message">
+): boolean {
+  if (error.code === "stale_page") return true;
+  const text = normalizeMessage(error.message);
+  if (!text) return false;
+  return STALE_PAGE_MESSAGE_PATTERNS.some((pattern) => pattern.test(text));
+}
+
+export function refreshSite(): void {
+  if (typeof window === "undefined") return;
+  window.location.reload();
 }
 
 export { GENERIC as GENERIC_APP_ERROR };

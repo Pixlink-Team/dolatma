@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, CircleAlert, Info, Lightbulb, Wrench } from "lucide-react";
+import { AlertTriangle, CircleAlert, Info, Lightbulb, RefreshCw, Wrench } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -10,6 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { isStalePageError, refreshSite } from "@/lib/app-errors/catalog";
 import type { ResolvedAppError } from "@/lib/app-errors/types";
 
 const SEVERITY_ICON = {
@@ -40,6 +41,7 @@ export function AppErrorModal({
   if (!error) return null;
 
   const Icon = SEVERITY_ICON[error.severity];
+  const canRefreshSite = isStalePageError(error);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -72,9 +74,16 @@ export function AppErrorModal({
         </div>
 
         <DialogFooter className="flex-row-reverse gap-2 sm:flex-row-reverse">
-          <Button type="button" onClick={() => onOpenChange(false)}>
-            متوجه شدم
-          </Button>
+          {canRefreshSite ? (
+            <Button type="button" onClick={refreshSite}>
+              <RefreshCw className="h-4 w-4" />
+              تازه‌سازی سایت
+            </Button>
+          ) : (
+            <Button type="button" onClick={() => onOpenChange(false)}>
+              متوجه شدم
+            </Button>
+          )}
           {onReportProblem ? (
             <Button
               type="button"
