@@ -249,7 +249,8 @@ type SidebarSection =
   | "publishing"
   | "assets"
   | "monitoring"
-  | "mediaCommand";
+  | "mediaCommand"
+  | "management";
 
 type AdminSidebarProps = {
   /** When reis is in full-panel mode via «تنظیمات», show a link back to the hub. */
@@ -401,8 +402,17 @@ export function AdminSidebar({ showReisReturn = false }: AdminSidebarProps) {
       setOpenSection("production");
     } else if (PUBLISHING_GROUP_HREFS.has(pathname)) {
       setOpenSection("publishing");
+    } else if (
+      managementNavHrefs.has(pathname) ||
+      pathname === "/admin/notifications" ||
+      (homeDeviceId && pathname === `/admin/devices/${homeDeviceId}`) ||
+      [...managementNavHrefs].some(
+        (href) => href !== "/admin" && pathname.startsWith(`${href}/`)
+      )
+    ) {
+      setOpenSection("management");
     }
-  }, [pathname]);
+  }, [pathname, homeDeviceId]);
 
   useEffect(() => {
     const el = desktopNavRef.current;
@@ -847,51 +857,85 @@ export function AdminSidebar({ showReisReturn = false }: AdminSidebarProps) {
         )}
 
         {managementNavItems.length > 0 && (
-          <div className="mt-4 border-t pt-3">
-            <p className="px-3 pb-2 text-xs font-medium text-muted-foreground">تنظیمات و مدیریت</p>
-            <div className="space-y-1">
-              {managementNavItems.map((item) => {
-                const Icon = item.icon;
-                const href = adminHref(item.href, campaignId);
-                const isActive =
-                  pathname === item.href ||
-                  (item.href === HOME_PASSPORT_HREF &&
+          <div className="mt-3 space-y-1 border-t pt-3">
+            <button
+              type="button"
+              onClick={() => toggleSection("management")}
+              className={cn(
+                "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium",
+                managementNavItems.some((item) => {
+                  if (pathname === item.href) return true;
+                  if (
+                    item.href === HOME_PASSPORT_HREF &&
                     Boolean(homeDeviceId) &&
-                    pathname === `/admin/devices/${homeDeviceId}`) ||
-                  (item.href === "/admin/elanha" && pathname === "/admin/notifications");
-                return (
-                  <Link
-                    key={item.href}
-                    href={href}
-                    prefetch={false}
-                    onClick={() => setMobileOpen(false)}
-                    className={cn(
-                      "apple-nav-item flex items-center gap-3 rounded-lg px-3 py-2 text-sm",
-                      isActive
-                        ? "bg-primary text-primary-foreground shadow-sm"
-                        : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-                    )}
-                  >
-                    <Icon className="h-4 w-4 shrink-0" />
-                    <span className="truncate flex-1">{item.label}</span>
-                    {item.href === PROBLEM_REPORTS_HREF && problemReportsUnread > 0 && (
-                      <span
-                        className="ms-auto h-2.5 w-2.5 shrink-0 rounded-full bg-red-500"
-                        title="پاسخ خوانده‌نشده"
-                        aria-label="پاسخ خوانده‌نشده"
-                      />
-                    )}
-                    {item.href === MESSAGES_HREF && contentMessagesUnread > 0 && (
-                      <span
-                        className="ms-auto h-2.5 w-2.5 shrink-0 rounded-full bg-red-500"
-                        title="پیام خوانده‌نشده"
-                        aria-label="پیام خوانده‌نشده"
-                      />
-                    )}
-                  </Link>
-                );
-              })}
-            </div>
+                    pathname === `/admin/devices/${homeDeviceId}`
+                  ) {
+                    return true;
+                  }
+                  if (item.href === "/admin/elanha" && pathname === "/admin/notifications") {
+                    return true;
+                  }
+                  return pathname.startsWith(`${item.href}/`);
+                })
+                  ? "bg-primary/10 text-primary"
+                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+              )}
+            >
+              <Settings className="h-4 w-4 shrink-0" />
+              <span className="flex-1 truncate text-right">تنظیمات و مدیریت</span>
+              <ChevronDown
+                className={cn(
+                  "h-4 w-4 shrink-0 transition-transform",
+                  openSection === "management" && "rotate-180"
+                )}
+              />
+            </button>
+            {openSection === "management" && (
+              <div className="space-y-0.5 pr-2">
+                {managementNavItems.map((item) => {
+                  const Icon = item.icon;
+                  const href = adminHref(item.href, campaignId);
+                  const isActive =
+                    pathname === item.href ||
+                    (item.href === HOME_PASSPORT_HREF &&
+                      Boolean(homeDeviceId) &&
+                      pathname === `/admin/devices/${homeDeviceId}`) ||
+                    (item.href === "/admin/elanha" && pathname === "/admin/notifications") ||
+                    pathname.startsWith(`${item.href}/`);
+                  return (
+                    <Link
+                      key={item.href}
+                      href={href}
+                      prefetch={false}
+                      onClick={() => setMobileOpen(false)}
+                      className={cn(
+                        "flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs",
+                        isActive
+                          ? "bg-primary text-primary-foreground"
+                          : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                      )}
+                    >
+                      <Icon className="h-3.5 w-3.5 shrink-0" />
+                      <span className="truncate flex-1">{item.label}</span>
+                      {item.href === PROBLEM_REPORTS_HREF && problemReportsUnread > 0 && (
+                        <span
+                          className="ms-auto h-2.5 w-2.5 shrink-0 rounded-full bg-red-500"
+                          title="پاسخ خوانده‌نشده"
+                          aria-label="پاسخ خوانده‌نشده"
+                        />
+                      )}
+                      {item.href === MESSAGES_HREF && contentMessagesUnread > 0 && (
+                        <span
+                          className="ms-auto h-2.5 w-2.5 shrink-0 rounded-full bg-red-500"
+                          title="پیام خوانده‌نشده"
+                          aria-label="پیام خوانده‌نشده"
+                        />
+                      )}
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
       </nav>
