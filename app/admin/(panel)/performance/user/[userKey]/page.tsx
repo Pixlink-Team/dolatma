@@ -92,7 +92,7 @@ export default async function CompanySupervisionPage({
           </p>
           {!isSelf && (
             <Button asChild>
-              <Link href={backHref}>بازگشت به مشاهده عملکرد</Link>
+              <Link href={backHref}>بازگشت به گزارش عملکرد زیردستان</Link>
             </Button>
           )}
         </CardContent>

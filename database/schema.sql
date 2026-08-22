@@ -2657,3 +2657,16 @@ ALTER TABLE sms_send_reports ADD COLUMN IF NOT EXISTS source_production_type TEX
 ALTER TABLE sms_send_reports ADD COLUMN IF NOT EXISTS source_production_id UUID;
 ALTER TABLE sms_send_reports ADD COLUMN IF NOT EXISTS channels JSONB NOT NULL DEFAULT '[]'::jsonb;
 
+-- Supervisors (ناظر) should see subordinate performance reports by default.
+UPDATE user_campaign_access uca
+SET permissions = jsonb_set(
+  COALESCE(uca.permissions, '{}'::jsonb),
+  '{viewSubtreePerformance}',
+  'true'::jsonb,
+  true
+)
+FROM users u
+WHERE u.id = uca.user_id
+  AND u.role = 'org_user'
+  AND u.org_role = 'supervisor';
+

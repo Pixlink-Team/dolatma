@@ -103,7 +103,7 @@ export function getOrgRolePermissionPreset(orgRole: OrgRole): ContributorPermiss
         scoreSubtreeContent: false,
         manageSubtreeDevices: false,
         viewSubtreeLiveReport: false,
-        viewSubtreePerformance: false,
+        viewSubtreePerformance: true,
       };
     case "pr":
       return {
@@ -196,5 +196,5 @@ export const subtreeManagementPermissionLabels = {
   scoreSubtreeContent: "امتیازدهی محتوای زیرشاخه",
   manageSubtreeDevices: "مدیریت دستگاه‌های زیرشاخه",
   viewSubtreeLiveReport: "گزارش زنده زیردستان",
-  viewSubtreePerformance: "مشاهده عملکرد زیردستان",
+  viewSubtreePerformance: "گزارش عملکرد زیردستان",
 } as const;

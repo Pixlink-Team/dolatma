@@ -121,7 +121,7 @@ const allNavItems: {
   { href: "/admin/performance", label: "مشاهده عملکرد", icon: Medal, adminOrClientOnly: true },
   {
     href: "/admin/subordinates-performance",
-    label: "مشاهده عملکرد زیردستان",
+    label: "گزارش عملکرد زیردستان",
     icon: Medal,
     orgSubtreeOnly: true,
     permissionKey: "viewSubtreePerformance",
@@ -264,6 +264,7 @@ export function AdminSidebar({ showReisReturn = false }: AdminSidebarProps) {
   const [isClientRole, setIsClientRole] = useState(false);
   const [isReisPanelUser, setIsReisPanelUser] = useState(false);
   const [canViewUsersNav, setCanViewUsersNav] = useState(false);
+  const [canViewSubtreePerformanceNav, setCanViewSubtreePerformanceNav] = useState(false);
   const [canViewDevicesNav, setCanViewDevicesNav] = useState(false);
   const [homeDeviceId, setHomeDeviceId] = useState<string | null>(null);
   const [permissions, setPermissions] = useState<ContributorPermissions | null>(null);
@@ -357,6 +358,12 @@ export function AdminSidebar({ showReisReturn = false }: AdminSidebarProps) {
                 ? hasContributorPermission(perms, "manageSubtreeUsers")
                 : session.manageSubtreeUsers === true)
           );
+          setCanViewSubtreePerformanceNav(
+            isOrgUserRole(session.role) &&
+              (perms
+                ? hasContributorPermission(perms, "viewSubtreePerformance")
+                : session.viewSubtreePerformance === true)
+          );
           setCanViewDevicesNav(
             isDeviceScopedPanelRole(session.role) &&
               (perms
@@ -427,6 +434,9 @@ export function AdminSidebar({ showReisReturn = false }: AdminSidebarProps) {
     if (item.orgSubtreeOnly) {
       if (seesAllCampaignSections) return false;
       if (!item.permissionKey) return false;
+      if (item.permissionKey === "viewSubtreePerformance") {
+        return canViewSubtreePerformanceNav;
+      }
       return hasContributorPermission(permissions, item.permissionKey);
     }
     // Panel management items: admin/client/reis always, or org_user with explicit grant.

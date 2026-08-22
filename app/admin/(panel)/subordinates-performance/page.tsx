@@ -48,7 +48,7 @@ export default async function SubordinatesPerformancePage({ searchParams }: Page
     return (
       <Card dir="rtl">
         <CardContent className="space-y-2 p-8 text-right">
-          <h1 className="text-xl font-bold">مشاهده عملکرد زیردستان</h1>
+          <h1 className="text-xl font-bold">گزارش عملکرد زیردستان</h1>
           <p className="text-sm text-muted-foreground">
             هنوز کاربری در زیرمجموعه شما ثبت نشده است. پس از افزودن زیردستان، آمار آن‌ها اینجا نمایش
             داده می‌شود.
@@ -98,8 +98,8 @@ export default async function SubordinatesPerformancePage({ searchParams }: Page
       campaignTitle={data.settings.title}
       campaignSlug={data.settings.slug}
       contentPlans={contentPlans}
-      pageTitle="مشاهده عملکرد زیردستان"
-      pageDescription={`نمای آماری کاربران زیرمجموعه شما در کمپین «${data.settings.title}» — فقط زیردستان نمایش داده می‌شوند`}
+      pageTitle="گزارش عملکرد زیردستان"
+      pageDescription={`گزارش آماری کاربران زیرمجموعه شما در کمپین «${data.settings.title}» — فقط زیردستان نمایش داده می‌شوند`}
     />
   );
 }
