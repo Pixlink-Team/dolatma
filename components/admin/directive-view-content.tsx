@@ -75,9 +75,19 @@ function DirectiveFileCard({
   badgeLabel,
   className,
 }: DirectiveFileCardProps) {
-  const kind = resolveDirectiveFileKind(fileUrl, mimeType, fileName);
-  const displayName = fileName.trim() || "فایل";
+  const safeUrl = fileUrl.trim();
+  const kind = resolveDirectiveFileKind(safeUrl, mimeType, fileName);
+  const displayName = (fileName ?? "").trim() || "فایل";
   const sizeLabel = formatDirectiveFileSize(fileSize ?? 0);
+
+  if (!safeUrl) {
+    return (
+      <article className={cn("rounded-xl border bg-card p-4 text-sm text-muted-foreground", className)}>
+        <p className="font-medium text-foreground">{title}</p>
+        <p className="mt-1">فایل در دسترس نیست</p>
+      </article>
+    );
+  }
 
   return (
     <article
@@ -101,20 +111,20 @@ function DirectiveFileCard({
         {kind === "image" ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={fileUrl}
+            src={safeUrl}
             alt={title}
             className="h-full min-h-[10rem] w-full object-contain sm:min-h-[11rem]"
           />
         ) : kind === "video" ? (
           <video
-            src={fileUrl}
+            src={safeUrl}
             controls
             playsInline
             preload="metadata"
             className="h-full min-h-[10rem] w-full bg-black object-contain sm:min-h-[11rem]"
           />
         ) : kind === "pdf" ? (
-          <iframe src={fileUrl} title={title} className="h-56 w-full bg-white sm:h-64" />
+          <iframe src={safeUrl} title={title} className="h-56 w-full bg-white sm:h-64" />
         ) : (
           <div className="flex min-h-[10rem] flex-col items-center justify-center gap-3 px-4 py-8 text-center sm:min-h-[11rem]">
             <FileText className="h-12 w-12 text-muted-foreground/80" />
@@ -130,7 +140,7 @@ function DirectiveFileCard({
           <span className="text-xs text-muted-foreground">دانلود فایل</span>
         )}
         <Button size="sm" variant="outline" className="h-8 gap-1.5" asChild>
-          <a href={fileUrl} target="_blank" rel="noreferrer" download={displayName}>
+          <a href={safeUrl} target="_blank" rel="noreferrer" download={displayName}>
             <Download className="h-4 w-4" />
             دانلود
           </a>
@@ -163,7 +173,7 @@ export function DirectiveOfficialLetterSection({ item }: { item: CampaignDirecti
         title="نامه رسمی"
         fileUrl={item.letterFileUrl}
         fileName={item.letterFileName ?? "نامه رسمی"}
-        mimeType={item.letterMimeType}
+        mimeType={item.letterMimeType ?? undefined}
         fileSize={item.letterFileSize}
         badgeLabel="نامه"
       />
@@ -195,7 +205,7 @@ export function DirectiveActionFilesSection({ item }: { item: CampaignDirective 
           {files.map((file, index) => (
             <DirectiveFileCard
               key={file.id}
-              title={file.title.trim() || `فایل اقدام ${formatPersianNumber(index + 1)}`}
+              title={(file.title ?? "").trim() || `فایل اقدام ${formatPersianNumber(index + 1)}`}
               fileUrl={file.fileUrl}
               fileName={file.fileName}
               mimeType={file.mimeType}

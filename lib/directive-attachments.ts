@@ -5,7 +5,8 @@ export function getDirectiveActionAttachments(item: CampaignDirective): Directiv
   const letterUrl = item.letterFileUrl ?? "";
   return (item.attachments ?? [])
     .filter((attachment) => {
-      if (!letterUrl) return attachment.title.trim() !== "نامه رسمی";
+      const title = (attachment.title ?? "").trim();
+      if (!letterUrl) return title !== "نامه رسمی";
       return attachment.fileUrl !== letterUrl;
     })
     .sort((a, b) => a.sortOrder - b.sortOrder);
