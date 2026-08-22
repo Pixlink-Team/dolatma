@@ -14,10 +14,12 @@ export default function AdminPanelError({
   reset: () => void;
 }) {
   useEffect(() => {
+    const guide = resolveAppError(error.message || "خطای غیرمنتظره در صفحه");
     showAppError({
       message: error.message || "خطای غیرمنتظره در صفحه",
-      code: "client_crash",
-      forceModal: true,
+      code: guide.code,
+      forceModal: guide.showModal,
+      notifyToast: !guide.showModal,
       metadata: {
         source: "next.error.tsx",
         digest: error.digest,
@@ -25,9 +27,7 @@ export default function AdminPanelError({
     });
   }, [error]);
 
-  const guide = resolveAppError(error.message || "خطای غیرمنتظره در صفحه", {
-    code: "client_crash",
-  });
+  const guide = resolveAppError(error.message || "خطای غیرمنتظره در صفحه");
 
   return (
     <div

@@ -23,6 +23,7 @@ export type AppErrorCode =
   | "rate_limit"
   | "login_failed"
   | "network"
+  | "stale_page"
   | "client_crash"
   | "not_found"
   | "tutorial_blocked";

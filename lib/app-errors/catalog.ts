@@ -369,12 +369,33 @@ const CATALOG: CatalogEntry[] = [
     showModal: true,
   },
   {
+    code: "stale_page",
+    match: [
+      /unexpected response was received from the server/i,
+      /Server Action/i,
+      /failed-to-find-server-action/i,
+      /was not found on the server/i,
+      /Failed to find Server Action/i,
+      /Minified React error #418/i,
+      /Hydration failed/i,
+      /ChunkLoadError/i,
+      /Loading chunk .+ failed/i,
+      /Failed to fetch dynamically imported module/i,
+    ],
+    title: "نسخهٔ صفحه قدیمی است",
+    why: "صفحهٔ بازشده در مرورگر با نسخهٔ فعلی سرور هم‌خوان نیست (معمولاً بعد از به‌روزرسانی یا قطع کوتاه ارتباط).",
+    whatToDo: "صفحه را با Ctrl+Shift+R تازه کنید یا دوباره همان کار را انجام دهید.",
+    severity: "warning",
+    // Recoverable deploy/cache mismatch — toast is enough; avoid scary crash modal.
+    showModal: false,
+  },
+  {
     code: "client_crash",
     exact: [
       "Application error: a client-side exception has occurred",
       "خطای غیرمنتظره در صفحه",
     ],
-    match: [/client-side exception/i, /Maximum call stack/i, /ChunkLoadError/i],
+    match: [/client-side exception/i, /Maximum call stack/i],
     title: "صفحه با خطای غیرمنتظره متوقف شد",
     why: "یک خطای فنی در مرورگر رخ داده (مثلاً داده ناسازگار یا باگ موقت).",
     whatToDo:
@@ -400,6 +421,28 @@ const BY_CODE = new Map<AppErrorCode, AppErrorGuide>(
 
 function normalizeMessage(message: string): string {
   return message.replace(/\s+/g, " ").trim();
+}
+
+/** Browser/extension noise that should not trigger user-facing error UI. */
+const IGNORE_CLIENT_ERROR_PATTERNS: RegExp[] = [
+  /ResizeObserver loop/i,
+  /^Script error\.?$/i,
+  /Non-Error promise rejection captured/i,
+  /AbortError/i,
+  /The user aborted a request/i,
+  /The operation was aborted/i,
+  /cancelled/i,
+];
+
+export function shouldIgnoreClientError(message: unknown): boolean {
+  const text =
+    typeof message === "string"
+      ? normalizeMessage(message)
+      : message instanceof Error
+        ? normalizeMessage(message.message)
+        : "";
+  if (!text) return true;
+  return IGNORE_CLIENT_ERROR_PATTERNS.some((pattern) => pattern.test(text));
 }
 
 /**

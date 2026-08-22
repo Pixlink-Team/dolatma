@@ -7,5 +7,6 @@ export type {
 export {
   resolveAppError,
   getAppErrorGuide,
+  shouldIgnoreClientError,
   GENERIC_APP_ERROR,
 } from "@/lib/app-errors/catalog";

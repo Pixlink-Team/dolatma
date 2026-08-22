@@ -12,7 +12,7 @@ import {
 } from "react";
 import { toast } from "sonner";
 import { AppErrorModal } from "@/components/admin/app-error-modal";
-import { resolveAppError } from "@/lib/app-errors/catalog";
+import { resolveAppError, shouldIgnoreClientError } from "@/lib/app-errors/catalog";
 import type { AppErrorCode, ResolvedAppError } from "@/lib/app-errors/types";
 import { redirectIfSessionExpired } from "@/lib/auth/client-reauth";
 
@@ -24,6 +24,8 @@ type ShowAppErrorInput = {
   code?: AppErrorCode;
   /** Force modal even when guide says toast-only. */
   forceModal?: boolean;
+  /** Show a toast when the guide is toast-only (used by global error handlers). */
+  notifyToast?: boolean;
   /** Extra audit metadata. */
   metadata?: Record<string, unknown>;
 };
@@ -115,11 +117,17 @@ export function AppErrorProvider({ children }: { children: ReactNode }) {
 
     sendErrorTrack(guide, input.metadata);
 
-    if (!dedupe && (guide.showModal || input.forceModal)) {
+    const shouldShowModal = !dedupe && (guide.showModal || input.forceModal);
+
+    if (shouldShowModal) {
       lastFingerprintRef.current = fingerprint;
       lastShownAtRef.current = now;
       setError(guide);
       setOpen(true);
+    } else if (!dedupe && input.notifyToast) {
+      lastFingerprintRef.current = fingerprint;
+      lastShownAtRef.current = now;
+      toast.error(guide.title, { description: guide.whatToDo });
     }
 
     return guide;
@@ -166,7 +174,11 @@ export function AppErrorProvider({ children }: { children: ReactNode }) {
         return originalError(guide.title, data as never);
       }
 
-      return originalError(message as never, data as never);
+      const toastMessage =
+        guide.code === "validation_required" || guide.code === "validation_choice"
+          ? guide.message
+          : guide.title;
+      return originalError(toastMessage, data as never);
     }) as typeof toast.error;
 
     return () => {
@@ -179,10 +191,11 @@ export function AppErrorProvider({ children }: { children: ReactNode }) {
       const message =
         event.message ||
         (event.error instanceof Error ? event.error.message : "خطای غیرمنتظره در صفحه");
+      if (shouldIgnoreClientError(message)) return;
+
       present({
         message,
-        code: "client_crash",
-        forceModal: true,
+        notifyToast: true,
         metadata: {
           source: "window.error",
           filename: event.filename,
@@ -200,10 +213,11 @@ export function AppErrorProvider({ children }: { children: ReactNode }) {
           : typeof reason === "string"
             ? reason
             : "وعدهٔ جاوااسکریپت بدون مدیریت خطا رد شد";
+      if (shouldIgnoreClientError(message)) return;
+
       present({
         message,
-        code: "client_crash",
-        forceModal: true,
+        notifyToast: true,
         metadata: { source: "unhandledrejection" },
       });
     };
