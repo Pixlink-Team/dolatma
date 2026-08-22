@@ -56,6 +56,7 @@ const INLINE_CONTENT_TYPES = new Set([
   "audio/mp4",
   "audio/x-m4a",
   "audio/aac",
+  "application/pdf",
 ]);
 
 /**

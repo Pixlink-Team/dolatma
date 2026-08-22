@@ -5,14 +5,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { MediaPlaceholder } from "@/components/ui/media-placeholder";
+import { PdfPreview } from "@/components/ui/pdf-preview";
+import { forceClientReauth, redirectIfSessionExpired } from "@/lib/auth/client-reauth";
 import {
   isAparatVideoInput,
+  isDirectPdfUrl,
   isDirectVideoUrl,
   isLocalUploadedFileUrl,
   resolveVideoEmbedUrl,
   resolveVideoThumbnail,
 } from "@/lib/media-utils";
-import { cn } from "@/lib/utils";
 import {
   captureAndUploadVideoCover,
   captureAndUploadVideoCoverFromUrl,
@@ -22,7 +24,7 @@ import {
   optimizeImageFile,
   type OptimizeImageOptions,
 } from "@/lib/client/optimize-image";
-import { forceClientReauth, redirectIfSessionExpired } from "@/lib/auth/client-reauth";
+import { cn } from "@/lib/utils";
 import { ImageIcon, Loader2, Trash2, Upload } from "lucide-react";
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -326,8 +328,12 @@ export function MediaUpload({
   const builtInImageCard = (
     <div className="relative min-h-40 w-full overflow-hidden rounded-[10px] bg-muted sm:min-h-48">
       {value ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={value} alt="" className="h-full min-h-40 w-full object-contain sm:min-h-48" />
+        isDirectPdfUrl(value) ? (
+          <PdfPreview src={value} title={label ?? "PDF preview"} className="min-h-40 sm:min-h-48" />
+        ) : (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={value} alt="" className="h-full min-h-40 w-full object-contain sm:min-h-48" />
+        )
       ) : (
         <div className="flex min-h-40 flex-col items-center justify-center gap-2 px-3 py-8 text-center text-muted-foreground sm:min-h-48">
           <ImageIcon className="h-10 w-10" />

@@ -32,6 +32,7 @@ import { downloadMedia, getFilenameFromUrl } from "@/lib/media-utils";
 import { VideoModal } from "@/components/media/video-modal";
 import { VideoThumbnail } from "@/components/media/video-thumbnail";
 import { ImageZoom } from "@/components/ui/image-zoom";
+import { PdfPreview } from "@/components/ui/pdf-preview";
 
 const BROADCAST_ITEMS_PER_ROW = 1;
 
@@ -61,6 +62,7 @@ function BroadcastReportCard({ report }: { report: BroadcastReport }) {
   const mediaType = resolveBroadcastMediaType(report);
   const fileKind = resolveBroadcastFileKind(report);
   const isMedia = mediaType === "media";
+  const isPdf = mediaType === "pdf";
   const category = broadcastMediaCategoryLabel(report);
   const videoVersion = fileKind === "video" ? toBroadcastVideoVersion(report) : null;
 
@@ -107,10 +109,12 @@ function BroadcastReportCard({ report }: { report: BroadcastReport }) {
               <Music className="h-16 w-16 text-primary" />
               <span className="text-xs text-muted-foreground">صوت</span>
             </div>
+          ) : isPdf ? (
+            <PdfPreview src={report.pdfUrl} title={report.title} interactive={false} />
           ) : (
             <div className="flex h-full flex-col items-center justify-center gap-3 bg-muted">
               <FileText className="h-16 w-16 text-primary" />
-              <span className="text-xs text-muted-foreground">PDF</span>
+              <span className="text-xs text-muted-foreground">فایل</span>
             </div>
           )
         }
@@ -130,7 +134,7 @@ function BroadcastReportCard({ report }: { report: BroadcastReport }) {
         }
         actions={
           <>
-            {isMedia ? (
+            {isMedia || isPdf ? (
               <Button variant="outline" size="sm" onClick={() => setPreviewOpen(true)}>
                 <Eye className="h-4 w-4" />
                 مشاهده
@@ -149,7 +153,7 @@ function BroadcastReportCard({ report }: { report: BroadcastReport }) {
             </Button>
           </>
         }
-        onClick={isMedia ? () => setPreviewOpen(true) : undefined}
+        onClick={isMedia || isPdf ? () => setPreviewOpen(true) : undefined}
       />
 
       {videoVersion && (
@@ -192,6 +196,19 @@ function BroadcastReportCard({ report }: { report: BroadcastReport }) {
               <p className="text-sm text-muted-foreground">{report.summaryData.notes}</p>
             ) : null}
             <audio src={report.pdfUrl} controls className="w-full" preload="metadata" />
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {isPdf && (
+        <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+          <DialogContent className="max-h-[90vh] max-w-4xl overflow-hidden p-0 sm:p-0">
+            <DialogHeader className="px-6 pt-6">
+              <DialogTitle>{report.title}</DialogTitle>
+            </DialogHeader>
+            <div className="h-[70vh] w-full border-t">
+              <PdfPreview src={report.pdfUrl} title={report.title} />
+            </div>
           </DialogContent>
         </Dialog>
       )}

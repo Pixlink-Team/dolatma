@@ -1,11 +1,13 @@
 "use client";
 
 import { MediaPlaceholder } from "@/components/ui/media-placeholder";
+import { PdfPreview } from "@/components/ui/pdf-preview";
 import {
   isLocalUploadedMediaUrl,
   OptimizedMediaImage,
 } from "@/components/ui/optimized-media-image";
 import { CARD_THUMB_WIDTH, toCardThumbnailUrl } from "@/lib/card-thumbnail-url";
+import { isDirectPdfUrl } from "@/lib/media-utils";
 import { cn } from "@/lib/utils";
 
 interface MediaThumbnailProps {
@@ -40,6 +42,19 @@ export function MediaThumbnail({
 }: MediaThumbnailProps) {
   if (!src) {
     return <MediaPlaceholder kind={kind} className={className} />;
+  }
+
+  if (isDirectPdfUrl(src)) {
+    return (
+      <div
+        className={cn(
+          fill ? "absolute inset-0 h-full w-full overflow-hidden" : "h-full w-full overflow-hidden",
+          className
+        )}
+      >
+        <PdfPreview src={src} title={alt} interactive={false} />
+      </div>
+    );
   }
 
   const fitClass = objectFit === "contain" ? "object-contain" : "object-cover";

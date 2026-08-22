@@ -43,6 +43,7 @@ import { AdminViewModeToggle } from "@/components/admin/admin-view-mode-toggle";
 import { DocumentUpload } from "@/components/ui/document-upload";
 import { MediaUpload } from "@/components/ui/media-upload";
 import { ImageZoom } from "@/components/ui/image-zoom";
+import { PdfPreview } from "@/components/ui/pdf-preview";
 import { VideoModal } from "@/components/media/video-modal";
 import { VideoThumbnail } from "@/components/media/video-thumbnail";
 import { PersianDateField } from "@/components/ui/persian-date-input";
@@ -221,11 +222,7 @@ export function BroadcastAdmin({ campaignId, initialReports }: BroadcastAdminPro
   };
 
   const handleView = (report: BroadcastReport) => {
-    if (resolveBroadcastMediaType(report) === "media") {
-      setPreviewReport(report);
-      return;
-    }
-    if (report.pdfUrl) window.open(report.pdfUrl, "_blank");
+    setPreviewReport(report);
   };
 
   const handleDelete = (report: BroadcastReport) => {
@@ -304,6 +301,7 @@ export function BroadcastAdmin({ campaignId, initialReports }: BroadcastAdminPro
   );
 
   const previewKind = previewReport ? resolveBroadcastFileKind(previewReport) : null;
+  const previewMediaType = previewReport ? resolveBroadcastMediaType(previewReport) : null;
   const previewVersion =
     previewReport && previewKind === "video" ? toBroadcastVideoVersion(previewReport) : null;
 
@@ -387,6 +385,8 @@ export function BroadcastAdmin({ campaignId, initialReports }: BroadcastAdminPro
                       <div className="flex h-full items-center justify-center">
                         <Music className="h-5 w-5 text-primary" />
                       </div>
+                    ) : type === "pdf" ? (
+                      <PdfPreview src={report.pdfUrl} title={report.title} interactive={false} />
                     ) : (
                       <div className="flex h-full items-center justify-center">
                         <FileText className="h-5 w-5 text-primary" />
@@ -645,6 +645,19 @@ export function BroadcastAdmin({ campaignId, initialReports }: BroadcastAdminPro
               <DialogTitle>{previewReport.title}</DialogTitle>
             </DialogHeader>
             <audio src={previewReport.pdfUrl} controls className="w-full" preload="metadata" />
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {previewReport && previewMediaType === "pdf" && (
+        <Dialog open onOpenChange={(next) => !next && setPreviewReport(null)}>
+          <DialogContent className="max-h-[90vh] max-w-4xl overflow-hidden p-0 sm:p-0">
+            <DialogHeader className="px-6 pt-6">
+              <DialogTitle>{previewReport.title}</DialogTitle>
+            </DialogHeader>
+            <div className="h-[70vh] w-full border-t">
+              <PdfPreview src={previewReport.pdfUrl} title={previewReport.title} />
+            </div>
           </DialogContent>
         </Dialog>
       )}

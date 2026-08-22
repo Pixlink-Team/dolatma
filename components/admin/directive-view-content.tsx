@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { PdfPreview } from "@/components/ui/pdf-preview";
 import { getDirectiveActionAttachments } from "@/lib/directive-attachments";
 import { isDirectImageUrl, isDirectVideoUrl } from "@/lib/media-utils";
 import type { CampaignDirective } from "@/lib/types";
@@ -124,7 +125,7 @@ function DirectiveFileCard({
             className="h-full min-h-[10rem] w-full bg-black object-contain sm:min-h-[11rem]"
           />
         ) : kind === "pdf" ? (
-          <iframe src={safeUrl} title={title} className="h-56 w-full bg-white sm:h-64" />
+          <PdfPreview src={safeUrl} title={title} className="min-h-[10rem] sm:min-h-[11rem]" />
         ) : (
           <div className="flex min-h-[10rem] flex-col items-center justify-center gap-3 px-4 py-8 text-center sm:min-h-[11rem]">
             <FileText className="h-12 w-12 text-muted-foreground/80" />

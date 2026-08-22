@@ -124,6 +124,28 @@ export function isDirectImageUrl(url: string): boolean {
   }
 }
 
+export function isDirectPdfUrl(url: string, mimeType?: string | null): boolean {
+  if (mimeType?.trim() === "application/pdf") return true;
+  const trimmed = url.trim();
+  if (!trimmed) return false;
+  if (/^\/api\/files\/.+\.pdf(\?.*)?$/i.test(trimmed)) return true;
+  try {
+    const pathname = new URL(trimmed, "https://local.invalid").pathname;
+    if (/^\/api\/files\/.+\.pdf$/i.test(pathname)) return true;
+    return /\.pdf$/i.test(pathname);
+  } catch {
+    return /\.pdf(\?.*)?$/i.test(trimmed);
+  }
+}
+
+/** Embed-friendly PDF URL for iframe previews (first page, minimal chrome). */
+export function buildPdfPreviewUrl(url: string, page = 1): string {
+  const trimmed = url.trim();
+  if (!trimmed) return trimmed;
+  const base = trimmed.split("#")[0];
+  return `${base}#page=${page}&view=FitH&toolbar=0&navpanes=0`;
+}
+
 export function resolveAbsoluteMediaUrl(url: string): string {
   const trimmed = url.trim();
   if (!trimmed) return trimmed;

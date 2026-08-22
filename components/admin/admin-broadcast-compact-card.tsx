@@ -6,6 +6,7 @@ import { AdminCreatedAtText } from "@/components/admin/admin-created-at";
 import { AdminItemActions } from "@/components/admin/admin-item-actions";
 import { AdminOwnerBadge } from "@/components/admin/admin-owner-badge";
 import { VideoThumbnail } from "@/components/media/video-thumbnail";
+import { PdfPreview } from "@/components/ui/pdf-preview";
 import { resolveBroadcastFileKind, resolveBroadcastMediaType } from "@/lib/broadcast-media";
 import type { BroadcastReport } from "@/lib/types";
 import { cn, formatPersianDate } from "@/lib/utils";
@@ -63,10 +64,12 @@ export function AdminBroadcastCompactCard({
               <Music className="h-10 w-10 text-primary" />
               <span className="text-[10px]">صوت</span>
             </div>
+          ) : !isMedia ? (
+            <PdfPreview src={report.pdfUrl} title={report.title} interactive={false} />
           ) : (
             <div className="flex h-full flex-col items-center justify-center gap-2 text-muted-foreground">
               <FileText className="h-10 w-10 text-primary" />
-              <span className="text-[10px]">PDF</span>
+              <span className="text-[10px]">فایل</span>
             </div>
           )}
         </div>

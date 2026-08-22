@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { forceClientReauth, redirectIfSessionExpired } from "@/lib/auth/client-reauth";
 import { isDirectImageUrl, isDirectVideoUrl } from "@/lib/media-utils";
 import { cn, formatPersianNumber } from "@/lib/utils";
+import { PdfPreview } from "@/components/ui/pdf-preview";
 import { ExternalLink, FileText, Loader2, Trash2, Upload } from "lucide-react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
@@ -225,11 +226,7 @@ export function DocumentUpload({
           className="h-full min-h-40 w-full bg-black object-contain sm:min-h-48"
         />
       ) : isPdf ? (
-        <iframe
-          src={value}
-          title={displayName}
-          className="h-64 w-full bg-white sm:h-80"
-        />
+        <PdfPreview src={value} title={displayName} className="h-64 sm:h-80" />
       ) : (
         <div className="flex min-h-40 flex-col items-center justify-center gap-3 px-4 py-8 text-center sm:min-h-48">
           <FileText className="h-12 w-12 text-muted-foreground" />
