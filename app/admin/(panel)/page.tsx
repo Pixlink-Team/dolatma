@@ -326,19 +326,13 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
       {onboardingProgress &&
       onboardingProgress.totalCount > 0 &&
       onboardingProgress.percent < 100 ? (
-        <OnboardingProgressCard progress={onboardingProgress}>
-          <EditSuggestionsPanel
-            suggestions={editSuggestions}
-            storageKey={editSuggestionsStorageKey}
-            embedded
-          />
-        </OnboardingProgressCard>
-      ) : onboardingProgress == null || onboardingProgress.totalCount === 0 ? (
-        <EditSuggestionsPanel
-          suggestions={editSuggestions}
-          storageKey={editSuggestionsStorageKey}
-        />
+        <OnboardingProgressCard progress={onboardingProgress} />
       ) : null}
+
+      <EditSuggestionsPanel
+        suggestions={editSuggestions}
+        storageKey={editSuggestionsStorageKey}
+      />
 
       <DashboardBentoGrid
         campaignId={campaignId}

@@ -18,14 +18,11 @@ import { formatPersianNumber } from "@/lib/utils";
 interface EditSuggestionsPanelProps {
   suggestions: EditSuggestionItem[];
   storageKey: string;
-  /** When true, render as a compact block without the outer card (e.g. under missions). */
-  embedded?: boolean;
 }
 
 export function EditSuggestionsPanel({
   suggestions,
   storageKey,
-  embedded = false,
 }: EditSuggestionsPanelProps) {
   const [open, setOpen] = useState(false);
   const hasSuggestions = suggestions.length > 0;
@@ -67,13 +64,9 @@ export function EditSuggestionsPanel({
 
   return (
     <>
-      {embedded ? (
-        <div className="rounded-xl border border-warning/30 bg-warning/10 p-4">{body}</div>
-      ) : (
-        <Card className="border-warning/30 bg-warning/10">
-          <CardContent className="p-4">{body}</CardContent>
-        </Card>
-      )}
+      <Card className="border-warning/30 bg-warning/10">
+        <CardContent className="p-4">{body}</CardContent>
+      </Card>
 
       <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent className="max-h-[88vh] max-w-2xl overflow-hidden p-0">
