@@ -1,18 +1,19 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { AutoSaveStatusIndicator } from "@/components/admin/auto-save-status";
 import { getSmsSettingsAction, saveSmsSettingsAction } from "@/lib/actions/sms-actions";
+import { useAutoSave } from "@/lib/hooks/use-auto-save";
 import type { SmsProviderId, SmsProviderSettingsPublic } from "@/lib/types";
 
 const schema = z.object({
@@ -44,7 +45,7 @@ const apiKeyHelpText: Partial<Record<SmsProviderId, string>> = {
 };
 
 export function SmsSettingsCard() {
-  const [isPending, startTransition] = useTransition();
+  const [ready, setReady] = useState(false);
   const [publicSettings, setPublicSettings] = useState<SmsProviderSettingsPublic | null>(null);
 
   const form = useForm<FormData>({
@@ -58,55 +59,85 @@ export function SmsSettingsCard() {
   });
 
   const provider = form.watch("provider");
+  const formValues = form.watch();
+  const autoSaveSnapshot = {
+    enabled: formValues.enabled,
+    provider: formValues.provider,
+    sender: formValues.sender,
+  };
+
+  const persistSettings = useCallback(async (): Promise<boolean> => {
+    const data = form.getValues();
+    const result = await saveSmsSettingsAction({
+      enabled: data.enabled,
+      provider: data.provider,
+      apiKey: data.apiKey || undefined,
+      sender: data.sender,
+    });
+
+    if (!result.success) {
+      toast.error(result.error ?? "ذخیره تنظیمات پیامک ناموفق بود");
+      return false;
+    }
+
+    const refreshed = await getSmsSettingsAction();
+    if (refreshed) setPublicSettings(refreshed);
+    form.setValue("apiKey", "");
+    return true;
+  }, [form]);
+
+  const { status: saveStatus, markSaved } = useAutoSave({
+    value: autoSaveSnapshot,
+    onSave: persistSettings,
+    skip: !ready,
+  });
+
+  const saveApiKeyOnBlur = async () => {
+    const apiKey = form.getValues("apiKey")?.trim();
+    if (!apiKey) return;
+    const ok = await persistSettings();
+    if (ok) {
+      markSaved(autoSaveSnapshot);
+    }
+  };
 
   useEffect(() => {
     getSmsSettingsAction().then((settings) => {
       if (!settings) return;
       setPublicSettings(settings);
-      form.reset({
+      const initial: FormData = {
         enabled: settings.enabled,
         provider: settings.provider,
         apiKey: "",
         sender: settings.sender,
+      };
+      form.reset(initial);
+      markSaved({
+        enabled: initial.enabled,
+        provider: initial.provider,
+        sender: initial.sender,
       });
+      setReady(true);
     });
-  }, [form]);
-
-  const onSubmit = (data: FormData) => {
-    startTransition(async () => {
-      const result = await saveSmsSettingsAction({
-        enabled: data.enabled,
-        provider: data.provider,
-        apiKey: data.apiKey || undefined,
-        sender: data.sender,
-      });
-
-      if (!result.success) {
-        toast.error(result.error ?? "ذخیره تنظیمات پیامک ناموفق بود");
-        return;
-      }
-
-      const refreshed = await getSmsSettingsAction();
-      if (refreshed) setPublicSettings(refreshed);
-      form.setValue("apiKey", "");
-      toast.success("تنظیمات پیامک ذخیره شد");
-    });
-  };
+  }, [form, markSaved]);
 
   return (
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between gap-3">
-          <CardTitle className="text-base">تنظیمات پیامک (SMS)</CardTitle>
-          {publicSettings?.configured ? (
-            <Badge variant="success">فعال</Badge>
-          ) : (
-            <Badge variant="warning">غیرفعال</Badge>
-          )}
+          <div className="flex items-center gap-3">
+            <CardTitle className="text-base">تنظیمات پیامک (SMS)</CardTitle>
+            {publicSettings?.configured ? (
+              <Badge variant="success">فعال</Badge>
+            ) : (
+              <Badge variant="warning">غیرفعال</Badge>
+            )}
+          </div>
+          <AutoSaveStatusIndicator status={saveStatus} />
         </div>
       </CardHeader>
       <CardContent>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <div className="space-y-4">
           <p className="text-sm text-muted-foreground">
             برای ارسال پیامک هنگام انتشار دستورکار، ارائه‌دهنده و کلید API را تنظیم کنید.
             این تنظیمات سراسری است و برای همه راستاها اعمال می‌شود.
@@ -170,7 +201,11 @@ export function SmsSettingsCard() {
             <Label>کلید API</Label>
             <Input
               type="password"
-              {...form.register("apiKey")}
+              {...form.register("apiKey", {
+                onBlur: () => {
+                  void saveApiKeyOnBlur();
+                },
+              })}
               dir="ltr"
               autoComplete="new-password"
               placeholder={
@@ -187,11 +222,7 @@ export function SmsSettingsCard() {
                 "کلید ذخیره می‌شود و در رابط کاربری دوباره نمایش داده نمی‌شود."}
             </p>
           </div>
-
-          <Button type="submit" disabled={isPending}>
-            {isPending ? "در حال ذخیره..." : "ذخیره تنظیمات پیامک"}
-          </Button>
-        </form>
+        </div>
       </CardContent>
     </Card>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -21,6 +21,8 @@ import { SmsSettingsCard } from "@/components/admin/sms-settings-card";
 import { AiSettingsCard } from "@/components/admin/ai-settings-card";
 import { LoginPageSettingsCard } from "@/components/admin/login-page-settings-card";
 import { CampaignFaviconCard } from "@/components/admin/campaign-favicon-card";
+import { AutoSaveStatusIndicator } from "@/components/admin/auto-save-status";
+import { useAutoSave } from "@/lib/hooks/use-auto-save";
 import {
   contentPlansFromTopics,
   normalizeContentTopics,
@@ -296,7 +298,8 @@ export function SettingsAdmin({
   canEditFullSettings = true,
   hasPagePassword = false,
 }: SettingsAdminProps) {
-  const [isPending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
+  const [settingsReady, setSettingsReady] = useState(false);
   const [contentTopics, setContentTopics] = useState<ContentTopic[]>(() =>
     normalizeContentTopics(
       initialSettings.contentTopics?.length
@@ -352,44 +355,99 @@ export function SettingsAdmin({
     },
   });
 
-  const onSubmit = form.handleSubmit((data) => {
-    if (!canEditFullSettings) return;
-    startTransition(async () => {
-      await updateSettingsAction({
-        id: initialSettings.id,
-        title: data.title,
-        slug: data.slug,
-        tagline: data.tagline?.trim() || null,
-        description: data.description,
-        status: data.status,
-        startDate: data.startDate,
-        endDate: data.endDate,
-        coverImageUrl: data.coverImageUrl,
-        published: data.published,
-        features: data.features,
-        analyticsConfig: buildAnalyticsConfig(data, initialSettings.analyticsConfig),
-        billboardConfig: {},
-        adminOwnerLabel: data.adminOwnerLabel?.trim() || DEFAULT_ADMIN_OWNER_LABEL,
-        contentTopics,
-        contentPlans: contentPlansFromTopics(contentTopics),
-      });
-      toast.success("تنظیمات ذخیره شد");
+  const formValues = form.watch();
+  const settingsSnapshot = { form: formValues, contentTopics };
+
+  const persistSettings = useCallback(async (): Promise<boolean> => {
+    if (!canEditFullSettings) return false;
+
+    return new Promise((resolve) => {
+      form.handleSubmit(
+        async (data) => {
+          const result = await updateSettingsAction({
+            id: initialSettings.id,
+            title: data.title,
+            slug: data.slug,
+            tagline: data.tagline?.trim() || null,
+            description: data.description,
+            status: data.status,
+            startDate: data.startDate,
+            endDate: data.endDate,
+            coverImageUrl: data.coverImageUrl,
+            published: data.published,
+            features: data.features,
+            analyticsConfig: buildAnalyticsConfig(data, initialSettings.analyticsConfig),
+            billboardConfig: {},
+            adminOwnerLabel: data.adminOwnerLabel?.trim() || DEFAULT_ADMIN_OWNER_LABEL,
+            contentTopics,
+            contentPlans: contentPlansFromTopics(contentTopics),
+          });
+          if (result && "success" in result && !result.success) {
+            toast.error("error" in result && result.error ? result.error : "ذخیره تنظیمات ناموفق بود");
+            resolve(false);
+            return;
+          }
+          resolve(true);
+        },
+        () => resolve(false)
+      )();
     });
+  }, [canEditFullSettings, contentTopics, form, initialSettings]);
+
+  const { status: settingsSaveStatus, markSaved: markSettingsSaved } = useAutoSave({
+    value: settingsSnapshot,
+    onSave: persistSettings,
+    enabled: canEditFullSettings,
+    skip: !settingsReady,
   });
 
-  const savePagePassword = (removePassword = false) => {
+  useEffect(() => {
+    if (!canEditFullSettings) return;
+    markSettingsSaved({ form: form.getValues(), contentTopics });
+    setSettingsReady(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- baseline snapshot once on mount
+  }, [canEditFullSettings]);
+
+  const markPagePasswordSavedRef = useRef<(snapshot?: string) => void>(() => {});
+
+  const persistPagePassword = useCallback(async (): Promise<boolean> => {
+    const trimmed = pagePassword.trim();
+    if (!trimmed) return true;
+
+    const result = await saveCampaignPagePasswordAction(initialSettings.id, {
+      password: trimmed,
+    });
+    if (!result.success) {
+      toast.error("error" in result && result.error ? result.error : "ذخیره رمز نشد");
+      return false;
+    }
+    setPagePassword("");
+    setPagePasswordConfigured(true);
+    markPagePasswordSavedRef.current("");
+    return true;
+  }, [initialSettings.id, pagePassword]);
+
+  const { status: pagePasswordSaveStatus, markSaved: markPagePasswordSaved } = useAutoSave({
+    value: pagePassword,
+    onSave: persistPagePassword,
+    skip: !pagePassword.trim(),
+    delayMs: 800,
+  });
+
+  markPagePasswordSavedRef.current = markPagePasswordSaved;
+
+  const removePagePassword = () => {
     startTransition(async () => {
       const result = await saveCampaignPagePasswordAction(initialSettings.id, {
-        password: removePassword ? undefined : pagePassword,
-        removePassword,
+        removePassword: true,
       });
       if (!result.success) {
-        toast.error("error" in result && result.error ? result.error : "ذخیره رمز نشد");
+        toast.error("error" in result && result.error ? result.error : "حذف رمز نشد");
         return;
       }
       setPagePassword("");
-      setPagePasswordConfigured(!removePassword);
-      toast.success(removePassword ? "رمز صفحه راستا حذف شد" : "رمز صفحه راستا ذخیره شد");
+      setPagePasswordConfigured(false);
+      markPagePasswordSaved("");
     });
   };
 
@@ -418,7 +476,10 @@ export function SettingsAdmin({
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">رمز صفحه نمایش راستا</CardTitle>
+          <div className="flex items-center justify-between gap-3">
+            <CardTitle className="text-base">رمز صفحه نمایش راستا</CardTitle>
+            <AutoSaveStatusIndicator status={pagePasswordSaveStatus} />
+          </div>
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-sm text-muted-foreground">
@@ -434,25 +495,11 @@ export function SettingsAdmin({
             className="text-left"
             autoComplete="new-password"
           />
-          <div className="flex flex-wrap gap-2">
-            <Button
-              type="button"
-              onClick={() => savePagePassword(false)}
-              disabled={isPending || !pagePassword.trim()}
-            >
-              {pagePasswordConfigured ? "تغییر رمز" : "تنظیم رمز"}
+          {pagePasswordConfigured && (
+            <Button type="button" variant="outline" onClick={removePagePassword}>
+              حذف رمز
             </Button>
-            {pagePasswordConfigured && (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => savePagePassword(true)}
-                disabled={isPending}
-              >
-                حذف رمز
-              </Button>
-            )}
-          </div>
+          )}
           {pagePasswordConfigured && (
             <p className="text-xs text-muted-foreground">رمز فعلی تنظیم شده است.</p>
           )}
@@ -467,9 +514,14 @@ export function SettingsAdmin({
 
       {canEditFullSettings && (
       <Card>
-        <CardHeader><CardTitle className="text-base">اطلاعات راستا</CardTitle></CardHeader>
+        <CardHeader>
+          <div className="flex items-center justify-between gap-3">
+            <CardTitle className="text-base">اطلاعات راستا</CardTitle>
+            <AutoSaveStatusIndicator status={settingsSaveStatus} />
+          </div>
+        </CardHeader>
         <CardContent>
-          <form onSubmit={onSubmit} className="space-y-4">
+          <div className="space-y-4">
             <div>
               <Label>عنوان سایت / راستا</Label>
               <Input {...form.register("title")} maxLength={CONTENT_TITLE_MAX_LENGTH} />
@@ -659,8 +711,7 @@ export function SettingsAdmin({
               form={form}
             />
 
-            <Button type="submit" disabled={isPending}>{isPending ? "در حال ذخیره..." : "ذخیره تغییرات"}</Button>
-          </form>
+          </div>
         </CardContent>
       </Card>
       )}

@@ -1,16 +1,16 @@
 "use client";
 
-import { useEffect, useTransition } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { MediaUpload } from "@/components/ui/media-upload";
+import { AutoSaveStatusIndicator } from "@/components/admin/auto-save-status";
 import {
   getAdminLoginPageSettingsAction,
   saveLoginPageSettingsAction,
@@ -19,6 +19,7 @@ import {
   DEFAULT_LOGIN_CUSTOM_BACKGROUND,
   DEFAULT_LOGIN_PAGE_SETTINGS,
 } from "@/lib/login-page-defaults";
+import { useAutoSave } from "@/lib/hooks/use-auto-save";
 import type { LoginBackgroundMode, LoginFormAlignment } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -62,7 +63,7 @@ const FORM_ALIGNMENT_OPTIONS: Array<{
 ];
 
 export function LoginPageSettingsCard() {
-  const [isPending, startTransition] = useTransition();
+  const [ready, setReady] = useState(false);
 
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -73,37 +74,52 @@ export function LoginPageSettingsCard() {
   const customBackgroundUrl = form.watch("customBackgroundUrl");
   const preRegistrationEnabled = form.watch("preRegistrationEnabled");
   const formAlignment = form.watch("formAlignment");
+  const formValues = form.watch();
+
+  const persistSettings = useCallback(async (): Promise<boolean> => {
+    const data = form.getValues();
+    if (data.backgroundMode === "custom" && !data.customBackgroundUrl?.trim()) {
+      return false;
+    }
+
+    const parsed = schema.safeParse(data);
+    if (!parsed.success) {
+      return false;
+    }
+
+    const result = await saveLoginPageSettingsAction(parsed.data);
+    if (!result.success) {
+      toast.error(result.error ?? "ذخیره تنظیمات ورود ناموفق بود");
+      return false;
+    }
+    return true;
+  }, [form]);
+
+  const { status: saveStatus, markSaved } = useAutoSave({
+    value: formValues,
+    onSave: persistSettings,
+    skip: !ready,
+  });
 
   useEffect(() => {
     getAdminLoginPageSettingsAction().then((settings) => {
       if (!settings) return;
       form.reset(settings);
+      markSaved(settings);
+      setReady(true);
     });
-  }, [form]);
-
-  const onSubmit = (data: FormData) => {
-    if (data.backgroundMode === "custom" && !data.customBackgroundUrl?.trim()) {
-      toast.error("برای حالت تصویر سفارشی، یک تصویر آپلود کنید");
-      return;
-    }
-
-    startTransition(async () => {
-      const result = await saveLoginPageSettingsAction(data);
-      if (!result.success) {
-        toast.error(result.error ?? "ذخیره تنظیمات ورود ناموفق بود");
-        return;
-      }
-      toast.success("تنظیمات صفحه ورود ذخیره شد");
-    });
-  };
+  }, [form, markSaved]);
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">تنظیمات صفحه ورود</CardTitle>
+        <div className="flex items-center justify-between gap-3">
+          <CardTitle className="text-base">تنظیمات صفحه ورود</CardTitle>
+          <AutoSaveStatusIndicator status={saveStatus} />
+        </div>
       </CardHeader>
       <CardContent>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <div className="space-y-6">
           <p className="text-sm text-muted-foreground">
             متن‌ها و پس‌زمینه صفحه ورود پنل را از اینجا تغییر دهید.
           </p>
@@ -235,11 +251,7 @@ export function LoginPageSettingsCard() {
               <p className="text-xs text-destructive">{form.formState.errors.footer.message}</p>
             ) : null}
           </div>
-
-          <Button type="submit" disabled={isPending}>
-            {isPending ? "در حال ذخیره..." : "ذخیره تنظیمات ورود"}
-          </Button>
-        </form>
+        </div>
       </CardContent>
     </Card>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useCallback, useEffect, useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -12,6 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { AutoSaveStatusIndicator } from "@/components/admin/auto-save-status";
 import {
   getAiSettingsAction,
   saveAiSettingsAction,
@@ -24,6 +25,7 @@ import {
   type AiProviderId,
   type AiSettingsPublic,
 } from "@/lib/ai/settings";
+import { useAutoSave } from "@/lib/hooks/use-auto-save";
 import { formatPersianNumber } from "@/lib/utils";
 
 const providerSchema = z.enum(["openai", "gemini"]);
@@ -58,6 +60,7 @@ function parseDailyLimit(value: string | undefined): number | null {
 
 export function AiSettingsCard() {
   const [isPending, startTransition] = useTransition();
+  const [ready, setReady] = useState(false);
   const [testingProvider, setTestingProvider] = useState<AiProviderId | null>(null);
   const [publicSettings, setPublicSettings] = useState<AiSettingsPublic | null>(null);
 
@@ -79,11 +82,72 @@ export function AiSettingsCard() {
     },
   });
 
+  const formValues = form.watch();
+  const autoSaveSnapshot = {
+    enabled: formValues.enabled,
+    defaultProvider: formValues.defaultProvider,
+    openaiModel: formValues.openaiModel,
+    openaiBaseUrl: formValues.openaiBaseUrl,
+    geminiModel: formValues.geminiModel,
+    geminiBaseUrl: formValues.geminiBaseUrl,
+    featureProviders: formValues.featureProviders,
+    dailyTokenLimit: formValues.dailyTokenLimit,
+  };
+
+  const persistSettings = useCallback(async (): Promise<boolean> => {
+    const data = form.getValues();
+    const result = await saveAiSettingsAction({
+      enabled: data.enabled,
+      defaultProvider: data.defaultProvider,
+      openai: {
+        model: data.openaiModel,
+        baseUrl: data.openaiBaseUrl?.trim() || null,
+        apiKey: data.openaiApiKey || undefined,
+      },
+      gemini: {
+        model: data.geminiModel,
+        baseUrl: data.geminiBaseUrl?.trim() || null,
+        apiKey: data.geminiApiKey || undefined,
+      },
+      featureProviders: data.featureProviders as Record<AiFeatureId, AiProviderId>,
+      dailyTokenLimit: parseDailyLimit(data.dailyTokenLimit),
+    });
+
+    if (!result.success) {
+      toast.error(result.error ?? "ذخیره تنظیمات هوش مصنوعی ناموفق بود");
+      return false;
+    }
+
+    const refreshed = await getAiSettingsAction();
+    if (refreshed) {
+      setPublicSettings(refreshed);
+      form.setValue("openaiApiKey", "");
+      form.setValue("geminiApiKey", "");
+    }
+    return true;
+  }, [form]);
+
+  const { status: saveStatus, markSaved } = useAutoSave({
+    value: autoSaveSnapshot,
+    onSave: persistSettings,
+    skip: !ready,
+  });
+
+  const saveApiKeysOnBlur = async () => {
+    const openaiApiKey = form.getValues("openaiApiKey")?.trim();
+    const geminiApiKey = form.getValues("geminiApiKey")?.trim();
+    if (!openaiApiKey && !geminiApiKey) return;
+    const ok = await persistSettings();
+    if (ok) {
+      markSaved(autoSaveSnapshot);
+    }
+  };
+
   useEffect(() => {
     getAiSettingsAction().then((settings) => {
       if (!settings) return;
       setPublicSettings(settings);
-      form.reset({
+      const initial: FormData = {
         enabled: settings.enabled,
         defaultProvider: settings.defaultProvider,
         openaiModel: settings.openai.model,
@@ -95,43 +159,21 @@ export function AiSettingsCard() {
         featureProviders: { ...settings.featureProviders },
         dailyTokenLimit:
           settings.dailyTokenLimit != null ? String(settings.dailyTokenLimit) : "",
+      };
+      form.reset(initial);
+      markSaved({
+        enabled: initial.enabled,
+        defaultProvider: initial.defaultProvider,
+        openaiModel: initial.openaiModel,
+        openaiBaseUrl: initial.openaiBaseUrl,
+        geminiModel: initial.geminiModel,
+        geminiBaseUrl: initial.geminiBaseUrl,
+        featureProviders: initial.featureProviders,
+        dailyTokenLimit: initial.dailyTokenLimit,
       });
+      setReady(true);
     });
-  }, [form]);
-
-  const onSubmit = (data: FormData) => {
-    startTransition(async () => {
-      const result = await saveAiSettingsAction({
-        enabled: data.enabled,
-        defaultProvider: data.defaultProvider,
-        openai: {
-          model: data.openaiModel,
-          baseUrl: data.openaiBaseUrl?.trim() || null,
-          apiKey: data.openaiApiKey || undefined,
-        },
-        gemini: {
-          model: data.geminiModel,
-          baseUrl: data.geminiBaseUrl?.trim() || null,
-          apiKey: data.geminiApiKey || undefined,
-        },
-        featureProviders: data.featureProviders as Record<AiFeatureId, AiProviderId>,
-        dailyTokenLimit: parseDailyLimit(data.dailyTokenLimit),
-      });
-
-      if (!result.success) {
-        toast.error(result.error ?? "ذخیره تنظیمات هوش مصنوعی ناموفق بود");
-        return;
-      }
-
-      const refreshed = await getAiSettingsAction();
-      if (refreshed) {
-        setPublicSettings(refreshed);
-        form.setValue("openaiApiKey", "");
-        form.setValue("geminiApiKey", "");
-      }
-      toast.success("تنظیمات هوش مصنوعی ذخیره شد");
-    });
-  };
+  }, [form, markSaved]);
 
   const testConnection = (provider: AiProviderId) => {
     setTestingProvider(provider);
@@ -165,16 +207,19 @@ export function AiSettingsCard() {
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between gap-3">
-          <CardTitle className="text-base">تنظیمات هوش مصنوعی</CardTitle>
-          {publicSettings?.configured ? (
-            <Badge variant="success">فعال</Badge>
-          ) : (
-            <Badge variant="warning">غیرفعال</Badge>
-          )}
+          <div className="flex items-center gap-3">
+            <CardTitle className="text-base">تنظیمات هوش مصنوعی</CardTitle>
+            {publicSettings?.configured ? (
+              <Badge variant="success">فعال</Badge>
+            ) : (
+              <Badge variant="warning">غیرفعال</Badge>
+            )}
+          </div>
+          <AutoSaveStatusIndicator status={saveStatus} />
         </div>
       </CardHeader>
       <CardContent>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <div className="space-y-4">
           <p className="text-sm text-muted-foreground">
             ارائه‌دهنده، مدل و کلید API را برای قابلیت‌های هوش مصنوعی تنظیم کنید.
             کلیدها رمزنگاری می‌شوند و در رابط کاربری دوباره نمایش داده نمی‌شوند.
@@ -249,7 +294,11 @@ export function AiSettingsCard() {
               <Label>کلید API</Label>
               <Input
                 type="password"
-                {...form.register("openaiApiKey")}
+                {...form.register("openaiApiKey", {
+                  onBlur: () => {
+                    void saveApiKeysOnBlur();
+                  },
+                })}
                 dir="ltr"
                 autoComplete="new-password"
                 placeholder={
@@ -297,7 +346,11 @@ export function AiSettingsCard() {
               <Label>کلید API</Label>
               <Input
                 type="password"
-                {...form.register("geminiApiKey")}
+                {...form.register("geminiApiKey", {
+                  onBlur: () => {
+                    void saveApiKeysOnBlur();
+                  },
+                })}
                 dir="ltr"
                 autoComplete="new-password"
                 placeholder={
@@ -359,13 +412,7 @@ export function AiSettingsCard() {
               <p className="text-xs text-destructive">سقف مصرف روزانه به پایان رسیده است.</p>
             )}
           </div>
-
-          <Button type="submit" disabled={isPending}>
-            {isPending && testingProvider === null
-              ? "در حال ذخیره..."
-              : "ذخیره تنظیمات هوش مصنوعی"}
-          </Button>
-        </form>
+        </div>
       </CardContent>
     </Card>
   );
