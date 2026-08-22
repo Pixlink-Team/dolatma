@@ -925,7 +925,6 @@ function CompanySupervisionAdminInner({
   }, [loadMessages]);
 
   useEffect(() => {
-    if (isSelfView) return;
     if (!UUID_RE.test(entry.userKey)) {
       setDayActivity(null);
       return;
@@ -946,7 +945,7 @@ function CompanySupervisionAdminInner({
     return () => {
       cancelled = true;
     };
-  }, [entry.userKey, isSelfView]);
+  }, [entry.userKey]);
 
   const openTodayItem = (item: CompanySupervisionItem) => {
     setTodayDialogOpen(false);
@@ -1430,7 +1429,10 @@ function CompanySupervisionAdminInner({
       </div>
 
       {isSelfView ? (
-        <CompanyContentUploadTimeline items={items} onItemClick={setViewingItem} />
+        <div className="grid gap-4 xl:grid-cols-2">
+          <CompanyPresenceTimeline activity={dayActivity} loading={dayActivityLoading} />
+          <CompanyContentUploadTimeline items={items} onItemClick={setViewingItem} />
+        </div>
       ) : (
         <>
       <Tabs
@@ -1532,7 +1534,10 @@ function CompanySupervisionAdminInner({
             />
           </div>
 
-          <CompanyPresenceTimeline activity={dayActivity} loading={dayActivityLoading} />
+          <div className="grid gap-4 xl:grid-cols-2">
+            <CompanyPresenceTimeline activity={dayActivity} loading={dayActivityLoading} />
+            <CompanyContentUploadTimeline items={items} onItemClick={setViewingItem} />
+          </div>
 
           <section className="space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
