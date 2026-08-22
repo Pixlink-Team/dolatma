@@ -34,7 +34,7 @@ import type {
 } from "@/lib/types";
 import type { UserRegion } from "@/lib/user-regions";
 import { isPostgresConfigured } from "@/lib/utils";
-import { stripFileAccessTokensDeep } from "@/lib/uploads";
+import { stripFileAccessTokensDeep, withFileAccessTokensDeep } from "@/lib/uploads";
 import type {
   DirectiveCreationMode,
   DirectiveMissionType,
@@ -109,7 +109,11 @@ export async function listDirectivesAction(campaignId: string): Promise<{
       campaignId,
       creatorFilterForSession(access.session)
     );
-    return { success: true, canManage: true, directives };
+    return {
+      success: true,
+      canManage: true,
+      directives: withFileAccessTokensDeep(directives),
+    };
   }
 
   if (!access.session.userId) {
@@ -120,7 +124,11 @@ export async function listDirectivesAction(campaignId: string): Promise<{
     campaignId,
     access.session.userId
   );
-  return { success: true, canManage: false, directives };
+  return {
+    success: true,
+    canManage: false,
+    directives: withFileAccessTokensDeep(directives),
+  };
 }
 
 export async function listCampaignDirectiveUsersAction(campaignId: string) {
@@ -623,7 +631,7 @@ export async function listUnconfirmedDirectivesAction(campaignId: string): Promi
   );
   return {
     success: true,
-    directives: directives.filter((row) => !row.confirmed),
+    directives: withFileAccessTokensDeep(directives.filter((row) => !row.confirmed)),
   };
 }
 

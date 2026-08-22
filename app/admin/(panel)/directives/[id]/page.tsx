@@ -67,13 +67,15 @@ export default async function DirectiveWorkspacePage({ params, searchParams }: P
     redirect(`/admin/directives?campaign=${campaignId}`);
   }
 
+  const signedDirective = withFileAccessTokensDeep(directive);
+
   if (directive.creationMode === "smart") {
     return (
       <div className="space-y-6">
         <DirectiveSmartOpsRoom
           campaignId={campaignId}
           canManage={canManage}
-          directive={directive}
+          directive={signedDirective}
           currentUserId={session.userId}
           isFullAdmin={fullAdmin}
         />
@@ -121,7 +123,7 @@ export default async function DirectiveWorkspacePage({ params, searchParams }: P
   return (
     <div className="space-y-6">
       <DirectiveOpsPanels
-        directive={directive}
+        directive={signedDirective}
         recipients={recipients}
         blockers={blockers}
         canManage={canManage}
