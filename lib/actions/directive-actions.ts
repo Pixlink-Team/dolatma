@@ -153,23 +153,32 @@ export async function getDirectiveForViewAction(
   }
 
   const canManage = canManageDirectives(access.session, access.permissions);
-  if (canManage) {
-    if (!canManageDirectiveRecord(access.session, directive, access.permissions)) {
-      return { success: false, directive: null, error: "دسترسی ندارید" };
-    }
-  } else if (!access.session.userId) {
-    return { success: false, directive: null, error: "Unauthorized" };
-  } else {
+  const canManageRecord =
+    canManage && canManageDirectiveRecord(access.session, directive, access.permissions);
+
+  let inboxRow: CampaignDirective | undefined;
+  if (!canManageRecord && access.session.userId) {
     const inbox = await pgDirectives.pgListDirectivesForUserInbox(
       campaignId,
       access.session.userId
     );
-    if (!inbox.some((row) => row.id === directiveId)) {
-      return { success: false, directive: null, error: "دسترسی ندارید" };
-    }
+    inboxRow = inbox.find((row) => row.id === directiveId);
   }
 
-  return { success: true, directive: withFileAccessTokensDeep(directive) };
+  if (!canManageRecord && !inboxRow) {
+    return { success: false, directive: null, error: "دسترسی ندارید" };
+  }
+
+  const merged = inboxRow
+    ? {
+        ...directive,
+        confirmed: inboxRow.confirmed,
+        seenAt: inboxRow.seenAt,
+        hasActionPlan: inboxRow.hasActionPlan,
+      }
+    : directive;
+
+  return { success: true, directive: withFileAccessTokensDeep(merged) };
 }
 
 export async function listCampaignDirectiveUsersAction(campaignId: string) {

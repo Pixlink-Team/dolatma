@@ -8,6 +8,7 @@ export function getDirectiveActionAttachments(item: CampaignDirective): Directiv
     .filter((attachment) => {
       const title = (attachment.title ?? "").trim();
       const attachmentUrl = stripFileAccessToken(attachment.fileUrl ?? "");
+      if (!attachmentUrl) return false;
       if (!letterUrl) return title !== "نامه رسمی";
       return attachmentUrl !== letterUrl;
     })

@@ -29,19 +29,25 @@ function formatDirectiveFileSize(bytes: number): string | null {
 
 function resolveDirectiveFileKind(
   url: string,
-  mimeType?: string,
-  fileName?: string
+  mimeType?: string | null,
+  fileName?: string | null
 ): DirectiveFileKind {
-  if (mimeType?.startsWith("image/") || isDirectImageUrl(url)) return "image";
+  const safeUrl = (url ?? "").trim();
+  const safeName = (fileName ?? "").trim();
+  if (mimeType?.startsWith("image/") || isDirectImageUrl(safeUrl)) return "image";
   if (
     mimeType?.startsWith("video/") ||
-    isDirectVideoUrl(url) ||
-    /\.(mp4|webm|mov|m4v)(\?.*)?$/i.test(url) ||
-    Boolean(fileName && /\.(mp4|webm|mov|m4v)$/i.test(fileName))
+    isDirectVideoUrl(safeUrl) ||
+    /\.(mp4|webm|mov|m4v)(\?.*)?$/i.test(safeUrl) ||
+    /\.(mp4|webm|mov|m4v)$/i.test(safeName)
   ) {
     return "video";
   }
-  if (mimeType === "application/pdf" || /\.pdf(\?.*)?$/i.test(url) || /\.pdf$/i.test(fileName ?? "")) {
+  if (
+    mimeType === "application/pdf" ||
+    /\.pdf(\?.*)?$/i.test(safeUrl) ||
+    /\.pdf$/i.test(safeName)
+  ) {
     return "pdf";
   }
   return "document";

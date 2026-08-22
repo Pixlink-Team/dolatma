@@ -3,7 +3,7 @@ import { stat } from "fs/promises";
 import path from "path";
 import { Readable } from "stream";
 import { NextResponse } from "next/server";
-import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
+import { getAuthSession } from "@/lib/auth/get-session";
 import { verifyFileAccessToken } from "@/lib/auth/file-access-token";
 import {
   getOrCreateUploadThumbnail,
@@ -60,8 +60,8 @@ const INLINE_CONTENT_TYPES = new Set([
 ]);
 
 /**
- * Signed URLs are the primary access path (tokens added before serving data).
- * Full admins may open unsigned paths for ops; other sessions alone cannot IDOR.
+ * Signed URLs work for public/unauthenticated views.
+ * Authenticated admin-panel sessions may also load uploads (UUID filenames).
  */
 async function canAccessFile(request: Request, filename: string): Promise<boolean> {
   const { searchParams } = new URL(request.url);
@@ -70,7 +70,7 @@ async function canAccessFile(request: Request, filename: string): Promise<boolea
   }
 
   const session = await getAuthSession();
-  return Boolean(session && isFullAdmin(session));
+  return Boolean(session);
 }
 
 function contentDispositionFor(contentType: string, filename: string): string {
