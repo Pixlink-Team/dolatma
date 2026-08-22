@@ -355,6 +355,18 @@ export function DirectivesAdmin({
     setRejectedCount(initialRejected.length);
   }, [initialRejected]);
 
+  useEffect(() => {
+    setRows(initialDirectives);
+  }, [initialDirectives]);
+
+  useEffect(() => {
+    setInboxRowsState(initialInbox);
+  }, [initialInbox]);
+
+  useEffect(() => {
+    setArchivedRows(initialArchived);
+  }, [initialArchived]);
+
   const audienceType = form.watch("audienceType");
   const audienceMinistryId = form.watch("audienceMinistryId");
   const audienceOrganizationId = form.watch("audienceOrganizationId");

@@ -1,6 +1,8 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import {
+  AlertCircle,
   Download,
   FileImage,
   FileText,
@@ -10,6 +12,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PdfPreview } from "@/components/ui/pdf-preview";
+import { getDirectiveForViewAction } from "@/lib/actions/directive-actions";
 import { getDirectiveActionAttachments } from "@/lib/directive-attachments";
 import { isDirectImageUrl, isDirectVideoUrl } from "@/lib/media-utils";
 import type { CampaignDirective } from "@/lib/types";
@@ -59,8 +62,8 @@ function FileKindIcon({ kind, className }: { kind: DirectiveFileKind; className?
 
 interface DirectiveFileCardProps {
   title: string;
-  fileUrl: string;
-  fileName: string;
+  fileUrl?: string | null;
+  fileName?: string | null;
   mimeType?: string;
   fileSize?: number;
   badgeLabel?: string;
@@ -76,10 +79,15 @@ function DirectiveFileCard({
   badgeLabel,
   className,
 }: DirectiveFileCardProps) {
-  const safeUrl = fileUrl.trim();
-  const kind = resolveDirectiveFileKind(safeUrl, mimeType, fileName);
+  const safeUrl = (fileUrl ?? "").trim();
+  const kind = resolveDirectiveFileKind(safeUrl, mimeType, fileName ?? undefined);
   const displayName = (fileName ?? "").trim() || "فایل";
   const sizeLabel = formatDirectiveFileSize(fileSize ?? 0);
+  const [loadFailed, setLoadFailed] = useState(false);
+
+  useEffect(() => {
+    setLoadFailed(false);
+  }, [safeUrl]);
 
   if (!safeUrl) {
     return (
@@ -109,12 +117,20 @@ function DirectiveFileCard({
       </div>
 
       <div className="relative min-h-[10rem] bg-muted/30 sm:min-h-[11rem]">
-        {kind === "image" ? (
+        {loadFailed ? (
+          <div className="flex min-h-[10rem] flex-col items-center justify-center gap-2 px-4 py-8 text-center sm:min-h-[11rem]">
+            <AlertCircle className="h-10 w-10 text-destructive/80" />
+            <p className="text-sm text-muted-foreground">
+              پیش‌نمایش فایل بارگذاری نشد. صفحه را تازه کنید یا فایل را دانلود کنید.
+            </p>
+          </div>
+        ) : kind === "image" ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={safeUrl}
             alt={title}
             className="h-full min-h-[10rem] w-full object-contain sm:min-h-[11rem]"
+            onError={() => setLoadFailed(true)}
           />
         ) : kind === "video" ? (
           <video
@@ -123,6 +139,7 @@ function DirectiveFileCard({
             playsInline
             preload="metadata"
             className="h-full min-h-[10rem] w-full bg-black object-contain sm:min-h-[11rem]"
+            onError={() => setLoadFailed(true)}
           />
         ) : kind === "pdf" ? (
           <PdfPreview src={safeUrl} title={title} className="min-h-[10rem] sm:min-h-[11rem]" />
@@ -152,7 +169,7 @@ function DirectiveFileCard({
 }
 
 export function DirectiveOfficialLetterSection({ item }: { item: CampaignDirective }) {
-  if (!item.letterFileUrl) {
+  if (!(item.letterFileUrl ?? "").trim()) {
     return (
       <section className="space-y-2">
         <h3 className="flex items-center gap-2 text-sm font-medium">
@@ -236,14 +253,14 @@ export function DirectiveViewMeta({ item }: { item: CampaignDirective }) {
 export function DirectiveViewBody({ item }: { item: CampaignDirective }) {
   return (
     <div className="rounded-xl border bg-muted/15 px-4 py-3">
-      <p className="whitespace-pre-wrap text-sm leading-7">{item.body}</p>
+      <p className="whitespace-pre-wrap text-sm leading-7">{item.body ?? ""}</p>
     </div>
   );
 }
 
 /** Organized directive content for inbox, modal, and detail views. */
 export function DirectiveUserView({
-  item,
+  item: initialItem,
   className,
   showMeta = true,
 }: {
@@ -251,6 +268,26 @@ export function DirectiveUserView({
   className?: string;
   showMeta?: boolean;
 }) {
+  const [item, setItem] = useState(initialItem);
+
+  useEffect(() => {
+    setItem(initialItem);
+  }, [initialItem]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    void getDirectiveForViewAction(initialItem.id, initialItem.campaignId).then((result) => {
+      if (!cancelled && result.success && result.directive) {
+        setItem(result.directive);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [initialItem.id, initialItem.campaignId]);
+
   return (
     <div className={cn("space-y-5", className)}>
       <DirectiveViewBody item={item} />

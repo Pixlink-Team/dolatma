@@ -5,6 +5,7 @@ import { AiActionAssistantPanel } from "@/components/admin/ai-action-assistant-p
 import { DirectiveAutopsyPanel } from "@/components/admin/directive-autopsy-panel";
 import { DirectiveMemoryPanel } from "@/components/admin/directive-memory-panel";
 import { DirectivePlaybooksAdmin } from "@/components/admin/directive-playbooks-admin";
+import { DirectiveUserView } from "@/components/admin/directive-view-content";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -341,6 +342,9 @@ export function DirectiveSmartOpsRoom({
   const missionLabel = directive.missionType
     ? DIRECTIVE_MISSION_TYPE_LABELS[directive.missionType]
     : "نامشخص";
+  const hasDirectiveFiles = Boolean(
+    (directive.letterFileUrl ?? "").trim() || (directive.attachments?.length ?? 0) > 0
+  );
 
   return (
     <div className="space-y-4 text-right" dir="rtl">
@@ -361,6 +365,7 @@ export function DirectiveSmartOpsRoom({
       <Tabs value={tab} onValueChange={setTab} dir="rtl">
         <TabsList className="flex h-auto flex-wrap justify-start gap-1">
           <TabsTrigger value="ops">عملیات</TabsTrigger>
+          {hasDirectiveFiles ? <TabsTrigger value="files">فایل‌ها</TabsTrigger> : null}
           <TabsTrigger value="assistant">دستیار اقدام</TabsTrigger>
           {canAutopsy ? <TabsTrigger value="autopsy">کالبدشکافی</TabsTrigger> : null}
           {canMemory ? <TabsTrigger value="memory">دانش استخراج‌شده</TabsTrigger> : null}
@@ -370,6 +375,12 @@ export function DirectiveSmartOpsRoom({
         <TabsContent value="ops" className="mt-4">
           <AdaptiveOpsContent missionType={directive.missionType} payload={payload} />
         </TabsContent>
+
+        {hasDirectiveFiles ? (
+          <TabsContent value="files" className="mt-4">
+            <DirectiveUserView item={directive} showMeta={false} />
+          </TabsContent>
+        ) : null}
 
         <TabsContent value="assistant" className="mt-4">
           <AiActionAssistantPanel directiveId={directive.id} canManage={canManage} />

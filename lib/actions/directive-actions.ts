@@ -131,6 +131,47 @@ export async function listDirectivesAction(campaignId: string): Promise<{
   };
 }
 
+export async function getDirectiveForViewAction(
+  directiveId: string,
+  campaignId: string
+): Promise<{
+  success: boolean;
+  directive: CampaignDirective | null;
+  error?: string;
+}> {
+  const access = await assertDirectivesAccess(campaignId);
+  if (access.error || !access.session) {
+    return { success: false, directive: null, error: access.error ?? "Unauthorized" };
+  }
+  if (!isPostgresConfigured()) {
+    return { success: false, directive: null, error: "Database required" };
+  }
+
+  const directive = await pgDirectives.pgGetDirectiveById(directiveId);
+  if (!directive || directive.campaignId !== campaignId) {
+    return { success: false, directive: null, error: "یافت نشد" };
+  }
+
+  const canManage = canManageDirectives(access.session, access.permissions);
+  if (canManage) {
+    if (!canManageDirectiveRecord(access.session, directive, access.permissions)) {
+      return { success: false, directive: null, error: "دسترسی ندارید" };
+    }
+  } else if (!access.session.userId) {
+    return { success: false, directive: null, error: "Unauthorized" };
+  } else {
+    const inbox = await pgDirectives.pgListDirectivesForUserInbox(
+      campaignId,
+      access.session.userId
+    );
+    if (!inbox.some((row) => row.id === directiveId)) {
+      return { success: false, directive: null, error: "دسترسی ندارید" };
+    }
+  }
+
+  return { success: true, directive: withFileAccessTokensDeep(directive) };
+}
+
 export async function listCampaignDirectiveUsersAction(campaignId: string) {
   const access = await assertDirectivesAccess(campaignId);
   if (access.error || !access.session) {

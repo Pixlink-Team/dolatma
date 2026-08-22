@@ -70,6 +70,10 @@ export function DashboardDirectivesPanel({
     });
   }, []);
 
+  useEffect(() => {
+    setInboxRows(initialInbox);
+  }, [initialInbox]);
+
   const unreadCount = useMemo(
     () => inboxRows.filter((row) => !row.confirmed).length,
     [inboxRows]

@@ -435,5 +435,5 @@ export async function listMyReplacementAlertsAction(campaignId: string): Promise
     campaignId,
     status: "pending",
   });
-  return { success: true, alerts };
+  return { success: true, alerts: withFileAccessTokensDeep(alerts) };
 }
