@@ -13,6 +13,7 @@ import { AuditTracker } from "@/components/admin/audit-tracker";
 import { AppErrorProvider } from "@/components/admin/app-error-provider";
 import { ChatFloatingWidget } from "@/components/admin/chat-floating-widget";
 import { ChatPresenceBeacon } from "@/components/admin/chat-presence-beacon";
+import { DirectiveAckGate } from "@/components/admin/directive-ack-gate";
 import { ProblemReportButton } from "@/components/admin/problem-report-button";
 import { ReisShell } from "@/components/admin/reis/reis-shell";
 import { ScrollToTopButton } from "@/components/ui/scroll-to-top-button";
@@ -101,6 +102,9 @@ function PanelChrome({
           <ChatPresenceBeacon />
         </Suspense>
         <Suspense fallback={null}>
+          <DirectiveAckGate />
+        </Suspense>
+        <Suspense fallback={null}>
           <ProblemReportButton />
         </Suspense>
         <Suspense fallback={null}>
@@ -140,6 +144,9 @@ function ReisChrome({
       ) : null}
       <Suspense fallback={null}>
         <ChatPresenceBeacon />
+      </Suspense>
+      <Suspense fallback={null}>
+        <DirectiveAckGate />
       </Suspense>
       <Suspense fallback={null}>
         <NavigationPendingOverlay offsetForSidebar={false} />

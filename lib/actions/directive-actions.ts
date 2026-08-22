@@ -604,6 +604,29 @@ export async function confirmDirectiveSeenAction(directiveId: string, campaignId
   return { success: true as const };
 }
 
+export async function listUnconfirmedDirectivesAction(campaignId: string): Promise<{
+  success: boolean;
+  directives: CampaignDirective[];
+  error?: string;
+}> {
+  const access = await assertDirectivesAccess(campaignId);
+  if (access.error || !access.session?.userId) {
+    return { success: false, directives: [], error: access.error ?? "Unauthorized" };
+  }
+  if (!isPostgresConfigured()) {
+    return { success: false, directives: [], error: "Database required" };
+  }
+
+  const directives = await pgDirectives.pgListDirectivesForUserInbox(
+    campaignId,
+    access.session.userId
+  );
+  return {
+    success: true,
+    directives: directives.filter((row) => !row.confirmed),
+  };
+}
+
 export async function markDirectiveSeenAction(directiveId: string, campaignId: string) {
   const access = await assertDirectivesAccess(campaignId);
   if (access.error || !access.session?.userId) {
