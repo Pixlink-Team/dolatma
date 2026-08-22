@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { BestPracticesAdmin } from "@/components/admin/best-practices-admin";
 import { resolveAdminCampaignId } from "@/lib/admin-campaign";
-import { canManageDirectives } from "@/lib/auth/access";
+import { canManageDirectives, canViewBestPractices } from "@/lib/auth/access";
 import { requireContributorAccess } from "@/lib/auth/require-contributor-access";
 import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
 import {
@@ -10,6 +10,7 @@ import {
 } from "@/lib/db/repository-best-practices";
 import { BEST_PRACTICE_SCORE_SUGGEST_THRESHOLD } from "@/lib/command-feature-labels";
 import { pgGetUserPermissionsForCampaign } from "@/lib/db/repository-extended";
+import { isReisRole } from "@/lib/user-roles";
 import { isPostgresConfigured } from "@/lib/utils";
 
 interface PageProps {
@@ -27,10 +28,16 @@ export default async function BestPracticesPage({ searchParams }: PageProps) {
   if (!session) redirect("/admin/login");
 
   let campaignPermissions = null;
-  if (!isFullAdmin(session) && session.role !== "client") {
+  if (
+    !isFullAdmin(session) &&
+    session.role !== "client" &&
+    !isReisRole(session.role)
+  ) {
     if (!session.userId || !isPostgresConfigured()) redirect("/admin");
     campaignPermissions = await pgGetUserPermissionsForCampaign(session.userId, campaignId);
-    if (!campaignPermissions) redirect("/admin");
+    if (!campaignPermissions || !canViewBestPractices(session, campaignPermissions)) {
+      redirect("/admin");
+    }
   }
 
   if (!isPostgresConfigured()) {

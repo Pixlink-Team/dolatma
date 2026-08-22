@@ -13,7 +13,7 @@ import { resolveAdminBillboards } from "@/lib/billboards";
 import type { Billboard, CampaignSettings } from "@/lib/types";
 import { BulkContentImport } from "@/components/admin/bulk-content-import";
 import { OnboardingProgressCard } from "@/components/admin/onboarding-progress-card";
-import { canManageAllContent, canManageDirectives } from "@/lib/auth/access";
+import { canManageAllContent, canManageDirectives, canViewBestPractices } from "@/lib/auth/access";
 import { getSessionHomeDeviceId } from "@/lib/auth/device-access";
 import { getAuthSession, getOwnerFilter, isFullAdmin } from "@/lib/auth/get-session";
 import { getAllUsers } from "@/lib/data-access/admin";
@@ -181,9 +181,13 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
       })
     : [];
 
-  const bestPractices = isPostgresConfigured()
-    ? await pgListBestPractices(campaignId, "approved")
-    : [];
+  const canViewBestPracticesForUser =
+    Boolean(session && canViewBestPractices(session, contributorPermissions));
+
+  const bestPractices =
+    isPostgresConfigured() && canViewBestPracticesForUser
+      ? await pgListBestPractices(campaignId, "approved")
+      : [];
   const bestPracticesCount = bestPractices.length;
   const dashboardData = { ...data, bestPracticesCount };
 
@@ -336,6 +340,7 @@ export default async function AdminDashboardPage({ searchParams }: AdminDashboar
 
       <DashboardBentoGrid
         campaignId={campaignId}
+        showBestPractices={canViewBestPracticesForUser}
         directivesSlot={
           <DashboardDirectivesPanel
             campaignId={campaignId}

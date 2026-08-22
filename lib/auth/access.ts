@@ -136,6 +136,15 @@ export function canManageDirectives(
   );
 }
 
+/** Best-practices library page — admin/client/reis or granted `bestPractices`. */
+export function canViewBestPractices(
+  session: AuthSession,
+  permissions?: ContributorPermissions | null
+): boolean {
+  if (isFullAdmin(session) || isBroadPanelUser(session)) return true;
+  return hasContributorPermission(permissions, "bestPractices");
+}
+
 /** Parent issuers are limited to their subtree; admin/client are not. */
 export function isScopedDirectiveIssuer(session: AuthSession): boolean {
   return isOrgUserRole(session.role) && !canManageDirectivesGlobally(session);

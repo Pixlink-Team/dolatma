@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -27,6 +27,10 @@ const CONTENT_TYPE_LABELS: Record<ScoreableContentType, string> = {
   meeting: "جلسه",
 };
 
+function contentTypeLabel(type: ScoreableContentType): string {
+  return CONTENT_TYPE_LABELS[type] ?? "محتوا";
+}
+
 interface BestPracticesAdminProps {
   campaignId: string;
   canManage: boolean;
@@ -51,6 +55,12 @@ export function BestPracticesAdmin({
   const [pending, setPending] = useState(initialPending);
   const [highScore, setHighScore] = useState(initialHighScore);
   const [isPending, startTransition] = useTransition();
+
+  useEffect(() => {
+    setApproved(initialApproved);
+    setPending(initialPending);
+    setHighScore(initialHighScore);
+  }, [initialApproved, initialPending, initialHighScore]);
 
   const refresh = () => {
     startTransition(async () => {
@@ -87,7 +97,7 @@ export function BestPracticesAdmin({
                   <div>
                     <p className="font-medium">{item.title}</p>
                     <p className="text-xs text-muted-foreground">
-                      {CONTENT_TYPE_LABELS[item.contentType]} · امتیاز{" "}
+                      {contentTypeLabel(item.contentType)} · امتیاز{" "}
                       {formatPersianNumber(item.score)}
                     </p>
                   </div>
@@ -132,7 +142,7 @@ export function BestPracticesAdmin({
                   <div>
                     <p className="font-medium">{item.title}</p>
                     <p className="text-xs text-muted-foreground">
-                      {CONTENT_TYPE_LABELS[item.contentType]}
+                      {contentTypeLabel(item.contentType)}
                       {item.suggestedScore != null
                         ? ` · امتیاز ${formatPersianNumber(item.suggestedScore)}`
                         : ""}
@@ -199,7 +209,7 @@ export function BestPracticesAdmin({
             <div key={item.id} className="rounded-lg border p-3">
               <div className="flex flex-wrap items-center gap-2">
                 <p className="font-medium">{item.title}</p>
-                <Badge variant="secondary">{CONTENT_TYPE_LABELS[item.contentType]}</Badge>
+                <Badge variant="secondary">{contentTypeLabel(item.contentType)}</Badge>
                 {item.suggestedScore != null ? (
                   <Badge variant="outline">
                     امتیاز {formatPersianNumber(item.suggestedScore)}

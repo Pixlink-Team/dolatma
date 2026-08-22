@@ -28,6 +28,8 @@ export type DashboardBentoScores = {
 
 interface DashboardBentoGridProps {
   campaignId: string;
+  /** When false, hides the best-practices card (user lacks section permission). */
+  showBestPractices?: boolean;
   directivesSlot: ReactNode;
   bestPractices: {
     count: number;
@@ -115,6 +117,7 @@ function BentoCardShell({
 
 export function DashboardBentoGrid({
   campaignId,
+  showBestPractices = true,
   directivesSlot,
   bestPractices,
   scores,
@@ -133,18 +136,20 @@ export function DashboardBentoGrid({
       </div>
 
       <div className="min-w-0 xl:col-span-2">
-        <BentoCardShell
-          title="بهترین اقدامات"
-          icon={Award}
-          href={adminHref("/admin/best-practices", campaignId)}
-          badge={
-            <Badge variant="secondary">
-              {formatPersianNumber(bestPractices.count)} مورد
-            </Badge>
-          }
-          emptyText="هنوز اقدام برتری ثبت نشده است"
-          items={bestPractices.items}
-        />
+        {showBestPractices ? (
+          <BentoCardShell
+            title="بهترین اقدامات"
+            icon={Award}
+            href={adminHref("/admin/best-practices", campaignId)}
+            badge={
+              <Badge variant="secondary">
+                {formatPersianNumber(bestPractices.count)} مورد
+              </Badge>
+            }
+            emptyText="هنوز اقدام برتری ثبت نشده است"
+            items={bestPractices.items}
+          />
+        ) : null}
       </div>
 
       <div className="min-w-0">
