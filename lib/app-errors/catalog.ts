@@ -13,11 +13,13 @@ const STALE_PAGE_MESSAGE_PATTERNS: RegExp[] = [
   /failed-to-find-server-action/i,
   /was not found on the server/i,
   /Failed to find Server Action/i,
+  /nextjs\.org\/docs\/messages\/failed-to-find-server-action/i,
   /Minified React error #418/i,
   /Hydration failed/i,
   /ChunkLoadError/i,
   /Loading chunk .+ failed/i,
   /Failed to fetch dynamically imported module/i,
+  /An error occurred in the Server Components render/i,
 ];
 
 const GENERIC: AppErrorGuide = {

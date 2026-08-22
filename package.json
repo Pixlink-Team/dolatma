@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "prebuild": "node scripts/generate-site-updates.mjs",
+    "prebuild": "node scripts/generate-site-updates.mjs && node scripts/generate-app-build-id.mjs",
     "build": "next build",
     "start": "next start -H 0.0.0.0 -p ${PORT:-3030}",
     "lint": "next lint",

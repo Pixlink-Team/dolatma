@@ -12,7 +12,12 @@ import {
 } from "react";
 import { toast } from "sonner";
 import { AppErrorModal } from "@/components/admin/app-error-modal";
-import { resolveAppError, shouldIgnoreClientError } from "@/lib/app-errors/catalog";
+import {
+  isStalePageError,
+  resolveAppError,
+  shouldIgnoreClientError,
+} from "@/lib/app-errors/catalog";
+import { scheduleAutoRefreshStalePage } from "@/lib/app-errors/stale-page-refresh";
 import type { AppErrorCode, ResolvedAppError } from "@/lib/app-errors/types";
 import { redirectIfSessionExpired } from "@/lib/auth/client-reauth";
 
@@ -49,6 +54,13 @@ function extractToastMessage(message: unknown): string {
 function currentPath(): string {
   if (typeof window === "undefined") return "";
   return window.location.pathname + window.location.search;
+}
+
+function tryHandleStalePage(guide: ResolvedAppError): boolean {
+  if (!isStalePageError(guide)) return false;
+  if (!scheduleAutoRefreshStalePage()) return false;
+  toast.message("نسخهٔ جدید سایت در حال بارگذاری است…", { duration: 2000 });
+  return true;
 }
 
 function sendErrorTrack(guide: ResolvedAppError, metadata?: Record<string, unknown>) {
@@ -109,6 +121,11 @@ export function AppErrorProvider({ children }: { children: ReactNode }) {
     }
 
     const guide = resolveAppError(input.message, { code: input.code });
+    if (tryHandleStalePage(guide)) {
+      sendErrorTrack(guide, { ...input.metadata, autoRefresh: true });
+      return guide;
+    }
+
     const fingerprint = `${guide.code}:${guide.message}`;
     const now = Date.now();
     // Avoid stacking identical modals from rapid toast bursts.
@@ -157,6 +174,10 @@ export function AppErrorProvider({ children }: { children: ReactNode }) {
 
       const guide = resolveAppError(message);
       sendErrorTrack(guide, { source: "toast.error" });
+
+      if (tryHandleStalePage(guide)) {
+        return originalError(guide.title, data as never);
+      }
 
       if (guide.showModal) {
         const fingerprint = `${guide.code}:${guide.message}`;

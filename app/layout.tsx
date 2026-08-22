@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
+import { StalePageGuard } from "@/components/admin/stale-page-guard";
 import { ThemedToaster } from "@/components/themed-toaster";
 import { buildCampaignMetadata } from "@/lib/campaign-metadata";
 import { pgGetAllCampaigns } from "@/lib/db/repository";
@@ -104,6 +105,7 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
       <body className={`${vazirmatn.className} min-h-screen bg-background font-sans text-foreground antialiased`}>
+        <StalePageGuard />
         {children}
         <ThemedToaster />
       </body>
