@@ -160,6 +160,14 @@ export async function ensureDirectiveCommandSchema(): Promise<void> {
       ADD COLUMN IF NOT EXISTS ai_understanding_confirmed_at TIMESTAMPTZ
   `;
   await sql`
+    ALTER TABLE campaign_directives
+      ADD COLUMN IF NOT EXISTS archived_at TIMESTAMPTZ
+  `;
+  await sql`
+    CREATE INDEX IF NOT EXISTS idx_campaign_directives_archive
+    ON campaign_directives (campaign_id, archived_at, created_at DESC)
+  `;
+  await sql`
     CREATE INDEX IF NOT EXISTS idx_campaign_directives_mission_type
     ON campaign_directives (mission_type)
   `;
@@ -463,6 +471,7 @@ export async function pgListDirectivesForCampaign(
   campaignId: string,
   options?: { createdByUserId?: string }
 ): Promise<CampaignDirective[]> {
+  await ensureDirectiveCommandSchema();
   const sql = getSql();
   const createdByUserId = options?.createdByUserId?.trim() || null;
   const rows = createdByUserId
@@ -542,6 +551,7 @@ export async function pgListArchivedDirectivesForCampaign(
   campaignId: string,
   options?: { createdByUserId?: string }
 ): Promise<CampaignDirective[]> {
+  await ensureDirectiveCommandSchema();
   const sql = getSql();
   const createdByUserId = options?.createdByUserId?.trim() || null;
   const rows = createdByUserId
@@ -1075,7 +1085,10 @@ export async function pgSaveDirective(input: SaveDirectiveInput): Promise<{ id: 
   return { id };
 }
 
-export async function pgArchiveDirective(id: string): Promise<boolean> {
+export async function pgArchiveDirective(
+  id: string
+): Promise<{ ok: boolean; archivedAt?: string }> {
+  await ensureDirectiveCommandSchema();
   const sql = getSql();
   const now = new Date().toISOString();
   const rows = await sql`
@@ -1083,6 +1096,23 @@ export async function pgArchiveDirective(id: string): Promise<boolean> {
     SET archived_at = COALESCE(archived_at, ${now}),
         updated_at = ${now}
     WHERE id = ${id}
+    RETURNING archived_at
+  `;
+  if (!rows[0]) return { ok: false };
+  const archivedAt = toIsoString(rows[0].archived_at) ?? now;
+  return { ok: true, archivedAt };
+}
+
+export async function pgRestoreDirective(id: string): Promise<boolean> {
+  await ensureDirectiveCommandSchema();
+  const sql = getSql();
+  const now = new Date().toISOString();
+  const rows = await sql`
+    UPDATE campaign_directives
+    SET archived_at = NULL,
+        updated_at = ${now}
+    WHERE id = ${id}
+      AND archived_at IS NOT NULL
     RETURNING id
   `;
   return rows.length > 0;

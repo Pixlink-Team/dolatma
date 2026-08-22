@@ -632,9 +632,41 @@ export async function archiveDirectiveAction(id: string, campaignId: string) {
     return { success: false as const, error: "فقط دستورکارهای خودتان را می‌توانید آرشیو کنید" };
   }
 
-  const ok = await pgDirectives.pgArchiveDirective(id);
-  if (!ok) {
+  const archived = await pgDirectives.pgArchiveDirective(id);
+  if (!archived.ok) {
     return { success: false as const, error: "دستورکار یافت نشد" };
+  }
+
+  revalidateDirectives(campaignId);
+  return { success: true as const, archivedAt: archived.archivedAt };
+}
+
+export async function restoreDirectiveAction(id: string, campaignId: string) {
+  const access = await assertDirectivesAccess(campaignId);
+  if (access.error || !access.session) {
+    return { success: false as const, error: access.error ?? "Unauthorized" };
+  }
+  if (!canManageDirectives(access.session, access.permissions)) {
+    return { success: false as const, error: "دسترسی ندارید" };
+  }
+  if (!isPostgresConfigured()) {
+    return { success: false as const, error: "Database required" };
+  }
+
+  const existing = await pgDirectives.pgGetDirectiveById(id);
+  if (!existing || existing.campaignId !== campaignId) {
+    return { success: false as const, error: "دستورکار یافت نشد" };
+  }
+  if (!existing.archivedAt) {
+    return { success: false as const, error: "این دستورکار در آرشیو نیست" };
+  }
+  if (!canManageDirectiveRecord(access.session, existing, access.permissions)) {
+    return { success: false as const, error: "فقط دستورکارهای خودتان را می‌توانید بازیابی کنید" };
+  }
+
+  const ok = await pgDirectives.pgRestoreDirective(id);
+  if (!ok) {
+    return { success: false as const, error: "بازیابی انجام نشد" };
   }
 
   revalidateDirectives(campaignId);

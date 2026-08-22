@@ -46,6 +46,7 @@ import {
   archiveDirectiveAction,
   confirmDirectiveSeenAction,
   getDirectiveRecipientsAction,
+  restoreDirectiveAction,
   saveDirectiveAction,
 } from "@/lib/actions/directive-actions";
 import { convertDirectiveToSmartAction } from "@/lib/actions/directive-smart-actions";
@@ -404,7 +405,12 @@ export function DirectivesAdmin({
     let base: CampaignDirective[];
     if (!showingInbox) {
       base = manageListTab === "archive" ? archivedRows : rows;
-      if (issuerFilterEnabled && issuerFilter !== "all" && currentUserId) {
+      if (
+        issuerFilterEnabled &&
+        issuerFilter !== "all" &&
+        currentUserId &&
+        manageListTab !== "archive"
+      ) {
         base =
           issuerFilter === "mine"
             ? base.filter((row) => row.createdByUserId === currentUserId)
@@ -1132,7 +1138,7 @@ export function DirectivesAdmin({
                                   toast.error(result.error ?? "آرشیو نشد");
                                   return;
                                 }
-                                const archivedAt = new Date().toISOString();
+                                const archivedAt = result.archivedAt ?? new Date().toISOString();
                                 setRows((prev) => prev.filter((row) => row.id !== item.id));
                                 setInboxRowsState((prev) =>
                                   prev.filter((row) => row.id !== item.id)
@@ -1141,7 +1147,9 @@ export function DirectivesAdmin({
                                   { ...item, archivedAt },
                                   ...prev.filter((row) => row.id !== item.id),
                                 ]);
-                                toast.success("به آرشیو منتقل شد");
+                                setIssuerFilter("all");
+                                setManageListTab("archive");
+                                toast.success("به تب آرشیو منتقل شد");
                               });
                             }}
                           >
@@ -1150,6 +1158,38 @@ export function DirectivesAdmin({
                           </Button>
                         </>
                       )}
+                      {showingArchive ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1 sm:flex-none"
+                          disabled={isPending}
+                          onClick={() => {
+                            if (
+                              !window.confirm(
+                                "این دستورکار از آرشیو خارج شود و دوباره در لیست فعال نمایش داده شود؟"
+                              )
+                            ) {
+                              return;
+                            }
+                            startTransition(async () => {
+                              const result = await restoreDirectiveAction(item.id, campaignId);
+                              if (!result.success) {
+                                toast.error(result.error ?? "بازیابی نشد");
+                                return;
+                              }
+                              const restored = { ...item, archivedAt: null };
+                              setArchivedRows((prev) => prev.filter((row) => row.id !== item.id));
+                              setRows((prev) => [restored, ...prev.filter((row) => row.id !== item.id)]);
+                              setManageListTab("active");
+                              toast.success("از آرشیو بازیابی شد");
+                            });
+                          }}
+                        >
+                          <Archive className="h-4 w-4" />
+                          بازیابی
+                        </Button>
+                      ) : null}
                     </>
                   )}
                 </div>
