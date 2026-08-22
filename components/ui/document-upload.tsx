@@ -1,11 +1,11 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { forceClientReauth, redirectIfSessionExpired } from "@/lib/auth/client-reauth";
+import { isDirectImageUrl } from "@/lib/media-utils";
 import { cn, formatPersianNumber } from "@/lib/utils";
-import { FileText, Loader2, Upload } from "lucide-react";
+import { ExternalLink, FileText, Loader2, Trash2, Upload } from "lucide-react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -30,6 +30,18 @@ function formatFileSize(bytes: number): string {
   return `${formatPersianNumber(Math.round(bytes / (1024 * 1024)))} MB`;
 }
 
+function isUploadedImage(url: string, mimeType?: string, name?: string): boolean {
+  if (mimeType?.startsWith("image/")) return true;
+  if (isDirectImageUrl(url)) return true;
+  return Boolean(name && /\.(jpe?g|png|webp|gif|avif)$/i.test(name));
+}
+
+function isUploadedPdf(url: string, mimeType?: string, name?: string): boolean {
+  if (mimeType === "application/pdf") return true;
+  if (/\.pdf(\?.*)?$/i.test(url)) return true;
+  return Boolean(name && /\.pdf$/i.test(name));
+}
+
 const LETTER_ACCEPT =
   ".pdf,image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.gif,application/pdf";
 
@@ -38,6 +50,8 @@ const DOCUMENT_ACCEPT =
 
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 const MAX_DOCUMENT_BYTES = 25 * 1024 * 1024;
+
+const EMPTY_FILE = { url: "", fileName: "", fileSize: 0, mimeType: "" };
 
 export function DocumentUpload({
   value,
@@ -53,12 +67,16 @@ export function DocumentUpload({
   const [uploading, setUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const isLetter = variant === "letter";
+  const hasFile = Boolean(value.trim());
+  const displayName = fileName?.trim() || "فایل آپلود شده";
+  const isImage = hasFile && isUploadedImage(value, mimeType, fileName);
+  const isPdf = hasFile && isUploadedPdf(value, mimeType, fileName);
 
   const handleUpload = async (file: File) => {
     if (isLetter) {
-      const isPdf = file.type === "application/pdf" || /\.pdf$/i.test(file.name);
-      const isImage = file.type.startsWith("image/");
-      if (!isPdf && !isImage) {
+      const isPdfFile = file.type === "application/pdf" || /\.pdf$/i.test(file.name);
+      const isImageFile = file.type.startsWith("image/");
+      if (!isPdfFile && !isImageFile) {
         toast.error("فقط PDF یا تصویر مجاز است");
         return;
       }
@@ -115,44 +133,151 @@ export function DocumentUpload({
     }
   };
 
+  const clearFile = () => {
+    onChange(EMPTY_FILE);
+  };
+
+  const openFile = () => {
+    window.open(value, "_blank", "noopener,noreferrer");
+  };
+
+  const dropzoneHint = isLetter
+    ? "PDF یا تصویر نامه رسمی — تصویر تا ۱۰، PDF تا ۲۵ مگابایت"
+    : "PDF، Word، Excel، RAR یا فایل متنی — حداکثر ۲۵ مگابایت";
+
+  const emptyDropzone = (
+    <div className="flex flex-col items-center gap-3 px-2 py-6 text-center">
+      <FileText className="h-8 w-8 text-muted-foreground" />
+      <p className="text-sm text-muted-foreground">{dropzoneHint}</p>
+      <span className="inline-flex items-center gap-1.5 rounded-md border bg-background px-3 py-1.5 text-xs font-medium text-foreground shadow-sm">
+        <Upload className="h-3.5 w-3.5" />
+        انتخاب فایل
+      </span>
+      <p className="text-xs text-muted-foreground">فایل را اینجا بکشید و رها کنید</p>
+    </div>
+  );
+
+  const filePreview = (
+    <div className="relative min-h-40 w-full overflow-hidden rounded-[10px] bg-muted sm:min-h-48">
+      {isImage ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={value} alt={displayName} className="h-full min-h-40 w-full object-contain sm:min-h-48" />
+      ) : isPdf ? (
+        <iframe
+          src={value}
+          title={displayName}
+          className="h-64 w-full bg-white sm:h-80"
+        />
+      ) : (
+        <div className="flex min-h-40 flex-col items-center justify-center gap-3 px-4 py-8 text-center sm:min-h-48">
+          <FileText className="h-12 w-12 text-muted-foreground" />
+          <div className="space-y-1">
+            <p className="text-sm font-medium">{displayName}</p>
+            {fileSize ? (
+              <p className="text-xs text-muted-foreground">{formatFileSize(fileSize)}</p>
+            ) : null}
+          </div>
+        </div>
+      )}
+
+      {!disabled ? (
+        <div
+          className="absolute inset-x-0 bottom-0 flex flex-wrap items-center justify-center gap-1 bg-gradient-to-t from-black/70 to-transparent px-2 pb-2 pt-8"
+          onClick={(event) => event.stopPropagation()}
+          onKeyDown={(event) => event.stopPropagation()}
+        >
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            className="h-8"
+            disabled={uploading}
+            onClick={() => inputRef.current?.click()}
+          >
+            {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+            تعویض
+          </Button>
+          {!isImage && !isPdf ? (
+            <Button type="button" variant="secondary" size="sm" className="h-8" onClick={openFile}>
+              <ExternalLink className="h-4 w-4" />
+              باز کردن
+            </Button>
+          ) : null}
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            className="h-8 text-destructive"
+            onClick={clearFile}
+          >
+            <Trash2 className="h-4 w-4" />
+            حذف
+          </Button>
+        </div>
+      ) : null}
+
+      {hasFile && !isImage && !isPdf ? (
+        <div className="border-t bg-background/90 px-3 py-2 text-center text-xs text-muted-foreground">
+          {displayName}
+          {fileSize ? ` — ${formatFileSize(fileSize)}` : ""}
+        </div>
+      ) : null}
+    </div>
+  );
+
   return (
-    <div className="space-y-2">
+    <div className="space-y-2 text-right" dir="rtl">
       {label && <Label>{label}</Label>}
 
       <div
+        role={!hasFile && !disabled ? "button" : undefined}
+        tabIndex={!hasFile && !disabled ? 0 : undefined}
+        onClick={
+          !hasFile && !disabled
+            ? () => {
+                if (uploading) return;
+                inputRef.current?.click();
+              }
+            : undefined
+        }
+        onKeyDown={
+          !hasFile && !disabled
+            ? (event) => {
+                if (event.key !== "Enter" && event.key !== " ") return;
+                event.preventDefault();
+                if (uploading) return;
+                inputRef.current?.click();
+              }
+            : undefined
+        }
         onDragOver={(event) => {
+          if (disabled || hasFile) return;
           event.preventDefault();
           setIsDragging(true);
         }}
         onDragLeave={() => setIsDragging(false)}
         onDrop={(event) => {
+          if (disabled || hasFile) return;
           event.preventDefault();
           setIsDragging(false);
           const file = event.dataTransfer.files?.[0];
           if (file) void handleUpload(file);
         }}
         className={cn(
-          "rounded-xl border-2 border-dashed p-4 transition-colors",
-          isDragging && "border-primary bg-primary/5",
+          "rounded-xl border-2 border-dashed transition-colors",
+          hasFile ? "overflow-hidden border-solid border-border p-0" : "p-0",
+          !hasFile && !disabled && "cursor-pointer",
+          !hasFile && isDragging && "border-primary bg-primary/5",
           disabled && "pointer-events-none opacity-50"
         )}
       >
-        <div className="flex flex-col items-center gap-3 text-center">
-          <FileText className="h-8 w-8 text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">
-            {isLetter
-              ? "PDF یا تصویر نامه رسمی — تصویر تا ۱۰، PDF تا ۲۵ مگابایت"
-              : "PDF، Word، Excel، RAR یا فایل متنی — حداکثر ۲۵ مگابایت"}
-          </p>
-          <Button
-            type="button"
-            variant="outline"
-            disabled={uploading || disabled}
-            onClick={() => inputRef.current?.click()}
-          >
-            {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-            انتخاب فایل
-          </Button>
+        <div className="relative w-full">
+          {hasFile ? filePreview : emptyDropzone}
+          {uploading && (
+            <div className="absolute inset-0 flex items-center justify-center bg-background/60">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          )}
         </div>
       </div>
 
@@ -166,16 +291,6 @@ export function DocumentUpload({
           if (file) void handleUpload(file);
         }}
       />
-
-      {value && (
-        <div className="rounded-lg border bg-muted/30 p-3 text-sm">
-          <p className="font-medium">{fileName ?? "فایل آپلود شده"}</p>
-          <p className="text-xs text-muted-foreground">
-            {mimeType ?? "document"} {fileSize ? `— ${formatFileSize(fileSize)}` : ""}
-          </p>
-          <Input value={value} readOnly dir="ltr" className="mt-2 text-xs" />
-        </div>
-      )}
     </div>
   );
 }
