@@ -1,4 +1,6 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { PRIVATE_NOINDEX_ROBOTS } from "@/lib/site-seo";
 import { getAllCampaigns } from "@/lib/data-access/admin";
 import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
 import { pgGetUserById } from "@/lib/db/repository-extended";
@@ -9,6 +11,10 @@ import { isPostgresConfigured } from "@/lib/utils";
 import { headers } from "next/headers";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  robots: PRIVATE_NOINDEX_ROBOTS,
+};
 
 export default async function AdminPanelLayout({
   children,

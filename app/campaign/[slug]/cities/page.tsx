@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 import { getPublicCampaignData } from "@/lib/data-access/campaign";
 import { CityLeaderboardDashboard } from "@/components/public/city-leaderboard-dashboard";
 import { CampaignPageUnlock } from "@/components/public/campaign-page-unlock";
@@ -6,6 +7,7 @@ import { canScoreContent } from "@/lib/auth/access";
 import { resolveCampaignAuthViewer } from "@/lib/auth/campaign-viewer";
 import { getAuthSession } from "@/lib/auth/get-session";
 import { isCampaignPageUnlocked } from "@/lib/campaign-page-unlock";
+import { buildCampaignMetadata } from "@/lib/campaign-metadata";
 import { pgGetPublishedCampaignBySlug } from "@/lib/db/repository";
 import { isPostgresConfigured } from "@/lib/utils";
 
@@ -13,6 +15,31 @@ export const dynamic = "force-dynamic";
 
 interface CityLeaderboardPageProps {
   params: Promise<{ slug: string }>;
+}
+
+export async function generateMetadata({
+  params,
+}: CityLeaderboardPageProps): Promise<Metadata> {
+  const { slug } = await params;
+
+  if (isPostgresConfigured()) {
+    const settings = await pgGetPublishedCampaignBySlug(slug);
+    if (settings) {
+      return await buildCampaignMetadata(settings, { path: `/campaign/${slug}/cities` });
+    }
+  }
+
+  return await buildCampaignMetadata(
+    {
+      title: slug,
+      tagline: null,
+      description: "",
+      coverImageUrl: null,
+      faviconUrl: null,
+      slug,
+    },
+    { path: `/campaign/${slug}/cities` }
+  );
 }
 
 export default async function CityLeaderboardPage({ params }: CityLeaderboardPageProps) {

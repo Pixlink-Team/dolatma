@@ -10,6 +10,11 @@ import {
 } from "@/lib/campaign-branding";
 import { isLocalUploadedFileUrl } from "@/lib/media-utils";
 import type { CampaignSettings } from "@/lib/types";
+import {
+  buildGoogleVerificationMetadata,
+  DEFAULT_SITE_KEYWORDS,
+  PUBLIC_INDEX_ROBOTS,
+} from "@/lib/site-seo";
 import { withFileAccessToken } from "@/lib/uploads";
 
 export {
@@ -141,6 +146,12 @@ export async function buildCampaignMetadata(
     metadataBase: new URL(baseUrl),
     title,
     description,
+    keywords: [...DEFAULT_SITE_KEYWORDS],
+    robots: PUBLIC_INDEX_ROBOTS,
+    alternates: {
+      canonical: pageUrl,
+    },
+    ...buildGoogleVerificationMetadata(),
     icons: {
       icon: iconEntries,
       apple: usesDefaultWebp
