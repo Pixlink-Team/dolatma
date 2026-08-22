@@ -1,6 +1,210 @@
 {
   "entries": [
     {
+      "hash": "4243015b6074cc82bdc9e68aa2472fad5bd6f295",
+      "committedAt": "2026-08-22T12:44:36+03:30",
+      "title": "ذخیره خودکار تنظیمات بدون نیاز به دکمه ذخیره",
+      "subject": "Add auto-save to admin settings forms"
+    },
+    {
+      "hash": "d4cc2f0e652551e55bf27d9ffeb90de6ad8b1df2",
+      "committedAt": "2026-08-22T12:41:37+03:30",
+      "title": "افزودن sms.ir به تنظیمات پیامک و فعال‌سازی ارسال دستورکار",
+      "subject": "Add sms.ir to SMS provider settings"
+    },
+    {
+      "hash": "8a628f6d6d8497b5b1e670dd0328f708796af8a7",
+      "committedAt": "2026-08-22T12:21:06+03:30",
+      "title": "نمایش پیشنهادهای ویرایش به‌صورت جداگانه در داشبورد ادمین",
+      "subject": "Show edit suggestions as standalone panel on admin dashboard"
+    },
+    {
+      "hash": "07e3ac1d4b60400ba60e28e703d64e53365fcea2",
+      "committedAt": "2026-08-22T12:18:47+03:30",
+      "title": "نمایش پیش‌نمایش فایل آپلود شده به‌جای لینک و افزودن دکمه تعویض",
+      "subject": "Improve document upload preview and replace UX"
+    },
+    {
+      "hash": "14f83afcb33a3e2d620d08cf21d6b41afa18c952",
+      "committedAt": "2026-08-22T12:15:12+03:30",
+      "title": "حذف نمایش خودکار نام کاربری قبلی در صفحه ورود",
+      "subject": "Remove remembered username display on login page"
+    },
+    {
+      "hash": "38e9fa49fec0910eed3d8b24ded198a2835e8c8f",
+      "committedAt": "2026-08-22T12:14:01+03:30",
+      "title": "امکان تنظیم موقعیت فرم ورود (راست، وسط، چپ) از پنل ادمین",
+      "subject": "Add login form horizontal alignment setting"
+    },
+    {
+      "hash": "69a1587b0f5cfd16c1009b8afa48834980871d1c",
+      "committedAt": "2026-08-22T12:12:30+03:30",
+      "title": "افزودن بخش جداگانه آپلود فاویکون با محدودیت اندازه",
+      "subject": "Add dedicated campaign favicon upload card"
+    },
+    {
+      "hash": "d9989299d834284cc5a62867f50a9ad7de53fab1",
+      "committedAt": "2026-08-22T12:12:08+03:30",
+      "title": "فعال‌سازی پشتیبان‌گیری خودکار شبانه و دانلود پشتیبان کامل سامانه با SHA-256",
+      "subject": "Add full system backup with nightly 22:00 cron"
+    },
+    {
+      "hash": "b95a37d6a99fbec514f41e1616a40db3621379f3",
+      "committedAt": "2026-08-22T12:05:39+03:30",
+      "title": "حذف کارت پروفایل من از انتهای داشبورد",
+      "subject": "Remove profile card from dashboard bottom"
+    },
+    {
+      "hash": "bbb60b05dfe6c56ff616e5f47bea4f522eeb78fb",
+      "committedAt": "2026-08-22T12:05:39+03:30",
+      "title": "افزودن گزینه فعال/غیرفعال کردن پیش‌ثبت‌نام در تنظیمات صفحه ورود",
+      "subject": "Add login page toggle for pre-registration"
+    },
+    {
+      "hash": "2373eddb03de32a8ab9fbd97c4dfe03d992fed08",
+      "committedAt": "2026-08-22T12:04:29+03:30",
+      "title": "امکان تغییر پس‌زمینه صفحه ورود از تنظیمات ادمین",
+      "subject": "Add configurable login background with custom image upload"
+    },
+    {
+      "hash": "e2a8d9327bba1bfc49a40e402081dc36ca9c1587",
+      "committedAt": "2026-08-21T21:20:34+03:30",
+      "title": "رفع خطای بیلد دیپلوی",
+      "subject": "Fix missing getSubordinatesOwnerFilter import for build"
+    },
+    {
+      "hash": "35bae2b1e6f0cd35e19909e2f94ca5eb0a70343a",
+      "committedAt": "2026-08-21T21:15:22+03:30",
+      "title": "حذف فیلتر وزارتخانه و سازمان از صفحه کاربران",
+      "subject": "Hide ministry and organization filters on campaign pages"
+    },
+    {
+      "hash": "71e1362be8567835aec4dd928678482eec4a05bd",
+      "committedAt": "2026-08-21T21:10:23+03:30",
+      "title": "انتقال پیشنهاد ویرایش به زیر مأموریت و مخفی‌شدن پس از تکمیل",
+      "subject": "Nest edit suggestions under active missions"
+    },
+    {
+      "hash": "60ad84430f87de7f9eb775e377d6b9afb8b99846",
+      "committedAt": "2026-08-21T21:08:33+03:30",
+      "title": "افزودن شناسنامه دستگاه به بخش تنظیمات سایدبار",
+      "subject": "Add device passport link to sidebar settings"
+    },
+    {
+      "hash": "50fd2e04e14ba14d05e560cf4388093bed7534ff",
+      "committedAt": "2026-08-21T21:06:59+03:30",
+      "title": "محدود کردن تنظیم دسترسی دستگاه‌ها به مدیر و کارفرما",
+      "subject": "Restrict device access ceilings to admin and employer"
+    },
+    {
+      "hash": "fb82cbc29a58194390c18b521831a3945c78be73",
+      "committedAt": "2026-08-21T21:05:27+03:30",
+      "title": "نمایش کامل اطلاعات دستگاه در کارت بالای شناسنامه و قرار دادن کارکنان کنار مسئولان",
+      "subject": "Show full profile data on passport hero card"
+    },
+    {
+      "hash": "b5b7a86f55b839b3a8c12ada1fa84fe7bfdb7994",
+      "committedAt": "2026-08-21T21:04:08+03:30",
+      "title": "محدود کردن مشاهده و تغییر وضعیت دستگاه به ادمین و کارفرما",
+      "subject": "Restrict device status to admin and employer"
+    },
+    {
+      "hash": "3c2de31a4ed8e37bce97bfd02ccf30f16903d882",
+      "committedAt": "2026-08-21T21:03:08+03:30",
+      "title": "بهبود نمایش پنل ادمین روی تبلت، آی‌پد و لپ‌تاپ",
+      "subject": "Improve admin panel responsive layout for tablet and laptop"
+    },
+    {
+      "hash": "33d07e44a2caff037f3f9499961f4ffb79b02aec",
+      "committedAt": "2026-08-21T20:56:29+03:30",
+      "title": "افزودن گزارش زنده و مشاهده عملکرد زیردستان با دسترسی جداگانه",
+      "subject": "Add subordinates live report and performance pages"
+    },
+    {
+      "hash": "c8fc4b7cb1fdc2883e7e361305ec637146c9901b",
+      "committedAt": "2026-08-21T20:54:49+03:30",
+      "title": "امکان انتخاب فقط یک رسانه در ارسال پیام انبوه",
+      "subject": "Limit bulk send to a single media channel"
+    },
+    {
+      "hash": "d4242136b5baa20da410e96a3413ef22459f141a",
+      "committedAt": "2026-08-21T20:53:42+03:30",
+      "title": "نمایش خطا روی فیلدهای خالی به‌جای پیام toast هنگام ذخیره",
+      "subject": "Replace required-field toasts with red highlight and scroll-on-save."
+    },
+    {
+      "hash": "8db195d47aa11a27844f1ec6ab6e069c4ef54024",
+      "committedAt": "2026-08-21T20:52:14+03:30",
+      "title": "اصلاح اندازه کارت‌های آپلود امروز و حالت خالی بخش‌ها",
+      "subject": "Fix cramped today-upload content cards"
+    },
+    {
+      "hash": "5d18bce943cecd94a5a0df250e2114a2b73595c9",
+      "committedAt": "2026-08-21T20:46:10+03:30",
+      "title": "محدود کردن نمایش محتوا به محتوای خود کاربر در پنل",
+      "subject": "Limit org users to own content in list scope"
+    },
+    {
+      "hash": "6f2fd994b120678e4bdbfb2efca7ff694a6fa1f8",
+      "committedAt": "2026-08-21T20:41:54+03:30",
+      "title": "ساده‌سازی فرم تبلیغات محیطی؛ حذف آدرس و دوره نمایش",
+      "subject": "Simplify billboard form fields and media section"
+    },
+    {
+      "hash": "891a38d3963cc16c8632b0b8894348839e39edfe",
+      "committedAt": "2026-08-21T20:38:59+03:30",
+      "title": "نمایش تولیدات آماده فقط از دارایی‌های دستورکار",
+      "subject": "Limit ready productions to directive assets only"
+    },
+    {
+      "hash": "3b968424451debddf70f044736b680896d73ceb1",
+      "committedAt": "2026-08-20T18:50:28+03:30",
+      "title": "اجباری شدن موضوع در فرم‌های سریع و ویرایش گروهی",
+      "subject": "Require topic on form dialogs and bulk topic edits"
+    },
+    {
+      "hash": "73457121f2331d590689a6015d667be0a2008893",
+      "committedAt": "2026-08-20T18:48:55+03:30",
+      "title": "اجباری شدن موضوع در بقیه فرم‌های محتوا",
+      "subject": "Require plan labels across remaining content forms"
+    },
+    {
+      "hash": "bf57de0ef193451f38b0eb693a125640e2fa74bd",
+      "committedAt": "2026-08-20T18:48:41+03:30",
+      "title": "اجباری شدن موضوع در ثبت راش",
+      "subject": "Require plan label on raw media save"
+    },
+    {
+      "hash": "7e493c0ba3c06d052c8c0c6f8084f323b2b1d836",
+      "committedAt": "2026-08-20T18:48:27+03:30",
+      "title": "اجباری شدن انتخاب موضوع هنگام ثبت محتوا",
+      "subject": "Require plan labels on content forms"
+    },
+    {
+      "hash": "3f0e68317b8773391d662c0ad09774a89a4a6ceb",
+      "committedAt": "2026-08-20T18:48:03+03:30",
+      "title": "رفع مشکل ذخیره نشدن و پریدن فرم هنگام آپلود محتوا",
+      "subject": "Fix content create save for contributors"
+    },
+    {
+      "hash": "274ad4b81308a8610113a42b50b3126a013d505e",
+      "committedAt": "2026-08-20T18:43:23+03:30",
+      "title": "اجباری شدن عنوان کانال‌های اجتماعی و دوره‌های نمایش بیلبورد",
+      "subject": "Require titles for social channels and billboard periods"
+    },
+    {
+      "hash": "36014c1ec07ecd71811a22e39d7f9aacfc23c64a",
+      "committedAt": "2026-08-20T18:29:45+03:30",
+      "title": "بهبود انتشار تولیدات آماده و فرم‌های پنل ادمین",
+      "subject": "Improve ready productions publish flow and admin forms"
+    },
+    {
+      "hash": "5652670bf3df8a6e43b7078d853788badec0d727",
+      "committedAt": "2026-08-20T18:29:41+03:30",
+      "title": "رفع نمایش لوگوی سازمان در شناسنامه دستگاه",
+      "subject": "Fix device logo display with file access tokens"
+    },
+    {
       "hash": "20e91f0181feb73ceb8173d7bdb4f2916bcdd634",
       "committedAt": "2026-08-20T18:25:32+03:30",
       "title": "حذف فیلد یادداشت از فرم‌های ثبت محتوا",

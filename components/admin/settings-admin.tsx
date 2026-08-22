@@ -14,6 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MediaUpload } from "@/components/ui/media-upload";
 import { PersianDateField } from "@/components/ui/persian-date-input";
+import { getActionErrorMessage, isActionFailure } from "@/lib/action-result";
 import { updateSettingsAction } from "@/lib/actions/admin-actions";
 import { saveCampaignPagePasswordAction } from "@/lib/actions/extended-actions";
 import { CampaignTools } from "@/components/admin/campaign-tools";
@@ -382,8 +383,8 @@ export function SettingsAdmin({
             contentTopics,
             contentPlans: contentPlansFromTopics(contentTopics),
           });
-          if (result && "success" in result && !result.success) {
-            toast.error("error" in result && result.error ? result.error : "ذخیره تنظیمات ناموفق بود");
+          if (isActionFailure(result)) {
+            toast.error(getActionErrorMessage(result, "ذخیره تنظیمات ناموفق بود"));
             resolve(false);
             return;
           }

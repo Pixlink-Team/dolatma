@@ -5,7 +5,8 @@ import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MediaUpload } from "@/components/ui/media-upload";
 import { updateSettingsAction } from "@/lib/actions/admin-actions";
-import { DEFAULT_FAVICON_URL } from "@/lib/campaign-metadata";
+import { getActionErrorMessage, isActionFailure } from "@/lib/action-result";
+import { DEFAULT_FAVICON_URL } from "@/lib/campaign-branding";
 
 const FAVICON_MAX_BYTES = 512 * 1024;
 const FAVICON_OPTIMIZE = {
@@ -35,10 +36,8 @@ export function CampaignFaviconCard({
         title: campaignTitle,
         faviconUrl: url.trim() || null,
       });
-      if (result && "success" in result && !result.success) {
-        toast.error(
-          "error" in result && result.error ? result.error : "ذخیره فاویکون ناموفق بود"
-        );
+      if (isActionFailure(result)) {
+        toast.error(getActionErrorMessage(result, "ذخیره فاویکون ناموفق بود"));
         return;
       }
       toast.success("فاویکون ذخیره شد");
