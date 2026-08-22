@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
-import { Check, ClipboardCheck, Download, Eye, Sparkles } from "lucide-react";
+import { Check, ClipboardCheck, Eye, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,7 @@ import type { DirectiveAiSuggestion } from "@/lib/db/repository-directive-smart"
 import type { CampaignDirective } from "@/lib/types";
 import { adminHref, cn, formatPersianDate, formatPersianDateTime, formatPersianNumber } from "@/lib/utils";
 import { DirectiveCtaButton } from "@/components/admin/directive-cta-button";
+import { DirectiveUserView } from "@/components/admin/directive-view-content";
 
 interface DashboardDirectivesPanelProps {
   campaignId: string;
@@ -28,41 +29,6 @@ interface DashboardDirectivesPanelProps {
 type InboxTab = "new" | "seen";
 
 const PREVIEW_LIMIT = 5;
-
-function OfficialLetterPreview({ item }: { item: CampaignDirective }) {
-  if (!item.letterFileUrl) {
-    return <p className="text-sm text-muted-foreground">نامه رسمی آپلود نشده</p>;
-  }
-
-  const isImage = Boolean(item.letterMimeType?.startsWith("image/"));
-
-  return (
-    <div className="space-y-2 rounded-lg border px-3 py-3">
-      {isImage && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={item.letterFileUrl}
-          alt={item.letterFileName || "نامه رسمی"}
-          className="max-h-56 w-full rounded-md object-contain bg-muted/30"
-        />
-      )}
-      <a
-        href={item.letterFileUrl}
-        target="_blank"
-        rel="noreferrer"
-        className="inline-flex items-start gap-2 text-sm text-primary hover:underline"
-      >
-        <Download className="mt-0.5 h-4 w-4 shrink-0" />
-        <span className="min-w-0">
-          <span className="block font-medium text-foreground">
-            {item.letterFileName || "نامه رسمی"}
-          </span>
-          <span className="block text-xs text-muted-foreground">دانلود / مشاهده نامه رسمی</span>
-        </span>
-      </a>
-    </div>
-  );
-}
 
 function DirectiveDateRange({ item }: { item: CampaignDirective }) {
   const start = item.startDate;
@@ -420,18 +386,7 @@ export function DashboardDirectivesPanel({
                 </DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
-                <p className="whitespace-pre-wrap text-sm leading-7">{detailItem.body}</p>
-                <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-                  <span>
-                    انتشار:{" "}
-                    {formatPersianDateTime(detailItem.publishedAt ?? detailItem.createdAt)}
-                  </span>
-                  <DirectiveDateRange item={detailItem} />
-                </div>
-                <div className="space-y-2">
-                  <p className="text-sm font-medium">نامه رسمی</p>
-                  <OfficialLetterPreview item={detailItem} />
-                </div>
+                <DirectiveUserView item={detailItem} />
                 <DirectiveCtaButton item={detailItem} />
                 {!detailItem.confirmed && (
                   <Button

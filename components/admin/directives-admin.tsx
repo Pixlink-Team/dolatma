@@ -9,7 +9,6 @@ import {
   Check,
   ClipboardCheck,
   ClipboardList,
-  Download,
   Eye,
   LayoutDashboard,
   Plus,
@@ -20,6 +19,7 @@ import { toast } from "sonner";
 import Link from "next/link";
 import { DirectiveActionPlanDialog } from "@/components/admin/directive-action-plan-dialog";
 import { DirectiveCtaButton } from "@/components/admin/directive-cta-button";
+import { DirectiveUserView } from "@/components/admin/directive-view-content";
 import { DirectiveGlobalMemoryAdmin } from "@/components/admin/directive-global-memory-admin";
 import { DirectivePlaybooksAdmin } from "@/components/admin/directive-playbooks-admin";
 import { DirectiveSmartWizard } from "@/components/admin/directive-smart-wizard";
@@ -65,6 +65,7 @@ import {
   type DirectiveCtaKind,
   type DirectiveInternalTarget,
 } from "@/lib/directive-cta";
+import { getDirectiveActionAttachments } from "@/lib/directive-attachments";
 import { DIRECTIVE_URGENCY_OPTIONS } from "@/lib/directive-workspace";
 import {
   DIRECTIVE_MISSION_TYPE_LABELS,
@@ -152,23 +153,17 @@ function createAttachmentDraft(partial?: Partial<AttachmentDraft>): AttachmentDr
 
 /** Skip legacy rows that only mirrored the official letter into attachments. */
 function toAttachmentDrafts(item: CampaignDirective): AttachmentDraft[] {
-  const letterUrl = item.letterFileUrl ?? "";
-  return (item.attachments ?? [])
-    .filter((attachment) => {
-      if (!letterUrl) return attachment.title.trim() !== "نامه رسمی";
-      return attachment.fileUrl !== letterUrl;
+  return getDirectiveActionAttachments(item).map((attachment) =>
+    createAttachmentDraft({
+      key: attachment.id,
+      id: attachment.id,
+      title: attachment.title,
+      url: attachment.fileUrl,
+      fileName: attachment.fileName,
+      fileSize: attachment.fileSize,
+      mimeType: attachment.mimeType,
     })
-    .map((attachment) =>
-      createAttachmentDraft({
-        key: attachment.id,
-        id: attachment.id,
-        title: attachment.title,
-        url: attachment.fileUrl,
-        fileName: attachment.fileName,
-        fileSize: attachment.fileSize,
-        mimeType: attachment.mimeType,
-      })
-    );
+  );
 }
 
 interface CampaignUserOption {
@@ -250,96 +245,6 @@ const smsStatusLabels: Record<DirectiveRecipient["smsStatus"], string> = {
   no_phone: "بدون شماره",
   skipped: "رد شد",
 };
-
-function OfficialLetterPreview({ item }: { item: CampaignDirective }) {
-  if (!item.letterFileUrl) {
-    return <p className="text-sm text-muted-foreground">نامه رسمی آپلود نشده</p>;
-  }
-
-  const isImage = Boolean(item.letterMimeType?.startsWith("image/"));
-
-  return (
-    <div className="space-y-2 rounded-lg border px-3 py-3">
-      {isImage && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={item.letterFileUrl}
-          alt={item.letterFileName || "نامه رسمی"}
-          className="max-h-64 w-full rounded-md object-contain bg-muted/30"
-        />
-      )}
-      <a
-        href={item.letterFileUrl}
-        target="_blank"
-        rel="noreferrer"
-        className="inline-flex items-start gap-2 text-sm text-primary hover:underline"
-      >
-        <Download className="mt-0.5 h-4 w-4 shrink-0" />
-        <span className="min-w-0">
-          <span className="block font-medium text-foreground">
-            {item.letterFileName || "نامه رسمی"}
-          </span>
-          <span className="block text-xs text-muted-foreground">دانلود / مشاهده نامه رسمی</span>
-        </span>
-      </a>
-    </div>
-  );
-}
-
-function ActionFilesPreview({ item }: { item: CampaignDirective }) {
-  const files = toAttachmentDrafts(item);
-  if (files.length === 0) {
-    return <p className="text-sm text-muted-foreground">فایل اقدامی اضافه نشده</p>;
-  }
-
-  return (
-    <div className="space-y-2">
-      {files.map((file) => {
-        const isImage = Boolean(file.mimeType?.startsWith("image/"));
-        const isVideo = Boolean(
-          file.mimeType?.startsWith("video/") ||
-            /\.(mp4|webm|mov|m4v)(\?.*)?$/i.test(file.url)
-        );
-        return (
-          <div key={file.key} className="space-y-2 rounded-lg border px-3 py-3">
-            <p className="text-sm font-medium">{file.title || file.fileName}</p>
-            {isImage && file.url && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={file.url}
-                alt={file.title || file.fileName}
-                className="max-h-48 w-full rounded-md object-contain bg-muted/30"
-              />
-            )}
-            {isVideo && file.url && (
-              <video
-                src={file.url}
-                controls
-                playsInline
-                preload="metadata"
-                className="max-h-48 w-full rounded-md bg-black object-contain"
-              />
-            )}
-            <a
-              href={file.url}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-start gap-2 text-sm text-primary hover:underline"
-            >
-              <Download className="mt-0.5 h-4 w-4 shrink-0" />
-              <span className="min-w-0">
-                <span className="block font-medium text-foreground">
-                  {file.fileName || "دانلود فایل"}
-                </span>
-                <span className="block text-xs text-muted-foreground">دانلود / مشاهده</span>
-              </span>
-            </a>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
 
 function DirectiveDateRange({ item }: { item: CampaignDirective }) {
   const start = item.startDate;
@@ -2013,25 +1918,7 @@ export function DirectivesAdmin({
                 </DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
-                <p className="whitespace-pre-wrap text-sm leading-7">{detailItem.body}</p>
-                <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-                  <span>
-                    انتشار:{" "}
-                    {formatPersianDateTime(detailItem.publishedAt ?? detailItem.createdAt)}
-                  </span>
-                  <DirectiveDateRange item={detailItem} />
-                  {detailItem.createdByName && (
-                    <span>از طرف: {detailItem.createdByName}</span>
-                  )}
-                </div>
-                <div>
-                  <h3 className="mb-2 text-sm font-medium">نامه رسمی</h3>
-                  <OfficialLetterPreview item={detailItem} />
-                </div>
-                <div>
-                  <h3 className="mb-2 text-sm font-medium">فایل‌های اقدام</h3>
-                  <ActionFilesPreview item={detailItem} />
-                </div>
+                <DirectiveUserView item={detailItem} />
                 <DirectiveCtaButton item={detailItem} />
                 {showingInbox && !detailItem.confirmed && (
                   <Button disabled={isPending} onClick={() => confirmSeen(detailItem)}>

@@ -1,10 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
-import { AlertTriangle, Check, ClipboardCheck, Download, Loader2 } from "lucide-react";
+import { AlertTriangle, Check, ClipboardCheck, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useAdminCampaign } from "@/components/admin/admin-campaign-provider";
 import { DirectiveCtaButton } from "@/components/admin/directive-cta-button";
+import { DirectiveUserView } from "@/components/admin/directive-view-content";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,7 +21,7 @@ import {
   markDirectiveSeenAction,
 } from "@/lib/actions/directive-actions";
 import type { CampaignDirective } from "@/lib/types";
-import { cn, formatPersianDate, formatPersianDateTime, formatPersianNumber } from "@/lib/utils";
+import { cn, formatPersianNumber } from "@/lib/utils";
 
 const POLL_INTERVAL_MS = 30_000;
 
@@ -36,41 +37,6 @@ function sortUnconfirmed(rows: CampaignDirective[]): CampaignDirective[] {
 
     return new Date(b.publishedAt ?? b.createdAt).getTime() - new Date(a.publishedAt ?? a.createdAt).getTime();
   });
-}
-
-function OfficialLetterPreview({ item }: { item: CampaignDirective }) {
-  if (!item.letterFileUrl) {
-    return <p className="text-sm text-muted-foreground">نامه رسمی آپلود نشده</p>;
-  }
-
-  const isImage = Boolean(item.letterMimeType?.startsWith("image/"));
-
-  return (
-    <div className="space-y-2 rounded-lg border px-3 py-3">
-      {isImage && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={item.letterFileUrl}
-          alt={item.letterFileName || "نامه رسمی"}
-          className="max-h-56 w-full rounded-md bg-muted/30 object-contain"
-        />
-      )}
-      <a
-        href={item.letterFileUrl}
-        target="_blank"
-        rel="noreferrer"
-        className="inline-flex items-start gap-2 text-sm text-primary hover:underline"
-      >
-        <Download className="mt-0.5 h-4 w-4 shrink-0" />
-        <span className="min-w-0">
-          <span className="block font-medium text-foreground">
-            {item.letterFileName || "نامه رسمی"}
-          </span>
-          <span className="block text-xs text-muted-foreground">دانلود / مشاهده نامه رسمی</span>
-        </span>
-      </a>
-    </div>
-  );
 }
 
 /**
@@ -190,43 +156,7 @@ export function DirectiveAckGate() {
         </DialogHeader>
 
         <div className="space-y-4">
-          <p className="whitespace-pre-wrap text-sm leading-7">{current.body}</p>
-
-          <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-            <span>
-              انتشار: {formatPersianDateTime(current.publishedAt ?? current.createdAt)}
-            </span>
-            {current.startDate ? <span>شروع: {formatPersianDate(current.startDate)}</span> : null}
-            {current.endDate ?? current.dueDate ? (
-              <span>پایان: {formatPersianDate(current.endDate ?? current.dueDate!)}</span>
-            ) : null}
-          </div>
-
-          {current.attachments.length > 0 ? (
-            <div className="space-y-2">
-              <p className="text-sm font-medium">پیوست‌ها</p>
-              <ul className="space-y-2">
-                {current.attachments.map((attachment) => (
-                  <li key={attachment.id}>
-                    <a
-                      href={attachment.fileUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
-                    >
-                      <Download className="h-4 w-4 shrink-0" />
-                      {attachment.title || attachment.fileName}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-
-          <div className="space-y-2">
-            <p className="text-sm font-medium">نامه رسمی</p>
-            <OfficialLetterPreview item={current} />
-          </div>
+          <DirectiveUserView item={current} />
 
           <DirectiveCtaButton item={current} />
 
