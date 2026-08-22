@@ -1385,42 +1385,42 @@ function CompanySupervisionAdminInner({
                 : `گزارش زنده این شرکت در کمپین «${campaignTitle}» با امکان تایید، رد و تاریخچه کارت`}
             </p>
           </div>
-          {!isSelfView ? (
-            <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2">
+            {!isSelfView ? (
               <Badge variant="secondary">
                 رتبه {entry.rank > 0 ? getProvinceRankBadge(entry.rank) : "—"}
                 {periodLabel ? ` ${periodLabel}` : ""}
               </Badge>
-              <Badge variant="outline">{entry.province}</Badge>
-              <Badge variant="outline">
-                {formatPersianNumber(scopedSummary.total)} محتوا
-                {periodLabel ? ` ${periodLabel}` : ""}
+            ) : null}
+            <Badge variant="outline">{entry.province}</Badge>
+            <Badge variant="outline">
+              {formatPersianNumber(scopedSummary.total)} محتوا
+              {periodLabel ? ` ${periodLabel}` : ""}
+            </Badge>
+            <Badge variant="outline">
+              {formatPersianNumber(scopedSummary.activityScore)} امتیاز فعالیت
+              {periodLabel ? ` ${periodLabel}` : ""}
+            </Badge>
+            <Badge variant="outline">
+              {formatPersianNumber(scopedSummary.ratingScore)} امتیاز محتوا
+              {periodLabel ? ` ${periodLabel}` : ""}
+            </Badge>
+            {(entry.pendingScore ?? 0) > 0 && (
+              <Badge variant="outline" className="text-amber-700 dark:text-amber-400">
+                {formatPersianNumber(entry.pendingScore)} در انتظار
               </Badge>
-              <Badge variant="outline">
-                {formatPersianNumber(scopedSummary.activityScore)} امتیاز فعالیت
-                {periodLabel ? ` ${periodLabel}` : ""}
+            )}
+            {entry.todayUploads > 0 && (
+              <Badge className="bg-success/15 text-success hover:bg-success/20">
+                +{formatPersianNumber(entry.todayUploads)} امروز
               </Badge>
-              <Badge variant="outline">
-                {formatPersianNumber(scopedSummary.ratingScore)} امتیاز محتوا
-                {periodLabel ? ` ${periodLabel}` : ""}
+            )}
+            {returnedItems.length > 0 && (
+              <Badge variant="destructive">
+                {formatPersianNumber(returnedItems.length)} برگشتی
               </Badge>
-              {(entry.pendingScore ?? 0) > 0 && (
-                <Badge variant="outline" className="text-amber-700 dark:text-amber-400">
-                  {formatPersianNumber(entry.pendingScore)} در انتظار
-                </Badge>
-              )}
-              {entry.todayUploads > 0 && (
-                <Badge className="bg-success/15 text-success hover:bg-success/20">
-                  +{formatPersianNumber(entry.todayUploads)} امروز
-                </Badge>
-              )}
-              {returnedItems.length > 0 && (
-                <Badge variant="destructive">
-                  {formatPersianNumber(returnedItems.length)} برگشتی
-                </Badge>
-              )}
-            </div>
-          ) : null}
+            )}
+          </div>
         </div>
         <Button type="button" onClick={handleExport} className="w-full shrink-0 gap-2 sm:w-auto">
           <Download className="h-4 w-4" />
@@ -1428,13 +1428,6 @@ function CompanySupervisionAdminInner({
         </Button>
       </div>
 
-      {isSelfView ? (
-        <div className="grid gap-4 xl:grid-cols-2">
-          <CompanyPresenceTimeline activity={dayActivity} loading={dayActivityLoading} />
-          <CompanyContentUploadTimeline items={items} onItemClick={setViewingItem} />
-        </div>
-      ) : (
-        <>
       <Tabs
         value={activeTab}
         onValueChange={(value) => {
@@ -1755,8 +1748,6 @@ function CompanySupervisionAdminInner({
           </div>
         </DialogContent>
       </Dialog>
-        </>
-      )}
 
       <SupervisionItemDialog
         item={viewingItem}
