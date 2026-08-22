@@ -1,3 +1,4 @@
+import { normalizeDevicePhones } from "@/lib/device-passport-normalize";
 import type { DevicePassport } from "@/lib/types";
 
 export interface PassportCompletionItem {
@@ -18,10 +19,13 @@ export interface PassportCompletion {
 /** Checklist for identity fields on the device passport page (not campaign/directive stats). */
 export function computePassportCompletion(passport: DevicePassport): PassportCompletion {
   const { device, staff, capacities, users } = passport;
-  const hasPrimaryOfficial = users.some((user) => user.orgRole === "primary");
+  const safeUsers = users ?? [];
+  const safeCapacities = capacities ?? [];
+  const phones = normalizeDevicePhones(device.phones);
+  const hasPrimaryOfficial = safeUsers.some((user) => user.orgRole === "primary");
   const hasStaff = (staff?.length ?? 0) > 0;
-  const hasCapacity = capacities.some((item) => item.isActive);
-  const hasPhones = device.phones.some((phone) => phone.trim().length > 0);
+  const hasCapacity = safeCapacities.some((item) => item.isActive);
+  const hasPhones = phones.some((phone) => phone.trim().length > 0);
   const hasLocation = Boolean(device.province?.trim() && device.city?.trim());
 
   const items: PassportCompletionItem[] = [

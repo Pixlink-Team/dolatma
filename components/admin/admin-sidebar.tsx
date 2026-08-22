@@ -91,6 +91,17 @@ const MESSAGES_HREF = "/admin/messages";
 const RETURNED_CONTENT_HREF = "/admin/returned-content";
 const HOME_PASSPORT_HREF = "/admin/devices/home";
 
+function resolveAdminNavHref(
+  item: { href: string; homePassportNav?: boolean },
+  campaignId: string | null | undefined,
+  homeDeviceId: string | null
+): string {
+  if (item.homePassportNav && homeDeviceId) {
+    return adminHref(`/admin/devices/${homeDeviceId}`, campaignId);
+  }
+  return adminHref(item.href, campaignId);
+}
+
 const allNavItems: {
   href: string;
   label: string;
@@ -894,7 +905,7 @@ export function AdminSidebar({ showReisReturn = false }: AdminSidebarProps) {
               <div className="space-y-0.5 pr-2">
                 {managementNavItems.map((item) => {
                   const Icon = item.icon;
-                  const href = adminHref(item.href, campaignId);
+                  const href = resolveAdminNavHref(item, campaignId, homeDeviceId);
                   const isActive =
                     pathname === item.href ||
                     (item.href === HOME_PASSPORT_HREF &&

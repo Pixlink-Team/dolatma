@@ -56,6 +56,7 @@ import {
   DEVICE_TYPE_LABELS,
 } from "@/lib/device-labels";
 import { computePassportCompletion } from "@/lib/device-passport-completion";
+import { normalizeDevicePhones } from "@/lib/device-passport-normalize";
 import { DevicePassportCompletionRing } from "@/components/admin/device-passport-completion-ring";
 import { ORG_ROLES, type OrgRole } from "@/lib/org-roles";
 import {
@@ -185,6 +186,11 @@ export function DevicePassportView({
 }: DevicePassportViewProps) {
   const { campaignId } = useAdminCampaign();
   const passport = initialPassport;
+  const device = passport.device;
+  const devicePhones = normalizeDevicePhones(device.phones);
+  const deviceUsers = passport.users ?? [];
+  const deviceCapacities = passport.capacities ?? [];
+  const deviceChildren = passport.children ?? [];
   const [profileOpen, setProfileOpen] = useState(false);
   const [staffOpen, setStaffOpen] = useState(false);
   const [editingStaffId, setEditingStaffId] = useState<string | null>(null);
@@ -193,7 +199,6 @@ export function DevicePassportView({
   const [isPending, startTransition] = useTransition();
 
   const canEditProfile = canManageStaff || canManageAdminSections;
-  const device = passport.device;
   const isRootMinistry = !device.parentId;
   const lockTypeField = !canChangeMinistry && isRootMinistry;
   const profileTypeOptions = canChangeMinistry
@@ -215,7 +220,7 @@ export function DevicePassportView({
       activityScope: device.activityScope,
       mission: device.mission ?? "",
       address: device.address ?? "",
-      phones: extractLocalLandline(device.phones[0] ?? "", initialAreaCode),
+      phones: extractLocalLandline(devicePhones[0] ?? "", initialAreaCode),
       status: device.status,
     },
   });
@@ -263,9 +268,9 @@ export function DevicePassportView({
   const contactUsers = useMemo(
     () =>
       sortContactUsers(
-        passport.users.filter((user) => isUserOnDevice(user, device.id))
+        deviceUsers.filter((user) => isUserOnDevice(user, device.id))
       ),
-    [passport.users, device.id]
+    [deviceUsers, device.id]
   );
   const completion = useMemo(() => computePassportCompletion(passport), [passport]);
   const staffMembers = passport.staff ?? [];
@@ -457,7 +462,7 @@ export function DevicePassportView({
               label="استان / شهر"
               value={[device.province, device.city].filter(Boolean).join(" / ") || "—"}
             />
-            <InfoItem label="تماس" value={device.phones.join("، ") || "—"} />
+            <InfoItem label="تماس" value={devicePhones.join("، ") || "—"} />
             <div className="sm:col-span-2">
               <InfoItem label="آدرس" value={device.address || "—"} />
             </div>
@@ -707,7 +712,7 @@ export function DevicePassportView({
               </div>
             </div>
 
-            {passport.children.length > 0 ? (
+            {deviceChildren.length > 0 ? (
               <>
                 <div
                   className="flex items-center py-1"
@@ -722,7 +727,7 @@ export function DevicePassportView({
                 >
                   <p className="text-xs text-muted-foreground">زیرمجموعه‌ها</p>
                   <ul className="space-y-2">
-                    {passport.children.map((child) => (
+                    {deviceChildren.map((child) => (
                       <li key={child.id}>
                         <div className="rounded-lg border px-3 py-2.5 transition-colors hover:bg-muted/40">
                           <div className="flex flex-wrap items-center justify-between gap-2">
@@ -790,7 +795,7 @@ export function DevicePassportView({
               </Button>
             ) : null}
           </div>
-          {passport.capacities.length === 0 ? (
+          {deviceCapacities.length === 0 ? (
             <div className="rounded-xl border border-dashed bg-muted/30 px-4 py-8 text-center">
               <p className="text-sm font-medium">هنوز دارایی‌ای ثبت نشده است</p>
               <p className="mt-1 text-xs text-muted-foreground">
@@ -799,7 +804,7 @@ export function DevicePassportView({
             </div>
           ) : (
             <div className="grid gap-2 sm:grid-cols-2">
-              {passport.capacities.map((item) => {
+              {deviceCapacities.map((item) => {
                 const details = normalizeCapacityDetails(item.capacityType, item.details);
                 const summary = formatCapacityDetailsSummary(item.capacityType, details, {
                   province: item.province,
