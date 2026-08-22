@@ -93,6 +93,7 @@ type AdminLoginFormProps = {
 export function AdminLoginForm({ settings = DEFAULT_LOGIN_PAGE_SETTINGS }: AdminLoginFormProps) {
   const searchParams = useSearchParams();
   const redirectTo = getSafeRedirectPath(searchParams.get("next"));
+  const preRegistrationEnabled = settings.preRegistrationEnabled !== false;
   const [mode, setMode] = useState<"login" | "preregister">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -119,6 +120,12 @@ export function AdminLoginForm({ settings = DEFAULT_LOGIN_PAGE_SETTINGS }: Admin
     mediaQuery.addEventListener("change", syncMotionPreference);
     return () => mediaQuery.removeEventListener("change", syncMotionPreference);
   }, []);
+
+  useEffect(() => {
+    if (!preRegistrationEnabled && mode === "preregister") {
+      setMode("login");
+    }
+  }, [preRegistrationEnabled, mode]);
 
   useEffect(() => {
     const storedUser = readStoredLoginUser();
@@ -282,34 +289,44 @@ export function AdminLoginForm({ settings = DEFAULT_LOGIN_PAGE_SETTINGS }: Admin
               </div>
             </header>
 
-            <div className="mb-6 grid grid-cols-2 gap-2 rounded-2xl border border-white/20 bg-white/10 p-1.5">
-              <button
-                type="button"
-                onClick={() => setMode("login")}
-                className={[
-                  "rounded-xl px-3 py-2.5 text-sm font-semibold transition",
-                  mode === "login"
-                    ? "bg-white text-zinc-900 shadow-sm"
-                    : "text-white/80 hover:bg-white/10 hover:text-white",
-                ].join(" ")}
-              >
-                ورود
-              </button>
-              <button
-                type="button"
-                onClick={() => setMode("preregister")}
-                className={[
-                  "rounded-xl px-3 py-2.5 text-sm font-semibold transition",
-                  mode === "preregister"
-                    ? "bg-white text-zinc-900 shadow-sm"
-                    : "text-white/80 hover:bg-white/10 hover:text-white",
-                ].join(" ")}
-              >
-                پیش‌ثبت‌نام
-              </button>
+            <div
+              className={
+                preRegistrationEnabled
+                  ? "mb-6 grid grid-cols-2 gap-2 rounded-2xl border border-white/20 bg-white/10 p-1.5"
+                  : "mb-6"
+              }
+            >
+              {preRegistrationEnabled ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setMode("login")}
+                    className={[
+                      "rounded-xl px-3 py-2.5 text-sm font-semibold transition",
+                      mode === "login"
+                        ? "bg-white text-zinc-900 shadow-sm"
+                        : "text-white/80 hover:bg-white/10 hover:text-white",
+                    ].join(" ")}
+                  >
+                    ورود
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMode("preregister")}
+                    className={[
+                      "rounded-xl px-3 py-2.5 text-sm font-semibold transition",
+                      mode === "preregister"
+                        ? "bg-white text-zinc-900 shadow-sm"
+                        : "text-white/80 hover:bg-white/10 hover:text-white",
+                    ].join(" ")}
+                  >
+                    پیش‌ثبت‌نام
+                  </button>
+                </>
+              ) : null}
             </div>
 
-            {mode === "login" ? (
+            {mode === "login" || !preRegistrationEnabled ? (
               <>
                 {rememberedUser ? (
                   <p className="mb-5 animate-in fade-in slide-in-from-top-1 duration-500 rounded-2xl border border-white/20 bg-white/10 px-4 py-3 text-sm font-semibold text-white [text-shadow:0_2px_12px_rgba(0,0,0,0.55)]">

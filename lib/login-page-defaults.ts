@@ -9,6 +9,7 @@ export const DEFAULT_LOGIN_PAGE_SETTINGS: LoginPageSettings = {
   footer: "سامانه مدیریت گزارش زنده راستا",
   backgroundMode: "custom",
   customBackgroundUrl: DEFAULT_LOGIN_CUSTOM_BACKGROUND,
+  preRegistrationEnabled: true,
 };
 
 const MAX_FIELD_LENGTH = 120;
@@ -48,5 +49,6 @@ export function normalizeLoginPageSettings(value: unknown): LoginPageSettings {
     footer: sanitizeField(record.footer, DEFAULT_LOGIN_PAGE_SETTINGS.footer),
     backgroundMode,
     customBackgroundUrl: sanitizeBackgroundUrl(record.customBackgroundUrl),
+    preRegistrationEnabled: record.preRegistrationEnabled !== false,
   };
 }

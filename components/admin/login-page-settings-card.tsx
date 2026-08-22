@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
 import { MediaUpload } from "@/components/ui/media-upload";
 import {
   getAdminLoginPageSettingsAction,
@@ -28,6 +29,7 @@ const schema = z.object({
   footer: z.string().trim().min(1, "الزامی است").max(120),
   backgroundMode: z.enum(["time_of_day", "custom"]),
   customBackgroundUrl: z.string().nullable(),
+  preRegistrationEnabled: z.boolean(),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -59,6 +61,7 @@ export function LoginPageSettingsCard() {
 
   const backgroundMode = form.watch("backgroundMode");
   const customBackgroundUrl = form.watch("customBackgroundUrl");
+  const preRegistrationEnabled = form.watch("preRegistrationEnabled");
 
   useEffect(() => {
     getAdminLoginPageSettingsAction().then((settings) => {
@@ -145,6 +148,25 @@ export function LoginPageSettingsCard() {
                 چهار تصویر صبح، ظهر، عصر و شب بر اساس ساعت محلی کاربر نمایش داده می‌شود.
               </p>
             )}
+          </div>
+
+          <div className="flex items-center justify-between gap-4 rounded-xl border p-4">
+            <div className="space-y-1">
+              <Label htmlFor="login-prereg-enabled" className="text-sm font-semibold">
+                پیش‌ثبت‌نام در صفحه ورود
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                با غیرفعال کردن، تب پیش‌ثبت‌نام از صفحه ورود پنل حذف می‌شود.
+              </p>
+            </div>
+            <Switch
+              id="login-prereg-enabled"
+              checked={preRegistrationEnabled}
+              onCheckedChange={(checked) =>
+                form.setValue("preRegistrationEnabled", checked, { shouldDirty: true })
+              }
+              aria-label="فعال‌سازی پیش‌ثبت‌نام در صفحه ورود"
+            />
           </div>
 
           <div className="space-y-2">

@@ -511,6 +511,8 @@ export interface LoginPageSettings {
   backgroundMode: LoginBackgroundMode;
   /** Public URL when backgroundMode is "custom". */
   customBackgroundUrl: string | null;
+  /** Show the pre-registration tab on the admin login page. */
+  preRegistrationEnabled: boolean;
 }
 
 export interface CampaignSettings {

@@ -40,6 +40,7 @@ export async function saveLoginPageSettingsAction(data: {
   footer?: string;
   backgroundMode?: "time_of_day" | "custom";
   customBackgroundUrl?: string | null;
+  preRegistrationEnabled?: boolean;
 }) {
   const session = await getAuthSession();
   if (!session || !isFullAdmin(session)) {

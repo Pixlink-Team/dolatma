@@ -22,6 +22,7 @@ import {
 } from "@/lib/pre-registration/otp";
 import { maskIranMobile, normalizeIranMobile } from "@/lib/pre-registration/phone";
 import { getCitiesForProvince, isIranProvince } from "@/lib/iran-locations";
+import { pgGetLoginPageSettings } from "@/lib/db/login-page-settings";
 import { isSmsIrOtpConfigured, sendSmsIrOtp } from "@/lib/sms/smsir-otp";
 import { isPostgresConfigured } from "@/lib/utils";
 
@@ -35,12 +36,22 @@ function trimField(value: unknown, max: number): string {
     .slice(0, max);
 }
 
+async function assertPreRegistrationEnabled(): Promise<ActionFail | null> {
+  const settings = await pgGetLoginPageSettings();
+  if (settings.preRegistrationEnabled === false) {
+    return { success: false, error: "پیش‌ثبت‌نام در حال حاضر غیرفعال است" };
+  }
+  return null;
+}
+
 export async function sendPreRegistrationOtpAction(
   phoneRaw: string
 ): Promise<ActionOk<{ maskedPhone: string; resendAfterSeconds: number }> | ActionFail> {
   if (!isPostgresConfigured()) {
     return { success: false, error: "پایگاه داده در دسترس نیست" };
   }
+  const disabled = await assertPreRegistrationEnabled();
+  if (disabled) return disabled;
   if (!isSmsIrOtpConfigured()) {
     return { success: false, error: "سرویس پیامک هنوز روی سرور تنظیم نشده است" };
   }
@@ -99,6 +110,8 @@ export async function verifyPreRegistrationOtpAction(
   if (!isPostgresConfigured()) {
     return { success: false, error: "پایگاه داده در دسترس نیست" };
   }
+  const disabled = await assertPreRegistrationEnabled();
+  if (disabled) return disabled;
 
   const phone = normalizeIranMobile(phoneRaw);
   if (!phone) {
@@ -168,6 +181,8 @@ export async function submitPreRegistrationAction(input: {
   if (!isPostgresConfigured()) {
     return { success: false, error: "پایگاه داده در دسترس نیست" };
   }
+  const disabled = await assertPreRegistrationEnabled();
+  if (disabled) return disabled;
 
   const phone = normalizeIranMobile(input.phone);
   if (!phone) {
