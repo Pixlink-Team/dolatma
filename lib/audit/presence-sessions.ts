@@ -4,14 +4,30 @@ const PRESENCE_GAP_MS = 2.5 * 60 * 1000;
 /** Heartbeat interval — treat the last ping as covering this window. */
 const PRESENCE_TAIL_MS = 60_000;
 
+/** Actions that must not count as "online" / working time (idle tab pings). */
+const PRESENCE_EXCLUDED_ACTIONS = new Set(["presence.heartbeat", "auth.login_failed"]);
+
 export type PresenceSession = {
   startAt: string;
   endAt: string;
   durationSeconds: number;
 };
 
+/** Whether an audit action should contribute to presence / active-in-system time. */
+export function isPresenceActivityAction(action: string): boolean {
+  return !PRESENCE_EXCLUDED_ACTIONS.has(action);
+}
+
+export function extractPresenceTimestamps(
+  events: ReadonlyArray<{ action: string; createdAt: string }>
+): string[] {
+  return events
+    .filter((event) => isPresenceActivityAction(event.action))
+    .map((event) => event.createdAt);
+}
+
 /**
- * Cluster presence/activity timestamps into online sessions.
+ * Cluster meaningful activity timestamps into online sessions.
  * Timestamps closer than PRESENCE_GAP_MS belong to the same session.
  */
 export function buildPresenceSessions(

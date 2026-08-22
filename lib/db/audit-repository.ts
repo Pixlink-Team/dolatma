@@ -480,13 +480,11 @@ export async function pgGetAllUsersPresence(
       GROUP BY e.actor_user_id
     ),
     online AS (
-      SELECT DISTINCT ON (e.actor_user_id)
-        e.actor_user_id
+      SELECT DISTINCT e.actor_user_id
       FROM user_audit_events e
       WHERE e.created_at >= now() - (${minutes} * interval '1 minute')
-        AND e.action <> 'auth.login_failed'
+        AND e.action NOT IN ('auth.login_failed', 'presence.heartbeat')
         AND e.actor_user_id IS NOT NULL
-      ORDER BY e.actor_user_id, e.created_at DESC
     ),
     last_activity AS (
       SELECT DISTINCT ON (e.actor_user_id)

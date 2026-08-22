@@ -76,7 +76,8 @@ function resolveClickTarget(target: EventTarget | null): {
 
 /**
  * Client-side audit tracker for the admin panel.
- * Records page views, clicks (flagging content actions), and presence.
+ * Records page views, clicks (flagging content actions), and idle-tab heartbeats.
+ * Heartbeats are stored for diagnostics but do not count toward presence / active time.
  * UI errors are tracked by AppErrorProvider with richer metadata.
  */
 export function AuditTracker() {

@@ -3,6 +3,7 @@
 import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
 import {
   buildPresenceSessions,
+  extractPresenceTimestamps,
   sumSessionDurationSeconds,
   type PresenceSession,
 } from "@/lib/audit/presence-sessions";
@@ -139,8 +140,7 @@ export async function getUserAuditProfileAction(
     ]);
 
     const events = rawDayEvents.filter((event) => event.action !== "presence.heartbeat");
-    const presenceTimestamps = rawDayEvents.map((event) => event.createdAt);
-    const sessions = buildPresenceSessions(presenceTimestamps, {
+    const sessions = buildPresenceSessions(extractPresenceTimestamps(rawDayEvents), {
       dayEndMs: new Date(bounds.to).getTime(),
     });
     const onlineSeconds = sumSessionDurationSeconds(sessions);

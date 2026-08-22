@@ -407,7 +407,7 @@ export function AuditUserProfileDialog({
             <>
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
                 <MiniStat
-                  label="مدت آنلاین"
+                  label="مدت فعالیت"
                   value={formatPersianDurationFromSeconds(profile.summary.onlineSeconds)}
                   icon={Clock}
                   hint={`${formatPersianNumber(profile.summary.sessionCount)} نشست`}
@@ -444,9 +444,9 @@ export function AuditUserProfileDialog({
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base flex flex-wrap items-center gap-2">
                     <Radio className="h-4 w-4 text-primary" />
-                    خط زمانی حضور در {formatPersianDateShort(selectedDate)}
+                    خط زمانی فعالیت در {formatPersianDateShort(selectedDate)}
                     <Badge variant="outline">
-                      {formatPersianDurationFromSeconds(profile.summary.onlineSeconds)} آنلاین
+                      {formatPersianDurationFromSeconds(profile.summary.onlineSeconds)} فعال
                     </Badge>
                   </CardTitle>
                 </CardHeader>
@@ -459,7 +459,7 @@ export function AuditUserProfileDialog({
 
                   {profile.sessions.length === 0 ? (
                     <p className="text-sm text-muted-foreground text-center py-2">
-                      در این روز حضور آنلاین ثبت‌شده‌ای دیده نشد (ورود یا heartbeat).
+                      در این روز فعالیتی در سامانه ثبت نشده است.
                     </p>
                   ) : (
                     <ul className="space-y-2">
@@ -799,7 +799,7 @@ function DayPresenceBar({
       <div className="flex flex-wrap gap-3 text-[11px] text-muted-foreground">
         <span className="inline-flex items-center gap-1.5">
           <span className="h-2.5 w-4 rounded-sm bg-emerald-500/80" />
-          بازه آنلاین
+          بازه فعالیت
         </span>
         <span className="inline-flex items-center gap-1.5">
           <span className="h-2.5 w-1 bg-emerald-500" />

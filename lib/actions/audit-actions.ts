@@ -4,6 +4,7 @@ import { canScoreContent } from "@/lib/auth/access";
 import { getAuthSession } from "@/lib/auth/get-session";
 import {
   buildPresenceSessions,
+  extractPresenceTimestamps,
   sumSessionDurationSeconds,
   type PresenceSession,
 } from "@/lib/audit/presence-sessions";
@@ -82,10 +83,9 @@ export async function getCompanySupervisionDayActivityAction(
   });
 
   const events = rawDayEvents.filter((event) => event.action !== "presence.heartbeat");
-  const sessions = buildPresenceSessions(
-    rawDayEvents.map((event) => event.createdAt),
-    { dayEndMs: new Date(bounds.to).getTime() }
-  );
+  const sessions = buildPresenceSessions(extractPresenceTimestamps(rawDayEvents), {
+    dayEndMs: new Date(bounds.to).getTime(),
+  });
 
   const loginEvents = events
     .filter((event) => event.action === "auth.login")

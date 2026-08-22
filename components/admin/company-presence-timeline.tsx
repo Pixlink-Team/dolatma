@@ -58,7 +58,7 @@ function PresenceBar({
       <div className="flex flex-wrap gap-3 text-[11px] text-muted-foreground">
         <span className="inline-flex items-center gap-1.5">
           <span className="h-2.5 w-4 rounded-sm bg-emerald-500/70" />
-          بازه آنلاین
+          بازه فعالیت
         </span>
         <span className="inline-flex items-center gap-1.5">
           <span className="h-2.5 w-0.5 bg-emerald-500" />
@@ -81,10 +81,10 @@ export function CompanyPresenceTimeline({
       <CardHeader className="pb-2">
         <CardTitle className="flex flex-wrap items-center gap-2 text-base">
           <Clock className="h-4 w-4 text-primary" />
-          خط زمانی ورود امروز
+          خط زمانی فعالیت در سامانه
           {activity ? (
             <Badge variant="outline">
-              {formatPersianDurationFromSeconds(activity.onlineSeconds)} آنلاین
+              {formatPersianDurationFromSeconds(activity.onlineSeconds)} فعال
             </Badge>
           ) : null}
         </CardTitle>
@@ -92,7 +92,7 @@ export function CompanyPresenceTimeline({
       <CardContent className="space-y-4">
         {loading ? (
           <p className="py-4 text-center text-sm text-muted-foreground">
-            در حال بارگذاری حضور امروز...
+            در حال بارگذاری فعالیت امروز...
           </p>
         ) : !activity ? (
           <p className="py-4 text-center text-sm text-muted-foreground">
@@ -108,7 +108,7 @@ export function CompanyPresenceTimeline({
 
             {activity.sessions.length === 0 ? (
               <p className="py-2 text-center text-sm text-muted-foreground">
-                امروز ورود یا حضور آنلاینی ثبت نشده است.
+                در این روز فعالیتی در سامانه ثبت نشده است.
               </p>
             ) : (
               <ul className="space-y-2">
