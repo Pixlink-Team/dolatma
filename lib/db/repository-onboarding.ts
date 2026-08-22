@@ -60,19 +60,21 @@ async function seedDefaultOnboardingSteps(): Promise<void> {
     `;
   }
 
-  // Keep default subsidiaries copy in sync: completion requires adding a user, not just a device node.
-  const subsidiaries = DEFAULT_ONBOARDING_STEPS.find((step) => step.stepKey === "subsidiaries");
-  if (subsidiaries) {
+  for (const stepKey of ["subsidiaries", "content"] as const) {
+    const step = DEFAULT_ONBOARDING_STEPS.find((item) => item.stepKey === stepKey);
+    if (!step) continue;
     await sql`
       UPDATE onboarding_steps
       SET
-        description = ${subsidiaries.description},
-        href = ${subsidiaries.href},
+        title = ${step.title},
+        description = ${step.description},
+        href = ${step.href},
         updated_at = now()
-      WHERE step_key = 'subsidiaries'
+      WHERE step_key = ${stepKey}
         AND (
-          description IS DISTINCT FROM ${subsidiaries.description}
-          OR href IS DISTINCT FROM ${subsidiaries.href}
+          title IS DISTINCT FROM ${step.title}
+          OR description IS DISTINCT FROM ${step.description}
+          OR href IS DISTINCT FROM ${step.href}
         )
     `;
   }
@@ -253,8 +255,63 @@ export interface DeviceOnboardingFacts {
   childrenCount: number;
   /** Org users whose parent is a user of this device (actual subsidiary users added). */
   subordinateUsersCount: number;
+  /** Subordinate users linked to a child device (not the root ministry/org itself). */
+  subordinateUsersOnSubsidiariesCount: number;
   contentCounts: Record<string, number>;
   directivesIssued: number;
+}
+
+/** Count subordinate org users attached to child devices under homeDeviceId. */
+export async function pgCountSubordinateUsersOnChildDevices(input: {
+  homeDeviceId: string;
+  issuerUserId?: string | null;
+}): Promise<number> {
+  await ensureOnboardingSchema();
+  const sql = getSql();
+  const issuerUserId = input.issuerUserId?.trim() || null;
+
+  const rows = issuerUserId
+    ? await sql`
+        SELECT COUNT(*)::int AS c
+        FROM users child
+        WHERE child.role = 'org_user'
+          AND child.parent_user_id = ${issuerUserId}::uuid
+          AND (
+            (
+              child.organization_id IS NOT NULL
+              AND child.organization_id IN (
+                SELECT id FROM devices WHERE parent_id = ${input.homeDeviceId}::uuid
+              )
+            )
+            OR child.device_id IN (
+              SELECT id FROM devices WHERE parent_id = ${input.homeDeviceId}::uuid
+            )
+          )
+      `
+    : await sql`
+        SELECT COUNT(*)::int AS c
+        FROM users child
+        WHERE child.role = 'org_user'
+          AND (
+            (
+              child.organization_id IS NOT NULL
+              AND child.organization_id IN (
+                SELECT id FROM devices WHERE parent_id = ${input.homeDeviceId}::uuid
+              )
+            )
+            OR child.device_id IN (
+              SELECT id FROM devices WHERE parent_id = ${input.homeDeviceId}::uuid
+            )
+          )
+          AND child.parent_user_id IN (
+            SELECT u.id FROM users u
+            WHERE u.device_id = ${input.homeDeviceId}::uuid
+               OR u.organization_id = ${input.homeDeviceId}::uuid
+               OR (u.ministry_id = ${input.homeDeviceId}::uuid AND u.organization_id IS NULL)
+          )
+      `;
+
+  return Number(rows[0]?.c ?? 0);
 }
 
 const EMPTY_CONTENT_COUNTS: Record<string, number> = {
@@ -387,6 +444,28 @@ export async function pgGetDeviceOnboardingFacts(input: {
                OR (u.ministry_id = d.id AND u.organization_id IS NULL)
           )
       ) AS subordinate_users_count,
+      (
+        SELECT COUNT(*)::int
+        FROM users child
+        WHERE child.role = 'org_user'
+          AND (
+            (
+              child.organization_id IS NOT NULL
+              AND child.organization_id IN (
+                SELECT id FROM devices WHERE parent_id = d.id
+              )
+            )
+            OR child.device_id IN (
+              SELECT id FROM devices WHERE parent_id = d.id
+            )
+          )
+          AND child.parent_user_id IN (
+            SELECT u.id FROM users u
+            WHERE u.device_id = d.id
+               OR u.organization_id = d.id
+               OR (u.ministry_id = d.id AND u.organization_id IS NULL)
+          )
+      ) AS subordinate_users_on_subsidiaries_count,
       EXISTS(
         SELECT 1 FROM users u
         WHERE u.org_role = 'primary'
@@ -463,6 +542,9 @@ export async function pgGetDeviceOnboardingFacts(input: {
     hasCapacity: Boolean(device.has_capacity),
     childrenCount: Number(device.children_count ?? 0),
     subordinateUsersCount: Number(device.subordinate_users_count ?? 0),
+    subordinateUsersOnSubsidiariesCount: Number(
+      device.subordinate_users_on_subsidiaries_count ?? 0
+    ),
     contentCounts,
     directivesIssued,
   };

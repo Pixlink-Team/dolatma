@@ -28,9 +28,9 @@ export const DEFAULT_ONBOARDING_STEPS: DefaultOnboardingStepSeed[] = [
   },
   {
     stepKey: "content",
-    title: "آپلود محتوا",
-    description: "در هر دسته فعال راستا حداقل یک محتوا بارگذاری کنید.",
-    href: "/admin",
+    title: "تولید پوستر",
+    description: "حداقل یک پوستر در بخش تولید بارگذاری کنید.",
+    href: "/admin/posters",
     evaluator: "content",
     sortOrder: 3,
   },
@@ -47,7 +47,7 @@ export const DEFAULT_ONBOARDING_STEPS: DefaultOnboardingStepSeed[] = [
 export const ONBOARDING_EVALUATOR_LABELS: Record<OnboardingEvaluator, string> = {
   passport: "شناسنامه دستگاه",
   subsidiaries: "زیرمجموعه‌ها",
-  content: "آپلود محتوا",
+  content: "تولید پوستر",
   directives: "صدور دستورکار",
   none: "بدون ارزیابی خودکار",
 };

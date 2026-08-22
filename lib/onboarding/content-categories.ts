@@ -2,6 +2,9 @@ import type { CampaignFeatures } from "@/lib/types";
 import type { ContributorPermissions } from "@/lib/contributor-permissions";
 import { hasContributorPermission } from "@/lib/contributor-permissions";
 
+/** Production > poster section — target for the onboarding content step. */
+export const ONBOARDING_CONTENT_STEP_HREF = "/admin/posters";
+
 /** Uploadable content categories checked by the onboarding content step. */
 export interface OnboardingContentCategoryDef {
   key: string;

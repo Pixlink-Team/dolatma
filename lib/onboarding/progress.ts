@@ -2,13 +2,17 @@ import { getUserHomeDeviceId } from "@/lib/auth/device-access";
 import type { CampaignFeatures } from "@/lib/types";
 import type { ContributorPermissions } from "@/lib/contributor-permissions";
 import { hasContributorPermission } from "@/lib/contributor-permissions";
-import { resolveRequiredContentCategories } from "@/lib/onboarding/content-categories";
+import {
+  ONBOARDING_CONTENT_STEP_HREF,
+  resolveRequiredContentCategories,
+} from "@/lib/onboarding/content-categories";
 import type {
   OnboardingProgress,
   OnboardingStep,
   OnboardingStepProgress,
 } from "@/lib/onboarding/types";
 import {
+  pgCountSubordinateUsersOnChildDevices,
   pgGetDeviceOnboardingFacts,
   pgListDevicesWithUsersForOnboarding,
   pgListOnboardingSteps,
@@ -67,7 +71,7 @@ function buildStepHref(input: {
   } else if (input.step.evaluator === "subsidiaries") {
     path = raw || "/admin/users";
   } else if (input.step.evaluator === "content") {
-    path = input.firstMissingContentHref || raw || "/admin";
+    path = input.firstMissingContentHref || raw || ONBOARDING_CONTENT_STEP_HREF;
   } else if (input.step.evaluator === "directives") {
     path = raw || "/admin/directives";
   } else if (!path) {
@@ -91,6 +95,8 @@ function evaluateStep(
     campaignId: string;
     /** When set (org-user dashboard), prefer this over device-level subordinate count. */
     subordinateUsersCount?: number;
+    /** Subordinate users attached to child devices (not the root unit). */
+    subordinateUsersOnSubsidiariesCount?: number;
   }
 ): OnboardingStepProgress {
   const requiredCategories = resolveRequiredContentCategories({
@@ -117,12 +123,12 @@ function evaluateStep(
       break;
     }
     case "subsidiaries": {
-      // Both are required: a child device node AND at least one subordinate user.
-      // Pre-built org tree alone (or a user without a subsidiary) must not complete the step.
+      // Both are required: a child device node AND at least one subordinate user on it.
+      // Pre-built org tree alone (or a user on the root ministry) must not complete the step.
       const userCount =
-        typeof options.subordinateUsersCount === "number"
-          ? options.subordinateUsersCount
-          : facts.subordinateUsersCount;
+        typeof options.subordinateUsersOnSubsidiariesCount === "number"
+          ? options.subordinateUsersOnSubsidiariesCount
+          : facts.subordinateUsersOnSubsidiariesCount;
       const hasSubsidiaryDevice = facts.childrenCount >= 1;
       const hasSubordinateUser = userCount >= 1;
       done = hasSubsidiaryDevice && hasSubordinateUser;
@@ -131,28 +137,24 @@ function evaluateStep(
       } else {
         const gaps: string[] = [];
         if (!hasSubsidiaryDevice) gaps.push("تعریف زیرمجموعه");
-        if (!hasSubordinateUser) gaps.push("افزودن کاربر");
+        if (!hasSubordinateUser) gaps.push("افزودن کاربر برای زیرمجموعه");
         detail = `ناقص: ${gaps.join(" و ")}`;
       }
       break;
     }
     case "content": {
-      if (requiredCategories.length === 0) {
+      const posterCategory = requiredCategories.find((category) => category.key === "posters");
+      if (!posterCategory) {
         done = true;
-        detail = "دسته فعالی برای محتوا تعریف نشده";
+        detail = "بخش پوستر در این راستا فعال نیست";
         break;
       }
-      const missing = requiredCategories.filter(
-        (category) => (facts.contentCounts[category.key] ?? 0) < 1
-      );
-      done = missing.length === 0;
-      const filled = requiredCategories.length - missing.length;
+      const posterCount = facts.contentCounts.posters ?? 0;
+      done = posterCount >= 1;
       detail = done
-        ? `همه ${requiredCategories.length} دسته تکمیل شده`
-        : `${filled} از ${requiredCategories.length} دسته — باقی‌مانده: ${missing
-            .map((item) => item.label)
-            .join("، ")}`;
-      firstMissingContentHref = missing[0]?.href ?? null;
+        ? `${posterCount} پوستر ثبت شده`
+        : "هنوز پوستری در بخش تولید بارگذاری نشده";
+      firstMissingContentHref = ONBOARDING_CONTENT_STEP_HREF;
       break;
     }
     case "directives": {
@@ -195,6 +197,7 @@ function toProgress(
     ignorePermissions?: boolean;
     hasSubordinateUsers?: boolean;
     subordinateUsersCount?: number;
+    subordinateUsersOnSubsidiariesCount?: number;
     campaignId: string;
   }
 ): OnboardingProgress {
@@ -227,7 +230,8 @@ export async function evaluateDeviceOnboarding(input: {
   /** Current user — used to hide directives when they have no subordinates. */
   issuerUserId?: string | null;
 }): Promise<OnboardingProgress | null> {
-  const [steps, facts, subordinateIds] = await Promise.all([
+  const [steps, facts, subordinateIds, subordinateUsersOnSubsidiariesCount] =
+    await Promise.all([
     pgListOnboardingSteps({ activeOnly: true }),
     pgGetDeviceOnboardingFacts({
       deviceId: input.deviceId,
@@ -238,6 +242,10 @@ export async function evaluateDeviceOnboarding(input: {
     input.issuerUserId
       ? pgListSubUserIds(input.issuerUserId)
       : Promise.resolve(null as string[] | null),
+    pgCountSubordinateUsersOnChildDevices({
+      homeDeviceId: input.deviceId,
+      issuerUserId: input.issuerUserId,
+    }),
   ]);
 
   if (!facts) return null;
@@ -255,6 +263,7 @@ export async function evaluateDeviceOnboarding(input: {
     hasSubordinateUsers:
       subordinateIds === null ? undefined : subordinateIds.length > 0,
     subordinateUsersCount,
+    subordinateUsersOnSubsidiariesCount,
     campaignId: input.campaignId,
   });
 }
