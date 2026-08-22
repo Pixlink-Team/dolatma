@@ -261,7 +261,6 @@ export function ActivitiesAdmin({
   };
 
   const handleDelete = (activity: CampaignActivity) => {
-    if (!window.confirm(`حذف «${activity.title}»؟`)) return;
     startTransition(async () => {
       await deleteCampaignActivityAction(activity.id);
       setRows((prev) => prev.filter((row) => row.id !== activity.id));

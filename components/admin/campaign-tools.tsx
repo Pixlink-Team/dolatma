@@ -5,6 +5,16 @@ import { Camera, Download, FileArchive, Loader2, Trash2, Upload } from "lucide-r
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useAdminCampaign } from "@/components/admin/admin-campaign-provider";
 
 interface CampaignToolsProps {
@@ -43,6 +53,7 @@ export function CampaignTools({ isFullAdmin }: CampaignToolsProps) {
   const [isLoadingList, setIsLoadingList] = useState(false);
   const [backups, setBackups] = useState<StoredBackup[]>([]);
   const [deletingFilename, setDeletingFilename] = useState<string | null>(null);
+  const [backupPendingDelete, setBackupPendingDelete] = useState<StoredBackup | null>(null);
   const importRef = useRef<HTMLInputElement>(null);
 
   const refreshBackups = useCallback(async () => {
@@ -114,14 +125,14 @@ export function CampaignTools({ isFullAdmin }: CampaignToolsProps) {
 
   const handleDeleteBackup = (backup: StoredBackup) => {
     if (!campaignId) return;
-    if (
-      !window.confirm(
-        `پشتیبان «${formatBackupDate(backup.createdAt)}» از سرور حذف شود؟ این کار قابل بازگشت نیست.`
-      )
-    ) {
-      return;
-    }
+    setBackupPendingDelete(backup);
+  };
 
+  const confirmDeleteBackup = () => {
+    const backup = backupPendingDelete;
+    if (!campaignId || !backup) return;
+
+    setBackupPendingDelete(null);
     setDeletingFilename(backup.filename);
     startTransition(async () => {
       try {
@@ -178,6 +189,7 @@ export function CampaignTools({ isFullAdmin }: CampaignToolsProps) {
   const totalBytes = backups.reduce((sum, item) => sum + item.sizeBytes, 0);
 
   return (
+    <>
     <Card>
       <CardHeader>
         <CardTitle className="text-base">خروجی و پشتیبان‌گیری</CardTitle>
@@ -310,5 +322,34 @@ export function CampaignTools({ isFullAdmin }: CampaignToolsProps) {
         </div>
       </CardContent>
     </Card>
+
+    <AlertDialog
+      open={backupPendingDelete !== null}
+      onOpenChange={(open) => {
+        if (!open) setBackupPendingDelete(null);
+      }}
+    >
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>حذف پشتیبان؟</AlertDialogTitle>
+          <AlertDialogDescription>
+            {backupPendingDelete
+              ? `پشتیبان «${formatBackupDate(backupPendingDelete.createdAt)}» از سرور حذف شود؟ این کار قابل بازگشت نیست.`
+              : null}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={isPending}>انصراف</AlertDialogCancel>
+          <AlertDialogAction
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            disabled={isPending}
+            onClick={confirmDeleteBackup}
+          >
+            بله، حذف شود
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }

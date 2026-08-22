@@ -584,7 +584,6 @@ export function SocialPostsAdmin({
   };
 
   const handleDelete = (post: SocialMediaPost) => {
-    if (!window.confirm(`حذف «${post.title}»؟`)) return;
     startTransition(async () => {
       await deleteSocialPostAction(post.id);
       setRows((prev) => prev.filter((row) => row.id !== post.id));

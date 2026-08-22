@@ -1,8 +1,19 @@
 "use client";
 
 import type { ComponentPropsWithoutRef, ReactNode } from "react";
+import { useState } from "react";
 import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Dialog,
   DialogContent,
@@ -155,30 +166,60 @@ export function AdminEditorDialogActions({
   onSave,
   extra,
 }: AdminEditorDialogActionsProps) {
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+
   return (
-    <div className="flex w-full items-center gap-2">
-      {extra}
-      <Button
-        type={submit ? "submit" : "button"}
-        onClick={submit ? undefined : onSave}
-        disabled={isPending || saveDisabled}
-        className="min-w-0 flex-1"
-      >
-        {isPending ? pendingLabel : saveLabel}
-      </Button>
-      {onDelete ? (
+    <>
+      <div className="flex w-full items-center gap-2">
+        {extra}
         <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          onClick={onDelete}
-          disabled={isPending || deleteDisabled}
-          aria-label={deleteLabel}
-          title={deleteLabel}
+          type={submit ? "submit" : "button"}
+          onClick={submit ? undefined : onSave}
+          disabled={isPending || saveDisabled}
+          className="min-w-0 flex-1"
         >
-          <Trash2 className="h-4 w-4 text-destructive" />
+          {isPending ? pendingLabel : saveLabel}
         </Button>
+        {onDelete ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={() => setConfirmDeleteOpen(true)}
+            disabled={isPending || deleteDisabled}
+            aria-label={deleteLabel}
+            title={deleteLabel}
+          >
+            <Trash2 className="h-4 w-4 text-destructive" />
+          </Button>
+        ) : null}
+      </div>
+
+      {onDelete ? (
+        <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{deleteLabel}؟</AlertDialogTitle>
+              <AlertDialogDescription>
+                آیا مطمئن هستید؟ این عمل قابل بازگشت نیست.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={isPending}>انصراف</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                disabled={isPending}
+                onClick={() => {
+                  setConfirmDeleteOpen(false);
+                  onDelete();
+                }}
+              >
+                بله، حذف شود
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       ) : null}
-    </div>
+    </>
   );
 }
