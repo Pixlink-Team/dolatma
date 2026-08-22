@@ -1,10 +1,11 @@
 import { revalidatePath } from "next/cache";
 import { authorizeCron } from "@/lib/auth/cron";
 import { runDailyCampaignBackups } from "@/lib/services/campaign-backup";
+import { runDailySystemBackup } from "@/lib/services/system-backup";
 import { isPostgresConfigured } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 300;
+export const maxDuration = 600;
 
 async function handleCron(request: Request) {
   if (!authorizeCron(request)) {
@@ -25,15 +26,20 @@ async function handleCron(request: Request) {
     );
   }
 
-  const summary = await runDailyCampaignBackups();
+  const [systemBackup, campaignSummary] = await Promise.all([
+    runDailySystemBackup(),
+    runDailyCampaignBackups(),
+  ]);
 
   revalidatePath("/admin");
+  revalidatePath("/admin/backups");
 
   return Response.json({
     success: true,
-    createdCount: summary.created.length,
-    failedCount: summary.failed.length,
-    summary,
+    systemBackup,
+    campaignCreatedCount: campaignSummary.created.length,
+    campaignFailedCount: campaignSummary.failed.length,
+    campaignSummary,
   });
 }
 

@@ -29,6 +29,9 @@ services:
       AUTH_SECRET: ${AUTH_SECRET:?Set AUTH_SECRET in .env (min 16 random characters)}
       UPLOAD_DIR: /app/data/uploads
       BACKUP_DIR: /app/data/backups
+      CRON_SECRET: ${CRON_SECRET:-}
+      BACKUP_CRON_ENABLED: ${BACKUP_CRON_ENABLED:-1}
+      BACKUP_CRON_HOUR: ${BACKUP_CRON_HOUR:-22}
     depends_on:
       db:
         condition: service_healthy

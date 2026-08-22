@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getAuthSession, isFullAdmin } from "@/lib/auth/get-session";
 import * as pg from "@/lib/db/repository";
 import { listAllStoredCampaignBackups } from "@/lib/services/campaign-backup";
+import { listStoredSystemBackups } from "@/lib/services/system-backup";
 import { BackupsAdmin } from "@/components/admin/backups-admin";
 import { isPostgresConfigured } from "@/lib/utils";
 
@@ -14,13 +15,19 @@ export default async function BackupsPage() {
 
   if (!isPostgresConfigured()) {
     return (
-      <BackupsAdmin campaigns={[]} initialBackups={[]} databaseReady={false} />
+      <BackupsAdmin
+        campaigns={[]}
+        initialBackups={[]}
+        initialSystemBackups={[]}
+        databaseReady={false}
+      />
     );
   }
 
-  const [campaigns, backups] = await Promise.all([
+  const [campaigns, backups, systemBackups] = await Promise.all([
     pg.pgGetAllCampaigns(),
     listAllStoredCampaignBackups(),
+    listStoredSystemBackups(),
   ]);
 
   const campaignOptions = campaigns.map((campaign) => ({
@@ -30,6 +37,11 @@ export default async function BackupsPage() {
   }));
 
   return (
-    <BackupsAdmin campaigns={campaignOptions} initialBackups={backups} databaseReady />
+    <BackupsAdmin
+      campaigns={campaignOptions}
+      initialBackups={backups}
+      initialSystemBackups={systemBackups}
+      databaseReady
+    />
   );
 }

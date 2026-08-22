@@ -3,11 +3,13 @@
 import { useMemo, useRef, useState, useTransition } from "react";
 import {
   Archive,
+  Copy,
   Download,
   FileArchive,
   HardDrive,
   Loader2,
   RotateCcw,
+  Shield,
   Trash2,
   Upload,
 } from "lucide-react";
@@ -55,29 +57,49 @@ interface StoredBackup {
   source: "manual" | "scheduled" | "unknown";
 }
 
+interface StoredSystemBackup {
+  filename: string;
+  sizeBytes: number;
+  createdAt: string;
+  sha256: string;
+  source: "manual" | "scheduled" | "unknown";
+  databaseSizeBytes: number;
+  uploadsFileCount: number;
+  uploadsTotalBytes: number;
+}
+
 interface BackupsAdminProps {
   campaigns: CampaignOption[];
   initialBackups: StoredBackup[];
+  initialSystemBackups: StoredSystemBackup[];
   databaseReady: boolean;
 }
 
 type PendingAction =
   | { kind: "backup-all" }
+  | { kind: "backup-system" }
   | { kind: "backup-one"; campaignId: string }
+  | { kind: "delete-system"; backup: StoredSystemBackup }
   | { kind: "delete-one"; backup: StoredBackup }
   | { kind: "delete-selected" }
   | { kind: "cleanup-older"; days: number }
   | { kind: "cleanup-keep"; keep: number }
   | { kind: "import"; file: File; campaignId: string | null };
 
-const SOURCE_LABELS: Record<StoredBackup["source"], string> = {
+const SOURCE_LABELS: Record<StoredBackup["source"] | StoredSystemBackup["source"], string> = {
   manual: "دستی",
   scheduled: "خودکار (شبانه)",
   unknown: "نامشخص",
 };
 
-export function BackupsAdmin({ campaigns, initialBackups, databaseReady }: BackupsAdminProps) {
+export function BackupsAdmin({
+  campaigns,
+  initialBackups,
+  initialSystemBackups,
+  databaseReady,
+}: BackupsAdminProps) {
   const [backups, setBackups] = useState<StoredBackup[]>(initialBackups);
+  const [systemBackups, setSystemBackups] = useState<StoredSystemBackup[]>(initialSystemBackups);
   const [isLoading, setIsLoading] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [campaignFilter, setCampaignFilter] = useState(ALL_CAMPAIGNS);
@@ -132,18 +154,52 @@ export function BackupsAdmin({ campaigns, initialBackups, databaseReady }: Backu
   const refresh = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch("/api/campaign/backups");
-      const result = (await response.json()) as { success?: boolean; backups?: StoredBackup[]; error?: string };
-      if (!response.ok || !result.success) {
-        toast.error(result.error ?? "خطا در بارگذاری فهرست پشتیبان‌ها");
+      const [campaignResponse, systemResponse] = await Promise.all([
+        fetch("/api/campaign/backups"),
+        fetch("/api/system/backup"),
+      ]);
+      const campaignResult = (await campaignResponse.json()) as {
+        success?: boolean;
+        backups?: StoredBackup[];
+        error?: string;
+      };
+      const systemResult = (await systemResponse.json()) as {
+        success?: boolean;
+        backups?: StoredSystemBackup[];
+        error?: string;
+      };
+      if (!campaignResponse.ok || !campaignResult.success) {
+        toast.error(campaignResult.error ?? "خطا در بارگذاری فهرست پشتیبان‌ها");
         return;
       }
-      setBackups(result.backups ?? []);
+      if (!systemResponse.ok || !systemResult.success) {
+        toast.error(systemResult.error ?? "خطا در بارگذاری پشتیبان کامل سامانه");
+        return;
+      }
+      setBackups(campaignResult.backups ?? []);
+      setSystemBackups(systemResult.backups ?? []);
       setSelected(new Set());
     } catch {
       toast.error("خطا در بارگذاری فهرست پشتیبان‌ها");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const downloadSystemBackup = (backup: StoredSystemBackup) => {
+    const params = new URLSearchParams({ filename: backup.filename });
+    const link = document.createElement("a");
+    link.href = `/api/system/backup?${params.toString()}`;
+    link.download = backup.filename;
+    link.click();
+  };
+
+  const copyHash = async (hash: string) => {
+    try {
+      await navigator.clipboard.writeText(hash);
+      toast.success("SHA-256 کپی شد");
+    } catch {
+      toast.error("کپی ناموفق بود");
     }
   };
 
@@ -176,6 +232,38 @@ export function BackupsAdmin({ campaigns, initialBackups, databaseReady }: Backu
                 ? ` — ${formatPersianNumber(result.failed?.length ?? 0)} مورد ناموفق`
                 : "")
           );
+          await refresh();
+          return;
+        }
+
+        if (action.kind === "backup-system") {
+          const response = await fetch("/api/system/backup", { method: "POST" });
+          const result = (await response.json()) as {
+            success?: boolean;
+            backup?: StoredSystemBackup;
+            error?: string;
+          };
+          if (!response.ok || !result.success || !result.backup) {
+            toast.error(result.error ?? "پشتیبان‌گیری کامل سامانه ناموفق بود");
+            return;
+          }
+          toast.success("پشتیبان کامل سامانه ساخته شد");
+          await refresh();
+          return;
+        }
+
+        if (action.kind === "delete-system") {
+          const response = await fetch("/api/system/backup", {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ filename: action.backup.filename }),
+          });
+          const result = (await response.json()) as { success?: boolean; error?: string };
+          if (!response.ok || !result.success) {
+            toast.error(result.error ?? "حذف پشتیبان ناموفق بود");
+            return;
+          }
+          toast.success("پشتیبان کامل سامانه حذف شد");
           await refresh();
           return;
         }
@@ -335,7 +423,7 @@ export function BackupsAdmin({ campaigns, initialBackups, databaseReady }: Backu
             پشتیبان‌گیری
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            ساخت، دانلود، پاک‌سازی و ایمپورت پشتیبان ZIP برای همه راستاها.
+            پشتیبان کامل سامانه (PostgreSQL + فایل‌ها + SHA-256) و پشتیبان ZIP راستاها.
           </p>
         </div>
         <Button variant="outline" size="sm" disabled={busy} onClick={() => void refresh()}>
@@ -343,6 +431,100 @@ export function BackupsAdmin({ campaigns, initialBackups, databaseReady }: Backu
           بروزرسانی
         </Button>
       </div>
+
+      <Card className="border-primary/30">
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Shield className="h-4 w-4 text-primary" />
+            پشتیبان کامل سامانه
+          </CardTitle>
+          <CardDescription>
+            شامل dump کامل PostgreSQL، همه فایل‌های آپلود و manifest با SHA-256 برای بازیابی
+            کل سامانه. هر شب ساعت ۲۲ (با فعال‌سازی cron) به‌صورت خودکار ساخته می‌شود.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <Button
+              variant="default"
+              disabled={busy}
+              onClick={() => setPendingAction({ kind: "backup-system" })}
+            >
+              <Shield className="h-4 w-4" />
+              ساخت پشتیبان کامل الان
+            </Button>
+            {systemBackups[0] ? (
+              <p className="text-xs text-muted-foreground">
+                آخرین: {formatPersianDateTime(systemBackups[0].createdAt)} ·{" "}
+                {formatStorageBytes(systemBackups[0].sizeBytes)}
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground">هنوز پشتیبان کامل ساخته نشده است.</p>
+            )}
+          </div>
+
+          {systemBackups.length > 0 ? (
+            <div className="overflow-hidden rounded-lg border">
+              <div className="divide-y">
+                {systemBackups.map((backup) => (
+                  <div
+                    key={backup.filename}
+                    className="flex flex-wrap items-center gap-3 px-3 py-3 text-sm"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-medium">پشتیبان کامل</span>
+                        <span className="text-xs text-muted-foreground">
+                          {SOURCE_LABELS[backup.source]}
+                        </span>
+                      </div>
+                      <p className="truncate text-xs text-muted-foreground" dir="ltr">
+                        {backup.filename}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatPersianDateTime(backup.createdAt)} · {formatStorageBytes(backup.sizeBytes)} · DB{" "}
+                        {formatStorageBytes(backup.databaseSizeBytes)} · {formatPersianNumber(backup.uploadsFileCount)} فایل
+                      </p>
+                      <p className="truncate font-mono text-[11px] text-muted-foreground" dir="ltr">
+                        SHA-256: {backup.sha256}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 gap-1.5">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={busy}
+                        onClick={() => void copyHash(backup.sha256)}
+                      >
+                        <Copy className="h-3.5 w-3.5" />
+                        Hash
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={busy}
+                        onClick={() => downloadSystemBackup(backup)}
+                      >
+                        <Download className="h-3.5 w-3.5" />
+                        دانلود
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        disabled={busy}
+                        onClick={() => setPendingAction({ kind: "delete-system", backup })}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        حذف
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard label="تعداد پشتیبان‌ها" value={formatPersianNumber(backups.length)} icon={FileArchive} />
@@ -652,6 +834,10 @@ function confirmTitle(action: PendingAction | null): string {
   switch (action.kind) {
     case "backup-all":
       return "پشتیبان‌گیری از همه راستاها";
+    case "backup-system":
+      return "پشتیبان کامل سامانه";
+    case "delete-system":
+      return "حذف پشتیبان کامل سامانه";
     case "delete-one":
       return "حذف پشتیبان";
     case "delete-selected":
@@ -672,6 +858,10 @@ function confirmDescription(action: PendingAction | null): string {
   switch (action.kind) {
     case "backup-all":
       return "برای همه راستاها یک پشتیبان تازه ساخته می‌شود. بسته به تعداد راستاها ممکن است کمی طول بکشد.";
+    case "backup-system":
+      return "یک ZIP کامل شامل PostgreSQL، فایل‌های آپلود و manifest با SHA-256 ساخته می‌شود. برای بازیابی کل سامانه مناسب است.";
+    case "delete-system":
+      return `پشتیبان کامل «${action.backup.filename}» برای همیشه از سرور حذف می‌شود. این کار قابل بازگشت نیست.`;
     case "delete-one":
       return `پشتیبان «${action.backup.filename}» برای همیشه از سرور حذف می‌شود. این کار قابل بازگشت نیست.`;
     case "delete-selected":

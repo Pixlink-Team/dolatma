@@ -94,24 +94,35 @@ What it updates:
 - **Aparat videos**: views, likes, comments (and empty title/description/cover)
 - **Site publications** + **magazine/newspaper** with a link: Open Graph title/description/cover when empty
 
-### 6. Daily campaign ZIP backups (Coolify Scheduled Job)
+### 6. Daily backups (full system + campaigns)
 
-Campaign backups are stored on the server under `BACKUP_DIR` (default `/app/data/backups`) and can be downloaded from the admin dashboard (**خروجی و پشتیبان‌گیری**).
+Backups are stored under `BACKUP_DIR` (default `/app/data/backups`) and can be downloaded from **Admin → پشتیبان‌گیری** (`/admin/backups`).
 
-`GET|POST /api/cron/create-backups`
+**Full system backup** (`BACKUP_DIR/system/`): PostgreSQL dump + all uploads + `manifest.json` with per-file SHA-256 hashes. Use this to restore the entire platform.
 
-1. In Coolify, open the app → **Scheduled Tasks**.
-2. Schedule for noon Iran time. If the scheduler uses UTC: `30 8 * * *` (12:00 Asia/Tehran). If the job TZ is `Asia/Tehran`: `0 12 * * *`.
-3. Command:
+**Campaign ZIP backups** (`BACKUP_DIR/{slug}/`): per-campaign exports for partial import.
+
+`GET|POST /api/cron/create-backups` creates both the nightly system backup and campaign ZIPs.
+
+#### Built-in scheduler (Docker / Coolify)
+
+If `CRON_SECRET` is set, the container runs a built-in scheduler at **22:00 Asia/Tehran** by default (`BACKUP_CRON_HOUR=22`, `BACKUP_CRON_ENABLED=1`). No external cron required.
+
+#### External Coolify Scheduled Job (optional)
+
+If you prefer an external job instead, set `BACKUP_CRON_ENABLED=0` and schedule:
+
+- UTC: `30 18 * * *` (22:00 Asia/Tehran)
+- TZ `Asia/Tehran`: `0 22 * * *`
 
 ```bash
 curl -fsS -X POST "$APP_URL/api/cron/create-backups" \
   -H "Authorization: Bearer $CRON_SECRET"
 ```
 
-Also set a persistent volume for `BACKUP_DIR` (Compose already mounts `backups_data`). Older ZIPs are pruned per campaign (`BACKUP_RETENTION_COUNT`, default 14).
+Retention: `SYSTEM_BACKUP_RETENTION_COUNT` (default 7 full backups), `BACKUP_RETENTION_COUNT` (default 14 per campaign). Mount a persistent volume for `BACKUP_DIR` (Compose already mounts `backups_data`).
 
-Admins can also click **ساخت پشتیبان (ذخیره روی سایت)** any time, then **دانلود آخرین پشتیبان**.
+Admins can also create/download backups manually from `/admin/backups` any time.
 
 ### 7. Local Docker test
 
