@@ -37,6 +37,7 @@ export async function pgSaveLoginPageSettings(
     backgroundMode: data.backgroundMode ?? existing.backgroundMode,
     customBackgroundUrl: data.customBackgroundUrl ?? existing.customBackgroundUrl,
     preRegistrationEnabled: data.preRegistrationEnabled ?? existing.preRegistrationEnabled,
+    formAlignment: data.formAlignment ?? existing.formAlignment,
   });
 
   await sql`

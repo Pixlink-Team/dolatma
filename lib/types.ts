@@ -502,6 +502,9 @@ export interface SmsProviderSettingsPublic {
 /** Login screen background: time-based art or a single uploaded image. */
 export type LoginBackgroundMode = "time_of_day" | "custom";
 
+/** Horizontal placement of the login card on the page (visual left/center/right). */
+export type LoginFormAlignment = "left" | "center" | "right";
+
 /** Configurable copy shown on the admin login screen. */
 export interface LoginPageSettings {
   eyebrow: string;
@@ -513,6 +516,8 @@ export interface LoginPageSettings {
   customBackgroundUrl: string | null;
   /** Show the pre-registration tab on the admin login page. */
   preRegistrationEnabled: boolean;
+  /** Where the login card sits horizontally on the page. */
+  formAlignment: LoginFormAlignment;
 }
 
 export interface CampaignSettings {

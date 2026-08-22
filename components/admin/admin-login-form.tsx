@@ -16,8 +16,12 @@ import {
   getTimeOfDayConfig,
   type TimeOfDayConfig,
 } from "@/lib/login-time-of-day";
-import { DEFAULT_LOGIN_CUSTOM_BACKGROUND, DEFAULT_LOGIN_PAGE_SETTINGS } from "@/lib/login-page-defaults";
-import { isSupabaseConfigured } from "@/lib/utils";
+import {
+  DEFAULT_LOGIN_CUSTOM_BACKGROUND,
+  DEFAULT_LOGIN_PAGE_SETTINGS,
+  getLoginFormLayoutClasses,
+} from "@/lib/login-page-defaults";
+import { cn, isSupabaseConfigured } from "@/lib/utils";
 import type { LoginPageSettings } from "@/lib/types";
 import { PreRegistrationPanel } from "@/components/admin/pre-registration-panel";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
@@ -206,10 +210,14 @@ export function AdminLoginForm({ settings = DEFAULT_LOGIN_PAGE_SETTINGS }: Admin
   const backgroundLayers = useTimeOfDayBackground
     ? ALL_PERIOD_BACKGROUNDS
     : [customBackgroundUrl];
+  const formLayout = getLoginFormLayoutClasses(settings.formAlignment ?? "center");
 
   return (
     <main
-      className="dark relative flex min-h-[100dvh] flex-col items-center justify-center overflow-hidden px-4 py-8 text-white"
+      className={cn(
+        "dark relative flex min-h-[100dvh] flex-col justify-center overflow-hidden px-4 py-8 text-white",
+        formLayout.main
+      )}
       dir="rtl"
       onPointerMove={handlePagePointerMove}
     >
@@ -259,7 +267,10 @@ export function AdminLoginForm({ settings = DEFAULT_LOGIN_PAGE_SETTINGS }: Admin
         </div>
       ) : null}
 
-      <div className="relative z-20 w-full max-w-[460px]" style={{ perspective: "1100px" }}>
+      <div
+        className={cn("relative z-20 w-full max-w-[460px]", formLayout.wrapper)}
+        style={{ perspective: "1100px" }}
+      >
         <section
           className="relative overflow-hidden rounded-[32px] border border-white/35 bg-white/[0.08] p-6 shadow-[0_24px_70px_rgba(0,0,0,0.28)] backdrop-blur-[10px] backdrop-saturate-150 transition-transform duration-150 ease-out will-change-transform md:p-7"
           style={{

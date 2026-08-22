@@ -1,4 +1,4 @@
-import type { LoginBackgroundMode, LoginPageSettings } from "@/lib/types";
+import type { LoginBackgroundMode, LoginFormAlignment, LoginPageSettings } from "@/lib/types";
 
 export const DEFAULT_LOGIN_CUSTOM_BACKGROUND = "/images/login/custom.webp";
 
@@ -10,7 +10,22 @@ export const DEFAULT_LOGIN_PAGE_SETTINGS: LoginPageSettings = {
   backgroundMode: "custom",
   customBackgroundUrl: DEFAULT_LOGIN_CUSTOM_BACKGROUND,
   preRegistrationEnabled: true,
+  formAlignment: "center",
 };
+
+export function getLoginFormLayoutClasses(alignment: LoginFormAlignment): {
+  main: string;
+  wrapper: string;
+} {
+  switch (alignment) {
+    case "right":
+      return { main: "items-start", wrapper: "sm:ms-6 lg:ms-10 xl:ms-16" };
+    case "left":
+      return { main: "items-end", wrapper: "sm:me-6 lg:me-10 xl:me-16" };
+    default:
+      return { main: "items-center", wrapper: "" };
+  }
+}
 
 const MAX_FIELD_LENGTH = 120;
 
@@ -35,6 +50,11 @@ function sanitizeBackgroundUrl(value: unknown): string | null {
   return trimmed.slice(0, 512);
 }
 
+function sanitizeFormAlignment(value: unknown): LoginFormAlignment {
+  if (value === "left" || value === "right") return value;
+  return "center";
+}
+
 export function normalizeLoginPageSettings(value: unknown): LoginPageSettings {
   if (!value || typeof value !== "object") {
     return { ...DEFAULT_LOGIN_PAGE_SETTINGS };
@@ -50,5 +70,6 @@ export function normalizeLoginPageSettings(value: unknown): LoginPageSettings {
     backgroundMode,
     customBackgroundUrl: sanitizeBackgroundUrl(record.customBackgroundUrl),
     preRegistrationEnabled: record.preRegistrationEnabled !== false,
+    formAlignment: sanitizeFormAlignment(record.formAlignment),
   };
 }

@@ -19,7 +19,7 @@ import {
   DEFAULT_LOGIN_CUSTOM_BACKGROUND,
   DEFAULT_LOGIN_PAGE_SETTINGS,
 } from "@/lib/login-page-defaults";
-import type { LoginBackgroundMode } from "@/lib/types";
+import type { LoginBackgroundMode, LoginFormAlignment } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const schema = z.object({
@@ -30,6 +30,7 @@ const schema = z.object({
   backgroundMode: z.enum(["time_of_day", "custom"]),
   customBackgroundUrl: z.string().nullable(),
   preRegistrationEnabled: z.boolean(),
+  formAlignment: z.enum(["left", "center", "right"]),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -51,6 +52,15 @@ const BACKGROUND_MODE_OPTIONS: Array<{
   },
 ];
 
+const FORM_ALIGNMENT_OPTIONS: Array<{
+  value: LoginFormAlignment;
+  label: string;
+}> = [
+  { value: "right", label: "راست" },
+  { value: "center", label: "وسط" },
+  { value: "left", label: "چپ" },
+];
+
 export function LoginPageSettingsCard() {
   const [isPending, startTransition] = useTransition();
 
@@ -62,6 +72,7 @@ export function LoginPageSettingsCard() {
   const backgroundMode = form.watch("backgroundMode");
   const customBackgroundUrl = form.watch("customBackgroundUrl");
   const preRegistrationEnabled = form.watch("preRegistrationEnabled");
+  const formAlignment = form.watch("formAlignment");
 
   useEffect(() => {
     getAdminLoginPageSettingsAction().then((settings) => {
@@ -148,6 +159,30 @@ export function LoginPageSettingsCard() {
                 چهار تصویر صبح، ظهر، عصر و شب بر اساس ساعت محلی کاربر نمایش داده می‌شود.
               </p>
             )}
+          </div>
+
+          <div className="space-y-3 rounded-xl border p-4">
+            <Label className="text-sm font-semibold">موقعیت فرم ورود</Label>
+            <div className="grid grid-cols-3 gap-2">
+              {FORM_ALIGNMENT_OPTIONS.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => form.setValue("formAlignment", option.value, { shouldDirty: true })}
+                  className={cn(
+                    "rounded-xl border px-3 py-2.5 text-sm font-semibold transition",
+                    formAlignment === option.value
+                      ? "border-primary bg-primary/5 ring-1 ring-primary/30"
+                      : "border-border hover:bg-muted/40"
+                  )}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              محل قرارگیری کارت ورود روی صفحه (راست، وسط یا چپ).
+            </p>
           </div>
 
           <div className="flex items-center justify-between gap-4 rounded-xl border p-4">

@@ -41,6 +41,7 @@ export async function saveLoginPageSettingsAction(data: {
   backgroundMode?: "time_of_day" | "custom";
   customBackgroundUrl?: string | null;
   preRegistrationEnabled?: boolean;
+  formAlignment?: "left" | "center" | "right";
 }) {
   const session = await getAuthSession();
   if (!session || !isFullAdmin(session)) {
