@@ -568,6 +568,19 @@ export function collectTodaySupervisionItems(
   return items.filter((item) => item.isToday);
 }
 
+export function collectSupervisionItemsForDate(
+  items: CompanySupervisionItem[],
+  dateIso: string
+): CompanySupervisionItem[] {
+  return items
+    .filter((item) => isSameDay(item.createdAt, dateIso))
+    .sort((a, b) => {
+      const aTime = a.createdAt ? Date.parse(a.createdAt) : 0;
+      const bTime = b.createdAt ? Date.parse(b.createdAt) : 0;
+      return aTime - bTime;
+    });
+}
+
 export function isTodayReturnedItem(item: CompanySupervisionItem): boolean {
   const isReturned =
     item.reviewStatus === "needs_revision" || item.reviewStatus === "resubmitted";

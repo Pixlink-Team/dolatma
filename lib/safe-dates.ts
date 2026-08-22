@@ -45,6 +45,14 @@ export function getTehranOffsetDateIso(daysFromToday: number): string {
   return getTehranCalendarDateIso(base);
 }
 
+/** Shift a Tehran calendar day by `deltaDays` (negative = past). */
+export function shiftTehranCalendarDateIso(dateIso: string, deltaDays: number): string {
+  const base = new Date(`${dateIso}T12:00:00+03:30`);
+  if (Number.isNaN(base.getTime())) return getTehranCalendarDateIso();
+  base.setTime(base.getTime() + deltaDays * 24 * 60 * 60 * 1000);
+  return getTehranCalendarDateIso(base);
+}
+
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 /**
