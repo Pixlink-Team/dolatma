@@ -499,12 +499,18 @@ export interface SmsProviderSettingsPublic {
   configured: boolean;
 }
 
+/** Login screen background: time-based art or a single uploaded image. */
+export type LoginBackgroundMode = "time_of_day" | "custom";
+
 /** Configurable copy shown on the admin login screen. */
 export interface LoginPageSettings {
   eyebrow: string;
   title: string;
   subtitle: string;
   footer: string;
+  backgroundMode: LoginBackgroundMode;
+  /** Public URL when backgroundMode is "custom". */
+  customBackgroundUrl: string | null;
 }
 
 export interface CampaignSettings {

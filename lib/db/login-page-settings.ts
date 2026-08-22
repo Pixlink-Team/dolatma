@@ -34,6 +34,8 @@ export async function pgSaveLoginPageSettings(
     title: data.title ?? existing.title,
     subtitle: data.subtitle ?? existing.subtitle,
     footer: data.footer ?? existing.footer,
+    backgroundMode: data.backgroundMode ?? existing.backgroundMode,
+    customBackgroundUrl: data.customBackgroundUrl ?? existing.customBackgroundUrl,
   });
 
   await sql`

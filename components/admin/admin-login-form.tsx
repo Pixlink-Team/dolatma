@@ -16,7 +16,7 @@ import {
   getTimeOfDayConfig,
   type TimeOfDayConfig,
 } from "@/lib/login-time-of-day";
-import { DEFAULT_LOGIN_PAGE_SETTINGS } from "@/lib/login-page-defaults";
+import { DEFAULT_LOGIN_CUSTOM_BACKGROUND, DEFAULT_LOGIN_PAGE_SETTINGS } from "@/lib/login-page-defaults";
 import { isSupabaseConfigured } from "@/lib/utils";
 import type { LoginPageSettings } from "@/lib/types";
 import { PreRegistrationPanel } from "@/components/admin/pre-registration-panel";
@@ -192,16 +192,26 @@ export function AdminLoginForm({ settings = DEFAULT_LOGIN_PAGE_SETTINGS }: Admin
     ? formatPersonalizedGreeting(timeOfDay.greeting, rememberedUser)
     : null;
 
+  const backgroundMode = settings.backgroundMode ?? "custom";
+  const customBackgroundUrl =
+    settings.customBackgroundUrl?.trim() || DEFAULT_LOGIN_CUSTOM_BACKGROUND;
+  const useTimeOfDayBackground = backgroundMode === "time_of_day";
+  const backgroundLayers = useTimeOfDayBackground
+    ? ALL_PERIOD_BACKGROUNDS
+    : [customBackgroundUrl];
+
   return (
     <main
       className="dark relative flex min-h-[100dvh] flex-col items-center justify-center overflow-hidden px-4 py-8 text-white"
       dir="rtl"
       onPointerMove={handlePagePointerMove}
     >
-      {ALL_PERIOD_BACKGROUNDS.map((src) => {
-        const isActive = timeOfDay
-          ? timeOfDay.backgroundSrc === src
-          : src === ALL_PERIOD_BACKGROUNDS[0];
+      {backgroundLayers.map((src) => {
+        const isActive = useTimeOfDayBackground
+          ? timeOfDay
+            ? timeOfDay.backgroundSrc === src
+            : src === ALL_PERIOD_BACKGROUNDS[0]
+          : true;
         return (
           <div
             key={src}

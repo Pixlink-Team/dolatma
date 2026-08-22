@@ -38,6 +38,8 @@ export async function saveLoginPageSettingsAction(data: {
   title?: string;
   subtitle?: string;
   footer?: string;
+  backgroundMode?: "time_of_day" | "custom";
+  customBackgroundUrl?: string | null;
 }) {
   const session = await getAuthSession();
   if (!session || !isFullAdmin(session)) {
