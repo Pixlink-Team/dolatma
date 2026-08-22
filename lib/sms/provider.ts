@@ -1,9 +1,10 @@
 /**
- * SMS provider placeholder.
+ * SMS provider integrations.
  * Credentials live in system_settings (key: sms_provider) and are edited from campaign settings UI.
  */
 
 import type { SmsProviderSettings } from "@/lib/types";
+import { parseSmsIrLineNumber, sendSmsIrBulk, toSmsIrMobile } from "@/lib/sms/smsir-client";
 
 export type SmsSendResult =
   | { ok: true; providerMessageId?: string }
@@ -45,7 +46,35 @@ export async function sendSms(
     return { ok: false, error: "کلید API پیامک تنظیم نشده است", skipped: true };
   }
 
-  // Provider integrations will be added when credentials are available.
+  if (settings.provider === "smsir") {
+    const lineNumber = parseSmsIrLineNumber(settings.sender);
+    if (!lineNumber) {
+      return { ok: false, error: "شماره خط sms.ir تنظیم نشده است", skipped: true };
+    }
+
+    const mobile = toSmsIrMobile(normalized);
+    if (!/^9\d{9}$/.test(mobile)) {
+      return { ok: false, error: "شماره موبایل نامعتبر است" };
+    }
+
+    const result = await sendSmsIrBulk({
+      apiKey: settings.apiKey.trim(),
+      lineNumber,
+      messageText: message,
+      mobiles: [mobile],
+    });
+
+    if (!result.ok) {
+      return { ok: false, error: result.error };
+    }
+
+    return {
+      ok: true,
+      providerMessageId: result.messageIds?.[0] ?? result.packId,
+    };
+  }
+
+  // Other provider integrations will be added when credentials are available.
   void message;
   return { ok: false, error: `اتصال ${settings.provider} هنوز پیاده‌سازی نشده است` };
 }

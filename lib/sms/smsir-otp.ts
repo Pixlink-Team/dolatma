@@ -3,9 +3,13 @@
  * Docs: POST https://api.sms.ir/v1/send/verify
  */
 
+import { toSmsIrMobile } from "@/lib/sms/smsir-client";
+
 export type SmsIrOtpResult =
   | { ok: true; messageId?: string }
   | { ok: false; error: string; statusCode?: number };
+
+export { toSmsIrMobile };
 
 function getApiKey(): string | null {
   const key = process.env.SMS_IR_API_KEY?.trim();
@@ -20,13 +24,6 @@ function getTemplateId(): number | null {
 
 function getParamName(): string {
   return process.env.SMS_IR_OTP_PARAM_NAME?.trim() || "CODE";
-}
-
-/** SMS.ir often expects mobile without leading zero (e.g. 912...). */
-export function toSmsIrMobile(phone09: string): string {
-  const digits = phone09.replace(/\D/g, "");
-  if (digits.startsWith("0") && digits.length === 11) return digits.slice(1);
-  return digits;
 }
 
 export function isSmsIrOtpConfigured(): boolean {

@@ -482,7 +482,7 @@ export interface AnalyticsConfig {
 /** Reserved for future campaign billboard settings. */
 export type BillboardConfig = Record<string, unknown>;
 
-export type SmsProviderId = "none" | "kavenegar" | "melipayamak" | "custom";
+export type SmsProviderId = "none" | "smsir" | "kavenegar" | "melipayamak" | "custom";
 
 export interface SmsProviderSettings {
   enabled: boolean;

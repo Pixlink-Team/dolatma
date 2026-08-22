@@ -17,7 +17,7 @@ import type { SmsProviderId, SmsProviderSettingsPublic } from "@/lib/types";
 
 const schema = z.object({
   enabled: z.boolean(),
-  provider: z.enum(["none", "kavenegar", "melipayamak", "custom"]),
+  provider: z.enum(["none", "smsir", "kavenegar", "melipayamak", "custom"]),
   apiKey: z.string().optional(),
   sender: z.string().optional(),
 });
@@ -26,9 +26,21 @@ type FormData = z.infer<typeof schema>;
 
 const providerLabels: Record<SmsProviderId, string> = {
   none: "بدون ارائه‌دهنده",
+  smsir: "sms.ir",
   kavenegar: "کاوه نگار",
   melipayamak: "ملی پیامک",
   custom: "سفارشی",
+};
+
+const senderPlaceholders: Partial<Record<SmsProviderId, string>> = {
+  smsir: "مثلاً 30007732000000",
+  kavenegar: "مثلاً 1000xxxx",
+  melipayamak: "مثلاً 5000xxxx",
+};
+
+const apiKeyHelpText: Partial<Record<SmsProviderId, string>> = {
+  smsir:
+    "کلید خصوصی پنل برنامه‌نویسان sms.ir را وارد کنید. در درخواست‌ها با هدر X-API-KEY ارسال می‌شود.",
 };
 
 export function SmsSettingsCard() {
@@ -144,9 +156,14 @@ export function SmsSettingsCard() {
             <Input
               {...form.register("sender")}
               dir="ltr"
-              placeholder="مثلاً 1000xxxx"
+              placeholder={senderPlaceholders[provider] ?? "مثلاً 1000xxxx"}
               className="text-left"
             />
+            {provider === "smsir" && (
+              <p className="text-xs text-muted-foreground">
+                برای sms.ir شماره خط ارسال (lineNumber) از پنل کاربری را وارد کنید.
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -159,12 +176,15 @@ export function SmsSettingsCard() {
               placeholder={
                 publicSettings?.hasApiKey
                   ? "•••••••• (برای تغییر وارد کنید)"
-                  : "API Key ارائه‌دهنده"
+                  : provider === "smsir"
+                    ? "X-API-KEY"
+                    : "API Key ارائه‌دهنده"
               }
               className="text-left"
             />
             <p className="text-xs text-muted-foreground">
-              کلید ذخیره می‌شود و در رابط کاربری دوباره نمایش داده نمی‌شود.
+              {apiKeyHelpText[provider] ??
+                "کلید ذخیره می‌شود و در رابط کاربری دوباره نمایش داده نمی‌شود."}
             </p>
           </div>
 

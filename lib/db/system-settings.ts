@@ -9,7 +9,7 @@ import type {
 
 const SMS_PROVIDER_SETTINGS_KEY = "sms_provider";
 
-const SMS_PROVIDERS: SmsProviderId[] = ["none", "kavenegar", "melipayamak", "custom"];
+const SMS_PROVIDERS: SmsProviderId[] = ["none", "smsir", "kavenegar", "melipayamak", "custom"];
 
 function normalizeSmsProvider(value: unknown): SmsProviderId {
   if (typeof value === "string" && SMS_PROVIDERS.includes(value as SmsProviderId)) {
@@ -64,11 +64,18 @@ function resolveStoredApiKey(
 }
 
 export function isSmsProviderConfigured(settings: SmsProviderSettings): boolean {
-  return Boolean(
-    settings.enabled &&
-      settings.provider !== "none" &&
-      settings.apiKey?.trim()
-  );
+  const hasApiKey = Boolean(settings.apiKey?.trim());
+  const hasSender = Boolean(settings.sender?.trim());
+
+  if (!settings.enabled || settings.provider === "none" || !hasApiKey) {
+    return false;
+  }
+
+  if (settings.provider === "smsir") {
+    return hasSender;
+  }
+
+  return true;
 }
 
 export function toPublicSmsSettings(settings: SmsProviderSettings): SmsProviderSettingsPublic {
