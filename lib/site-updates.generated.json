@@ -1,6 +1,138 @@
 {
   "entries": [
     {
+      "hash": "75bbfc0576c9239e7f6121c7bc896e89f61ff6f4",
+      "committedAt": "2026-08-22T14:26:26+03:30",
+      "title": "نمایش تصویر کاور هنگام اشتراک لینک راستا در تلگرام و واتساپ",
+      "subject": "Fix campaign cover image in social link previews"
+    },
+    {
+      "hash": "114fc1260c493eca48ab49fe9af835df1b43d50b",
+      "committedAt": "2026-08-22T14:23:35+03:30",
+      "title": "رفع خطای صفحه دستورکارها هنگام مشاهده همه",
+      "subject": "Fix directive view build error blocking directives page"
+    },
+    {
+      "hash": "77673338cc5596049ad3acbc79b629dd266c70f0",
+      "committedAt": "2026-08-22T14:22:28+03:30",
+      "title": "باز و بسته شدن بخش تنظیمات و مدیریت در منوی پنل",
+      "subject": "Make settings and management sidebar section collapsible"
+    },
+    {
+      "hash": "230e54d55b34d143252cedb18a755cf7e183345a",
+      "committedAt": "2026-08-22T14:18:53+03:30",
+      "title": "نمایش فایل‌های اقدام دستورکار به‌صورت کارت با پیش‌نمایش و دانلود",
+      "subject": "Show directive action files as organized download cards"
+    },
+    {
+      "hash": "3b0d7d78e36a09f2330f628ea1218011e6d654c4",
+      "committedAt": "2026-08-22T14:17:18+03:30",
+      "title": "نمایش فایل‌های اقدام دستورکار در بخش تولیدات آماده",
+      "subject": "Include directive action files in ready productions"
+    },
+    {
+      "hash": "710ba8b789e8eb20720ade0fca3f10cff1d7de59",
+      "committedAt": "2026-08-22T14:13:59+03:30",
+      "title": "نمایش اجباری دستورکار جدید تا زمان تأیید مشاهده",
+      "subject": "Add blocking directive acknowledgment gate for online users"
+    },
+    {
+      "hash": "ee0f7ab4349fbfc519caf6ebac1cf5f3161e3d0a",
+      "committedAt": "2026-08-22T14:11:38+03:30",
+      "title": "کاهش خطای نسخه قدیمی صفحه با تازه‌سازی خودکار بعد از به‌روزرسانی",
+      "subject": "Auto-refresh stale client bundles after deploy"
+    },
+    {
+      "hash": "d46974563fee617608d79211f7822f91f3ed6620",
+      "committedAt": "2026-08-22T14:10:47+03:30",
+      "title": "امکان آپلود عکس و ویدیو در فایل‌های اقدام دستورکار",
+      "subject": "Allow image and video uploads in directive action files"
+    },
+    {
+      "hash": "91c7b9acc2e488667b09513be3f1019a1a8405c0",
+      "committedAt": "2026-08-22T14:04:40+03:30",
+      "title": "افزودن گزارش عملکرد زیردستان برای ناظرها",
+      "subject": "Enable subordinate performance report for supervisors"
+    },
+    {
+      "hash": "a85513c4101bbd4b2b08f98abe3c6a5ddebd9cc8",
+      "committedAt": "2026-08-22T13:59:13+03:30",
+      "title": "تکمیل مرحله زیرمجموعه فقط با تعریف زیرمجموعه و افزودن کاربر به آن",
+      "subject": "Require subsidiary-linked user for onboarding subsidiaries step"
+    },
+    {
+      "hash": "cac30d89491e63d4b85e54de54af9bcffe8258a6",
+      "committedAt": "2026-08-22T13:55:53+03:30",
+      "title": "نمایش جداگانه خط زمانی فعالیت و آپلود محتوا در گزارش عملکرد",
+      "subject": "Show separate presence and upload timelines in performance report"
+    },
+    {
+      "hash": "8b5cf3d595bf90d1415905a12b6c65fbdf5810c5",
+      "committedAt": "2026-08-22T13:55:22+03:30",
+      "title": "انتخاب تولید در فرم‌های نشر دیگر اجباری نیست",
+      "subject": "Make production source optional on publish forms"
+    },
+    {
+      "hash": "5897440e31eb2ee2cdbe2c5c53e88faa0c3cb584",
+      "committedAt": "2026-08-22T13:48:07+03:30",
+      "title": "افزودن دکمه تازه‌سازی سایت برای خطای نسخه قدیمی صفحه",
+      "subject": "Add refresh site button for stale page errors"
+    },
+    {
+      "hash": "4c1b175187f3731f39b8273ef94f587a3d19c045",
+      "committedAt": "2026-08-22T13:43:31+03:30",
+      "title": "نمایش آیکون پیش‌فرض سایت در صفحه ورود",
+      "subject": "Use site default icon on admin login page"
+    },
+    {
+      "hash": "ccd974a65c067fbe02aa92a4757e165013068f8f",
+      "committedAt": "2026-08-22T13:09:51+03:30",
+      "title": "جایگزینی تأیید حذف مرورگر با دیالوگ یکپارچه در پنل ادمین",
+      "subject": "Replace window.confirm with AlertDialog for admin deletes"
+    },
+    {
+      "hash": "e3090cebb84880d5c1cb5b5bd601ec7ae5db8439",
+      "committedAt": "2026-08-22T13:09:45+03:30",
+      "title": "کاهش نمایش مودال خطا برای مشکلات موقت صفحه و به‌روزرسانی",
+      "subject": "Reduce noisy client error modals for stale page responses"
+    },
+    {
+      "hash": "1826ef717dcaff0ba8f9c9f841f5ea89849131e6",
+      "committedAt": "2026-08-22T13:08:52+03:30",
+      "title": "محاسبه آنلاین بودن بر اساس فعالیت واقعی در سامانه، نه باز بودن تب مرورگر",
+      "subject": "Exclude idle heartbeats from presence and online status"
+    },
+    {
+      "hash": "ec4be1cbad8e4ecb77f87f0b7a3a38b18998cb3f",
+      "committedAt": "2026-08-22T13:07:17+03:30",
+      "title": "نمایش خط زمانی آپلود محتوا با امکان انتخاب روز در گزارش عملکرد",
+      "subject": "Simplify self performance report to content upload timeline"
+    },
+    {
+      "hash": "fa03472bf3c0c899a88e55ebeb4796503914ea61",
+      "committedAt": "2026-08-22T13:04:44+03:30",
+      "title": "بستن خودکار سایر بخش‌های سایدبار هنگام باز کردن یک بخش",
+      "subject": "Accordion sidebar sections so only one opens at a time"
+    },
+    {
+      "hash": "dfe8e182bd246ab359210a5d8c18c4ed0a4aebb8",
+      "committedAt": "2026-08-22T13:04:14+03:30",
+      "title": "حذف پیام «هنوز موردی ثبت نشده است» از بخش‌های خالی پنل",
+      "subject": "Remove empty-state message boxes from admin sections"
+    },
+    {
+      "hash": "ba253dee8fe94aa2ff85e11acc27304602eba8cc",
+      "committedAt": "2026-08-22T13:00:34+03:30",
+      "title": "اصلاح افکت مایل‌شدن فرم ورود هنگام قرارگیری در چپ یا راست",
+      "subject": "Fix login card tilt to use card bounds instead of viewport"
+    },
+    {
+      "hash": "23f7f5cfb7ff8030c70f7715e5c34a97cfd6eb39",
+      "committedAt": "2026-08-22T12:52:44+03:30",
+      "title": "رفع خطای build و deploy سایت",
+      "subject": "Fix Docker build failure from server-only metadata import"
+    },
+    {
       "hash": "4243015b6074cc82bdc9e68aa2472fad5bd6f295",
       "committedAt": "2026-08-22T12:44:36+03:30",
       "title": "ذخیره خودکار تنظیمات بدون نیاز به دکمه ذخیره",
